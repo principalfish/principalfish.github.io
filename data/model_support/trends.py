@@ -16,6 +16,10 @@ summary is kept after an equal run without one, so the odds appear. The
 reverse is not kept: an equal run without a summary after one with a summary
 adds nothing, and the earlier entry's odds carry forward. With no summaries
 anywhere the rule is exactly the old one.
+
+A run whose stored error budget shows no national polls for any party is
+left out: with nothing polled it projects the baseline with no error, which
+would plot as a spike. The previous entry carries across the gap.
 """
 
 from __future__ import annotations
@@ -23,7 +27,7 @@ from __future__ import annotations
 import re
 import shlex
 import sqlite3
-from collections.abc import Collection, Iterator
+from collections.abc import Collection, Iterator, Mapping
 from contextlib import closing, contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -260,7 +264,7 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             ):
                 if eid in metrics:
                     metrics[eid][str(pid)]["e"] += ev_by_election[eid][unit_name]
-        uncertainty = _trend_uncertainty(conn, scope, elections)
+        uncertainty, unpolled = _trend_uncertainty(conn, scope, elections)
         dates: set[str] = set()
         previous: tuple[dict[str, dict[str, int | float]], bool] | None = None
         for eid, (name, as_of) in sorted(
@@ -275,6 +279,8 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             total = sum(party["v"] for party in parties.values())
             for party in parties.values():
                 party["v"] = round(party["v"] / total * 100.0, 1) if total > 0 else 0.0
+            if eid in unpolled:
+                continue
             summary = uncertainty.get(eid)
             if (
                 previous is not None
@@ -306,7 +312,7 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
 
 def _trend_uncertainty(
     conn: sqlite3.Connection, scope: OutputScope, election_ids: Collection[int]
-) -> dict[int, TrendUncertainty]:
+) -> tuple[dict[int, TrendUncertainty], set[int]]:
     """Read each scoped run's trend additions from its stored national block.
 
     Args:
@@ -315,17 +321,21 @@ def _trend_uncertainty(
         election_ids: The scope's dated runs.
 
     Returns:
-        Election id -> its additions, for the runs with a summary.
+        Election id -> its additions, for the runs with a summary; and the
+        runs whose budget shows no national polls (:func:`_unpolled`).
 
     Raises:
         ValueError: A stored block is unreadable or lacks a published field
             (callers report trend failures as ``ValueError``).
     """
     result: dict[int, TrendUncertainty] = {}
+    unpolled: set[int] = set()
     try:
         for election_id, national in iter_national_blocks(conn, scope):
             if election_id not in election_ids:
                 continue
+            if _unpolled(national):
+                unpolled.add(election_id)
             try:
                 result[election_id] = trend_uncertainty(national)
             except PublicUncertaintyError as err:
@@ -334,7 +344,25 @@ def _trend_uncertainty(
                 ) from err
     except UncertaintyStoreError as err:
         raise ValueError(f"Stored uncertainty is unreadable: {err}") from err
-    return result
+    return result, unpolled
+
+
+def _unpolled(national: Mapping[str, object]) -> bool:
+    """Whether a stored block's error budget shows no national polls at all.
+
+    Only the Westminster budget records ``poll_count`` per party. Any other or
+    malformed budget is private and unvalidated, so it counts as polled and
+    its run is kept.
+    """
+    budget = national.get("budget")
+    parties = budget.get("parties") if isinstance(budget, Mapping) else None
+    if not isinstance(parties, Mapping) or not parties:
+        return False
+    counts = [
+        party.get("poll_count") if isinstance(party, Mapping) else None
+        for party in parties.values()
+    ]
+    return all(type(count) is int and count == 0 for count in counts)
 
 
 _DEFERRED: ContextVar[frozenset[tuple[Path, OutputScope, Path]]] = ContextVar(

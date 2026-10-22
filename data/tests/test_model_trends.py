@@ -600,6 +600,54 @@ def test_equal_run_without_a_summary_after_one_with_is_dropped(
     ]
 
 
+def polled_block(parties: list[int], counts: tuple[int, ...]) -> dict[str, object]:
+    """A national block whose Westminster budget records these poll counts."""
+    block = national_block(parties)
+    block["budget"] = {
+        "parties": {str(party): {"poll_count": count} for party, count in zip(parties, counts)}
+    }
+    return block
+
+
+def test_run_with_no_polls_is_left_out(
+    db: Database, only_the_test_database: Path
+) -> None:
+    """With nothing polled the run is the baseline with no error: a spike."""
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day, share, counts in ((1, 60, (2, 2)), (2, 75, (0, 0)), (3, 65, (1, 1))):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, share,
+            polled_block(parties, counts),
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [e["as_of_date"] for e in entries] == ["2026-06-01", "2026-06-03"]
+
+
+def test_run_after_a_skipped_one_still_collapses_onto_the_last_entry(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day, share, counts in ((1, 60, (2, 2)), (2, 75, (0, 0)), (3, 60, (1, 1))):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, share,
+            polled_block(parties, counts),
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [e["as_of_date"] for e in entries] == ["2026-06-01"]
+
+
+def test_run_with_any_polled_party_is_kept(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    store_with_summary(
+        only_the_test_database, scope, 1, seats[0], parties, 60,
+        polled_block(parties, (1, 0)),
+    )
+    (entry,) = reconstruct_trends(only_the_test_database, scope)
+    assert entry["as_of_date"] == "2026-06-01"
+
+
 def test_parties_missing_from_either_side(
     db: Database, only_the_test_database: Path
 ) -> None:

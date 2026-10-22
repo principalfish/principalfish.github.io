@@ -3507,6 +3507,8 @@ def test_retrospective_publishes_committed_first_date_after_middle_failure(
 ) -> None:
     trend, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
     world = westminster_world
+    # A run with no polls is left out of the trends, so give the first date one.
+    _seed_swing_poll(db, world, date(2026, 6, 1))
     args = _retrospective_args(
         monkeypatch,
         world,

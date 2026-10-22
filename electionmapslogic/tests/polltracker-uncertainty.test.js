@@ -129,4 +129,16 @@ describe("poll tracker uncertainty display", () => {
     expect(pollTrackerUncertaintyNote(capabilities, { chances: true })).not.toContain("Shaded bands");
     expect(pollTrackerTooltipValues(chanceSeries([row], "pMaj", [0])[0], 0)).toHaveLength(1);
   });
+
+  it("leaves 90% ranges out of tooltips and the note when uncertainty is hidden", () => {
+    const row = { ...series, seatLo: [220], seatHi: [376] };
+    expect(pollTrackerTooltipValues(row, 0, { ranges: false })).toEqual([["Seats", "300"], ["Vote share", "40.12%"]]);
+    expect(pollTrackerTooltipValues(row, 0, { ranges: true })).toContainEqual(["90% seat range", "220–376"]);
+    const capabilities = { seatBands: true, voteBands: true };
+    const hidden = pollTrackerUncertaintyNote(capabilities, { seats: true, votes: true, bands: false });
+    expect(hidden).toContain("Uncertainty hidden");
+    expect(hidden).not.toContain("Shaded bands");
+    // Chances never draw bands, so hiding uncertainty doesn't change their note.
+    expect(pollTrackerUncertaintyNote(capabilities, { chances: true, bands: false })).toContain("Chances");
+  });
 });

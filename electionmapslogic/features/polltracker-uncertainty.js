@@ -14,9 +14,10 @@ export function pollTrackerCapabilities(data) {
   };
 }
 
-export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes }) {
+export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes, bands = true }) {
   const basis = "if an election were held today, conditional on current polls and the model's error assumptions.";
   if (chances) return `Chances ${basis} Hung means no party wins a majority.`;
+  if (!bands) return "Uncertainty hidden. Tick Uncertainty to show 90% ranges.";
   const metrics = [];
   if (seats && capabilities.seatBands) metrics.push("seat");
   if (votes && capabilities.voteBands) metrics.push("vote-share");
@@ -37,14 +38,18 @@ export function chanceSeries(series, metric, hung) {
   ];
 }
 
-/** Only finite values are formatted; missing optional observations never become zero. */
-export function pollTrackerTooltipValues(series, index) {
+/**
+ * Only finite values are formatted; missing optional observations never become zero.
+ * With `ranges: false` (uncertainty hidden) the 90% seat and vote ranges are left out.
+ */
+export function pollTrackerTooltipValues(series, index, { ranges = true } = {}) {
   const percent = (value) => Number.isFinite(value) ? `${formatPct(value)}%` : "Unavailable";
   if (series.chanceLabel) return [[series.chanceLabel, percent(series.votePct[index])]];
   const values = [
     ["Seats", Number.isFinite(series.seats[index]) ? formatInt(series.seats[index]) : "Unavailable"],
     ["Vote share", percent(series.votePct[index])],
   ];
+  if (!ranges) return values;
   if (Number.isFinite(series.seatLo?.[index]) && Number.isFinite(series.seatHi?.[index])) {
     values.push(["90% seat range", `${formatInt(series.seatLo[index])}–${formatInt(series.seatHi[index])}`]);
   }

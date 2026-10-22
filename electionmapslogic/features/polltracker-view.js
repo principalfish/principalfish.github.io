@@ -35,6 +35,8 @@ const pollTrackerPartyControls = document.getElementById('mapsPollTrackerPartyCo
 const pollTrackerMetricSeatsInput = document.getElementById('mapsPollTrackerMetricSeats');
 // Metric checkbox — when checked, the chart paints dashed lines for vote % on the right axis.
 const pollTrackerMetricVotesInput = document.getElementById('mapsPollTrackerMetricVotes');
+// Checkbox — when checked, the chart shades 90% bands and the tooltip lists 90% ranges.
+const pollTrackerShowUncertaintyInput = document.getElementById('mapsPollTrackerShowUncertainty');
 let chartMode = "totals";
 let chanceMetric = "pMaj";
 
@@ -61,15 +63,19 @@ function wirePollTrackerMetricInput(inputEl) {
 export function wirePollTrackerControls() {
   wirePollTrackerMetricInput(pollTrackerMetricSeatsInput);
   wirePollTrackerMetricInput(pollTrackerMetricVotesInput);
+  wirePollTrackerMetricInput(pollTrackerShowUncertaintyInput);
+  // View (Seats & votes / Chances) and chance measure (Majority / Largest party) are
+  // radio groups; the chosen radio's data attribute names the mode.
   for (const attribute of ["data-polltracker-view", "data-polltracker-chance"]) {
-    document.querySelectorAll(`[${attribute}]`).forEach((button) => {
-      if (button.dataset.wired === "true") return;
-      button.addEventListener("click", () => {
-        if (attribute === "data-polltracker-view") chartMode = button.getAttribute(attribute);
-        else chanceMetric = button.getAttribute(attribute);
+    document.querySelectorAll(`[${attribute}]`).forEach((radio) => {
+      if (radio.dataset.wired === "true") return;
+      radio.addEventListener("change", () => {
+        if (!radio.checked) return;
+        if (attribute === "data-polltracker-view") chartMode = radio.getAttribute(attribute);
+        else chanceMetric = radio.getAttribute(attribute);
         if (state.view === "polltracker") renderPollTracker();
       });
-      button.dataset.wired = "true";
+      radio.dataset.wired = "true";
     });
   }
 
@@ -121,18 +127,29 @@ function renderPollTrackerUncertaintyControls() {
   document.getElementById("mapsPollTrackerViewControls").hidden = !capabilities.chances;
   document.getElementById("mapsPollTrackerChanceControls").hidden = !chances;
   document.getElementById("mapsPollTrackerMetrics").hidden = chances;
+  document.getElementById("mapsPollTrackerUncertaintyToggle").hidden = !capabilities.bands;
   for (const [attribute, selected] of [["data-polltracker-view", chartMode], ["data-polltracker-chance", chanceMetric]]) {
-    document.querySelectorAll(`[${attribute}]`).forEach((button) => {
-      const active = button.getAttribute(attribute) === selected;
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-pressed", String(active));
+    // Keeps the radios in step with the mode (e.g. falling back to totals when the
+    // data has no chances).
+    document.querySelectorAll(`[${attribute}]`).forEach((radio) => {
+      radio.checked = radio.getAttribute(attribute) === selected;
     });
   }
   const note = document.getElementById("mapsPollTrackerUncertaintyNote");
   note.hidden = !capabilities.bands && !capabilities.chances;
   note.textContent = pollTrackerUncertaintyNote(capabilities, {
     chances, seats: pollTrackerMetricSeatsInput?.checked, votes: pollTrackerMetricVotesInput?.checked,
+    bands: pollTrackerUncertaintyShown(),
   });
+}
+
+/**
+ * Whether the user wants uncertainty shown (bands and tooltip ranges). Defaults to shown
+ * when the toggle is missing, so a page without it keeps the original behaviour.
+ * @returns {boolean}
+ */
+function pollTrackerUncertaintyShown() {
+  return pollTrackerShowUncertaintyInput ? pollTrackerShowUncertaintyInput.checked : true;
 }
 
 /**
@@ -203,7 +220,7 @@ function renderPollTrackerChart() {
   });
 
   // Paint the lines and legend, then mount the SVG.
-  if (!chances) {
+  if (!chances && pollTrackerUncertaintyShown()) {
     const xAt = (index) => useTimeScale ? x(visibleTimeline[index].dateValue) : x(index);
     if (seatsEnabled) drawPollTrackerBands(plot, selectedSeries, xAt, ySeats, d3.area, "seats");
     if (votePctEnabled) drawPollTrackerBands(plot, selectedSeries, xAt, yVotePct, d3.area, "votes");
@@ -493,7 +510,7 @@ function pollTrackerTooltipHandlers({ svg, tooltip, crosshairLine, margin, inner
     tooltip.innerHTML = `
       <div class="maps-polltracker-tooltip-party"><span class="maps-party-swatch" style="background:${partyColour}"></span>${escapeHtml(series.partyName)}</div>
       <div>${timelinePoint?.dateKey || ''}</div>
-      ${pollTrackerTooltipValues(series, index).map(([label, value]) => `<div>${escapeHtml(label)}: ${escapeHtml(value)}</div>`).join("")}
+      ${pollTrackerTooltipValues(series, index, { ranges: pollTrackerUncertaintyShown() }).map(([label, value]) => `<div>${escapeHtml(label)}: ${escapeHtml(value)}</div>`).join("")}
     `;
     const tooltipX = Math.min(width - 220, Math.max(8, pointerX + 14));
     const tooltipY = Math.min(height - 96, Math.max(8, event.offsetY + 10));

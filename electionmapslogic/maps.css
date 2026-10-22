@@ -1276,6 +1276,16 @@ a {
   margin-left: auto;
 }
 
+/* Mode-specific controls (Seats / Vote % / Uncertainty, or Majority / Largest party)
+   take a full row of their own under the view switch and date range. */
+.maps-polltracker-secondary {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .maps-polltracker-range-btn {
   padding: 0.28rem 0.48rem;
   font-size: 0.74rem;

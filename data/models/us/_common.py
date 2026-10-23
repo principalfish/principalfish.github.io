@@ -433,6 +433,19 @@ def is_others_party(party_name: str) -> bool:
     return party_name.strip().casefold() in OTHERS_PARTY_NAMES
 
 
+def has_baseline_party_support(
+    baseline_votes: Mapping[int, float],
+    party_id: int,
+    party_name: str,
+) -> bool:
+    """Allow broad polling effects only where the party had baseline votes.
+
+    Others remains an aggregate bucket with its existing swing policy.
+    A newly polled candidate can still enter through that seat's own poll blend.
+    """
+    return baseline_votes.get(party_id, 0.0) > 0.0 or is_others_party(party_name)
+
+
 def decided_vote_shares(shares: Mapping[int, float]) -> dict[int, float]:
     """Rescale one poll's party shares so the named candidates sum to 100.
 
@@ -1313,12 +1326,13 @@ def blend_seat_swings(
     * ``fallback`` is the parent state's blended swing for an ``X CD-n`` seat
       whose parent was itself blended, otherwise the seat's region swing from
       :func:`compute_region_diffs`. So Maine CD-2 rides Maine's polls until it
-      has polls of its own, and every unpolled seat keeps today's behaviour
-      exactly.
+      has polls of its own. Broad polling effects are zero for parties without
+      positive baseline votes in this seat, except for the Others bucket. A new
+      entrant's own local poll contribution is retained.
 
-    ``W = 0`` gives α = 0 and therefore the fallback unchanged, which is how a
-    district with no polls inherits its state's blend verbatim. An average with
-    no contributing polls (every reading skipped as partial) is treated as no
+    ``W = 0`` gives α = 0 and therefore the eligible fallback unchanged. A
+    district with no polls inherits its state's blend for baseline-supported
+    parties. An average with no contributing polls (every reading skipped as partial) is treated as no
     average at all, so the seat stays off the result and its districts keep their
     own region swing, exactly as if it had never been polled.
 
@@ -1366,7 +1380,15 @@ def blend_seat_swings(
 
         swings: dict[int, float] = {}
         for party_id in parties:
-            fallback = fallbacks.get(party_id, 0.0)
+            fallback = (
+                fallbacks.get(party_id, 0.0)
+                if has_baseline_party_support(
+                    seat_party_vote_totals.get(seat_id, {}),
+                    party_id,
+                    party_name_by_id.get(party_id, ""),
+                )
+                else 0.0
+            )
             if alpha <= 0.0:
                 swings[party_id] = fallback
                 continue
@@ -1430,6 +1452,8 @@ def project_seat_votes(
     region_swings: dict[int, dict[int, float]],
     party_name_by_id: dict[int, str],
     seat_swings: Mapping[int, Mapping[int, float]] | None = None,
+    *,
+    seat_poll_averages: Mapping[int, SeatPollAverage] | None = None,
 ) -> tuple[list[dict[str, Any]], Counter[str]]:
     """Apply swings to baseline seat shares and project a winner per seat.
 
@@ -1442,7 +1466,9 @@ def project_seat_votes(
     (:func:`blend_seat_swings`); every other seat uses its region's uniform swing,
     which is what the whole map did before seat polls existed. Clamping,
     renormalisation and the winner rule are identical either way — blending only
-    changes which swing goes in.
+    changes which swing goes in. A party without positive baseline votes receives
+    no swing unless this seat's contributing polls name it. Inherited state polls
+    cannot admit a new district candidate. Others keeps its existing treatment.
 
     Returns ``(projected_votes, winners_by_party)`` — projected vote rows carry a
     ``vote_total`` vote count (turnout held at the baseline seat total) and an
@@ -1465,9 +1491,19 @@ def project_seat_votes(
             swing_for_seat = region_swings.get(region_id, {}) if region_id is not None else {}
 
         projection_raw: dict[int, float] = {}
+        average = seat_poll_averages.get(seat_id) if seat_poll_averages is not None else None
         for party_id in party_universe:
             baseline_share = base_share_by_party.get(party_id, 0.0)
-            swing = swing_for_seat.get(party_id, 0.0)
+            local_entrant = (
+                average is not None
+                and average.n_polls > 0
+                and average.total_weight > 0.0
+                and party_id in average.shares
+            )
+            eligible = has_baseline_party_support(
+                base_vote_totals, party_id, party_name_by_id.get(party_id, "")
+            )
+            swing = swing_for_seat.get(party_id, 0.0) if eligible or local_entrant else 0.0
             projection_raw[party_id] = max(0.0, baseline_share + swing)
 
         projection_sum = sum(projection_raw.values())
@@ -2370,6 +2406,7 @@ def run_simulation(
         region_swings,
         party_name_by_id,
         seat_swings=seat_swings,
+        seat_poll_averages=seat_averages,
     )
 
     election_name = _election_name_pattern(spec, cfg.as_of_date)

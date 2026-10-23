@@ -1,33 +1,10 @@
 #!/usr/bin/env python3
-"""US Senate forecast runner: national uniform swing over the 2026 Class-2 field.
+"""US Senate nowcast runner with an immutable field resolved from the run date.
 
-Only ~a third of Senate seats are contested each cycle. The 2026 election is the
-Class-2 field, last contested in 2020 — so the projection swings the **2020 US
-Senate** result by the national two-party average and picks an FPTP winner per
-contested state.
-
-The contested field is pinned to the states that currently hold a Class-2 seat
-(read from ``senate-current.json``, the same snapshot the front end uses). This
-excludes states whose 2020 race was an off-class special (e.g. Arizona 2020 was a
-Class-3 special and is not up in 2026), which projecting the raw 2020 baseline
-would wrongly include. When the snapshot is unavailable the allowlist is ``None``
-and every 2020-contested seat is projected.
-
-Special elections join that field. 2026 fills two Class-3 seats early (Florida and
-Ohio), which were last contested in **2022**, not 2020 — so they are added to the
-allowlist and given their own baseline election. Both facts come from
-``map-modes-shell.json``, the same hand-authored file the front end's map modes are
-generated from, so the model and the map cannot disagree about which specials are up.
-
-Persists a ``us_senate_model`` election (the projected contested seats) and appends
-a poll-tracker trend entry. The front end's SenatePredict merges these projected
-winners into the full 100-member chamber (``senate-current.json``) for its
-"Full Senate" view.
-
-Usage:
-    python data/models/us/run_us_senate_model.py --dry-run
-    python data/models/us/run_us_senate_model.py --as-of-date 2026-06-01
-    python data/models/us/run_us_senate_model.py --start-date 2025-01-01 --end-date 2026-06-01
+The 2026 Class-2 field uses 2020 results, with Florida/Ohio Class-3 specials
+using 2022. From 2027-01-01 the configured target is the 2028 Class-3 field,
+using 2022 results. A verified post-2026 roster is required for its full chamber.
+The live frontend roster and shell do not determine model inputs.
 """
 
 from __future__ import annotations
@@ -43,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _common import UsModelSpec, main_for_spec
 from model_support.trends import default_trend_path
+from model_support.senate_cycles import DEFAULT_SENATE_CYCLES
 
 # Importable because ``_common`` (above) puts ``data/`` on the path, as it does for
 # its own ``scripts.export.naming`` import. The export's parser is the one rule
@@ -171,8 +149,6 @@ def senate_field_allowlist(
     return class2_states | {special.seat for special in specials}
 
 
-SENATE_SPECIALS: tuple[SenateSpecial, ...] = senate_special_elections()
-
 SPEC = UsModelSpec(
     map_name="US Senate 2024",
     baseline_election_name="2020 US Senate Election",
@@ -180,16 +156,11 @@ SPEC = UsModelSpec(
     election_name_prefix="US Senate UNS",
     trend_cache_json=default_trend_path("us-senate"),
     trend_cache_meta_json=RESULTS_DIR / "us-senate-trends_meta.json",
-    seat_name_allowlist=senate_field_allowlist(
-        class2_state_allowlist(), SENATE_SPECIALS
-    ),
+    senate_cycle_config=DEFAULT_SENATE_CYCLES,
     # The Senate has no national series of its own: its national swing is the
     # House generic ballot, polled once and stored on the House map.
     national_poll_map_name="US House Districts 2024",
-    # Florida and Ohio are Class-3 specials: they swing from 2022, not 2020.
-    seat_baseline_overrides={
-        special.seat: special.baseline_election_id for special in SENATE_SPECIALS
-    },
+
 )
 
 

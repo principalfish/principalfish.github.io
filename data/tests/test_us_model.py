@@ -2669,14 +2669,15 @@ class TestSenateFieldAllowlist:
     def test_the_shipped_spec_adds_both_specials_on_their_2022_baseline(self) -> None:
         from run_us_senate_model import SPEC
 
-        assert dict(SPEC.seat_baseline_overrides) == {
+        spec = _common.spec_for_date(SPEC, date(2026, 10, 19))
+        assert dict(spec.seat_baseline_overrides) == {
             "Florida": "2022-us-senate",
             "Ohio": "2022-us-senate",
         }
-        assert SPEC.seat_name_allowlist is not None
-        assert {"Florida", "Ohio"} <= SPEC.seat_name_allowlist
+        assert spec.seat_name_allowlist is not None
+        assert {"Florida", "Ohio"} <= spec.seat_name_allowlist
         # 33 Class-2 states plus the two Class-3 specials.
-        assert len(SPEC.seat_name_allowlist) == 35
+        assert len(spec.seat_name_allowlist) == 35
 
 
 # ── Senate specials: resolving the baseline election ──────────────────────────

@@ -19,9 +19,8 @@ NO_AUTO_COMPARISON_TYPES: frozenset[str] = frozenset({ElectionType.us_senate.val
 
 # Each US forecast entry compares against the same baseline its model swings from
 # (``models/us/run_us_*_model.py``), so gains / comparison columns read against the
-# result the projection actually moved. The Senate forecast projects the 2026
-# Class-2 field, last contested in 2020 — hence 2020, not the latest Senate cycle.
-# Bump alongside the model baselines when the cycles roll.
+# result the projection actually moved. Resolved Senate entries supply their own
+# baselineElectionId; 2020 remains the compatibility default for legacy entries.
 US_MODEL_COMPARISON_IDS: dict[str, str] = {
     ElectionType.us_house_model.value: "2024-us-house",
     ElectionType.us_presidential_model.value: "2024-us-president",
@@ -137,15 +136,16 @@ def build_map_modes_with_regions(
         # Resolve the durable Senate-class cycle ({base year per class, period}) into concrete
         # "next up" years as of this export, so the front-end filter stays a simple class→year
         # lookup and the cycle rolls forward on its own without editing the shell.
+        senate_year = entry.get("senateForecastYear", current_year)
         cycle = entry.pop("senateClassCycle", None)
         if cycle:
-            entry["senateClassNextElection"] = _senate_class_next_election(cycle, current_year)
+            entry["senateClassNextElection"] = _senate_class_next_election(cycle, senate_year)
         # Senate special elections (an off-cycle vacancy contested alongside the regular class,
         # e.g. Ohio and Florida's Class-3 seats in 2026) are filtered here, once, to the ones the
         # next Senate election holds; the front end then uses the list as-is.
         if "senateSpecialElections" in entry:
             entry["senateSpecialElections"] = _live_senate_specials(
-                entry["senateSpecialElections"], special_year, current_year
+                entry["senateSpecialElections"], special_year, senate_year
             )
         merged[map_id_str] = entry
     return merged
@@ -313,7 +313,12 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
         elif entry.get("type") in US_MODEL_COMPARISON_IDS:
             # US forecasts compare against their model's baseline; only when that
             # baseline is actually exported, so no dangling reference is written.
-            candidate = US_MODEL_COMPARISON_IDS[str(entry.get("type"))]
+            candidate = (
+                entry.get("baselineElectionId")
+                if entry.get("type") == ElectionType.us_senate_model.value
+                and entry.get("baselineElectionId")
+                else US_MODEL_COMPARISON_IDS[str(entry.get("type"))]
+            )
             comparison_id = candidate if candidate in present_ids else None
         else:
             parliament = entry.get("parliament")

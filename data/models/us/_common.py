@@ -45,7 +45,7 @@ import re
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable, Literal
@@ -61,6 +61,11 @@ from config import DatabaseConfig
 from db import Database
 from electoral_votes import allocation_year, get_electoral_votes, positive_integer
 from model_support.history import HistoryRecomputationError
+from model_support.senate_cycles import (
+    SenateCycle,
+    resolve_senate_cycle,
+    senate_cycle_snapshot,
+)
 from model_support.us_simulation import (
     UsErrorConfig,
     UsLocalAverage,
@@ -177,12 +182,13 @@ class UsModelSpec:
         seat_baseline_overrides: Seat name → the **manifest id** of the election that
             seat's baseline comes from, for seats whose baseline is not
             ``baseline_election_name`` (the 2026 Senate specials, which swing from 2022
-            rather than 2020). Manifest ids rather than election names, because the
-            source of truth is ``map-modes-shell.json``, which names elections the way
-            the exported manifest does; :func:`resolve_special_baselines` turns them
-            into rows. Consumed by the baseline loader.
+            rather than 2020). Manifest ids let configured model baselines and
+            exported comparison files identify the same election;
+            :func:`resolve_special_baselines` turns them into rows.
         target_election_year: Presidential allocation year; other chambers leave it
             unset.
+        senate_cycle_config: Optional pinned Senate configuration, resolved per date.
+        senate_cycle: Resolved immutable Senate field and counting inputs.
     """
 
     map_name: str
@@ -199,6 +205,22 @@ class UsModelSpec:
     # every spec ever built.
     seat_baseline_overrides: Mapping[str, str] = field(default_factory=dict)
     target_election_year: int | None = None
+    senate_cycle_config: Path | None = None
+    senate_cycle: SenateCycle | None = None
+
+
+def spec_for_date(spec: UsModelSpec, as_of: date) -> UsModelSpec:
+    """Bind a configured Senate runner to its dated field, preserving other models."""
+    if spec.senate_cycle_config is None:
+        return spec
+    if spec.election_type != "us_senate_model":
+        raise ValueError("Only Senate specifications support a Senate cycle config")
+    cycle = resolve_senate_cycle(as_of, spec.senate_cycle_config)
+    return replace(
+        spec, baseline_election_name=cycle.baseline_name,
+        seat_name_allowlist=cycle.states, seat_baseline_overrides=cycle.baseline_overrides,
+        senate_cycle=cycle,
+    )
 
 
 @dataclass
@@ -206,7 +228,7 @@ class UsSimulationConfig:
     """Configuration parameters for a single US forecast run.
 
     Attributes:
-        spec: The static per-type configuration.
+        spec: Per-type configuration, bound to the as-of Senate cycle when configured.
         as_of_date: Upper bound for poll fieldwork end dates; the projection reflects
             the state of play as of this date.
         since_date: Lower bound for poll fieldwork end dates.
@@ -233,6 +255,7 @@ class UsSimulationConfig:
     target_election_year: int | None = None
 
     def __post_init__(self) -> None:
+        self.spec = spec_for_date(self.spec, self.as_of_date)
         validate_half_life(self.half_life_days)
         validate_prior_weight(self.seat_prior_weight)
         validate_date_window(self.since_date, self.as_of_date)
@@ -2156,6 +2179,10 @@ def persist_projection(
             for row in recorded_vote_rows(projected_votes)
         ),
         target_election_year=target_election_year,
+        model_context=(
+            senate_cycle_snapshot(spec.senate_cycle)
+            if spec.senate_cycle is not None else None
+        ),
     )
 
 
@@ -2356,6 +2383,7 @@ def prepare_us_projection(
         resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
         popular_vote_parent_ids=popular_vote_parent_ids,
     )
+    _validate_senate_field(spec, seats, seat_party_vote_totals)
     popular_vote_seat_ids = (
         usable_popular_vote_seat_ids(seat_party_vote_totals, popular_vote_parent_ids)
         if popular_vote_parent_ids is not None
@@ -2570,6 +2598,8 @@ def run_simulation(
     printed so a 365-day backfill does not emit one per seat per day.
     """
     spec = cfg.spec
+    if spec.senate_cycle is not None:
+        print(spec.senate_cycle.log_description())
     prepared = prepare_us_projection(db, cfg, poll_window=poll_window)
     seats = prepared.seats
     projected_votes = prepared.projected_votes
@@ -2718,13 +2748,41 @@ def _validate_history_inputs(db: Database, spec: UsModelSpec) -> None:
     poll_map, baseline = resolve_simulation_scope(db, spec)
     resolve_poll_scope(db, spec)
     seats = fetch_seat_refs(db, poll_map.id, spec.seat_name_allowlist)
-    build_baseline_vote_state(
+    vote_totals, _, _, _ = build_baseline_vote_state(
         db,
         baseline.id,
         {seat.id: seat.region_id for seat in seats},
         {seat.id for seat in seats} if spec.seat_name_allowlist is not None else None,
         resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
     )
+    _validate_senate_field(spec, seats, vote_totals)
+
+
+def _validate_senate_field(
+    spec: UsModelSpec, seats: Sequence[SeatRef], votes: Mapping[int, Mapping[int, float]]
+) -> None:
+    if spec.senate_cycle is None:
+        return
+    present = {seat.seat_name for seat in seats if sum(votes.get(seat.id, {}).values()) > 0}
+    missing = spec.senate_cycle.states - present
+    if missing:
+        raise ValueError(
+            "Pinned Senate field is missing baseline votes: "
+            f"{', '.join(sorted(missing))}"
+        )
+
+
+def _preflight_dated_specs(
+    db: Database, spec: UsModelSpec, dates: Iterable[date]
+) -> None:
+    """Validate every distinct cycle before any dates in a batch are replaced."""
+    seen: set[str | None] = set()
+    for as_of in dates:
+        resolved = spec_for_date(spec, as_of)
+        identity = resolved.senate_cycle.identity if resolved.senate_cycle else None
+        if identity not in seen:
+            _validate_history_inputs(db, resolved)
+            seen.add(identity)
 
 
 def run_retrospective_range(
@@ -2757,7 +2815,11 @@ def run_retrospective_range(
     validate_half_life(args.half_life_days)
     validate_prior_weight(args.seat_prior_weight)
 
-    _validate_history_inputs(db, spec)
+    _preflight_dated_specs(
+        db, spec,
+        (start_date + timedelta(days=i)
+         for i in range((end_date - start_date).days + 1)),
+    )
 
     with trend_batch(
         database_file(db),
@@ -2960,7 +3022,7 @@ def _rebuild_history(
         print("REBUILD-HISTORY skipped for dry-run mode")
         return
 
-    _validate_history_inputs(db, spec)
+    _validate_history_inputs(db, cfg.spec)
     sqlite_path = database_file(db)
     map_id = _output_map_id(db, spec)
     existing = existing_trend_dates(spec, sqlite_path, map_id=map_id)
@@ -3122,6 +3184,13 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
         include_earliest=args.rebuild_history,
     )
     if latest_end is not None and cfg.as_of_date > latest_end:
+        if cfg.spec.senate_cycle is not None:
+            capped_spec = spec_for_date(spec, latest_end)
+            if capped_spec.senate_cycle != cfg.spec.senate_cycle:
+                raise ValueError(
+                    "Latest usable poll is outside the requested Senate cycle; "
+                    "choose an as-of date in that cycle or provide current-cycle polls"
+                )
         print(f"CAPPING as_of_date {cfg.as_of_date.isoformat()} → {latest_end.isoformat()}")
         cfg = UsSimulationConfig(
             spec=spec,
@@ -3168,6 +3237,9 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             run_dates.append(cfg.as_of_date)
     if len(run_dates) > 1:
         print(f"AUTO-BACKFILL missing_dates={len(run_dates)} from={run_dates[0]} to={run_dates[-1]}")
+
+    if spec.senate_cycle_config is not None:
+        _preflight_dated_specs(db, spec, run_dates)
 
     latest_poll_usage: LatestPollUsage | None = None
 

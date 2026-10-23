@@ -77,6 +77,13 @@ from scripts.export.serialize import (
     write_json,
     write_manifest,
 )
+from scripts.export.senate import (
+    configure_senate_forecast,
+    latest_senate_run,
+    pinned_roster_payload,
+    public_senate_forecast,
+    senate_cycle_for_election,
+)
 from scripts.export.manifest import (
     build_manifest_party_settings,
     build_manifest_regions_by_map_id,
@@ -127,7 +134,9 @@ PAGE_PARLIAMENTS = {
 # elections filtered to the ones the next Senate election holds). A ``--metadata-only`` refresh therefore has to
 # re-copy them from the rebuilt mode — and drop the key when the rebuild no longer produces it,
 # so a removed shell entry (or a special whose cycle has passed) disappears from the manifest.
-DERIVED_MODE_KEYS: tuple[str, ...] = ("senateClassNextElection", "senateSpecialElections")
+DERIVED_MODE_KEYS: tuple[str, ...] = (
+    "senateClassNextElection", "senateSpecialElections", "senateForecastYear",
+)
 
 
 def refresh_manifest_modes(
@@ -364,6 +373,11 @@ def main() -> None:
             # Falls back to raw regions with no shell.
             shell_path = page_root / "map-modes-shell.json"
             shell = json.loads(shell_path.read_text(encoding="utf-8")) if shell_path.exists() else {}
+            if "senateForecast" in manifest:
+                shell = configure_senate_forecast(
+                    shell or manifest, manifest["senateForecast"]
+                )
+                manifest["parliamentFeatures"] = shell.get("parliamentFeatures", {})
             rebuilt_modes = build_map_modes_with_regions(
                 shell.get("mapModes", {}),
                 manifest_regions_by_map_id,
@@ -527,6 +541,8 @@ def main() -> None:
                     .order_by(Election.id.desc())
                     .limit(1)
                 ).scalars().first()
+                if _us_model_type == ElectionType.us_senate_model:
+                    latest_us_model = latest_senate_run(session)
                 if latest_us_model is not None:
                     latest_us_models.append(latest_us_model)
             if latest_us_models:
@@ -600,6 +616,17 @@ def _export_page(
     written_map_ids: set[int] = set()
     manifest_id_by_db_id: dict[int, str] = {}
     pending_by_election_rows: list[dict[str, Any]] = []
+
+    senate_election = next(
+        (e for e in elections if e.type == ElectionType.us_senate_model), None
+    )
+    senate_cycle = (
+        senate_cycle_for_election(session, senate_election) if senate_election else None
+    )
+    senate_forecast = (
+        public_senate_forecast(senate_cycle, senate_election.map_id)
+        if senate_cycle and senate_election else None
+    )
 
     for election in elections:
         map_row = election.map
@@ -827,6 +854,8 @@ def _export_page(
             ElectionType.us_senate_model,
         ):
             manifest_entry["model"] = True
+        if election.type == ElectionType.us_senate_model and senate_cycle is not None:
+            manifest_entry["baselineElectionId"] = senate_cycle.baseline_id
         manifest_entries.append(manifest_entry)
 
         if default_election_id is None and election.type == ElectionType.uk_general:
@@ -858,6 +887,19 @@ def _export_page(
         manifest_regions_by_map_id=manifest_regions_by_map_id,
         parliaments=parliaments,
     )
+
+    if senate_forecast and senate_forecast["rosterElectionId"] and senate_cycle:
+        roster_id = senate_forecast["rosterElectionId"]
+        roster_filename = f"{roster_id}.json"
+        if not args.dry_run:
+            write_json(results_dir / roster_filename, pinned_roster_payload(senate_cycle))
+        data_files_by_election_id[roster_id] = f"results/{roster_filename}"
+        manifest_entries.append({
+            "id": roster_id,
+            "name": f"Senate {senate_cycle.target_year} forecast baseline",
+            "type": ElectionType.us_senate.value, "mapId": senate_forecast["mapId"],
+            "parliament": "us_senate", "multiMember": True,
+        })
 
     if default_election_id is None:
         default_election_id = manifest_entries[0]["id"]
@@ -967,6 +1009,8 @@ def _export_page(
     shell_path = output_root / "map-modes-shell.json"
     shell = json.loads(shell_path.read_text(encoding="utf-8")) if shell_path.exists() else {}
     config = shell if shell else existing
+    if senate_election is not None:
+        config = configure_senate_forecast(config, senate_forecast)
 
     # model/poll-tracker meta files are keyed by parliament; keep only those belonging to
     # this page. Defaults cover every parliament with a forecast model (the front end
@@ -1068,6 +1112,9 @@ def _export_page(
         "files": files,
         "parties": manifest_parties,
     }
+
+    if senate_election is not None:
+        manifest_payload["senateForecast"] = senate_forecast
 
     if args.dry_run:
         print(f"Would write manifest: {manifest_path} ({len(manifest_entries)} elections)")

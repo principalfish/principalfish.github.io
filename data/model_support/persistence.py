@@ -225,6 +225,13 @@ def _delete_range(
             f"DELETE FROM {UNCERTAINTY_TABLE} WHERE election_id IN ({placeholders})",
             election_ids,
         )
+    if conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='model_context'"
+    ).fetchone():
+        conn.execute(
+            f"DELETE FROM model_context WHERE election_id IN ({placeholders})",
+            election_ids,
+        )
     deleted_votes = conn.execute(
         f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
     ).rowcount
@@ -264,6 +271,7 @@ def replace_output(
     *,
     target_election_year: int | None = None,
     uncertainty: UncertaintyPayload | None = None,
+    model_context: Mapping[str, object] | None = None,
 ) -> tuple[str, int]:
     """Commit deletion and insertion together, preserving old rows on failure.
 
@@ -287,6 +295,8 @@ def replace_output(
         votes: The run's vote rows.
         target_election_year: Target cycle; presidential outputs only.
         uncertainty: The run's Monte Carlo summary, if any.
+        model_context: Optional frozen deterministic counting inputs. The table
+            is created transactionally only when a context is saved.
 
     Returns:
         (election name, new election id).
@@ -297,6 +307,9 @@ def replace_output(
         UncertaintyStoreError: If ``uncertainty`` is given but the table has
             not been migrated; nothing is written.
     """
+    context_json = None if model_context is None else json.dumps(
+        dict(model_context), sort_keys=True, separators=(",", ":"), allow_nan=False
+    )
     encoded = None if uncertainty is None else _encode_payload(uncertainty)
     if scope.date_from_name(election_name) != as_of:
         raise ValueError("Election name does not match the output date and scope")
@@ -310,6 +323,12 @@ def replace_output(
         with conn:
             # Start before selection so concurrent changes cannot split the replacement.
             conn.execute("BEGIN IMMEDIATE")
+            if context_json is not None:
+                conn.execute(
+                    "CREATE TABLE IF NOT EXISTS model_context ("
+                    "election_id INTEGER PRIMARY KEY REFERENCES elections(id) "
+                    "ON DELETE CASCADE, payload_json TEXT NOT NULL)"
+                )
             has_uncertainty_table = _has_uncertainty_table(conn)
             if encoded is not None and not has_uncertainty_table:
                 raise UncertaintyStoreError(
@@ -357,6 +376,11 @@ def replace_output(
                     "(election_id, schema, national_json, regions_json, seats_json) "
                     "VALUES (?, ?, ?, ?, ?)",
                     (election_id, UNCERTAINTY_SCHEMA, *encoded),
+                )
+            if context_json is not None:
+                conn.execute(
+                    "INSERT INTO model_context (election_id, payload_json) "
+                    "VALUES (?, ?)", (election_id, context_json),
                 )
             if has_uncertainty_table:
                 _prune_detail(conn, scope)

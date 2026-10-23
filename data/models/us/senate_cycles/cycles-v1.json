@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "cycles": [
+    {
+      "id": "senate-2026-v1",
+      "target_year": 2026,
+      "effective_from": "2026-01-01",
+      "effective_until": "2027-01-01",
+      "regular_class": 2,
+      "regular_states": [
+        "Alabama",
+        "Alaska",
+        "Arkansas",
+        "Colorado",
+        "Delaware",
+        "Georgia",
+        "Idaho",
+        "Illinois",
+        "Iowa",
+        "Kansas",
+        "Kentucky",
+        "Louisiana",
+        "Maine",
+        "Massachusetts",
+        "Michigan",
+        "Minnesota",
+        "Mississippi",
+        "Montana",
+        "Nebraska",
+        "New Hampshire",
+        "New Jersey",
+        "New Mexico",
+        "North Carolina",
+        "Oklahoma",
+        "Oregon",
+        "Rhode Island",
+        "South Carolina",
+        "South Dakota",
+        "Tennessee",
+        "Texas",
+        "Virginia",
+        "West Virginia",
+        "Wyoming"
+      ],
+      "baseline_name": "2020 US Senate Election",
+      "baseline_id": "2020-us-senate",
+      "election_date": "2026-11-03T00:00:00-05:00",
+      "specials": [
+        {
+          "state": "Florida",
+          "seat_class": 3,
+          "baseline_id": "2022-us-senate"
+        },
+        {
+          "state": "Ohio",
+          "seat_class": 3,
+          "baseline_id": "2022-us-senate"
+        }
+      ],
+      "roster": {
+        "file": "roster-2026-v1.json",
+        "sha256": "13a0234b35cfb66b71aa245556322bca5d37488e3cd2341728fe43f302e6341d",
+        "provenance": "Snapshot of uselectionmaps/data/results/senate-current.json, verified 2026-10-23; the pre-election 2026 composition is held fixed for this configured nowcast cycle."
+      },
+      "control_policy": {
+        "id": "senate-2026-control-v1",
+        "vice_president": "republican",
+        "alignments": [
+          {
+            "state": "Maine",
+            "candidate": "Angus S. King, Jr.",
+            "caucus": "democrat"
+          },
+          {
+            "state": "Vermont",
+            "candidate": "Bernard Sanders",
+            "caucus": "democrat"
+          },
+          {
+            "state": "Nebraska",
+            "candidate": "Dan Osborn",
+            "caucus": null
+          }
+        ],
+        "provenance": "Explicit nowcast assumptions: King and Sanders caucus with Democrats; Osborn is unaligned; Republican vice president breaks a caucus tie."
+      },
+      "provenance": "Regular class and state slots from the versioned 2026 roster; 2026 Florida and Ohio special baselines from uselectionmaps/data/map-modes-shell.json. The 2028 field is configured without a post-2026 chamber roster or control policy."
+    },
+    {
+      "id": "senate-2028-v1",
+      "target_year": 2028,
+      "effective_from": "2027-01-01",
+      "effective_until": "2029-01-01",
+      "regular_class": 3,
+      "regular_states": [
+        "Alabama",
+        "Alaska",
+        "Arizona",
+        "Arkansas",
+        "California",
+        "Colorado",
+        "Connecticut",
+        "Florida",
+        "Georgia",
+        "Hawaii",
+        "Idaho",
+        "Illinois",
+        "Indiana",
+        "Iowa",
+        "Kansas",
+        "Kentucky",
+        "Louisiana",
+        "Maryland",
+        "Missouri",
+        "Nevada",
+        "New Hampshire",
+        "New York",
+        "North Carolina",
+        "North Dakota",
+        "Ohio",
+        "Oklahoma",
+        "Oregon",
+        "Pennsylvania",
+        "South Carolina",
+        "South Dakota",
+        "Utah",
+        "Vermont",
+        "Washington",
+        "Wisconsin"
+      ],
+      "baseline_name": "2022 US Senate Election",
+      "baseline_id": "2022-us-senate",
+      "election_date": "2028-11-07T00:00:00-05:00",
+      "specials": [],
+      "roster": null,
+      "control_policy": null,
+      "provenance": "Regular class and state slots from the versioned 2026 roster; 2026 Florida and Ohio special baselines from uselectionmaps/data/map-modes-shell.json. The 2028 field is configured without a post-2026 chamber roster or control policy."
+    }
+  ]
+}

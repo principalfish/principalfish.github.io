@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+<h2>US House: zero-error parity and error budget</h2>
+<p><a href="{{ url_for('home.home') }}">Console home</a></p>
+<form method="get"><label>As of <input type="date" name="as_of" value="{{ as_of }}" required></label> <button type="submit">Inspect</button></form>
+<p>60-day polling window; half-life 30 days; seat prior weight 1. This read-only diagnostic does not save a forecast or publish odds.</p>
+{% if parity %}<p><strong>Exact zero-error parity verified</strong> for {{ seat_count }} districts: recorded vote counts and winner flags equal the deterministic projection, in the same party order.</p>{% endif %}
+<p><strong>Provisional assumptions; calibration has not been accepted.</strong> {{ settings.assumption_label }}. Reported N is not automatically an effective likely-voter N. Sampling bases use the named-candidate fraction and explicit population/design adjustments. Aggregate estimates have no sample N or separate sampling term.</p>
+{% if error %}<p class="alert">Uncertainty unavailable: {{ error }}</p>{% endif %}
+</section>
+{% if budget %}
+<section class="card">
+<p>All SDs are percentage points before clamping and normalization. They are not outcome intervals. National references retain covariance from shared sources. National and state factors enter once; local polling and fallback errors follow alpha and any inherited parent graph. A single-party baseline is a data diagnostic, not a verified uncontested race or calibrated certainty.</p>
+<div class="table-wrap"><table><thead><tr><th>District / scope</th><th>Party</th><th>Alpha</th><th>National SD</th><th>State SD</th><th>Fallback race SD</th><th>Local floor SD</th><th>Sampling SD</th><th>Combined SD</th></tr></thead><tbody>
+{% for row in budget %}<tr><td>{{ row.seat }}{% if row.single_party_baseline %}<br>Single-party baseline{% endif %}</td><td>{{ row.party }}</td><td>{{ '%.2f'|format(row.alpha) if row.alpha is not none else 'N/A' }}</td><td>{{ '%.2f'|format(row.sd.national) }}</td><td>{{ '%.2f'|format(row.sd.state) }}</td><td>{{ '%.2f'|format(row.sd.race) }}</td><td>{{ '%.2f'|format(row.sd.local_floor) }}</td><td>{{ '%.2f'|format(row.sd.sampling) }}</td><td>{{ '%.2f'|format(row.combined_sd) }}</td></tr>{% endfor %}
+</tbody></table></div></section>
+<section class="card"><h3>Admitted evidence</h3><table><thead><tr><th>Poll</th><th>Kind</th><th>Population</th><th>Reported N</th><th>Effective decided N</th><th>Weight / named-candidate %</th><th>Source</th></tr></thead><tbody>{% for poll in polls %}<tr><td><a href="{{ url_for('polls.poll_detail', poll_id=poll.poll_id) }}">{{ poll.poll_id }}</a></td><td>{{ poll.kind }}</td><td>{{ poll.population or 'Unknown' }}</td><td>{{ poll.reported_n if poll.reported_n is not none else 'N/A (aggregate estimator)' }}</td><td>{{ '%.2f'|format(poll.effective_n) if poll.effective_n is not none else 'N/A' }}</td><td>{{ '%.2f'|format(poll.weight) }} / {{ '%.2f'|format(poll.decided_percent) }}</td><td>{{ poll.source }}</td></tr>{% endfor %}</tbody></table></section>
+{% endif %}
+{% endblock %}

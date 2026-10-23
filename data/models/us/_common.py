@@ -61,6 +61,15 @@ from config import DatabaseConfig
 from db import Database
 from electoral_votes import allocation_year, get_electoral_votes, positive_integer
 from model_support.history import HistoryRecomputationError
+from model_support.us_simulation import (
+    UsErrorConfig,
+    UsLocalAverage,
+    UsPollSnapshot,
+    UsSeatInput,
+    UsSimulationInputs,
+    build_us_simulation_inputs,
+    freeze_us_central_inputs,
+)
 from model_support.io import publish_json, validate_output_target
 from model_support.trends import (
     default_trend_path,
@@ -97,7 +106,7 @@ from model_support.summaries import (
     summarize_votes,
 )
 from models import Election, Map, Region, Vote
-from polls.importers.us.us_geography import parent_seat_name
+from polls.importers.us.us_geography import canonical_state, parent_seat_name
 from polls.importers.us.us_polls_common import (
     MAJOR_PARTY_NAMES,
     MatchupCandidate,
@@ -1770,6 +1779,8 @@ class SelectedPollWindow:
     seat_averages: dict[int, SeatPollAverage]
     national_contributors: tuple[LatestPollUsage, ...]
     seat_contributors: tuple[LatestPollUsage, ...]
+    national_evidence: tuple[PollReading, ...] = ()
+    seat_evidence: tuple[PollReading, ...] = ()
 
     @property
     def contributors(self) -> tuple[LatestPollUsage, ...]:
@@ -1819,10 +1830,13 @@ def collect_poll_window(
         source=source,
     )
     national_contributors: list[LatestPollUsage] = []
+    national_evidence: list[PollReading] = []
     weighted_sums, total_weights, _ = aggregate_national(
-        national_readings, scope.national_matchup, contributors=national_contributors
+        national_readings, scope.national_matchup, contributors=national_contributors,
+        evidence_contributors=national_evidence,
     )
     seat_contributors: list[LatestPollUsage] = []
+    seat_evidence: list[PollReading] = []
     seat_averages: dict[int, SeatPollAverage] = {}
     if include_seat_polls:
         seat_readings = (
@@ -1859,6 +1873,7 @@ def collect_poll_window(
             national_matchup=scope.national_matchup,
             policy=scope.seat_matchup_policy,
             contributors=seat_contributors,
+            evidence_contributors=seat_evidence,
         )
     return SelectedPollWindow(
         weighted_sums,
@@ -1866,6 +1881,8 @@ def collect_poll_window(
         seat_averages,
         tuple(national_contributors),
         tuple(seat_contributors),
+        tuple(national_evidence),
+        tuple(seat_evidence),
     )
 
 
@@ -2274,34 +2291,35 @@ def dates_to_run_for_cfg(
 # ── Orchestration ─────────────────────────────────────────────────────────────
 
 
-def run_simulation(
+@dataclass(frozen=True, slots=True)
+class PreparedUsProjection:
+    """One selected central estimator, shared by runs and scratch diagnostics."""
+
+    map_id: int
+    seats: list[SeatRef]
+    party_ids: tuple[int, ...]
+    party_name_by_id: dict[int, str]
+    seat_party_vote_totals: dict[int, dict[int, float]]
+    region_by_seat_id: dict[int, int | None]
+    region_swings: dict[int, dict[int, float]]
+    seat_swings: dict[int, dict[int, float]]
+    seat_averages: dict[int, SeatPollAverage]
+    projected_votes: list[dict[str, Any]]
+    region_diff_rows: list[dict[str, Any]]
+    winners_by_party: Counter[str]
+    latest_poll_usage: LatestPollUsage | None
+    popular_vote_seat_ids: set[int] | None
+    seat_poll_diagnostics: list[str]
+    poll_window: SelectedPollWindow
+
+
+def prepare_us_projection(
     db: Database,
     cfg: UsSimulationConfig,
     *,
     poll_window: SelectedPollWindow | None = None,
-) -> tuple[
-    str,
-    list[dict[str, Any]],
-    list[dict[str, Any]],
-    Counter[str],
-    LatestPollUsage | None,
-    dict[str, int],
-    list[str],
-]:
-    """Run one projection for a single ``as_of_date``.
-
-    Resolves scope, loads reference + baseline data, aggregates polls, computes
-    region swings, blends in each seat's own polls, projects seats, and (unless
-    dry-run) deletes any prior run for the date, persists the new model election,
-    and updates the trend JSON.
-
-    Returns ``(election_name, projected_votes, region_diff_rows, winners_by_party,
-    latest_poll_usage, electoral_votes_by_party, seat_poll_diagnostics)``.
-    ``electoral_votes_by_party`` is party-name → EV won, non-zero only for the
-    President, using the configured target's database allocation.
-    ``seat_poll_diagnostics`` holds the ``SEAT_POLL`` lines, returned rather than
-    printed so a 365-day backfill does not emit one per seat per day.
-    """
+) -> PreparedUsProjection:
+    """Prepare the existing deterministic result without any writes."""
     spec = cfg.spec
     poll_map, baseline = resolve_simulation_scope(db, spec)
     scope = resolve_poll_scope(db, spec)
@@ -2409,6 +2427,159 @@ def run_simulation(
         seat_poll_averages=seat_averages,
     )
 
+    return PreparedUsProjection(
+        poll_map.id, seats, tuple(party_universe), party_name_by_id,
+        seat_party_vote_totals, region_by_seat_id, region_swings, seat_swings,
+        seat_averages, projected_votes, region_diff_rows, winners_by_party,
+        latest_poll_usage, popular_vote_seat_ids, seat_poll_diagnostics, poll_window,
+    )
+
+
+def freeze_house_central_inputs(
+    prepared: PreparedUsProjection, cfg: UsSimulationConfig,
+) -> UsSimulationInputs:
+    """Check exact central parity independently of unresolved polling evidence.
+
+    This exposes no stochastic sources and does not waive evidence checks for
+    an uncertainty run. The ordinary central estimator needs no polling N.
+    """
+    if cfg.spec.election_type != "us_house_model":
+        raise ValueError("only the House adapter is enabled")
+    parties = prepared.party_ids
+    names = tuple(prepared.party_name_by_id.get(party, str(party)) for party in parties)
+    refs = {seat.id: seat for seat in prepared.seats}
+    parents = seat_parent_ids(prepared.seats)
+    frozen: list[UsSeatInput] = []
+    for seat_id, votes in prepared.seat_party_vote_totals.items():
+        turnout = sum(votes.values())
+        if turnout <= 0:
+            continue
+        ref = refs[seat_id]
+        state = canonical_state(ref.seat_name.split("-", 1)[0], allow_postal=True)
+        if state is None:
+            raise ValueError(f"cannot resolve House state for {ref.seat_name!r}")
+        baseline = baseline_shares_for_seat(votes)
+        swing = prepared.seat_swings.get(seat_id)
+        if swing is None:
+            swing = (
+                prepared.region_swings.get(ref.region_id, {})
+                if ref.region_id is not None else {}
+            )
+        average = prepared.seat_averages.get(seat_id)
+        active = (
+            average is not None and average.n_polls > 0 and average.total_weight > 0
+        )
+        broad = tuple(
+            has_baseline_party_support(votes, party, names[j])
+            for j, party in enumerate(parties)
+        )
+        eligible = tuple(
+            broad[j] or bool(active and average is not None and party in average.shares)
+            for j, party in enumerate(parties)
+        )
+        frozen.append(UsSeatInput(
+            seat_id=seat_id, name=ref.seat_name, state=state, turnout=turnout,
+            baseline=tuple(baseline.get(party, 0.0) for party in parties),
+            central_raw=tuple(
+                baseline.get(party, 0.0)
+                + (swing.get(party, 0.0) if eligible[j] else 0.0)
+                for j, party in enumerate(parties)
+            ),
+            broad_mask=broad, eligible=eligible, parent_id=parents.get(seat_id),
+            alpha=(
+                poll_blend_alpha(average.total_weight, cfg.seat_prior_weight)
+                if active and average is not None else 0.0
+            ),
+            single_party_baseline=sum(value > 0 for value in votes.values()) == 1,
+        ))
+    return freeze_us_central_inputs(
+        model="us-house", as_of_date=cfg.as_of_date, party_ids=parties,
+        party_names=names, seats=tuple(frozen), central_rows=prepared.projected_votes,
+    )
+
+
+def build_house_simulation_inputs(
+    prepared: PreparedUsProjection,
+    cfg: UsSimulationConfig,
+    error_config: UsErrorConfig,
+) -> UsSimulationInputs:
+    """Freeze actual selected evidence; reject unsupported contributors first."""
+    central = freeze_house_central_inputs(prepared, cfg)
+    window = prepared.poll_window
+    actual_ids = {usage.poll_id for usage in window.contributors}
+    evidence = {
+        poll.poll_id: poll
+        for poll in (*window.national_evidence, *window.seat_evidence)
+    }
+    if actual_ids != set(evidence):
+        raise ValueError("selected poll window lacks its admitted evidence snapshot")
+    snapshots = tuple(
+        UsPollSnapshot(
+            poll.poll_id, poll.seat_id, poll.weight, tuple(poll.shares.items()),
+            poll.evidence_kind, poll.population_type, poll.sample_size,
+            poll.evidence_source, poll.source_url,
+            fieldwork_start=poll.fieldwork_start, fieldwork_end=poll.fieldwork_end,
+            matchup=poll.matchup,
+        )
+        for poll in evidence.values()
+    )
+    averages = tuple(
+        UsLocalAverage(
+            seat.seat_id, seat.alpha,
+            tuple(prepared.seat_averages[seat.seat_id].shares.items()),
+        )
+        for seat in central.seats
+        if seat.seat_id in prepared.seat_averages
+        and prepared.seat_averages[seat.seat_id].n_polls > 0
+        and prepared.seat_averages[seat.seat_id].total_weight > 0
+    )
+    return build_us_simulation_inputs(
+        model=central.model, as_of_date=central.as_of_date,
+        party_ids=central.party_ids, party_names=central.party_names,
+        seats=central.seats, averages=averages, polls=snapshots,
+        config=error_config, central_rows=prepared.projected_votes,
+    )
+
+
+def run_simulation(
+    db: Database,
+    cfg: UsSimulationConfig,
+    *,
+    poll_window: SelectedPollWindow | None = None,
+) -> tuple[
+    str,
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    Counter[str],
+    LatestPollUsage | None,
+    dict[str, int],
+    list[str],
+]:
+    """Run one projection for a single ``as_of_date``.
+
+    Resolves scope, loads reference + baseline data, aggregates polls, computes
+    region swings, blends in each seat's own polls, projects seats, and (unless
+    dry-run) deletes any prior run for the date, persists the new model election,
+    and updates the trend JSON.
+
+    Returns ``(election_name, projected_votes, region_diff_rows, winners_by_party,
+    latest_poll_usage, electoral_votes_by_party, seat_poll_diagnostics)``.
+    ``electoral_votes_by_party`` is party-name → EV won, non-zero only for the
+    President, using the configured target's database allocation.
+    ``seat_poll_diagnostics`` holds the ``SEAT_POLL`` lines, returned rather than
+    printed so a 365-day backfill does not emit one per seat per day.
+    """
+    spec = cfg.spec
+    prepared = prepare_us_projection(db, cfg, poll_window=poll_window)
+    seats = prepared.seats
+    projected_votes = prepared.projected_votes
+    region_diff_rows = prepared.region_diff_rows
+    winners_by_party = prepared.winners_by_party
+    latest_poll_usage = prepared.latest_poll_usage
+    party_name_by_id = prepared.party_name_by_id
+    popular_vote_seat_ids = prepared.popular_vote_seat_ids
+    seat_poll_diagnostics = prepared.seat_poll_diagnostics
+
     election_name = _election_name_pattern(spec, cfg.as_of_date)
 
     # Electoral votes won per party (by name), non-zero only for the President.
@@ -2446,11 +2617,11 @@ def run_simulation(
     sqlite_path = database_file(db)
     validate_trend_scope(
         sqlite_path,
-        OutputScope(spec.election_type, poll_map.id, spec.election_name_prefix),
+        OutputScope(spec.election_type, prepared.map_id, spec.election_name_prefix),
     )
     persisted_name, persisted_election_id = persist_projection(
         spec,
-        poll_map.id,
+        prepared.map_id,
         cfg.as_of_date,
         election_name,
         projected_votes,
@@ -2467,7 +2638,7 @@ def run_simulation(
         seat_ev_by_id,
         popular_vote_seat_ids,
         sqlite_path=database_file(db),
-        map_id=poll_map.id,
+        map_id=prepared.map_id,
     )
 
     return (

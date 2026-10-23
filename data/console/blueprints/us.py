@@ -17,13 +17,29 @@ endpoints, registered from :data:`US_CHAMBERS` by :func:`_register_chamber_route
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import date, timedelta
 from pathlib import Path
+import sys
 from typing import Protocol
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
 
 from db import Database
+from model_support.us_simulation import UsErrorConfig, us_error_budget
+
+# The forecast runners are standalone modules; models.py owns the name models.
+_US_RUNNERS = Path(__file__).resolve().parents[2] / "models" / "us"
+if str(_US_RUNNERS) not in sys.path:
+    sys.path.insert(0, str(_US_RUNNERS))
+
+from _common import (
+    UsSimulationConfig,
+    build_house_simulation_inputs,
+    freeze_house_central_inputs,
+    prepare_us_projection,
+)
+from run_us_house_model import SPEC as HOUSE_SPEC
 
 from console.db import get_db
 from console.paths import EXPORT_ELECTION_SCRIPT
@@ -87,6 +103,67 @@ RUN_INTERRUPTED_NOTE = (
 )
 
 bp = Blueprint("us", __name__)
+
+
+@bp.route("/us/house/uncertainty/budget")
+def house_uncertainty_budget() -> ResponseReturnValue:
+    """Read-only central parity and provisional sampling diagnostics."""
+    try:
+        as_of = date.fromisoformat(request.args.get("as_of", date.today().isoformat()))
+        if as_of.isoformat() != request.args.get("as_of", as_of.isoformat()):
+            raise ValueError("as_of must be YYYY-MM-DD")
+    except ValueError:
+        abort(400, "as_of must be YYYY-MM-DD")
+    cfg = UsSimulationConfig(
+        spec=HOUSE_SPEC, as_of_date=as_of, since_date=as_of - timedelta(days=60),
+        half_life_days=30.0, dry_run=True,
+    )
+    settings = UsErrorConfig(
+        "Provisional sampling-only diagnostic: reported named-candidate fraction; "
+        "design effect 1, population adjustments 1; no accepted systematic scales",
+    )
+    parity = False
+    error: str | None = None
+    budget: list[dict[str, object]] = []
+    polls: list[dict[str, object]] = []
+    seat_count = 0
+    try:
+        prepared = prepare_us_projection(get_db(), cfg)
+        central = freeze_house_central_inputs(prepared, cfg)
+        parity = True
+        seat_count = len(central.seats)
+        try:
+            inputs = build_house_simulation_inputs(prepared, cfg, settings)
+        except ValueError as exc:
+            error = str(exc)
+        else:
+            budget = us_error_budget(inputs)
+            effective_n = {
+                source.poll_id: source.n_eff
+                for source in inputs.sources if source.kind == "sampling"
+            }
+            polls = [
+                {
+                    "poll_id": poll.poll_id, "kind": poll.evidence_kind,
+                    "population": poll.population_type,
+                    "effective_n": effective_n.get(poll.poll_id),
+                    "weight": poll.weight,
+                    "decided_percent": sum(share for _, share in poll.shares),
+                    "reported_n": (
+                        poll.sample_size
+                        if poll.evidence_kind == "individual_poll" else None
+                    ),
+                    "source": poll.evidence_source or poll.source_url,
+                }
+                for poll in inputs.polls
+            ]
+    except ValueError as exc:
+        error = str(exc)
+    return render_template(
+        "us_uncertainty_budget.html", title="US House uncertainty diagnostics",
+        as_of=as_of, parity=parity, seat_count=seat_count, error=error,
+        budget=budget, polls=polls, settings=settings,
+    )
 
 
 @bp.route("/us/run-models", methods=["POST"])

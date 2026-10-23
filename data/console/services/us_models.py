@@ -22,8 +22,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from sqlalchemy import select
+
+from config import DatabaseConfig
 from db import Database
-from models import ElectionType
+from model_support.persistence import (
+    OutputScope, UncertaintyStoreError, latest_saved_run, load_uncertainty,
+    uncertainty_status,
+)
+from model_support.us_release import HOUSE_RELEASE, UsReleaseError, house_release
+from model_support.us_replay import raw_detail_available, us_raw_path
+from models import ElectionType, Map
 
 from console.paths import (
     EXPORT_ELECTION_SCRIPT,
@@ -38,9 +47,54 @@ from console.services.runner import run_python_script
 
 STEP_TIMEOUT_SECONDS = 300
 
-# A rebuild recomputes one projection per day of trend history, and the runner
-# deletes the old points before it starts, so a timeout there leaves history
-# half-written rather than merely stale. The shipped President series already
+
+def house_uncertainty_status(
+    db: Database,
+    *,
+    map_name: str = "US House Districts 2024",
+    release_path: Path = HOUSE_RELEASE,
+) -> dict[str, object]:
+    """Present release and retention state without starting a model or loading draws."""
+    try:
+        release = house_release(release_path)
+        blockers = list(release.blockers)
+        enabled = release.enabled
+    except UsReleaseError as exc:
+        blockers, enabled = [str(exc)], False
+    result: dict[str, object] = {
+        "enabled": enabled, "blockers": blockers, "stored_runs": 0,
+        "latest_run": None, "detail_run": None, "raw_available": False,
+    }
+    with db.session() as session:
+        map_id = session.scalar(select(Map.id).where(Map.name == map_name))
+    if map_id is None:
+        return result
+    scope = OutputScope("us_house_model", map_id, "US House UNS")
+    sqlite_path = Path(str(db.engine.url.database))
+    latest = latest_saved_run(sqlite_path, scope)
+    result["latest_run"] = latest[0] if latest else None
+    try:
+        status = uncertainty_status(sqlite_path, scope)
+        stored = load_uncertainty(sqlite_path, latest[0]) if latest else None
+    except UncertaintyStoreError as exc:
+        result["error"] = str(exc)
+        return result
+    if status is not None:
+        result["stored_runs"] = status.stored_runs
+        result["detail_run"] = (
+            status.detail_run.election_id if status.detail_run else None
+        )
+    if stored is not None:
+        raw_path = us_raw_path(
+            Path(DatabaseConfig.from_env().simulations_path), "house",
+        )
+        result["raw_available"] = raw_detail_available(raw_path, stored)
+    return result
+
+
+# A rebuild replaces each historical date only after recomputation succeeds.
+# A timeout can leave some dates refreshed while others retain their old values.
+# The shipped President series already
 # spans ~21 months (December 2024 onwards) and only grows; at an estimated few
 # hundred milliseconds to a couple of seconds per day (each day re-reads the
 # map's polls and writes a full projection), that is several minutes today and

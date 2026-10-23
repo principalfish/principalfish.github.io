@@ -159,6 +159,8 @@ def run_size(national: Mapping[str, object]) -> tuple[int, float]:
     Raises:
         PublicUncertaintyError: Either is missing or out of range.
     """
+    if national.get("schema") == "pf-us-model-uncertainty-v1":
+        raise PublicUncertaintyError("US summaries require the US public adapter")
     simulations = _count(national.get("simulations"), "national.simulations")
     interval = _number(national.get("interval"), "national.interval")
     if simulations == 0 or not 0.0 < interval < 1.0:

@@ -61,6 +61,7 @@ from console.services.us_matchups import (
     set_national_matchup,
 )
 from console.services.us_models import (
+    house_uncertainty_status,
     EXPORT_STEP_LABEL,
     US_CHAMBERS,
     US_CHAMBERS_BY_SLUG,
@@ -122,6 +123,18 @@ def uncertainty_calibration(chamber: str) -> ResponseReturnValue:
         "us_uncertainty_calibration.html",
         title=f"US {chamber.title()} uncertainty calibration",
         chamber=chamber, report=report, error=error,
+    )
+
+
+@bp.route("/us/house/uncertainty")
+def house_uncertainty_hub() -> ResponseReturnValue:
+    return render_template(
+        "us_uncertainty_hub.html", title="US House uncertainty",
+        status=house_uncertainty_status(
+            get_db(), map_name=HOUSE_SPEC.map_name,
+            release_path=HOUSE_SPEC.uncertainty_release_config
+            or Path(__file__).resolve().parents[2] / "models/us/house-release.json",
+        ),
     )
 
 

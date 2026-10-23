@@ -334,6 +334,9 @@ def _trend_uncertainty(
         for election_id, national in iter_national_blocks(conn, scope):
             if election_id not in election_ids:
                 continue
+            if national.get("schema") == "pf-us-model-uncertainty-v1":
+                # US trends retain their legacy central contract until activated.
+                continue
             if _unpolled(national):
                 unpolled.add(election_id)
             try:

@@ -45,7 +45,7 @@ import re
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable, Literal
@@ -74,7 +74,17 @@ from model_support.us_simulation import (
     UsSimulationInputs,
     build_us_simulation_inputs,
     freeze_us_central_inputs,
+    run_us_simulations,
+    UsSimulationRun,
 )
+from model_support.us_release import (
+    HOUSE_RELEASE,
+    UsReleaseError,
+    house_release,
+    house_target_cycle,
+)
+from model_support.us_run import house_context, house_payload, json_data
+from model_support.us_replay import stage_us_draws, us_raw_path
 from model_support.io import publish_json, validate_output_target
 from model_support.trends import (
     default_trend_path,
@@ -85,9 +95,11 @@ from model_support.trends import (
 from model_support.persistence import (
     OutputScope,
     OutputVote,
+    UncertaintyPayload,
     delete_outputs,
     output_dates,
     replace_output,
+    latest_saved_run,
 )
 from model_support.cli import (
     single_date_window,
@@ -207,6 +219,7 @@ class UsModelSpec:
     target_election_year: int | None = None
     senate_cycle_config: Path | None = None
     senate_cycle: SenateCycle | None = None
+    uncertainty_release_config: Path | None = None
 
 
 def spec_for_date(spec: UsModelSpec, as_of: date) -> UsModelSpec:
@@ -254,11 +267,23 @@ class UsSimulationConfig:
     ignore_seat_polls: bool = False
     target_election_year: int | None = None
 
+    simulations: int | None = None
+    no_uncertainty: bool = False
+    keep_raw: bool = True
+
     def __post_init__(self) -> None:
         self.spec = spec_for_date(self.spec, self.as_of_date)
         validate_half_life(self.half_life_days)
         validate_prior_weight(self.seat_prior_weight)
         validate_date_window(self.since_date, self.as_of_date)
+        if self.simulations is not None and (
+            type(self.simulations) is not int or not 1 <= self.simulations <= 1_000_000
+        ):
+            raise ValueError("--simulations must be an integer in [1, 1000000]")
+        if self.simulations is not None and self.no_uncertainty:
+            raise ValueError("--simulations cannot be combined with --no-uncertainty")
+        if self.simulations is not None and self.spec.election_type != "us_house_model":
+            raise ValueError("uncertainty runner is currently enabled only for House")
         if self.spec.election_type == "us_presidential_model":
             self.target_election_year = allocation_year(
                 self.spec.election_type,
@@ -2145,6 +2170,7 @@ def persist_projection(
     sqlite_path: Path | None = None,
     *,
     target_election_year: int | None = None,
+    uncertainty: UncertaintyPayload | None = None,
 ) -> tuple[str, int]:
     """Replace this model/map/date and all its vote rows in one transaction.
 
@@ -2179,6 +2205,7 @@ def persist_projection(
             for row in recorded_vote_rows(projected_votes)
         ),
         target_election_year=target_election_year,
+        uncertainty=uncertainty,
         model_context=(
             senate_cycle_snapshot(spec.senate_cycle)
             if spec.senate_cycle is not None else None
@@ -2569,6 +2596,79 @@ def build_house_simulation_inputs(
     )
 
 
+def _house_uncertainty(
+    prepared: PreparedUsProjection, cfg: UsSimulationConfig,
+) -> tuple[UncertaintyPayload, UsSimulationRun] | None:
+    # Calibration shares the deterministic adapters in this module. Defer the
+    # numerical conversion import to avoid a module-initialization cycle.
+    from model_support.us_calibration import national_source_scale
+
+    if cfg.no_uncertainty or cfg.spec.election_type != "us_house_model":
+        return None
+    release = house_release(cfg.spec.uncertainty_release_config or HOUSE_RELEASE)
+    if not release.enabled and cfg.simulations is None:
+        return None
+    release.require_enabled()
+    state = release.state
+    if (
+        cfg.spec.map_name != state["map_name"]
+        or cfg.spec.baseline_election_name != state["baseline_name"]
+        or house_target_cycle(cfg.as_of_date) != state["target_cycle"]
+    ):
+        raise UsReleaseError(
+            "House release geography, baseline or cycle mismatches run",
+        )
+    config = release.error_config()
+    inputs = build_house_simulation_inputs(prepared, cfg, config)
+    national = next(source for source in inputs.sources if source.kind == "national")
+    try:
+        dem = inputs.party_names.index("Democratic")
+        rep = inputs.party_names.index("Republican")
+    except ValueError as exc:
+        raise ValueError(
+            "House national error requires Democratic/Republican inputs",
+        ) from exc
+    # The calibration contrast is D-minus-R; the deterministic party order is
+    # retained for exact winner/tie parity, including when IDs order differently.
+    shape = (national.proportions[dem], national.proportions[rep], *(
+        value for j, value in enumerate(national.proportions) if j not in (dem, rep)
+    ))
+    scale = national_source_scale(
+        float(release.calibration["national_margin_sigma"]), shape,
+    )
+    inputs = replace(
+        inputs, config=replace(config, national_scale=scale),
+        sources=tuple(replace(source, scale=scale) if source.kind == "national"
+                      else source for source in inputs.sources),
+    )
+    options: dict[str, object] = {
+        "lookback_days": (cfg.as_of_date - cfg.since_date).days,
+        "half_life_days": cfg.half_life_days,
+        "seat_prior_weight": cfg.seat_prior_weight,
+        "ignore_seat_polls": cfg.ignore_seat_polls,
+        "seat_matchup_policy": cfg.spec.seat_matchup_policy,
+        "baseline_name": cfg.spec.baseline_election_name,
+    }
+    context = house_context(
+        inputs, map_id=prepared.map_id, target_cycle=int(state["target_cycle"]),
+        options=options, comparability_id=str(state["comparability_id"]),
+    )
+    if cfg.dry_run:
+        return None
+    run = run_us_simulations(inputs, simulations=cfg.simulations or 10_000)
+    return house_payload(
+        run, context, options=options, provenance={
+            "release": dict(state), "calibration": dict(release.calibration),
+            "selected_polls": json_data([
+                asdict(poll) for poll in (
+                    *prepared.poll_window.national_evidence,
+                    *prepared.poll_window.seat_evidence,
+                )
+            ]),
+        },
+    ), run
+
+
 def run_simulation(
     db: Database,
     cfg: UsSimulationConfig,
@@ -2633,6 +2733,8 @@ def run_simulation(
     for party_id, electoral_votes in summary.electoral_votes_by_party.items():
         ev_by_party[party_name_by_id.get(party_id, str(party_id))] += electoral_votes
 
+    uncertainty = _house_uncertainty(prepared, cfg)
+
     if cfg.dry_run:
         return (
             election_name,
@@ -2649,16 +2751,38 @@ def run_simulation(
         sqlite_path,
         OutputScope(spec.election_type, prepared.map_id, spec.election_name_prefix),
     )
-    persisted_name, persisted_election_id = persist_projection(
-        spec,
-        prepared.map_id,
-        cfg.as_of_date,
-        election_name,
-        projected_votes,
-        party_name_by_id,
-        sqlite_path,
-        target_election_year=cfg.target_election_year,
+    output_scope = OutputScope(
+        spec.election_type, prepared.map_id, spec.election_name_prefix,
     )
+    latest = latest_saved_run(sqlite_path, output_scope)
+    staged = None
+    if uncertainty is not None and cfg.keep_raw and (
+        latest is None or cfg.as_of_date >= latest[1]
+    ):
+        raw_path = us_raw_path(
+            Path(DatabaseConfig.from_env().simulations_path), "house",
+        )
+        validate_output_target(raw_path, database=sqlite_path)
+        if any(raw_path.resolve() == path.resolve() for path in (
+            spec.trend_cache_json, spec.trend_cache_meta_json,
+            Path(DatabaseConfig.from_env().simulations_path),
+        )):
+            raise ValueError("House raw destination overlaps a protected output")
+        staged = stage_us_draws(raw_path, uncertainty[1], uncertainty[0])
+    try:
+        persisted_name, persisted_election_id = persist_projection(
+            spec, prepared.map_id, cfg.as_of_date, election_name, projected_votes,
+            party_name_by_id, sqlite_path,
+            target_election_year=cfg.target_election_year,
+            uncertainty=uncertainty[0] if uncertainty is not None else None,
+        )
+        if staged is not None and latest_saved_run(sqlite_path, output_scope) == (
+            persisted_election_id, cfg.as_of_date,
+        ):
+            staged.publish(persisted_election_id)
+    finally:
+        if staged is not None:
+            staged.discard()
     update_trend_cache_json(
         spec,
         persisted_election_id,
@@ -2852,6 +2976,11 @@ def run_retrospective_range(
                     seat_prior_weight=args.seat_prior_weight,
                     ignore_seat_polls=args.ignore_seat_polls,
                     target_election_year=getattr(args, "target_election_year", None),
+                    simulations=getattr(args, "simulations", None),
+                    no_uncertainty=getattr(args, "no_uncertainty", False),
+                    keep_raw=(
+                        current == end_date and not getattr(args, "no_raw_sims", False)
+                    ),
                 )
                 election_name, projected_votes, _, _, _, _, _ = run_simulation(db, cfg)
                 success_count += 1
@@ -2920,6 +3049,9 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
     parser.add_argument(
         "--dry-run", action="store_true", help="Compute without database or file writes"
     )
+    parser.add_argument("--simulations", type=int, default=None)
+    parser.add_argument("--no-uncertainty", action="store_true")
+    parser.add_argument("--no-raw-sims", action="store_true")
     # Single-date flags
     parser.add_argument(
         "--as-of-date", default=None, help="Upper-bound poll date (YYYY-MM-DD)"
@@ -2984,6 +3116,9 @@ def _build_config_from_args(spec: UsModelSpec, args: argparse.Namespace) -> UsSi
         seat_prior_weight=args.seat_prior_weight,
         ignore_seat_polls=args.ignore_seat_polls,
         target_election_year=getattr(args, "target_election_year", None),
+        simulations=getattr(args, "simulations", None),
+        no_uncertainty=getattr(args, "no_uncertainty", False),
+        keep_raw=not getattr(args, "no_raw_sims", False),
     )
 
 
@@ -3151,6 +3286,19 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
                 )
     try:
         validate_run_arguments(args, date.today())
+        if args.simulations is not None:
+            if not 1 <= args.simulations <= 1_000_000:
+                raise ValueError("--simulations must be in [1, 1000000]")
+            if args.no_uncertainty:
+                raise ValueError(
+                    "--simulations cannot be combined with --no-uncertainty",
+                )
+            if spec.election_type != "us_house_model":
+                raise ValueError(
+                    "uncertainty runner is currently enabled only for House",
+                )
+            release_path = spec.uncertainty_release_config or HOUSE_RELEASE
+            house_release(release_path).require_enabled()
     except ValueError as err:
         parser.error(str(err))
     db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
@@ -3201,6 +3349,9 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             seat_prior_weight=cfg.seat_prior_weight,
             ignore_seat_polls=cfg.ignore_seat_polls,
             target_election_year=cfg.target_election_year,
+            simulations=cfg.simulations,
+            no_uncertainty=cfg.no_uncertainty,
+            keep_raw=cfg.keep_raw,
         )
 
     lookback_days = max(0, (cfg.as_of_date - cfg.since_date).days)
@@ -3261,6 +3412,9 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
                 seat_prior_weight=cfg.seat_prior_weight,
                 ignore_seat_polls=cfg.ignore_seat_polls,
                 target_election_year=cfg.target_election_year,
+                simulations=cfg.simulations,
+                no_uncertainty=cfg.no_uncertainty,
+                keep_raw=cfg.keep_raw and run_date == run_dates[-1],
             )
             (
                 election_name,
@@ -3316,12 +3470,23 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             seat_prior_weight=cfg.seat_prior_weight,
             ignore_seat_polls=cfg.ignore_seat_polls,
             target_election_year=cfg.target_election_year,
+            simulations=cfg.simulations,
+            no_uncertainty=cfg.no_uncertainty,
+            keep_raw=False,
         )
         _, _, _, _, latest_poll_usage, _, _ = run_simulation(
             db, meta_cfg, poll_window=selected_polls
         )
 
-    if not cfg.dry_run:
+    latest_meta_run = latest_saved_run(
+        database_file(db),
+        OutputScope(
+            spec.election_type, _output_map_id(db, spec), spec.election_name_prefix,
+        ),
+    ) if not cfg.dry_run else None
+    if not cfg.dry_run and (
+        latest_meta_run is None or latest_meta_run[1] <= cfg.as_of_date
+    ):
         write_trend_cache_meta(
             spec,
             cfg.as_of_date,

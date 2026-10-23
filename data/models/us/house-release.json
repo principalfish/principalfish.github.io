@@ -1,0 +1,15 @@
+{
+  "schema": "pf-us-house-release-v1",
+  "enabled": false,
+  "geography_validated": false,
+  "target_cycle": 2026,
+  "map_name": "US House Districts 2024",
+  "baseline_name": "2024 US House Election",
+  "comparability_id": "house-held-today-v1",
+  "calibration_file": "calibration/house-candidate.json",
+  "blockers": [
+    "Resolve the target-cycle House map and baseline before enabling production odds",
+    "Explicitly accept the calibration and its labelled assumptions",
+    "Repair missing metadata and actual contributing sample sizes before uncertainty runs"
+  ]
+}

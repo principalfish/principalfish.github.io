@@ -557,6 +557,9 @@ class UsSimulationRun:
     vote_totals: IntArray
     winners: IntArray
     seed: int
+    seat_share_ranges: FloatArray
+    seat_share_histograms: IntArray
+    interval: float
 
 
 def run_us_simulations(
@@ -565,6 +568,7 @@ def run_us_simulations(
     simulations: int,
     chunk_size: int = 1000,
     seed: int | None = None,
+    interval: float = 0.9,
 ) -> UsSimulationRun:
     """Run a bounded scratch calculation without persistence or publication."""
     if type(simulations) is not int or not 1 <= simulations <= 1_000_000:
@@ -573,15 +577,34 @@ def run_us_simulations(
         raise ValueError("chunk_size must be an integer in [1, 10000]")
     if simulations * len(inputs.seats) > 100_000_000:
         raise ValueError("scratch simulation output exceeds resource bound")
+    if not math.isfinite(interval) or not 0 < interval < 1:
+        raise ValueError("interval must be in (0, 1)")
+    share_bytes = simulations * len(inputs.seats) * len(inputs.party_ids) * 4
+    if share_bytes > 256 * 1024**2:
+        raise ValueError(
+            "US per-race summary samples exceed the 256 MiB resource limit; "
+            "lower --simulations",
+        )
+    retained_bytes = share_bytes + simulations * (
+        len(inputs.seats) * 8 + len(inputs.party_ids) * 16
+    )
+    if retained_bytes > 512 * 1024**2:
+        raise ValueError("US simulation arrays exceed 512 MiB; lower --simulations")
     assert_zero_error_parity(inputs)
     streams = UsErrorStreams(inputs, seed)
     k = len(inputs.party_ids)
     winners = np.empty((simulations, len(inputs.seats)), dtype=np.int64)
     seat_totals = np.zeros((simulations, k), dtype=np.int64)
     vote_totals = np.zeros((simulations, k), dtype=np.int64)
+    # Float32 is sufficient for the persisted two-decimal share bands. Only
+    # compact ranges/histograms survive; raw replay retains exact float64 errors.
+    share_samples = np.empty(
+        (simulations, len(inputs.seats), k), dtype=np.float32,
+    )
     for start in range(0, simulations, chunk_size):
         stop = min(start + chunk_size, simulations)
         projection = project_us_seats(inputs, streams.draw(inputs, stop - start))
+        share_samples[start:stop] = projection.shares
         winners[start:stop] = projection.winners
         vote_totals[start:stop] = projection.votes.sum(axis=1)
         for party_index in range(k):
@@ -589,9 +612,18 @@ def run_us_simulations(
                 projection.winners == party_index
             ).sum(axis=1)
     central = project_us_seats(inputs, np.zeros((1, len(inputs.seats), k)))
+    quantiles = [(1 - interval) / 2, 0.5, (1 + interval) / 2]
+    share_ranges = np.empty((3, len(inputs.seats), k), dtype=np.float64)
+    histograms = np.empty((len(inputs.seats), k, 101), dtype=np.int64)
+    for i in range(len(inputs.seats)):
+        share_ranges[:, i] = np.quantile(share_samples[:, i], quantiles, axis=0)
+        for j in range(k):
+            bins = np.floor(share_samples[:, i, j]).astype(np.int64)
+            histograms[i, j] = np.bincount(bins, minlength=101)
     return UsSimulationRun(
         inputs, central, seat_totals, vote_totals, winners,
         inputs.seed if seed is None else seed,
+        share_ranges, histograms, interval,
     )
 
 

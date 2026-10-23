@@ -98,6 +98,9 @@ def model_uncertainty_export(
     """
     if stored is None:
         return ModelUncertaintyExport(None, None)
+    if stored.schema != "pf-model-uncertainty-v1":
+        # This exporter is scoped to Westminster; US sidecars have their own adapter.
+        return ModelUncertaintyExport(None, None)
     bands = None if stored.seats is None else seat_bands(stored.seats)
     document = (
         None

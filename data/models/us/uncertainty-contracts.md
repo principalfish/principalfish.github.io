@@ -1,7 +1,8 @@
 # US uncertainty boundary contracts
 
-These contracts describe held-today simulations. They are not connected to the
-production readers or writers yet. Golden files under
+These contracts describe held-today simulations. House storage, replay and schema
+dispatch are implemented behind the explicit production release gate. US public
+sidecars and trends remain pending activation. Golden files under
 `data/tests/fixtures/us_uncertainty/` use **synthetic party/map identifiers and
 results**, not calibrated forecasts. Fingerprints in fixtures are illustrative;
 production producers must hash the canonical frozen input, not assign a label.
@@ -137,8 +138,9 @@ array remains readable without this envelope.
 
 ## Reader dispatch before the first US write
 
-The modules added here are intentionally not imported by these production
-readers. The following changes must land together before US persistence is on:
+House storage dispatch now recognizes the US schema before invoking any legacy
+reader. The following boundaries also describe the remaining model and public
+activation work:
 
 | Reader/writer | Required dispatch |
 |-|-|
@@ -153,3 +155,48 @@ readers. The following changes must land together before US persistence is on:
 The summary-validator tests leave legacy Westminster validators unchanged and
 exercise their existing format directly. Full old/new storage and stale-cache
 integration tests are mandatory when dispatch is enabled.
+
+## House private replay and retained race detail
+
+The stored national document's `private.schema` is `pf-us-source-replay-v1`.
+It contains the complete frozen source graph, polling evidence and candidate
+readings, baseline shares/turnout, ordered party and race labels, central rows,
+configuration, release decision, central options, seed and budget. The
+`artifact_id` hashes context/result identity, summary and all private values
+except that hash itself. Every date retains this snapshot after race detail is
+pruned. Replay never resolves today's configuration, map or matchup.
+
+The retained seat block is `pf-us-race-summary-v1`, with explicit model, context,
+result identity, simulation count and interval. Its `seats` mapping contains
+party win probabilities, central share, three-value share ranges and 101-bin
+share histograms. Histogram index `i` counts `[i,i+1)` percent for 0–99; index
+100 counts exactly 100%. Quantiles use temporary float32 share samples and
+float64 quantile calculations, rounded to two decimals. These compact bands and
+histograms are stored even with `--no-raw-sims`. Deterministic central rows and
+raw replay retain their existing exact integer counts and float64 errors.
+
+The raw archive is `pf-us-source-draws-v1` at `us-house-latest.npz` beside
+`SIMULATIONS_PATH`. All bulk arrays are staged before SQLite replacement;
+after commit a small election-ID member binds the archive before atomic
+publication. Reads require matching election ID, model, map, context/date,
+kernel and artifact fingerprint. Publication failures preserve the old file,
+which is rejected for a changed saved run. Older reruns cannot replace newer
+archives or metadata. Detail pruning is isolated by model/map/name-prefix.
+
+Per-race summary sample allocation is capped at 256 MiB, retained numerical
+arrays at 512 MiB, and staged raw arrays at 1 GB. These checks precede their
+allocations and persistence. Lower the simulation count when a summary bound
+is reached, or use `--no-raw-sims` for the raw-only bound. Dry runs validate
+inputs but draw no simulations and write no files or DDL.
+
+`house-release.json` must explicitly enable release, attest target geography,
+name the baseline/map/cycle and reference accepted, labelled calibration.
+Committed production settings remain disabled while geography and calibration
+are unresolved. An explicit `--simulations` request reports the blockers;
+ordinary runs preserve central-only operation while gated, and
+`--no-uncertainty` always selects the central estimator.
+
+House targets roll forward on 1 January of each odd year: dates in 2025–2026
+use the 2026 field, and dates in 2027–2028 use the 2028 field. A release approved
+for one target cannot be reused for another; each requires approved geography
+and calibration.

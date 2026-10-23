@@ -2596,6 +2596,55 @@ def build_house_simulation_inputs(
     )
 
 
+def house_central_diagnostics(
+    prepared: PreparedUsProjection, cfg: UsSimulationConfig,
+) -> dict[str, object]:
+    """Retain actual central blend inputs before later database changes."""
+    parents = seat_parent_ids(prepared.seats)
+    rows: dict[str, object] = {}
+    for seat in freeze_house_central_inputs(prepared, cfg).seats:
+        region_id = prepared.region_by_seat_id.get(seat.seat_id)
+        region = prepared.region_swings.get(region_id, {}) if region_id else {}
+        inherited = prepared.seat_swings.get(parents.get(seat.seat_id, -1))
+        fallback = inherited if inherited is not None else region
+        average = prepared.seat_averages.get(seat.seat_id)
+        active = (
+            average is not None and average.n_polls > 0 and average.total_weight > 0
+        )
+        parties: dict[str, object] = {}
+        for j, party in enumerate(prepared.party_ids):
+            broad = fallback.get(party, 0.0) if seat.broad_mask[j] else 0.0
+            target = average.shares.get(party, 0.0) if active and average else None
+            keeps_fallback = bool(
+                active and average and party not in average.shares
+                and is_others_party(prepared.party_name_by_id.get(party, ""))
+            )
+            local = (
+                seat.alpha * (float(target) - seat.baseline[j])
+                if target is not None and not keeps_fallback else 0.0
+            )
+            broad_contribution = broad * (
+                1.0 if keeps_fallback else 1.0 - seat.alpha
+            )
+            if not math.isclose(
+                broad_contribution + local,
+                seat.central_raw[j] - seat.baseline[j], abs_tol=1e-10,
+            ):
+                raise ValueError("House central diagnostics differ from actual swing")
+            parties[str(party)] = {
+                "region_swing": region.get(party, 0.0),
+                "inherited_swing": (
+                    inherited.get(party, 0.0) if inherited is not None else None
+                ),
+                "fallback": broad, "local_average": target,
+                "fallback_contribution": broad_contribution,
+                "local_contribution": local,
+                "central_change": seat.central_raw[j] - seat.baseline[j],
+            }
+        rows[str(seat.seat_id)] = {"parties": parties, "alpha": seat.alpha}
+    return {"schema": "pf-us-central-diagnostics-v1", "seats": rows}
+
+
 def _house_uncertainty(
     prepared: PreparedUsProjection, cfg: UsSimulationConfig,
 ) -> tuple[UncertaintyPayload, UsSimulationRun] | None:
@@ -2659,6 +2708,7 @@ def _house_uncertainty(
     return house_payload(
         run, context, options=options, provenance={
             "release": dict(state), "calibration": dict(release.calibration),
+            "central_diagnostics": house_central_diagnostics(prepared, cfg),
             "selected_polls": json_data([
                 asdict(poll) for poll in (
                     *prepared.poll_window.national_evidence,

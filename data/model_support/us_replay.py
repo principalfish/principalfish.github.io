@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import zipfile
+import zlib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from io import BytesIO
@@ -144,31 +146,10 @@ class UsDraws:
 
 def raw_detail_available(path: Path, stored: StoredUncertainty) -> bool:
     """Check identity using only small metadata members, without loading draws."""
-    if stored.schema != US_STORED_SCHEMA or stored.seats is None:
-        return False
     try:
-        with np.load(path, allow_pickle=False) as archive:
-            header = json.loads(str(archive["header"].item()))
-            election_id = archive["election_id"]
-        context = validate_document(header["document"], public=False)
-        restore_run_inputs(header["document"])
-        if header.get("schema") != US_RAW_SCHEMA:
-            return False
-        private = header["document"]["private"]
-        expected = stored.national["private"]
-        if not isinstance(expected, Mapping):
-            return False
-        return bool(
-            election_id.shape == () and election_id.dtype.kind == "i"
-            and int(election_id.item()) == stored.election_id
-            and context == validate_document(stored.national, public=False)
-            and private["artifact_id"] == expected["artifact_id"]
-            and private["artifact_id"] == fingerprint([
-                header["document"]["result_identity"], header["document"]["summary"],
-                {key: value for key, value in private.items() if key != "artifact_id"},
-            ])
-        )
-    except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile):
+        read_us_draw_rows(path, stored)
+        return True
+    except ValueError:
         return False
 
 
@@ -231,7 +212,7 @@ def load_us_draws(path: Path, stored: StoredUncertainty) -> UsDraws:
             inputs, document, arrays["errors"], arrays["votes"], arrays["winners"],
             arrays["seat_totals"], arrays["vote_totals"], private["seed"],
         )
-    except (OSError, KeyError, TypeError, zipfile.BadZipFile) as exc:
+    except (OSError, KeyError, TypeError, zipfile.BadZipFile, zlib.error) as exc:
         raise ValueError(f"cannot read US simulation archive: {exc}") from exc
 
 
@@ -240,6 +221,187 @@ class UsReplayedSimulation:
     projection: UsProjection
     errors: FloatArray
     central: UsProjection
+
+
+@dataclass(frozen=True, slots=True)
+class UsDrawMetadata:
+    """Validated identity and dimensions, without allocating any draw cubes."""
+
+    inputs: UsSimulationInputs
+    document: Mapping[str, Any]
+    simulations: int
+    seed: int
+
+
+def _array_header(
+    archive: zipfile.ZipFile, name: str,
+) -> tuple[tuple[int, ...], np.dtype[Any], int]:
+    with archive.open(f"{name}.npy") as handle:
+        if np.lib.format.read_magic(handle) != (1, 0):
+            raise ValueError("unsupported US raw array format")
+        shape, fortran, dtype = np.lib.format.read_array_header_1_0(handle)
+        offset = handle.tell()
+    if fortran or dtype.hasobject:
+        raise ValueError("unsupported US raw array layout")
+    if archive.getinfo(f"{name}.npy").file_size != (
+        offset + int(np.prod(shape, dtype=object)) * dtype.itemsize
+    ):
+        raise ValueError(f"invalid US raw {name} size")
+    return shape, dtype, offset
+
+
+def _small_array(archive: zipfile.ZipFile, name: str) -> Any:
+    if archive.getinfo(f"{name}.npy").file_size > 20_000_000:
+        raise ValueError("US raw metadata exceeds supported size")
+    shape, dtype, _ = _array_header(archive, name)
+    if shape != () or (
+        dtype.kind != "U" if name == "header" else dtype != np.dtype("int64")
+    ):
+        raise ValueError(f"invalid US raw {name} metadata shape or dtype")
+    with archive.open(f"{name}.npy") as handle:
+        return np.lib.format.read_array(handle, allow_pickle=False)
+
+
+def _draw_metadata(
+    archive: zipfile.ZipFile, stored: StoredUncertainty,
+) -> UsDrawMetadata:
+    names = {f"{name}.npy" for name in (
+        "header", "election_id", "errors", "votes", "winners", "seat_totals",
+        "vote_totals",
+    )}
+    members = archive.infolist()
+    if len(members) != len(names) or {m.filename for m in members} != names:
+        raise ValueError("unsupported US raw archive members")
+    if sum(item.file_size for item in members) > 3_000_000_000:
+        raise ValueError("US raw archive exceeds supported size")
+    if stored.schema != US_STORED_SCHEMA or stored.seats is None:
+        raise ValueError("US detailed draws are unavailable or have been pruned")
+    election_id = _small_array(archive, "election_id")
+    header_array = _small_array(archive, "header")
+    if (election_id.shape != () or election_id.dtype != np.dtype("int64")
+            or int(election_id.item()) != stored.election_id):
+        raise ValueError("US raw archive election ID mismatch")
+    if header_array.shape != () or header_array.dtype.kind != "U":
+        raise ValueError("invalid US raw header")
+    header = json.loads(str(header_array.item()))
+    if header["schema"] != US_RAW_SCHEMA:
+        raise ValueError("unsupported US raw archive schema")
+    document = header["document"]
+    context = validate_document(document, public=False)
+    if context != validate_document(stored.national, public=False):
+        raise ValueError("US raw counting context mismatch")
+    private = document["private"]
+    expected = stored.national["private"]
+    if not isinstance(expected, Mapping) or (
+        private["artifact_id"] != expected["artifact_id"]
+        or private["artifact_id"] != fingerprint([
+            document["result_identity"], document["summary"],
+            {key: value for key, value in private.items() if key != "artifact_id"},
+        ])
+    ):
+        raise ValueError("US raw archive does not match the saved run")
+    inputs = restore_run_inputs(document)
+    n = document["summary"]["simulations"]
+    s, k = len(inputs.seats), len(inputs.party_ids)
+    shapes = {"errors": (n, s, k), "votes": (n, s, k), "winners": (n, s),
+              "seat_totals": (n, k), "vote_totals": (n, k)}
+    for name, expected_shape in shapes.items():
+        shape, dtype, _ = _array_header(archive, name)
+        expected_dtype = np.dtype("float64" if name == "errors" else "int64")
+        if shape != expected_shape or dtype != expected_dtype:
+            raise ValueError(f"invalid US raw {name} shape or dtype")
+    if type(private["seed"]) is not int or private["seed"] < 0:
+        raise ValueError("invalid saved US seed")
+    return UsDrawMetadata(inputs, document, n, private["seed"])
+
+
+def read_us_draw_rows(
+    path: Path, stored: StoredUncertainty, *, start: int = 0, count: int = 0,
+    detail: bool = False,
+) -> tuple[UsDrawMetadata, dict[str, Any]]:
+    """Read bounded contiguous rows; ZIP seeking never allocates skipped rows."""
+    try:
+        with zipfile.ZipFile(path) as archive:
+            metadata = _draw_metadata(archive, stored)
+            if (type(start) is not int or type(count) is not int
+                    or start < 0 or count < 0 or count > 50
+                    or start + count > metadata.simulations):
+                raise ValueError("simulation page is outside the saved run")
+            arrays: dict[str, Any] = {}
+            names: tuple[str, ...] = ("seat_totals", "vote_totals")
+            if detail:
+                names += ("errors", "votes", "winners")
+            for name in names:
+                shape, dtype, offset = _array_header(archive, name)
+                row_size = int(np.prod(shape[1:])) * dtype.itemsize
+                with archive.open(f"{name}.npy") as handle:
+                    handle.seek(offset + start * row_size)
+                    data = handle.read(count * row_size)
+                array = np.frombuffer(data, dtype=dtype).reshape((count, *shape[1:]))
+                if not np.isfinite(array).all():
+                    raise ValueError(f"nonfinite US raw {name}")
+                arrays[name] = array
+            return metadata, arrays
+    except (OSError, KeyError, TypeError, AttributeError, IndexError, EOFError,
+            zipfile.BadZipFile, zlib.error) as exc:
+        raise ValueError(f"cannot read US simulation archive: {exc}") from exc
+
+
+def replay_us_selected(
+    path: Path, stored: StoredUncertainty, index: int,
+) -> tuple[UsDrawMetadata, UsReplayedSimulation]:
+    metadata, arrays = read_us_draw_rows(
+        path, stored, start=index, count=1, detail=True,
+    )
+    streams = UsErrorStreams(metadata.inputs, metadata.seed)
+    for start in range(0, index, 256):
+        streams.draw(metadata.inputs, min(256, index - start))
+    errors = streams.draw(metadata.inputs, 1)
+    projection = project_us_seats(metadata.inputs, errors)
+    totals = np.bincount(
+        projection.winners[0], minlength=len(metadata.inputs.party_ids),
+    )
+    if not all((
+        np.array_equal(errors, arrays["errors"]),
+        np.array_equal(projection.votes, arrays["votes"]),
+        np.array_equal(projection.winners, arrays["winners"]),
+        np.array_equal(totals, arrays["seat_totals"][0]),
+        np.array_equal(projection.votes.sum(axis=1), arrays["vote_totals"]),
+    )):
+        raise ValueError("US simulation replay differs from saved counts or errors")
+    central = project_us_seats(metadata.inputs, np.zeros_like(errors))
+    return metadata, UsReplayedSimulation(projection, errors, central)
+
+
+def us_source_contributions(
+    metadata: UsDrawMetadata, index: int, seat_index: int,
+) -> list[tuple[str, str, FloatArray]]:
+    """Regenerate each shared source's actual loaded contribution to one race."""
+    if not 0 <= index < metadata.simulations:
+        raise ValueError("simulation index is outside the saved run")
+    result: list[tuple[str, str, FloatArray]] = []
+    k = len(metadata.inputs.party_ids)
+    for source in metadata.inputs.sources:
+        loadings = [item for item in source.loadings if item.seat_index == seat_index]
+        if not loadings:
+            continue
+        contribution = np.zeros(k)
+        if source.scale:
+            generator = np.random.default_rng(np.random.SeedSequence([
+                metadata.seed,
+                int.from_bytes(hashlib.sha256(source.source_id.encode()).digest()[:8],
+                               "big"),
+            ]))
+            for start in range(0, index, 256):
+                generator.standard_normal((min(256, index - start), k))
+            shape = np.array(source.proportions)
+            weighted = np.sqrt(shape) * generator.standard_normal((1, k))
+            error = (weighted - shape * weighted.sum(axis=-1, keepdims=True))
+            error *= source.scale
+            for loading in loadings:
+                contribution += (error * loading.coefficients)[0]
+        result.append((source.source_id, source.kind, contribution))
+    return result
 
 
 def replay_us_simulation(draws: UsDraws, index: int) -> UsReplayedSimulation:

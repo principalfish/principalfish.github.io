@@ -2,7 +2,7 @@
 {% block content %}
 <section class="card">
 <h2>US House: zero-error parity and error budget</h2>
-<p><a href="{{ url_for('home.home') }}">Console home</a></p>
+<p><a href="{{ url_for('home.home') }}">Console home</a> · <a href="{{ url_for('us.uncertainty_calibration', chamber='house') }}">Calibration candidate and assumptions</a></p>
 <form method="get"><label>As of <input type="date" name="as_of" value="{{ as_of }}" required></label> <button type="submit">Inspect</button></form>
 <p>60-day polling window; half-life 30 days; seat prior weight 1. This read-only diagnostic does not save a forecast or publish odds.</p>
 {% if parity %}<p><strong>Exact zero-error parity verified</strong> for {{ seat_count }} districts: recorded vote counts and winner flags equal the deterministic projection, in the same party order.</p>{% endif %}

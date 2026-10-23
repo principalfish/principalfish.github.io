@@ -134,3 +134,35 @@ No parameter values are approved by this source proposal. The next sign-off is
 on using RCP as the curated average archive, FEC/verified DB outcomes for results,
 and the documented coverage/transfer limits. Numerical calibration acceptance
 remains a later separate gate.
+
+## House candidate evidence, 23 October 2026
+
+The reproducible House slice is now in
+[`calibration/house-inputs.json`](calibration/house-inputs.json), with the generated
+[candidate report](calibration/house-report.md) and full JSON companion. Source
+approval has not accepted its numerical values or assumptions. House production
+odds also remain gated until the 2026 map/baseline alignment is resolved.
+
+The primary national fit uses the six clean 2012/2014/2016/2020/2022/2024 RCP
+joins. The uncertified 2018 NC09 return is sensitivity-only. Official outcomes
+use FEC candidate results, the separately reviewed 2020 NYC correction, and the
+approved 2024 House Clerk exception. Raw D/R levels, final-RCV conventions,
+nominal-count exclusions, original hashes and row/page provenance are retained.
+
+Conditional state/race fitting uses 315 stable, measured, genuinely contested
+districts from the 2022–2024 transition. The complete measured 433-district 2022
+baseline supplies the six-party covariance shapes. The fit passes observed raw
+national D/R changes through the actual deterministic helper and kernel before
+forming its residuals; source scales are jointly inverted and independently
+recovered. It does not substitute the earlier ideal-UNS ANOVA proxy.
+
+Run offline from `data/`:
+
+```sh
+./election_data/bin/python scripts/calibrate_us_uncertainty.py \
+  --output-dir models/us/calibration
+```
+
+Without `--output-dir`, the command prints its review document and writes
+nothing. Neither mode opens a database, changes central projections, saves a
+forecast or enables public odds. Senate and President fitting remain separate.

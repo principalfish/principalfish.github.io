@@ -27,6 +27,7 @@ from flask.typing import ResponseReturnValue
 
 from db import Database
 from model_support.us_simulation import UsErrorConfig, us_error_budget
+from model_support.us_calibration import read_house_report
 
 # The forecast runners are standalone modules; models.py owns the name models.
 _US_RUNNERS = Path(__file__).resolve().parents[2] / "models" / "us"
@@ -103,6 +104,25 @@ RUN_INTERRUPTED_NOTE = (
 )
 
 bp = Blueprint("us", __name__)
+
+
+@bp.route("/us/<chamber>/uncertainty/calibration")
+def uncertainty_calibration(chamber: str) -> ResponseReturnValue:
+    """Read generated calibration evidence without computing or saving a run."""
+    if chamber not in US_CHAMBERS_BY_SLUG:
+        abort(404)
+    report: dict[str, object] | None = None
+    error: str | None = None
+    if chamber == "house":
+        try:
+            report = read_house_report()
+        except (OSError, ValueError) as exc:
+            error = f"Calibration report unavailable: {exc}"
+    return render_template(
+        "us_uncertainty_calibration.html",
+        title=f"US {chamber.title()} uncertainty calibration",
+        chamber=chamber, report=report, error=error,
+    )
 
 
 @bp.route("/us/house/uncertainty/budget")

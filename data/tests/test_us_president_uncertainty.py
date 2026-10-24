@@ -312,6 +312,83 @@ def test_public_golden_and_export_identity(db: Database, tmp_path: Path) -> None
     assert export(allocation, cfg.spec.uncertainty_release_config).document is None
 
 
+def test_president_trends_use_ev_and_frozen_display_with_both_release_gates(
+    db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from console.services.trends import load_trend_entries
+    from model_support import trends
+    from model_support.us_release import president_publication_allowed
+
+    cfg = _world(db, tmp_path)
+    run_simulation(db, cfg)
+    scope = OutputScope("us_presidential_model", 1, "US President UNS")
+    entry = trends.reconstruct_trends(database_file(db), scope)[0]
+    assert entry["summary"] is None  # Current production release is disabled.
+    assert entry["display"] == {"target_cycle": 2028, "matchup": MATCHUP}
+    assert sum(entry["metrics"]["electoral_votes"]["central"].values()) == 538
+    assert sum(row["s"] for row in entry["parties"].values()) == 56
+    assert entry["metrics"]["electoral_votes"]["central"] == {
+        party: row["e"] for party, row in entry["parties"].items()
+    }
+    assert "house_seats" not in entry["metrics"]
+    monkeypatch.setattr(trends, "president_publication_allowed", lambda document: (
+        president_publication_allowed(document, release_path=cfg.spec.uncertainty_release_config)
+    ))
+    entries = trends.reconstruct_trends(database_file(db), scope)
+    assert entries[0]["summary"] is not None
+    document = trends.trend_document(scope, entries)
+    assert isinstance(document, dict) and document["model"] == "president"
+    cfg.spec.trend_cache_json.write_text(json.dumps(document))
+    assert load_trend_entries(cfg.spec.trend_cache_json) == entries
+    # Saved acceptance must still authorize a public summary after today's gate opens.
+    stored = _saved(db)
+    national = stored.national
+    national["private"]["provenance"]["calibration"]["accepted"] = False
+    from model_support.us_run import fingerprint
+    private = national["private"]
+    private["artifact_id"] = fingerprint([
+        national["result_identity"], national["summary"],
+        {key: value for key, value in private.items() if key != "artifact_id"},
+    ])
+    with db.engine.begin() as connection:
+        connection.execute(text(
+            "UPDATE model_uncertainty SET national_json=:document WHERE election_id=:id",
+        ), {"document": json.dumps(national), "id": stored.election_id})
+    assert trends.reconstruct_trends(database_file(db), scope)[0]["summary"] is None
+
+
+@pytest.mark.parametrize("mutation", ["target", "allocation", "snapshot", "absent"])
+def test_president_trends_never_invent_legacy_context(
+    db: Database, tmp_path: Path, mutation: str,
+) -> None:
+    from model_support.trends import reconstruct_trends
+
+    cfg = _world(db, tmp_path)
+    run_simulation(db, cfg)
+    stored = _saved(db)
+    with db.engine.begin() as connection:
+        if mutation == "target":
+            connection.execute(text(
+                "UPDATE elections SET target_election_year=2024 WHERE id=:id",
+            ), {"id": stored.election_id})
+        elif mutation == "allocation":
+            connection.execute(text(
+                "UPDATE us_electoral_vote_allocations SET electoral_votes="
+                "electoral_votes+CASE WHEN unit_name='California' THEN 1 ELSE -1 END "
+                "WHERE era_year=2020 AND unit_name IN ('California','Texas')",
+            ))
+        elif mutation == "snapshot":
+            connection.execute(text(
+                "UPDATE model_uncertainty SET national_json='{}' WHERE election_id=:id",
+            ), {"id": stored.election_id})
+        else:
+            connection.execute(text("DELETE FROM model_uncertainty"))
+    entry = reconstruct_trends(database_file(db), OutputScope("us_presidential_model", 1, "US President UNS"))[0]
+    assert entry["context"] is None and entry["segment_id"] is None
+    assert entry["summary"] is None and "display" not in entry
+    assert sum(entry["metrics"]["electoral_votes"]["central"].values()) == 538
+
+
 def test_gates_missing_evidence_and_dry_run(db: Database, tmp_path: Path) -> None:
     cfg = _world(db, tmp_path)
     assert not president_release().enabled

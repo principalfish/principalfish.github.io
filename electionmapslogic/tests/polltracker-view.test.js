@@ -16,6 +16,8 @@ const fixture = JSON.parse(readFileSync(new URL("../../data/tests/fixtures/us_un
   .replaceAll('"1":', '"20":').replaceAll('"2":', '"21":'));
 const senateFixture = JSON.parse(readFileSync(new URL("../../data/tests/fixtures/us_uncertainty/senate-public.json", import.meta.url), "utf8")
   .replaceAll('"1":', '"20":').replaceAll('"2":', '"21":'));
+const presidentFixture = JSON.parse(readFileSync(new URL("../../data/tests/fixtures/us_uncertainty/president-trend.json", import.meta.url), "utf8")
+  .replaceAll('"1":', '"20":').replaceAll('"2":', '"21":'));
 function senateHistory({ known = true } = {}) {
   const context = senateFixture.context;
   const summary = senateFixture.summary;
@@ -59,6 +61,9 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
       polltrackerDataPath: "results/us-house-trends.json", polltrackerDefaultParties: [20, 21],
     }, us_senate: {
       polltrackerDataPath: "results/us-senate-trends.json", polltrackerDefaultParties: [20, 21],
+    }, us_presidential: {
+      polltrackerDataPath: "results/us-president-trends.json", polltrackerDefaultParties: [20, 21],
+      uncertaintyModel: "president",
     } } });
     state.view = "polltracker";
     state.currentParliament = "us_house";
@@ -197,5 +202,44 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
     expect(document.getElementById("mapsPollTrackerMetricVotes").checked).toBe(false);
     expect(document.getElementById("mapsPollTrackerShowUncertainty").checked).toBe(true);
     expect(document.querySelector('[data-polltracker-range="all"]').classList.contains("is-active")).toBe(true);
+  });
+
+  it("uses EVs, safe frozen context and electoral chances with popular vote off by default", async () => {
+    state.currentParliament = "us_presidential";
+    const data = structuredClone(presidentFixture);
+    data.points[0].segment_id = "saved-president";
+    data.points[0].display = { target_cycle: 2028, matchup: "<img src=x onerror=bad()> vs Republican" };
+    fetchJson.mockResolvedValue(data);
+    await view.activatePollTrackerMode();
+    expect(state.pollTrackerData.seriesByParty.get("20").seats).toEqual([280]);
+    expect(document.getElementById("mapsPollTrackerMetricVotes").checked).toBe(false);
+    expect(document.getElementById("mapsPollTrackerMetricSeats").parentElement.textContent).toContain("Electoral votes");
+    expect(document.getElementById("mapsPollTrackerContext").textContent).toContain("2028 · <img");
+    expect(document.querySelector("#mapsPollTrackerContext img")).toBeNull();
+    expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(2);
+    expect(document.getElementById("mapsPollTrackerChartWrap").textContent).toContain("Electoral votes (538)");
+    const chances = document.querySelector('[data-polltracker-view="chances"]');
+    chances.checked = true;
+    chances.dispatchEvent(new window.Event("change"));
+    expect(document.getElementById("mapsPollTrackerUncertaintyNote").textContent).toContain("270 electoral votes");
+    expect(document.getElementById("mapsPollTrackerChartWrap").textContent).toContain("Electoral majority chance");
+    expect(document.getElementById("mapsPollTrackerChartWrap").textContent).toContain("No electoral majority");
+    expect(document.querySelector('[data-polltracker-chance="pLargest"]').closest("label").hidden).toBe(true);
+  });
+
+  it("plots historical President EV points with uncertainty controls and unknown matchup hidden", async () => {
+    state.currentParliament = "us_presidential";
+    const data = structuredClone(presidentFixture.points[0]);
+    delete data.context;
+    delete data.summary;
+    delete data.metrics;
+    fetchJson.mockResolvedValue([data]);
+    await view.activatePollTrackerMode();
+    expect(state.pollTrackerData.seriesByParty.get("20").seats).toEqual([280]);
+    expect(document.getElementById("mapsPollTrackerUncertaintyToggle").hidden).toBe(true);
+    expect(document.getElementById("mapsPollTrackerViewControls").hidden).toBe(true);
+    expect(document.getElementById("mapsPollTrackerContext").hidden).toBe(true);
+    expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(0);
+    expect(document.querySelectorAll(".maps-polltracker-isolated-point")).toHaveLength(2);
   });
 });

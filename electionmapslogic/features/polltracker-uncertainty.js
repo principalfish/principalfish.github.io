@@ -18,10 +18,10 @@ export function pollTrackerCapabilities(data) {
 export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes, bands = true, descriptor = WESTMINSTER_DESCRIPTOR }) {
   const basis = "if an election were held today, conditional on current polls and the model's error assumptions.";
   if (chances && descriptor.model === "senate") return `Caucus control ${basis} A 50–50 caucus split can still give control through the saved vice-president policy; it overlaps control chances. Unresolved control is shown separately. A caucus majority requires 51 seats.`;
-  if (chances) return `Chances ${basis} ${descriptor.residualShort} means no party wins a majority.`;
+  if (chances) return `Chances ${basis} ${descriptor.residualShort} means no party wins ${descriptor.model === "president" ? "270 electoral votes" : "a majority"}.`;
   if (!bands) return "Uncertainty hidden. Tick Uncertainty to show 90% ranges.";
   const metrics = [];
-  if (seats && capabilities.seatBands) metrics.push("seat");
+  if (seats && capabilities.seatBands) metrics.push(descriptor.rangeLabel);
   if (votes && capabilities.voteBands) metrics.push("vote-share");
   return metrics.length ? `Shaded bands show 90% ${metrics.join(" and ")} ranges (averaged over ${BAND_SMOOTHING_POINTS} model updates) ${basis}`
     : `Uncertainty describes an election held today, conditional on current polls and the model's error assumptions.`;
@@ -43,7 +43,7 @@ export function chanceSeries(series, metric, hung, descriptor = WESTMINSTER_DESC
         votePct: percent(senateChances.unresolved), chanceLabel: "Unresolved control chance", isHung: true },
     ];
   }
-  const label = metric === "pLargest" ? "Largest-party chance" : "Majority chance";
+  const label = metric === "pLargest" ? "Largest-party chance" : `${descriptor.majorityLabel} chance`;
   return [
     ...series.map((row) => ({ ...row, votePct: percent(row[metric] || []), chanceLabel: label })),
     {
@@ -64,12 +64,12 @@ export function pollTrackerTooltipValues(series, index, { ranges = true } = {}) 
   if (series.chanceLabel) return [[series.chanceLabel, percent(series.votePct[index])],
     ...(series.majorityPct ? [["Caucus majority chance (51+ seats)", percent(series.majorityPct[index])]] : [])];
   const values = [
-    ["Seats", Number.isFinite(series.seats[index]) ? formatInt(series.seats[index]) : "Unavailable"],
-    ...(series.noVotes ? [] : [["Vote share", percent(series.votePct[index])]]),
+    [series.tallyLabel || "Seats", Number.isFinite(series.seats[index]) ? formatInt(series.seats[index]) : "Unavailable"],
+    ...(series.noVotes ? [] : [[series.voteLabel || "Vote share", percent(series.votePct[index])]]),
   ];
   if (!ranges) return values;
   if (Number.isFinite(series.seatLo?.[index]) && Number.isFinite(series.seatHi?.[index])) {
-    values.push(["90% seat range", `${formatInt(series.seatLo[index])}–${formatInt(series.seatHi[index])}`]);
+    values.push([`90% ${series.rangeLabel || "seat"} range`, `${formatInt(series.seatLo[index])}–${formatInt(series.seatHi[index])}`]);
   }
   if (Number.isFinite(series.voteLo?.[index]) && Number.isFinite(series.voteHi?.[index])) {
     values.push(["90% vote range", `${formatPct(series.voteLo[index])}–${formatPct(series.voteHi[index])}%`]);

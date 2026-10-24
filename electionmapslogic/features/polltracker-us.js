@@ -1,5 +1,5 @@
-import { HOUSE_DESCRIPTOR, SENATE_DESCRIPTOR } from "../model-descriptors.js";
-import { decodeHouseSummary, decodeSenateSummary, validUsContext } from "../us-uncertainty.js";
+import { HOUSE_DESCRIPTOR, SENATE_DESCRIPTOR, PRESIDENT_DESCRIPTOR } from "../model-descriptors.js";
+import { decodeHouseSummary, decodeSenateSummary, decodePresidentSummary, presidentDisplay, validUsContext } from "../us-uncertainty.js";
 
 /** Adapt the explicit House envelope without reinterpreting any legacy tally. */
 export function houseTrackerEntries(document) {
@@ -89,4 +89,55 @@ export function senateTrackerEntries(document) {
       rosterOnly: Boolean(valid && rosterOnly) });
   }
   return { entries, descriptor: SENATE_DESCRIPTOR };
+}
+
+/** Legacy e is an EV central projection; legacy s is only a count of map units. */
+export function presidentTrackerEntries(document) {
+  if (document?.schema !== "pf-us-model-trends-v1" || document.model !== "president"
+    || !Array.isArray(document.points)) return null;
+  const entries = [];
+  for (const point of document.points) {
+    const legacy = point.metrics == null;
+    const electoral = legacy ? { unit: "electoral_votes", domain: "party", total: 538,
+      central: Object.fromEntries(Object.entries(point.parties || {}).map(([id, row]) => [id, row.e])) }
+      : point.metrics.electoral_votes;
+    const votes = legacy ? { unit: "percent", domain: "party", total: 100,
+      central: Object.fromEntries(Object.entries(point.parties || {}).map(([id, row]) => [id, row.v])) }
+      : point.metrics.national_vote_share;
+    const ids = Object.keys(electoral?.central || {});
+    const valid = electoral?.unit === "electoral_votes" && electoral.domain === "party" && electoral.total === 538
+      && votes?.unit === "percent" && votes.domain === "party" && votes.total === 100
+      && ids.length && ids.length === Object.keys(votes.central || {}).length
+      && ids.every((id) => /^[1-9]\d*$/.test(id) && Number.isInteger(electoral.central[id])
+        && electoral.central[id] >= 0 && electoral.central[id] <= 538
+        && typeof votes.central[id] === "number" && Number.isFinite(votes.central[id])
+        && votes.central[id] >= 0 && votes.central[id] <= 100)
+      && ids.reduce((sum, id) => sum + electoral.central[id], 0) === 538
+      && Math.abs(ids.reduce((sum, id) => sum + votes.central[id], 0) - 100) <= 0.051 * ids.length;
+    const display = presidentDisplay(point.display, point.context);
+    const known = valid && display && validUsContext(point.context) && point.context.model === "president"
+      && point.context.as_of_date === point.as_of_date;
+    const segment = known && typeof point.segment_id === "string" && point.segment_id.trim()
+      ? point.segment_id + JSON.stringify([
+        point.context.map_id, point.context.target_cycle, point.context.matchup_id,
+        point.context.field_id, point.context.baseline_id, point.context.central_options_id,
+        point.context.comparability_id, point.context.electoral_allocation_id, display.matchup,
+      ]) : null;
+    let decoded = segment && point.summary ? decodePresidentSummary(point.summary, String) : null;
+    if (decoded && (ids.length !== Object.keys(decoded.parties).length
+      || ids.some((id) => point.summary.metrics.electoral_votes.central[id] !== electoral.central[id]
+        || Math.abs(point.summary.metrics.national_vote_share.central[id] - votes.central[id]) > 0.051))) decoded = null;
+    const parties = {};
+    if (valid) {
+      for (const id of ids) {
+        const optional = decoded?.parties[id];
+        parties[id] = { s: electoral.central[id], v: votes.central[id],
+          ...(optional ? { sl: optional.s[0], sh: optional.s[2],
+            vl: optional.v[0], vh: optional.v[1], pm: optional.pm } : {}) };
+      }
+    }
+    entries.push({ ...point, parties, segment_id: segment,
+      display: segment ? display : null, residual: decoded?.residual ?? null });
+  }
+  return { entries, descriptor: PRESIDENT_DESCRIPTOR };
 }

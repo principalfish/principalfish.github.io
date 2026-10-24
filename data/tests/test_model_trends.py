@@ -83,13 +83,13 @@ def test_full_reconstruction_ignores_cache_and_insertion_order(
     destination.write_text("malformed-cache")
     publish_trends(only_the_test_database, scope, destination)
     entries = json.loads(destination.read_text())
-    if model in {"us-house", "us-senate"}:
+    if model in {"us-house", "us-senate", "us-president"}:
         assert entries["schema"] == "pf-us-model-trends-v1"
         entries = entries["points"]
     assert [entry["as_of_date"] for entry in entries] == [
         "2026-06-01",
         "2026-06-02",
-        *(["2026-06-03"] if model in {"us-house", "us-senate"} else []),
+        *(["2026-06-03"] if model in {"us-house", "us-senate", "us-president"} else []),
         "2026-06-04",
     ]
     assert entries[0]["election_id"] > entries[1]["election_id"]
@@ -97,11 +97,11 @@ def test_full_reconstruction_ignores_cache_and_insertion_order(
     store(only_the_test_database, scope, 2, seats[0], parties, 70)
     publish_trends(only_the_test_database, scope, destination)
     republished = json.loads(destination.read_text())
-    if model in {"us-house", "us-senate"}:
+    if model in {"us-house", "us-senate", "us-president"}:
         republished = republished["points"]
     assert [entry["as_of_date"] for entry in republished] == [
         "2026-06-01",
-        *(["2026-06-02"] if model in {"us-house", "us-senate"} else []),
+        *(["2026-06-02"] if model in {"us-house", "us-senate", "us-president"} else []),
         "2026-06-03",
         "2026-06-04",
     ]
@@ -111,7 +111,7 @@ def test_full_reconstruction_ignores_cache_and_insertion_order(
         entry["as_of_date"]
         for entry in reconstruct_trends(only_the_test_database, scope)
     ] == (["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04"]
-          if model in {"us-house", "us-senate"} else ["2026-06-01"])
+          if model in {"us-house", "us-senate", "us-president"} else ["2026-06-01"])
 
 
 @pytest.mark.parametrize("model", TREND_MODELS)
@@ -392,7 +392,7 @@ def test_identical_serialized_metrics_and_zero_totals(
             target_election_year=2028 if model == "us-president" else None,
         )
     entries = reconstruct_trends(only_the_test_database, scope)
-    assert len(entries) == (2 if model in {"us-house", "us-senate"} else 1)
+    assert len(entries) == (2 if model in {"us-house", "us-senate", "us-president"} else 1)
     assert entries[0]["parties"][str(parties[1])]["v"] == 0.0
     assert ("e" in entries[0]["parties"][str(parties[0])]) == (model == "us-president")
 

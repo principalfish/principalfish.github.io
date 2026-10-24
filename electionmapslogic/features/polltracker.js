@@ -1,7 +1,7 @@
 import { manifest } from '../state.js';
 import { DEFAULT_PARTY_COLOUR } from '../utils.js';
 import { WESTMINSTER_DESCRIPTOR } from "../model-descriptors.js";
-import { houseTrackerEntries, senateTrackerEntries } from "./polltracker-us.js";
+import { houseTrackerEntries, senateTrackerEntries, presidentTrackerEntries } from "./polltracker-us.js";
 
 function probability(value) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1
@@ -66,10 +66,14 @@ function optionalFields(party, hasUncertainty) {
  *   hung: Array<number|null>
  * }} Chart-ready timeline and per-party series.
  */
-export function parsePollTrackerData(data) {
-  const us = !Array.isArray(data) ? houseTrackerEntries(data) ?? senateTrackerEntries(data) : null;
+export function parsePollTrackerData(data, model = null) {
+  if (Array.isArray(data) && model === "president") {
+    data = { schema: "pf-us-model-trends-v1", model: "president", points: data };
+  }
+  const us = !Array.isArray(data) ? houseTrackerEntries(data) ?? senateTrackerEntries(data) ?? presidentTrackerEntries(data) : null;
   const descriptor = us?.descriptor ?? WESTMINSTER_DESCRIPTOR;
   const senate = descriptor.model === "senate";
+  const president = descriptor.model === "president";
   data = us?.entries ?? (Array.isArray(data) ? data : []);
   const partiesById = manifest.partiesById;
 
@@ -83,7 +87,7 @@ export function parsePollTrackerData(data) {
     const hung = probability(entry.hung);
     const residual = us ? probability(entry.residual) : hung;
     runsByDate.set(asOfDate, { hung, residual, segment: entry.segment_id ?? null,
-      senateOutcomes: entry.senateOutcomes ?? null });
+      senateOutcomes: entry.senateOutcomes ?? null, display: entry.display ?? null });
     for (const [partyIdStr, pdata] of Object.entries(entry.parties || {})) {
       const partyId = Number(partyIdStr);
       const seats = Number(pdata.s);
@@ -181,7 +185,7 @@ export function parsePollTrackerData(data) {
         lastSeats = Number(row.seats || 0);
         lastVotePct = senate ? null : Number(row.votePct || 0);
       }
-      if (senate && !row && runsByDate.has(entry.dateKey)) {
+      if ((senate || president) && !row && runsByDate.has(entry.dateKey)) {
         lastSeats = null;
         lastVotePct = null;
       }
@@ -208,6 +212,8 @@ export function parsePollTrackerData(data) {
       ...optional,
       latestSeats: lastSeats ?? 0,
       ...(senate ? { noVotes: true } : {}),
+      ...(president ? { tallyLabel: descriptor.tallyLabel, rangeLabel: descriptor.rangeLabel,
+        voteLabel: "Popular vote share" } : {}),
     });
   });
 
@@ -244,6 +250,15 @@ export function parsePollTrackerData(data) {
       senateChances.unresolved.push(last?.residual ?? null);
     });
   }
+  let display = null;
+  if (president) {
+    timeline.forEach((entry) => {
+      if (entry.boundary) display = null;
+      else if (runsByDate.has(entry.dateKey)) display = runsByDate.get(entry.dateKey).display;
+      entry.display = display;
+    });
+  }
   return { timeline, seriesByParty, hung, ...(us ? { residual, descriptor } : {}),
+    ...(president ? { display } : {}),
     ...(senate ? { senateChances, hasRosterOnly: data.some((entry) => entry.rosterOnly) } : {}) };
 }

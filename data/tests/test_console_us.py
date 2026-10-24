@@ -268,7 +268,8 @@ class TestPresidentElectoralVotes:
         assert "Electoral Votes" in body
         assert "Electoral Votes by Party" in body
 
-    def test_president_list_trend_plots_electoral_votes(self, db: Database, tmp_path: Path) -> None:
+    @pytest.mark.parametrize("envelope", [False, True])
+    def test_president_list_trend_plots_electoral_votes(self, db: Database, tmp_path: Path, envelope: bool) -> None:
         # A president trend cache with an "e" value drives the list chart onto EV.
         import json
 
@@ -277,15 +278,16 @@ class TestPresidentElectoralVotes:
         seeded = _seed_us_president(db)
         dem, rep = str(seeded["dem_id"]), str(seeded["rep_id"])
         trend = tmp_path / "us-president-trends.json"
-        trend.write_text(
-            json.dumps([
+        points = [
                 {
                     "election_id": 1,
                     "election_name": "US President UNS 2028-06-01",
                     "as_of_date": "2028-06-01",
                     "parties": {dem: {"s": 1, "v": 49.0, "e": 20}, rep: {"s": 1, "v": 48.0, "e": 3}},
                 }
-            ]),
+        ]
+        trend.write_text(
+            json.dumps({"schema": "pf-us-model-trends-v1", "model": "president", "points": points} if envelope else points),
             encoding="utf-8",
         )
         context = build_outputs_context(

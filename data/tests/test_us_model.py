@@ -2810,7 +2810,7 @@ class TestPresidentialRecordedSummaries:
         assert diffs == expected_diffs
         assert winners == expected_winners
         assert spec.trend_cache_json.read_bytes() == expected_trends
-        parties = json.loads(expected_trends)[0]["parties"]
+        parties = json.loads(expected_trends)["points"][0]["parties"]
         assert parties[str(dem.id)]["v"] == 35.0
         assert parties[str(rep.id)]["v"] == 65.0
         election = db.get_election_by_name(name)
@@ -2906,7 +2906,7 @@ class TestPresidentialRecordedSummaries:
             (row["seat_id"], row["party_id"], row["vote_total"], row["elected"])
             for row in projected
         )
-        parties = json.loads(spec.trend_cache_json.read_text())[0]["parties"]
+        parties = json.loads(spec.trend_cache_json.read_text())["points"][0]["parties"]
         assert parties[str(dem.id)] == {"s": 2, "v": 56.7, "e": 5}
         assert parties[str(rep.id)] == {
             "s": 1 if district_independent_wins else 2,

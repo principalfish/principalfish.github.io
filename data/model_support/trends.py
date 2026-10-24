@@ -61,10 +61,18 @@ from model_support.senate_cycles import senate_cycle_from_snapshot
 from model_support.us_senate import senate_party
 from model_support.us_release import (
     house_publication_allowed, senate_publication_allowed,
+    president_publication_allowed,
 )
 from model_support.us_run import fingerprint, restore_run_inputs
 from model_support.us_uncertainty import US_TREND_SCHEMA, keep_trend_point
 from polls.importers.us.us_geography import parent_seat_name
+
+
+_US_MODEL_TYPES = {
+    "us_house_model": "house",
+    "us_senate_model": "senate",
+    "us_presidential_model": "president",
+}
 
 
 class TrendEntry(TypedDict):
@@ -78,6 +86,7 @@ class TrendEntry(TypedDict):
     metrics: NotRequired[dict[str, Any]]
     summary: NotRequired[dict[str, Any] | None]
     central_basis: NotRequired[dict[str, Any]]
+    display: NotRequired[dict[str, object]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -281,7 +290,7 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
         uncertainty, unpolled = _trend_uncertainty(conn, scope, elections)
         us_metadata = (
             _us_metadata(conn, scope)
-            if scope.election_type in {"us_house_model", "us_senate_model"}
+            if scope.election_type in _US_MODEL_TYPES
             else None
         )
         if scope.election_type == "us_senate_model":
@@ -364,6 +373,15 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
                     entry["metrics"] = metadata.get("metrics", {}) if metadata else {}
                     if metadata and "central_basis" in metadata:
                         entry["central_basis"] = metadata["central_basis"]
+                if is_presidential:
+                    # Legacy s counts map units; only e counts the electoral college.
+                    entry["metrics"]["electoral_votes"] = {
+                        "unit": "electoral_votes", "domain": "party", "total": 538,
+                        "central": {p: row["e"] for p, row in parties.items()},
+                    }
+                    del entry["metrics"]["house_seats"]
+                    if metadata and "display" in metadata:
+                        entry["display"] = metadata["display"]
             entries.append(entry)
     return entries
 
@@ -475,7 +493,7 @@ def _us_metadata(
             if (document["context"]["map_id"] != scope.map_id
                     or inputs.as_of_date != as_of):
                 continue
-            model = scope.election_type.removeprefix("us_").removesuffix("_model")
+            model = _US_MODEL_TYPES[scope.election_type]
             if document["model"] != model:
                 continue
             private = document["private"]
@@ -496,6 +514,25 @@ def _us_metadata(
             actual.sort()
             if actual != sorted(inputs.central_rows):
                 continue
+            display: dict[str, object] | None = None
+            if model == "president":
+                context = document["context"]
+                target = conn.execute(
+                    "SELECT target_election_year FROM elections WHERE id=?",
+                    (election_id,),
+                ).fetchone()
+                matchup = private["options"]["tracked_matchup"]
+                if (target is None or target[0] != context["target_cycle"]
+                        or not isinstance(matchup, str) or not matchup.strip()):
+                    continue
+                allocation = get_electoral_votes_sqlite(
+                    conn, target[0], (seat.name for seat in inputs.seats),
+                )
+                saved = private["president_counting"]["allocation"]
+                if any(allocation[seat.name] != saved[str(seat.seat_id)]
+                       for seat in inputs.seats):
+                    continue
+                display = {"target_cycle": target[0], "matchup": matchup}
             config = {key: v for key, v in private["inputs"]["config"].items()
                       if key != "national_scale"}
             result[election_id] = {
@@ -513,10 +550,14 @@ def _us_metadata(
                 },
                 "summary": (
                     public_us_document(document)["summary"]
-                    if (senate_publication_allowed(document) if model == "senate"
-                        else house_publication_allowed(document)) else None
+                    if {"house": house_publication_allowed,
+                        "senate": senate_publication_allowed,
+                        "president": president_publication_allowed}[model](document)
+                    else None
                 ),
             }
+            if display is not None:
+                result[election_id]["display"] = display
         except (ValueError, KeyError, TypeError, AttributeError):
             # Unsupported optional metadata cannot supply public uncertainty.
             continue
@@ -525,8 +566,8 @@ def _us_metadata(
 
 def trend_document(scope: OutputScope, entries: list[TrendEntry]) -> object:
     """Publish activated US models with explicit metric and context domains."""
-    if scope.election_type in {"us_house_model", "us_senate_model"}:
-        model = scope.election_type.removeprefix("us_").removesuffix("_model")
+    if scope.election_type in _US_MODEL_TYPES:
+        model = _US_MODEL_TYPES[scope.election_type]
         return {"schema": US_TREND_SCHEMA, "model": model, "points": entries}
     return entries
 
@@ -551,7 +592,7 @@ def _trend_uncertainty(
     """
     result: dict[int, TrendUncertainty] = {}
     unpolled: set[int] = set()
-    if scope.election_type in {"us_house_model", "us_senate_model"}:
+    if scope.election_type in _US_MODEL_TYPES:
         return result, unpolled
     try:
         for election_id, national in iter_national_blocks(conn, scope):

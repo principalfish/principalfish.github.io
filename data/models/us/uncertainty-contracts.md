@@ -309,3 +309,20 @@ and `matchup` comes from the saved central options. These labels contain no poll
 records, sample sizes or sources. Current mutable tracked-matchup settings never
 supply labels for a previously saved result. The existing `basis` and opaque
 `uncertaintyId` cache extensions remain separate from the strict core.
+
+President maps and trackers now consume the gated public President contract.
+The explicit `electoral_votes` metric totals 538; legacy `e` supplies historical
+central EV values, while legacy `s` remains a count of allocation units. The
+shared chart's tally arrays receive EVs only at the President adapter boundary.
+Chances mean electoral majority (270 EVs) and no electoral majority. Popular
+vote is off by default and excludes district duplicates in the writer.
+
+President trends use `pf-us-model-trends-v1` with model `president` for the
+database election type `us_presidential_model`. Valid saved inputs can supply
+frozen cycle/matchup labels even while the current release gate hides the
+summary. Matching target and allocation are checked before attaching context.
+Historical central-only points remain visible as isolated EV dots without
+invented matchup, context, ranges or odds. Context changes, including matchup
+and allocation, break totals, bands, chances and carry-forward. Current and
+saved acceptance must both authorize uncertainty; production calibration
+remains disabled.

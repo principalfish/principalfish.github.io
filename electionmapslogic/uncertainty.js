@@ -107,13 +107,13 @@ export function uncertaintyHeadline(summary, labelParty) {
       + `50–50 caucuses ${uncertaintyNumber(outcomes.tied * 100)}% · `
       + `Unresolved control ${uncertaintyNumber(outcomes.residual * 100)}% (if an election were held today)`;
   }
-  if (summary.descriptor?.model === "house") {
+  if (["house", "president"].includes(summary.descriptor?.model)) {
     const leaders = Object.entries(summary.national.parties)
       .filter(([, row]) => Number.isFinite(row.pm))
       .sort((a, b) => b[1].pm - a[1].pm || labelParty(a[0]).localeCompare(labelParty(b[0])));
     if (!leaders.length || !Number.isFinite(summary.national.residual)) return "";
     const [party, row] = leaders[0];
-    return `${labelParty(party)} majority ${uncertaintyNumber(row.pm * 100)}% · `
+    return `${labelParty(party)} ${summary.descriptor.majorityLabel.toLowerCase()} ${uncertaintyNumber(row.pm * 100)}% · `
       + `${summary.descriptor.residualLabel} ${uncertaintyNumber(summary.national.residual * 100)}% `
       + "(if an election were held today)";
   }

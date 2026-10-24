@@ -18,7 +18,15 @@ export const SENATE_DESCRIPTOR = Object.freeze({
   votes: false,
 });
 
+export const PRESIDENT_DESCRIPTOR = Object.freeze({
+  model: "president", metric: "electoral_votes", tallyLabel: "Electoral votes",
+  rangeLabel: "electoral-vote", majorityLabel: "Electoral majority",
+  residualLabel: "No electoral majority", residualShort: "No electoral majority",
+  residualKey: "no_electoral_majority", largest: false,
+});
+
 export function modelDescriptor(model) {
   return model === "house" ? HOUSE_DESCRIPTOR
-    : model === "senate" ? SENATE_DESCRIPTOR : WESTMINSTER_DESCRIPTOR;
+    : model === "senate" ? SENATE_DESCRIPTOR
+      : model === "president" ? PRESIDENT_DESCRIPTOR : WESTMINSTER_DESCRIPTOR;
 }

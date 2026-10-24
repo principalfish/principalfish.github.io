@@ -262,8 +262,16 @@
     },
     "us_presidential": {
       "features": [
-        "predict"
+        "predict",
+        "pollTracker"
       ],
+      "polltrackerDataPath": "results/us-president-trends.json",
+      "polltrackerDefaultParties": [
+        20,
+        21
+      ],
+      "uncertaintyDataPath": "results/us-president-uncertainty.json",
+      "uncertaintyModel": "president",
       "predictAnchorElectionId": "current-us-president",
       "predictBaselineElectionId": "2024-us-president",
       "nextElectionYear": 2028,

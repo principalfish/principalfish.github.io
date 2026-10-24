@@ -1,8 +1,9 @@
 # US uncertainty boundary contracts
 
 These contracts describe held-today simulations. House storage, replay and schema
-dispatch are implemented behind the explicit production release gate. US public
-sidecars and trends remain pending activation. Golden files under
+dispatch are implemented behind the explicit production release gate.
+House public sidecars and trends are implemented behind the same gate; other
+US model activation remains pending. Golden files under
 `data/tests/fixtures/us_uncertainty/` use **synthetic party/map identifiers and
 results**, not calibrated forecasts. Fingerprints in fixtures are illustrative;
 production producers must hash the canonical frozen input, not assign a label.
@@ -200,3 +201,54 @@ House targets roll forward on 1 January of each odd year: dates in 2025–2026
 use the 2026 field, and dates in 2027–2028 use the 2028 field. A release approved
 for one target cannot be reused for another; each requires approved geography
 and calibration.
+
+## House publication and additive regional bands
+
+The public core validator still accepts exactly its five core fields. The
+exporter validates and copies that core first, then adds the reading-guide
+`basis`, the opaque cache `uncertaintyId`, and optional `regional_bands`.
+`uncertaintyId` is also stamped into the central result. It hashes the public
+result, public document and saved artifact identity, so a same-date, same-central
+rerun with a different seed, configuration or summary cannot reuse an old cache.
+The private artifact and its inputs are not published. Westminster's identity
+algorithm and format remain unchanged.
+
+`regional_bands` has exactly the public meaning identified by
+`schema: "pf-us-public-regions-v1"`. Its `regions` maps positive region IDs to
+`members` (sorted frozen district names) and `parties`. Each party has `s`
+(integer low/median/high seat quantiles) and `v` (two-decimal low/high projected
+vote shares). These are correlated aggregates of each complete simulation,
+not sums of district quantiles. The private stored block uses
+`pf-us-region-summary-v1` and also binds context, result identity, interval,
+simulation count and frozen seat IDs. Every region and participating party is
+validated; malformed or incomplete optional detail suppresses publication.
+The existing compact central result's `u` rows carry separately validated
+per-district `[party_id, low_share, high_share, win_probability]` values.
+
+New frozen inputs retain optional UI `region_id` membership. It contributes to
+the field fingerprint when present; old snapshots without it retain their
+original field identity and replay behavior. The exporter compares actual
+recorded central votes and current seat-to-region membership with the frozen
+snapshot before publishing. The frontend also requires exact region membership
+before attaching a region range. Older snapshots lacking frozen membership
+cannot supply regional ranges. Region labels may change cosmetically.
+
+Operational publication requires both today's release approval and the saved
+run's accepted calibration/geography/release decision. Approving today's
+configuration does not upgrade an unaccepted saved run. Missing, malformed or
+gated uncertainty removes a stale House sidecar and leaves central results
+without its cache identity. The pure serializer remains usable with synthetic
+fixtures independently of this operational gate.
+
+Only House activates `pf-us-model-trends-v1` now. Reconstruction retains its
+list API; publication wraps it in `{schema, model: "house", points}`. Console
+readers accept that envelope. Known points retain frozen context and an opaque
+`segment_id`; legacy unknown context remains null. Segment identity excludes
+as-of date, seed and ordinary input-dependent national scale conversion, while
+retaining interpretation and model options. Explicit summary loss clears odds,
+and context changes break compression, carry-forward, smoothing and chart lines.
+Senate and presidential trends retain their legacy arrays until their slices.
+
+Optional actual DOM tests use an existing jsdom 24 installation via
+`PF_TEST_JSDOM=/absolute/path/to/jsdom npm test`; no DOM library ships to the
+browser. Scratch previews contain synthetic data and do not enable production.

@@ -121,15 +121,18 @@ def house_context(
 ) -> UsRunContext:
     if inputs.model != "us-house" or len(inputs.seats) != 435:
         raise ValueError("House uncertainty requires the complete 435-district field")
+    field: object = [
+        [(seat.seat_id, seat.name, seat.state) for seat in inputs.seats],
+        inputs.party_ids,
+    ]
+    if any(seat.region_id is not None for seat in inputs.seats):
+        field = [field, [(seat.seat_id, seat.region_id) for seat in inputs.seats]]
     return UsRunContext(
         model="house", map_id=map_id,
         as_of_date=inputs.as_of_date.isoformat(), target_cycle=target_cycle,
         matchup_id=fingerprint(sorted({poll.matchup or "generic-ballot"
                                        for poll in inputs.polls})),
-        field_id=fingerprint([
-            [(seat.seat_id, seat.name, seat.state) for seat in inputs.seats],
-            inputs.party_ids,
-        ]),
+        field_id=fingerprint(field),
         baseline_id=fingerprint([
             (seat.seat_id, seat.baseline, seat.turnout) for seat in inputs.seats
         ]),
@@ -237,7 +240,30 @@ def house_payload(
         }
         for i, seat in enumerate(run.inputs.seats)
     }
-    return UncertaintyPayload(document, seats={
+    regions: dict[str, object] | None = None
+    if run.regions:
+        regions = {
+            "schema": "pf-us-region-summary-v1", "model": "house",
+            "context": context_json, "result_identity": result_identity,
+            "simulations": simulations, "interval": interval,
+            "regions": {
+                str(region.region_id): {
+                    "seat_ids": list(region.seat_ids),
+                    "parties": {
+                        str(p): {
+                            "central_seats": int(region.central_seats[j]),
+                            "central_share": float(region.central_shares[j]),
+                            "s": region.seat_ranges[:, j].tolist(),
+                            "v": [round(float(v), 2)
+                                  for v in region.share_ranges[:, j]],
+                        }
+                        for j, p in enumerate(parties)
+                    },
+                }
+                for region in run.regions
+            },
+        }
+    return UncertaintyPayload(document, regions=regions, seats={
         "schema": "pf-us-race-summary-v1", "model": "house",
         "context": context_json, "result_identity": result_identity,
         "simulations": simulations, "interval": interval, "seats": seats,

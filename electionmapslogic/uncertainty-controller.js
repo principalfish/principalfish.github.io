@@ -18,6 +18,8 @@ export async function activateUncertaintyView() {
     electionData.uncertainty = decodeUncertainty(
       payload, electionData.uncertaintyId,
       (party) => manifest.resolvePartyRef(party), manifest.regionsById,
+      { model: manifest.parliamentConfig(parliament).uncertaintyModel,
+        mapId: election.mapId, seats: electionData.currentSeats },
     );
   } catch {
     if (!isCurrent()) return;

@@ -25,6 +25,7 @@ would plot as a spike. The previous entry carries across the gap.
 from __future__ import annotations
 
 import re
+import json
 import shlex
 import sqlite3
 from collections.abc import Collection, Iterator, Mapping
@@ -32,7 +33,7 @@ from contextlib import closing, contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NotRequired, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 from electoral_votes import (
     ElectoralVoteError,
@@ -54,7 +55,11 @@ from model_support.public_uncertainty import (
     PublicUncertaintyError,
     TrendUncertainty,
     trend_uncertainty,
+    public_us_document,
 )
+from model_support.us_release import house_publication_allowed
+from model_support.us_run import fingerprint, restore_run_inputs
+from model_support.us_uncertainty import US_TREND_SCHEMA, keep_trend_point
 from polls.importers.us.us_geography import parent_seat_name
 
 
@@ -64,6 +69,10 @@ class TrendEntry(TypedDict):
     as_of_date: str
     parties: dict[str, dict[str, int | float]]
     hung: NotRequired[float]
+    context: NotRequired[dict[str, Any] | None]
+    segment_id: NotRequired[str | None]
+    metrics: NotRequired[dict[str, Any]]
+    summary: NotRequired[dict[str, Any] | None]
 
 
 @dataclass(frozen=True, slots=True)
@@ -265,8 +274,13 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
                 if eid in metrics:
                     metrics[eid][str(pid)]["e"] += ev_by_election[eid][unit_name]
         uncertainty, unpolled = _trend_uncertainty(conn, scope, elections)
+        house = (
+            _house_metadata(conn, scope) if scope.election_type == "us_house_model"
+            else None
+        )
         dates: set[str] = set()
         previous: tuple[dict[str, dict[str, int | float]], bool] | None = None
+        previous_segment: str | None = None
         for eid, (name, as_of) in sorted(
             elections.items(), key=lambda item: (item[1][1], item[0])
         ):
@@ -282,13 +296,25 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             if eid in unpolled:
                 continue
             summary = uncertainty.get(eid)
+            metadata = house.get(eid, {}) if house is not None else None
+            segment = metadata.get("segment_id") if metadata else None
+            has_summary = bool(metadata.get("summary")) if metadata else summary is not None
+            if house is not None and previous is not None and not keep_trend_point(
+                previous_context=previous_segment, context=segment,
+                central_equal=previous[0] == parties,
+                previous_has_summary=previous[1], has_summary=has_summary,
+            ):
+                continue
             if (
+                house is None
+                and
                 previous is not None
                 and previous[0] == parties
                 and (summary is None or previous[1])
             ):
                 continue
-            previous = (parties, summary is not None)
+            previous = (parties, has_summary)
+            previous_segment = segment
             entry: TrendEntry = {
                 "election_id": eid,
                 "election_name": name,
@@ -306,7 +332,91 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             }
             if summary is not None:
                 entry["hung"] = summary.hung
+            if house is not None:
+                entry.update({
+                    "context": metadata.get("context") if metadata else None,
+                    "segment_id": segment,
+                    "metrics": {
+                        "house_seats": {"unit": "seats", "domain": "party",
+                                        "total": 435,
+                                        "central": {p: row["s"]
+                                                    for p, row in parties.items()}},
+                        "national_vote_share": {
+                            "unit": "percent", "domain": "party", "total": 100,
+                            "central": {p: row["v"] for p, row in parties.items()},
+                        },
+                    },
+                    "summary": metadata.get("summary") if metadata else None,
+                })
             entries.append(entry)
+    return entries
+
+
+def _house_metadata(
+    conn: sqlite3.Connection, scope: OutputScope,
+) -> dict[int, dict[str, Any]]:
+    result: dict[int, dict[str, Any]] = {}
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='model_uncertainty'",
+    ).fetchone():
+        return result
+    for election_id, name, raw in conn.execute(
+        "SELECT e.id,e.name,u.national_json FROM elections e "
+        "JOIN model_uncertainty u ON e.id=u.election_id "
+        "WHERE e.type=? AND e.map_id=?", (scope.election_type, scope.map_id),
+    ):
+        try:
+            as_of = scope.date_from_name(name)
+            if as_of is None:
+                continue
+            document: dict[str, Any] = json.loads(raw)
+            inputs = restore_run_inputs(document)
+            if (document["context"]["map_id"] != scope.map_id
+                    or inputs.as_of_date != as_of):
+                continue
+            private = document["private"]
+            if private["artifact_id"] != fingerprint([
+                document["result_identity"], document["summary"],
+                {key: v for key, v in private.items() if key != "artifact_id"},
+            ]):
+                continue
+            rows = conn.execute(
+                "SELECT seat_id,party_id,vote_total,elected FROM votes "
+                "WHERE election_id=?", (election_id,),
+            )
+            actual = []
+            for seat, party, votes, winner in rows:
+                if votes is None or votes != int(votes):
+                    raise ValueError("nonintegral recorded House vote")
+                actual.append((seat, party, int(votes), bool(winner)))
+            actual.sort()
+            if actual != sorted(inputs.central_rows):
+                continue
+            config = {key: v for key, v in private["inputs"]["config"].items()
+                      if key != "national_scale"}
+            result[election_id] = {
+                "context": document["context"],
+                "segment_id": fingerprint([
+                    {key: v for key, v in document["context"].items()
+                     if key != "as_of_date"},
+                    inputs.version, config,
+                    private["provenance"].get("calibration"),
+                ]),
+                "summary": (
+                    public_us_document(document)["summary"]
+                    if house_publication_allowed(document) else None
+                ),
+            }
+        except (ValueError, KeyError, TypeError, AttributeError):
+            # Unsupported optional metadata cannot supply public uncertainty.
+            continue
+    return result
+
+
+def trend_document(scope: OutputScope, entries: list[TrendEntry]) -> object:
+    """Activate the explicit US envelope for House; other models retain arrays."""
+    if scope.election_type == "us_house_model":
+        return {"schema": US_TREND_SCHEMA, "model": "house", "points": entries}
     return entries
 
 
@@ -330,6 +440,8 @@ def _trend_uncertainty(
     """
     result: dict[int, TrendUncertainty] = {}
     unpolled: set[int] = set()
+    if scope.election_type == "us_house_model":
+        return result, unpolled
     try:
         for election_id, national in iter_national_blocks(conn, scope):
             if election_id not in election_ids:
@@ -395,7 +507,10 @@ def publish_trends(sqlite_path: Path, scope: OutputScope, destination: Path) -> 
             "Regenerate this custom model trend cache from its scoped database outputs."
         )
     )
-    publish_json(reconstruct_trends(sqlite_path, scope), destination, repair=repair)
+    publish_json(
+        trend_document(scope, reconstruct_trends(sqlite_path, scope)),
+        destination, repair=repair,
+    )
 
 
 @contextmanager

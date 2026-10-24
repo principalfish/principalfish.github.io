@@ -48,4 +48,12 @@ def trend_entry_as_of_date(entry: dict[str, Any]) -> date | None:
 def load_trend_entries(path: Path) -> list[dict[str, Any]]:
     """Load and return the trend cache JSON array from ``path``."""
     with path.open("r", encoding="utf-8") as handle:
-        return cast(list[dict[str, Any]], json.load(handle))
+        value = json.load(handle)
+    if isinstance(value, dict):
+        if (value.get("schema") != "pf-us-model-trends-v1"
+                or value.get("model") != "house"):
+            raise ValueError("unsupported model trend envelope")
+        value = value.get("points")
+    if not isinstance(value, list):
+        raise ValueError("model trends must contain a point list")
+    return cast(list[dict[str, Any]], value)

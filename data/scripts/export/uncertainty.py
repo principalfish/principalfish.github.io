@@ -36,7 +36,8 @@ UNCERTAINTY_FILENAME = "prediction-uncertainty.json"
 
 
 def link_uncertainty_payload(
-    result_payload: dict[str, object], document: dict[str, object] | None
+    result_payload: dict[str, object], document: dict[str, object] | None,
+    *, run_identity: str | None = None,
 ) -> dict[str, object] | None:
     """Pair public results and ranges so mixed cached exports cannot show stale odds.
 
@@ -52,8 +53,11 @@ def link_uncertainty_payload(
     public_summary = {
         key: value for key, value in document.items() if key != "uncertaintyId"
     }
+    identity_parts: list[object] = [public_results, public_summary]
+    if run_identity is not None:
+        identity_parts.append(run_identity)
     encoded = json.dumps(
-        [public_results, public_summary],
+        identity_parts,
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
@@ -77,6 +81,7 @@ class ModelUncertaintyExport:
 
     seat_bands: dict[int, dict[int, SeatBand]] | None
     document: dict[str, object] | None
+    run_identity: str | None = None
 
 
 def model_uncertainty_export(
@@ -172,7 +177,8 @@ def model_run_uncertainty(
 
 
 def sync_uncertainty_file(
-    results_dir: Path, document: dict[str, object] | None, *, dry_run: bool
+    results_dir: Path, document: dict[str, object] | None, *, dry_run: bool,
+    filename: str = UNCERTAINTY_FILENAME,
 ) -> None:
     """Write the uncertainty file, or remove a stale one when there is none.
 
@@ -184,9 +190,12 @@ def sync_uncertainty_file(
         document: The document to publish, or None.
         dry_run: Print the action instead of taking it.
     """
-    path = results_dir / UNCERTAINTY_FILENAME
+    path = results_dir / filename
     if document is not None:
-        regions = document["regions"]
+        regions = document.get("regions", {})
+        regional_bands = document.get("regional_bands")
+        if isinstance(regional_bands, dict):
+            regions = regional_bands.get("regions", {})
         count = len(regions) if isinstance(regions, dict) else 0
         if dry_run:
             print(f"Would write uncertainty: {path} ({count} regions)")

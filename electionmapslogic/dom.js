@@ -1463,7 +1463,12 @@ function renderSeatPopup(seatName) {
   // the party had no comparison data point, which suppresses the delta span entirely.
   renderPopupRows(rows, (row) => {
     const deltaHtml = row.delta == null ? '' : `<span class="${deltaClass(row.delta)}">${formatSigned(row.delta, 2)}</span>`;
-    const band = state.view === "election" && state.currentElection.model ? seat.u[row.party] : null;
+    const usUncertainty = manifest.parliamentConfig(state.currentParliament).uncertaintyModel;
+    const showBand = !usUncertainty || (
+      state.electionData?.uncertainty && state.voteTotals.showUncertainty
+    );
+    const band = state.view === "election" && state.currentElection.model && showBand
+      ? seat.u[row.party] : null;
     const bandHtml = band
       ? `<span class="maps-popup-uncertainty">${seatUncertaintyText(band)}</span>` : "";
     return `<span>${formatPct(row.pct)}%</span>${deltaHtml}${bandHtml}`;

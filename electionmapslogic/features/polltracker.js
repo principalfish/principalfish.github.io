@@ -1,5 +1,7 @@
 import { manifest } from '../state.js';
 import { DEFAULT_PARTY_COLOUR } from '../utils.js';
+import { WESTMINSTER_DESCRIPTOR } from "../model-descriptors.js";
+import { houseTrackerEntries } from "./polltracker-us.js";
 
 function probability(value) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1
@@ -65,6 +67,9 @@ function optionalFields(party, hasUncertainty) {
  * }} Chart-ready timeline and per-party series.
  */
 export function parsePollTrackerData(data) {
+  const house = !Array.isArray(data) ? houseTrackerEntries(data) : null;
+  const descriptor = house?.descriptor ?? WESTMINSTER_DESCRIPTOR;
+  data = house?.entries ?? (Array.isArray(data) ? data : []);
   const partiesById = manifest.partiesById;
 
   // 1. Flatten: one row per (entry, party).
@@ -75,7 +80,8 @@ export function parsePollTrackerData(data) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(asOfDate)
         || !Number.isFinite(new Date(`${asOfDate}T00:00:00Z`).getTime())) continue;
     const hung = probability(entry.hung);
-    runsByDate.set(asOfDate, { hung });
+    const residual = house ? probability(entry.residual) : hung;
+    runsByDate.set(asOfDate, { hung, residual, segment: entry.segment_id ?? null });
     for (const [partyIdStr, pdata] of Object.entries(entry.parties || {})) {
       const partyId = Number(partyIdStr);
       const seats = Number(pdata.s);
@@ -86,7 +92,8 @@ export function parsePollTrackerData(data) {
         asOfDate,
         seats,
         votePct,
-        ...optionalFields(pdata, hung !== null),
+        ...optionalFields(pdata, residual !== null),
+        ...(house ? { pLargest: null } : {}),
       });
     }
   }
@@ -116,7 +123,7 @@ export function parsePollTrackerData(data) {
     return `${year}-${month}-${day}`;
   };
 
-  const timeline = (() => {
+  let timeline = (() => {
     // Single point or empty: nothing to expand, just attach dateValue.
     if (sortedDates.length <= 1) {
       return sortedDates.map((entry) => ({ dateKey: entry.dateKey, dateValue: parseIsoDate(entry.dateKey) }));
@@ -133,6 +140,17 @@ export function parsePollTrackerData(data) {
     }
     return entries;
   })();
+  if (house) {
+    let previous;
+    timeline = timeline.flatMap((entry) => {
+      const current = runsByDate.get(entry.dateKey);
+      const boundary = current && previous !== undefined
+        && (!current.segment || !previous || current.segment !== previous);
+      if (current) previous = current.segment;
+      return boundary ? [{ ...entry, boundary: true,
+        dateValue: new Date(entry.dateValue.getTime() - 1) }, entry] : [entry];
+    });
+  }
 
   // 5. Carry forward: for each party, walk the dense timeline producing parallel seats/votePct arrays
   // with the last known value reused on no-data days. Days before the party's first reading stay null.
@@ -144,14 +162,28 @@ export function parsePollTrackerData(data) {
     let lastOptional = optionalFields(null, false);
     let lastSeats = null;
     let lastVotePct = null;
+    let lastContext = null;
     timeline.forEach((entry) => {
-      const row = rowsByDateKey.get(entry.dateKey);
+      const row = entry.boundary ? null : rowsByDateKey.get(entry.dateKey);
+      if (!entry.boundary && runsByDate.has(entry.dateKey)) {
+        lastContext = runsByDate.get(entry.dateKey).segment;
+      }
+      if (entry.boundary) {
+        lastSeats = null;
+        lastVotePct = null;
+        lastOptional = optionalFields(null, false);
+      }
       if (row) {
         lastSeats = Number(row.seats || 0);
         lastVotePct = Number(row.votePct || 0);
       }
       // Calendar gaps carry forward; an explicit run clears any missing optional values.
-      if (runsByDate.has(entry.dateKey)) lastOptional = row ?? optionalFields(null, false);
+      if (!entry.boundary && runsByDate.has(entry.dateKey)) lastOptional = row ?? optionalFields(null, false);
+      if (house && !runsByDate.has(entry.dateKey) && !lastContext) {
+        lastSeats = null;
+        lastVotePct = null;
+        lastOptional = optionalFields(null, false);
+      }
       for (const key of Object.keys(optional)) optional[key].push(lastOptional[key]);
       seats.push(lastSeats);
       votePct.push(lastVotePct);
@@ -171,9 +203,21 @@ export function parsePollTrackerData(data) {
   });
 
   let lastHung = null;
+  let lastResidual = null;
+  let lastSegment = null;
+  const residual = [];
   const hung = timeline.map((entry) => {
-    if (runsByDate.has(entry.dateKey)) lastHung = runsByDate.get(entry.dateKey).hung;
+    const run = entry.boundary ? null : runsByDate.get(entry.dateKey);
+    if (entry.boundary) {
+      lastHung = null;
+      lastResidual = null;
+    } else if (run) {
+      lastHung = run.hung;
+      lastResidual = run.residual;
+      lastSegment = run.segment;
+    } else if (house && !lastSegment) lastResidual = null;
+    residual.push(lastResidual);
     return lastHung;
   });
-  return { timeline, seriesByParty, hung };
+  return { timeline, seriesByParty, hung, ...(house ? { residual, descriptor } : {}) };
 }

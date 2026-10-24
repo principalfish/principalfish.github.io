@@ -117,6 +117,7 @@ class UsSeatInput:
     parent_id: int | None = None
     alpha: float = 0.0
     single_party_baseline: bool = False
+    region_id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -268,6 +269,10 @@ def build_us_simulation_inputs(
     k = len(party_ids)
     index = {seat.seat_id: i for i, seat in enumerate(seats)}
     for seat in seats:
+        if seat.region_id is not None and (
+            type(seat.region_id) is not int or seat.region_id <= 0
+        ):
+            raise ValueError("region membership must use a positive integer identifier")
         arrays = (seat.baseline, seat.central_raw, seat.broad_mask, seat.eligible)
         if any(len(values) != k for values in arrays):
             raise ValueError("seat input party shape mismatch")
@@ -548,6 +553,16 @@ class UsErrorStreams:
 
 
 @dataclass(frozen=True, slots=True)
+class UsRegionSummary:
+    region_id: int
+    seat_ids: tuple[int, ...]
+    central_seats: IntArray
+    central_shares: FloatArray
+    seat_ranges: IntArray
+    share_ranges: FloatArray
+
+
+@dataclass(frozen=True, slots=True)
 class UsSimulationRun:
     """Scratch numerical outputs; central projection is never a simulated mean."""
 
@@ -560,6 +575,7 @@ class UsSimulationRun:
     seat_share_ranges: FloatArray
     seat_share_histograms: IntArray
     interval: float
+    regions: tuple[UsRegionSummary, ...] = ()
 
 
 def run_us_simulations(
@@ -585,8 +601,14 @@ def run_us_simulations(
             "US per-race summary samples exceed the 256 MiB resource limit; "
             "lower --simulations",
         )
+    region_indices = {
+        region: [i for i, seat in enumerate(inputs.seats) if seat.region_id == region]
+        for region in sorted({seat.region_id for seat in inputs.seats
+                              if seat.region_id is not None})
+    }
     retained_bytes = share_bytes + simulations * (
         len(inputs.seats) * 8 + len(inputs.party_ids) * 16
+        + len(region_indices) * len(inputs.party_ids) * 16
     )
     if retained_bytes > 512 * 1024**2:
         raise ValueError("US simulation arrays exceed 512 MiB; lower --simulations")
@@ -596,6 +618,10 @@ def run_us_simulations(
     winners = np.empty((simulations, len(inputs.seats)), dtype=np.int64)
     seat_totals = np.zeros((simulations, k), dtype=np.int64)
     vote_totals = np.zeros((simulations, k), dtype=np.int64)
+    region_seats = {region: np.zeros((simulations, k), dtype=np.int64)
+                    for region in region_indices}
+    region_votes = {region: np.zeros((simulations, k), dtype=np.int64)
+                    for region in region_indices}
     # Float32 is sufficient for the persisted two-decimal share bands. Only
     # compact ranges/histograms survive; raw replay retains exact float64 errors.
     share_samples = np.empty(
@@ -611,6 +637,12 @@ def run_us_simulations(
             seat_totals[start:stop, party_index] = (
                 projection.winners == party_index
             ).sum(axis=1)
+        for region, indices in region_indices.items():
+            region_votes[region][start:stop] = projection.votes[:, indices].sum(axis=1)
+            for party_index in range(k):
+                region_seats[region][start:stop, party_index] = (
+                    projection.winners[:, indices] == party_index
+                ).sum(axis=1)
     central = project_us_seats(inputs, np.zeros((1, len(inputs.seats), k)))
     quantiles = [(1 - interval) / 2, 0.5, (1 + interval) / 2]
     share_ranges = np.empty((3, len(inputs.seats), k), dtype=np.float64)
@@ -620,10 +652,25 @@ def run_us_simulations(
         for j in range(k):
             bins = np.floor(share_samples[:, i, j]).astype(np.int64)
             histograms[i, j] = np.bincount(bins, minlength=101)
+    regions = []
+    for region, indices in region_indices.items():
+        votes = region_votes[region]
+        if (votes.sum(axis=1) <= 0).any():
+            raise ValueError("regional projected vote denominator must be positive")
+        central_votes = central.votes[0, indices].sum(axis=0)
+        regions.append(UsRegionSummary(
+            region, tuple(inputs.seats[i].seat_id for i in indices),
+            np.bincount(central.winners[0, indices], minlength=k),
+            central_votes / central_votes.sum() * 100,
+            np.quantile(region_seats[region], quantiles, axis=0, method="nearest")
+            .astype(np.int64),
+            np.quantile(votes / votes.sum(axis=1, keepdims=True) * 100,
+                        quantiles, axis=0),
+        ))
     return UsSimulationRun(
         inputs, central, seat_totals, vote_totals, winners,
         inputs.seed if seed is None else seed,
-        share_ranges, histograms, interval,
+        share_ranges, histograms, interval, tuple(regions),
     )
 
 

@@ -141,7 +141,11 @@ def test_enabled_rows_counts_and_winners_equal_central_only_and_raw_snapshot(
     stored = _saved(path, cfg)
     assert enabled == central
     assert _rows(path, stored.election_id) == central_rows
-    assert cfg.spec.trend_cache_json.read_bytes() == central_trends
+    central_point = json.loads(central_trends)["points"][0]
+    uncertainty_point = json.loads(cfg.spec.trend_cache_json.read_bytes())["points"][0]
+    assert uncertainty_point["parties"] == central_point["parties"]
+    assert central_point["context"] is None
+    assert uncertainty_point["context"] == stored.national["context"]
     draws = load_us_draws(_raw(), stored)
     assert draws.inputs.central_rows == tuple(
         (int(row["seat_id"]), int(row["party_id"]), int(row["vote_total"]),

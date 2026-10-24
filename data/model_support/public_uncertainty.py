@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+
+from model_support.us_uncertainty import US_PUBLIC_SCHEMA, validate_document
 
 PUBLIC_SCHEMA = "pf-uncertainty-v1"
 SHARE_DIGITS = 1
@@ -400,3 +402,162 @@ def public_document(
         "regions": public_regions,
     }
     return document
+
+
+def public_us_document(national: Mapping[str, object]) -> dict[str, object]:
+    """Copy the strict House public core; operational acceptance is separate.
+
+    Shares use two decimal places and exclusive outcomes use four decimal
+    places with conserved total probability. No private snapshot is copied.
+    """
+    context = validate_document(national, public=False)
+    if context.model != "house":
+        raise PublicUncertaintyError("only House public uncertainty is enabled")
+    summary = _mapping(national["summary"], "summary")
+    metrics = _mapping(summary["metrics"], "metrics")
+    published_metrics: dict[str, object] = {}
+    for name, value in metrics.items():
+        metric = _mapping(value, name)
+        central = _mapping(metric["central"], name)
+        ranges = _mapping(metric["ranges"], name)
+        published_metrics[name] = {
+            "unit": metric["unit"], "domain": metric["domain"],
+            "total": metric["total"],
+            "central": {
+                party: round(_number(v, name), 2) if name == "national_vote_share"
+                else _count(v, name) for party, v in central.items()
+            },
+            "ranges": {
+                party: [round(_number(v, name), 2) if name == "national_vote_share"
+                        else _count(v, name) for v in _sequence(values, name)]
+                for party, values in ranges.items()
+            },
+        }
+    outcomes = _mapping(summary["outcomes"], "outcomes")
+    majority = _mapping(outcomes["majority"], "majority")
+    probabilities = _mapping(majority["probabilities"], "probabilities")
+    keys = [*sorted(probabilities, key=int), "no_majority"]
+    values = [_number(probabilities[key], "probability") for key in keys[:-1]]
+    values.append(_number(outcomes["no_majority"], "no_majority"))
+    units = [math.floor(value * 10_000) for value in values]
+    for index in sorted(range(len(values)), key=lambda i: -(values[i] * 10_000 - units[i]))[
+        :10_000 - sum(units)
+    ]:
+        units[index] += 1
+    rounded = dict(zip(keys, (value / 10_000 for value in units)))
+    result: dict[str, object] = {
+        "schema": US_PUBLIC_SCHEMA, "model": "house", "context": asdict(context),
+        "result_identity": national["result_identity"],
+        "summary": {
+            "simulations": summary["simulations"], "interval": summary["interval"],
+            "metrics": published_metrics,
+            "outcomes": {
+                "majority": {"domain": "party", "probabilities": {
+                    key: rounded[key] for key in keys[:-1]
+                }},
+                "no_majority": rounded["no_majority"],
+            },
+        },
+    }
+    validate_document(result, public=True)
+    return result
+
+
+def _sequence(value: object, where: str) -> list[object]:
+    if not isinstance(value, list):
+        raise PublicUncertaintyError(f"{where}: expected a list")
+    return value
+
+
+def _us_detail(
+    national: Mapping[str, object], detail: Mapping[str, object], schema: str,
+) -> None:
+    if detail.get("schema") != schema or detail.get("model") != "house":
+        raise PublicUncertaintyError("unsupported House detail schema or model")
+    summary = _mapping(national["summary"], "summary")
+    for key in ("context", "result_identity"):
+        if detail.get(key) != national[key]:
+            raise PublicUncertaintyError("House detail identity mismatch")
+    if any(detail.get(key) != summary[key] for key in ("simulations", "interval")):
+        raise PublicUncertaintyError("House detail simulation context mismatch")
+
+
+def public_us_seat_bands(
+    national: Mapping[str, object], seats: Mapping[str, object],
+) -> dict[int, dict[int, SeatBand]]:
+    """Validate US race bands before using the existing public compact u rows."""
+    _us_detail(national, seats, "pf-us-race-summary-v1")
+    result: dict[int, dict[int, SeatBand]] = {}
+    for seat_id, value in _mapping(seats.get("seats"), "seats").items():
+        if not seat_id.isdecimal() or int(seat_id) <= 0:
+            raise PublicUncertaintyError("invalid House race identifier")
+        block = _mapping(value, seat_id)
+        parties = _mapping(block.get("parties"), seat_id)
+        result[int(seat_id)] = {}
+        for party, data in parties.items():
+            row = _mapping(data, party)
+            bounds = _sequence(row.get("share_range"), "share_range")
+            if len(bounds) != 3:
+                raise PublicUncertaintyError("invalid House share quantiles")
+            values = [_number(v, "share_range") for v in bounds]
+            if not 0 <= values[0] <= values[1] <= values[2] <= 100:
+                raise PublicUncertaintyError("invalid House share quantiles")
+            if not party.isdecimal() or int(party) <= 0:
+                raise PublicUncertaintyError("invalid House party identifier")
+            result[int(seat_id)][int(party)] = SeatBand(
+                round(values[0], 2), round(values[2], 2),
+                _probability(row.get("win_probability"), "win_probability"),
+            )
+    return result
+
+
+def public_us_regional_bands(
+    national: Mapping[str, object], regions: Mapping[str, object],
+    members: Mapping[int, list[str]],
+) -> dict[str, object]:
+    """A separate, whitelisted additive wire contract for correlated regions."""
+    _us_detail(national, regions, "pf-us-region-summary-v1")
+    published: dict[str, object] = {}
+    blocks = _mapping(regions.get("regions"), "regions")
+    if set(blocks) != {str(region) for region in members}:
+        raise PublicUncertaintyError("House regional field is incomplete")
+    summary = _mapping(national["summary"], "summary")
+    metrics = _mapping(summary["metrics"], "metrics")
+    house = _mapping(metrics["house_seats"], "house_seats")
+    expected_parties = set(_mapping(house["central"], "central"))
+    seen: set[int] = set()
+    for region_id, value in blocks.items():
+        if not region_id.isdecimal() or int(region_id) not in members:
+            raise PublicUncertaintyError("invalid House region identifier")
+        block = _mapping(value, region_id)
+        total = len(members[int(region_id)])
+        seat_ids = _sequence(block.get("seat_ids"), "region.seat_ids")
+        checked = [_count(seat, "region.seat_ids") for seat in seat_ids]
+        if (len(checked) != total or len(set(checked)) != total
+                or any(seat <= 0 or seat in seen for seat in checked)):
+            raise PublicUncertaintyError("invalid House regional membership")
+        seen.update(checked)
+        parties: dict[str, object] = {}
+        rows = _mapping(block.get("parties"), region_id)
+        if set(rows) != expected_parties:
+            raise PublicUncertaintyError("invalid House regional party field")
+        central_seats = 0
+        central_share = 0.0
+        for party, data in rows.items():
+            row = _mapping(data, party)
+            central_seats += _count(row.get("central_seats"), "central_seats")
+            central_share += _number(row.get("central_share"), "central_share")
+            seat_range = _seat_range(row.get("s"), "region.s")
+            shares = _sequence(row.get("v"), "region.v")
+            if len(shares) != 3 or seat_range[-1] > total:
+                raise PublicUncertaintyError("invalid House regional ranges")
+            values = [_number(v, "region.v") for v in shares]
+            if not 0 <= values[0] <= values[1] <= values[2] <= 100:
+                raise PublicUncertaintyError("invalid House regional share quantiles")
+            parties[party] = {"s": seat_range, "v": [round(values[0], 2),
+                                                     round(values[-1], 2)]}
+        if central_seats != total or abs(central_share - 100) > 1e-6:
+            raise PublicUncertaintyError("invalid House regional central totals")
+        published[region_id] = {"members": sorted(members[int(region_id)]),
+                                "parties": parties}
+    return {"schema": "pf-us-public-regions-v1", "regions": published}

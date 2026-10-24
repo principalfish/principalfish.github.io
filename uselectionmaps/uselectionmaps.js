@@ -19,6 +19,9 @@ import {
 } from '../electionmapslogic/features/predict-controller.js';
 import { wirePredictControls } from '../electionmapslogic/features/predict-view.js';
 import { activateSenateForecastView } from '../electionmapslogic/features/senate-forecast-controller.js';
+import {
+  activatePollTrackerMode, wirePollTrackerControls,
+} from "../electionmapslogic/features/polltracker-view.js";
 
 startApp({
   predict: {
@@ -27,4 +30,5 @@ startApp({
     getBaseElection: getPredictBaseElection,
     activateElection: activateSenateForecastView,
   },
+  pollTracker: { wire: wirePollTrackerControls, activate: activatePollTrackerMode },
 });

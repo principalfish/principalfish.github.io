@@ -19,7 +19,11 @@
   },
   "parliamentFeatures": {
     "us_house": {
-      "features": ["predict"],
+      "features": ["predict", "pollTracker"],
+      "polltrackerDataPath": "results/us-house-trends.json",
+      "polltrackerDefaultParties": [20, 21],
+      "uncertaintyDataPath": "results/us-house-uncertainty.json",
+      "uncertaintyModel": "house",
       "predictAnchorElectionId": "current-us-house",
       "predictBaselineElectionId": "2024-us-house",
       "nextElectionYear": 2026,

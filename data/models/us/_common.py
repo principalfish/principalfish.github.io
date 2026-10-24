@@ -2546,6 +2546,7 @@ def freeze_house_central_inputs(
                 if active and average is not None else 0.0
             ),
             single_party_baseline=sum(value > 0 for value in votes.values()) == 1,
+            region_id=ref.region_id,
         ))
     return freeze_us_central_inputs(
         model="us-house", as_of_date=cfg.as_of_date, party_ids=parties,

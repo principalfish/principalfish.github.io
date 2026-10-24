@@ -27,7 +27,7 @@ from model_support import trends
 from model_support.history import HistoryRecomputationError
 from model_support.io import OutputPublicationError, publish_json
 from model_support.persistence import OutputScope, OutputVote, replace_output
-from model_support.trends import TREND_MODELS, reconstruct_trends
+from model_support.trends import TREND_MODELS, reconstruct_trends, trend_document
 
 from tests import test_holyrood_model as holy
 from tests import test_us_model as us
@@ -220,8 +220,8 @@ def test_failed_date_retains_old_rows_and_finalizes_actual_database(
     if continue_on_error:
         assert f"2026-06-{failed_day:02}" in str(error.value)
     assert rows(only_the_test_database, foreign_scope) == foreign_before
-    assert json.loads(case.cache.read_text()) == reconstruct_trends(
-        only_the_test_database, case.scope
+    assert json.loads(case.cache.read_text()) == trend_document(
+        case.scope, reconstruct_trends(only_the_test_database, case.scope),
     )
 
 
@@ -540,6 +540,6 @@ def test_us_rebuild_prunes_only_after_all_replacements_succeed(
     for day in (1, 5):
         assert (f"{case.scope.name_prefix} 2026-06-{day:02}" in dates) is fail
     assert publication_count == 1
-    assert json.loads(case.cache.read_text()) == reconstruct_trends(
-        only_the_test_database, case.scope
+    assert json.loads(case.cache.read_text()) == trend_document(
+        case.scope, reconstruct_trends(only_the_test_database, case.scope),
     )

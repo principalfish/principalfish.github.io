@@ -1,4 +1,5 @@
 import { formatInt, formatPct } from "../utils.js";
+import { WESTMINSTER_DESCRIPTOR } from "../model-descriptors.js";
 
 /** Model updates averaged per drawn band step; the tooltip keeps each day's own range. */
 const BAND_SMOOTHING_POINTS = 5;
@@ -10,13 +11,13 @@ export function pollTrackerCapabilities(data) {
   const voteBands = hasBands("voteLo", "voteHi");
   return {
     bands: seatBands || voteBands, seatBands, voteBands,
-    chances: data.hung?.some(Number.isFinite) || series.some((row) => [...(row.pMaj || []), ...(row.pLargest || [])].some(Number.isFinite)),
+    chances: (data.residual ?? data.hung)?.some(Number.isFinite) || series.some((row) => [...(row.pMaj || []), ...(row.pLargest || [])].some(Number.isFinite)),
   };
 }
 
-export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes, bands = true }) {
+export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes, bands = true, descriptor = WESTMINSTER_DESCRIPTOR }) {
   const basis = "if an election were held today, conditional on current polls and the model's error assumptions.";
-  if (chances) return `Chances ${basis} Hung means no party wins a majority.`;
+  if (chances) return `Chances ${basis} ${descriptor.residualShort} means no party wins a majority.`;
   if (!bands) return "Uncertainty hidden. Tick Uncertainty to show 90% ranges.";
   const metrics = [];
   if (seats && capabilities.seatBands) metrics.push("seat");
@@ -26,14 +27,16 @@ export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes
 }
 
 /** Reuse the percentage plotting axis for odds, while retaining the underlying series. */
-export function chanceSeries(series, metric, hung) {
+export function chanceSeries(series, metric, hung, descriptor = WESTMINSTER_DESCRIPTOR) {
   const percent = (values) => values.map((value) => Number.isFinite(value) ? value * 100 : null);
   const label = metric === "pLargest" ? "Largest-party chance" : "Majority chance";
   return [
     ...series.map((row) => ({ ...row, votePct: percent(row[metric] || []), chanceLabel: label })),
     {
-      partyKey: "hung", partyName: "Hung parliament", colour: "#475569", isHung: true,
-      votePct: percent(hung), chanceLabel: "Hung-parliament chance",
+      partyKey: descriptor.residualKey, partyName: descriptor.residualLabel,
+      colour: "#475569", isHung: true,
+      votePct: percent(hung), chanceLabel: descriptor.model
+        ? `${descriptor.residualLabel} chance` : "Hung-parliament chance",
     },
   ];
 }

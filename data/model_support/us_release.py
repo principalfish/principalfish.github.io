@@ -120,3 +120,34 @@ def house_release(path: Path = HOUSE_RELEASE) -> HouseRelease:
         return release
     except (OSError, ValueError, KeyError, TypeError) as exc:
         raise UsReleaseError(f"Cannot load House release settings: {exc}") from exc
+
+
+def house_publication_allowed(
+    document: Mapping[str, Any], *, release_path: Path = HOUSE_RELEASE,
+) -> bool:
+    """Current approval cannot retroactively approve an unaccepted saved run."""
+    try:
+        current = house_release(release_path)
+        if not current.enabled or document.get("model") != "house":
+            return False
+        private = document["private"]
+        provenance = private["provenance"]
+        saved = provenance["release"]
+        calibration = provenance["calibration"]
+        return bool(
+            saved.get("schema") == "pf-us-house-release-v1"
+            and saved.get("enabled") is True
+            and saved.get("geography_validated") is True
+            and saved.get("blockers") == []
+            and calibration.get("accepted") is True
+            and calibration.get("model") == "us-house"
+            and calibration.get("kernel_version") == US_KERNEL_VERSION
+            and not calibration.get("release_blockers", [])
+            and all(saved.get(key) == current.state[key] for key in (
+                "target_cycle", "map_name", "baseline_name", "comparability_id",
+            ))
+            and document["context"]["target_cycle"] == saved["target_cycle"]
+            and private["options"]["baseline_name"] == saved["baseline_name"]
+        )
+    except (UsReleaseError, KeyError, TypeError, AttributeError):
+        return False

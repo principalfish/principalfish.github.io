@@ -1,4 +1,5 @@
 // Published uncertainty is optional. Keep decoding and display rules independent of the DOM.
+import { decodeUsUncertainty } from "./us-uncertainty.js";
 
 function finite(value, min = 0, max = Infinity) {
   return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
@@ -25,7 +26,10 @@ export function decodeSeatUncertainty(value, resolveParty) {
 }
 
 /** Decode public identifiers once, when a matching summary arrives. */
-export function decodeUncertainty(payload, identity, resolveParty, regionsById) {
+export function decodeUncertainty(payload, identity, resolveParty, regionsById, options = {}) {
+  if (options.model || payload?.schema === "pf-us-public-uncertainty-v1") {
+    return decodeUsUncertainty(payload, identity, resolveParty, regionsById, options);
+  }
   if (!identity || payload?.schema !== "pf-uncertainty-v1"
       || payload.uncertaintyId !== identity || !finite(payload.interval, 0, 1)
       || payload.interval === 0 || !Number.isInteger(payload.simulations)
@@ -86,6 +90,16 @@ export function seatUncertaintyText(band) {
 
 export function uncertaintyHeadline(summary, labelParty) {
   if (!summary) return "";
+  if (summary.descriptor?.model === "house") {
+    const leaders = Object.entries(summary.national.parties)
+      .filter(([, row]) => Number.isFinite(row.pm))
+      .sort((a, b) => b[1].pm - a[1].pm || labelParty(a[0]).localeCompare(labelParty(b[0])));
+    if (!leaders.length || !Number.isFinite(summary.national.residual)) return "";
+    const [party, row] = leaders[0];
+    return `${labelParty(party)} majority ${uncertaintyNumber(row.pm * 100)}% · `
+      + `${summary.descriptor.residualLabel} ${uncertaintyNumber(summary.national.residual * 100)}% `
+      + "(if an election were held today)";
+  }
   const leaders = Object.entries(summary.national.parties)
     .filter(([, row]) => row.pl !== null && row.pm !== null)
     .sort((a, b) => b[1].pl - a[1].pl || labelParty(a[0]).localeCompare(labelParty(b[0])));

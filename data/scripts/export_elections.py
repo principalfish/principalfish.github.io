@@ -48,7 +48,9 @@ from sqlalchemy.orm import joinedload, Session
 
 from db import Database
 from electoral_votes import allocation_year, get_electoral_votes
-from model_support.persistence import load_uncertainty
+from model_support.persistence import UncertaintyStoreError, load_uncertainty
+from model_support.trends import reconstruct_trends, trend_document
+from model_support.persistence import OutputScope
 from models import Election, ElectionType, Map, Party, Region, Seat, Vote
 from scripts.export.naming import (
     PARTY_NAME_TO_KEY,
@@ -107,6 +109,9 @@ from scripts.export.uncertainty import (
     link_uncertainty_payload,
     model_run_uncertainty,
     sync_uncertainty_file,
+)
+from scripts.export.us_uncertainty import (
+    HOUSE_MAP_NAME, HOUSE_PREFIX, house_uncertainty_export, latest_us_model_run,
 )
 
 DEM_PARTY_ID = 20   # Democratic — see uselectionmaps/data/map-modes.json parties[]
@@ -378,6 +383,8 @@ def main() -> None:
                     shell or manifest, manifest["senateForecast"]
                 )
                 manifest["parliamentFeatures"] = shell.get("parliamentFeatures", {})
+            elif "parliamentFeatures" in shell:
+                manifest["parliamentFeatures"] = shell["parliamentFeatures"]
             rebuilt_modes = build_map_modes_with_regions(
                 shell.get("mapModes", {}),
                 manifest_regions_by_map_id,
@@ -543,6 +550,15 @@ def main() -> None:
                 ).scalars().first()
                 if _us_model_type == ElectionType.us_senate_model:
                     latest_us_model = latest_senate_run(session)
+                elif _us_model_type == ElectionType.us_house_model:
+                    latest_us_model = latest_us_model_run(
+                        session, _us_model_type, HOUSE_MAP_NAME, HOUSE_PREFIX,
+                    )
+                elif _us_model_type == ElectionType.us_presidential_model:
+                    latest_us_model = latest_us_model_run(
+                        session, _us_model_type, "US Presidential 2024",
+                        "US President UNS",
+                    )
                 if latest_us_model is not None:
                     latest_us_models.append(latest_us_model)
             if latest_us_models:
@@ -703,6 +719,14 @@ def _export_page(
         published: ModelUncertaintyExport | None = None
         if election.type == ElectionType.model_uns:
             published = model_uncertainty or ModelUncertaintyExport(None, None)
+        elif election.type == ElectionType.us_house_model:
+            try:
+                stored = load_uncertainty(
+                    Path(str(session.get_bind().engine.url.database)), election.id,
+                )
+            except (ValueError, UncertaintyStoreError):
+                stored = None
+            published = house_uncertainty_export(election, stored, votes, seats)
         result_payload = build_result_payload(
             seats,
             votes,
@@ -711,7 +735,8 @@ def _export_page(
             seat_uncertainty=published.seat_bands if published is not None else None,
         )
         uncertainty_document = link_uncertainty_payload(
-            result_payload, published.document if published is not None else None
+            result_payload, published.document if published is not None else None,
+            run_identity=published.run_identity if published is not None else None,
         )
 
         if election.type == ElectionType.us_presidential:
@@ -817,7 +842,12 @@ def _export_page(
                     write_json(map_path, map_payload)
 
         if published is not None:
-            sync_uncertainty_file(results_dir, uncertainty_document, dry_run=args.dry_run)
+            sync_uncertainty_file(
+                results_dir, uncertainty_document, dry_run=args.dry_run,
+                filename=("us-house-uncertainty.json"
+                          if election.type == ElectionType.us_house_model
+                          else "prediction-uncertainty.json"),
+            )
 
         map_files_by_id[str(election.map_id)] = map_relpath
         written_map_ids.add(election.map_id)
@@ -988,6 +1018,26 @@ def _export_page(
 
             insert_current_parliament_entry(manifest_entries, composite_entry)
             default_election_id = composite_manifest_id
+
+    house_election = next(
+        (e for e in elections if e.type == ElectionType.us_house_model), None,
+    )
+    if house_election is not None:
+        house_scope = OutputScope(
+            "us_house_model", house_election.map_id, HOUSE_PREFIX,
+        )
+        source = Path(str(session.get_bind().engine.url.database))
+        house_trends = trend_document(
+            house_scope, reconstruct_trends(source, house_scope),
+        )
+        assert isinstance(house_trends, dict)
+        if not args.dry_run:
+            write_json(results_dir / "us-house-trends.json", house_trends)
+    elif "us_house" in parliaments and not single_election_mode:
+        sync_uncertainty_file(
+            results_dir, None, dry_run=args.dry_run,
+            filename="us-house-uncertainty.json",
+        )
 
     expected_map_filenames = {Path(path).name for path in map_files_by_id.values()}
     if maps_dir.exists():

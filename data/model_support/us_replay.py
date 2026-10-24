@@ -21,7 +21,7 @@ from model_support.persistence import StoredUncertainty, UncertaintyPayload
 from model_support.us_run import fingerprint, restore_run_inputs
 from model_support.us_simulation import (
     FloatArray, IntArray, UsErrorStreams, UsProjection, UsSimulationInputs,
-    UsSimulationRun, project_us_seats,
+    UsSimulationRun, project_us_seats, us_popular_votes,
 )
 from model_support.us_uncertainty import US_STORED_SCHEMA, validate_document
 
@@ -100,7 +100,8 @@ def stage_us_draws(
                 if (
                     not np.array_equal(projection.winners, run.winners[start:stop])
                     or not np.array_equal(
-                        projection.votes.sum(axis=1), run.vote_totals[start:stop],
+                        us_popular_votes(run.inputs, projection.votes),
+                        run.vote_totals[start:stop],
                     )
                 ):
                     raise ValueError("raw staging differs from the House simulation")
@@ -366,7 +367,9 @@ def replay_us_selected(
         np.array_equal(projection.votes, arrays["votes"]),
         np.array_equal(projection.winners, arrays["winners"]),
         np.array_equal(totals, arrays["seat_totals"][0]),
-        np.array_equal(projection.votes.sum(axis=1), arrays["vote_totals"]),
+        np.array_equal(
+            us_popular_votes(metadata.inputs, projection.votes), arrays["vote_totals"],
+        ),
     )):
         raise ValueError("US simulation replay differs from saved counts or errors")
     central = project_us_seats(metadata.inputs, np.zeros_like(errors))
@@ -418,7 +421,8 @@ def replay_us_simulation(draws: UsDraws, index: int) -> UsReplayedSimulation:
         np.array_equal(projection.votes[0], draws.votes[index]),
         np.array_equal(projection.winners[0], draws.winners[index]),
         np.array_equal(totals, draws.seat_totals[index]),
-        np.array_equal(projection.votes[0].sum(axis=0), draws.vote_totals[index]),
+        np.array_equal(us_popular_votes(draws.inputs, projection.votes)[0],
+                       draws.vote_totals[index]),
     )):
         raise ValueError("US simulation replay differs from saved counts or errors")
     central = project_us_seats(draws.inputs, np.zeros_like(errors))

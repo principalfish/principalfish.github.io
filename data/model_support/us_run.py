@@ -15,6 +15,10 @@ from model_support.persistence import UncertaintyPayload
 from model_support.senate_cycles import (
     SenateCycle, senate_cycle_snapshot, senate_cycle_from_snapshot,
 )
+from model_support.us_president import (
+    PRESIDENT_NATIONAL_POLICY, PRESIDENT_REFERENCE_POLICY,
+    president_counts, president_outcomes, validate_president_field,
+)
 from model_support.us_senate import senate_summary
 from model_support.us_outcomes import UsRunContext
 from model_support.us_simulation import (
@@ -27,7 +31,7 @@ from model_support.us_simulation import (
     UsSimulationInputs,
     UsSimulationRun,
     assert_zero_error_parity,
-    us_error_budget,
+    us_error_budget, us_popular_votes,
 )
 from model_support.us_uncertainty import US_STORED_SCHEMA, validate_document
 
@@ -98,6 +102,9 @@ def restore_inputs(snapshot: Mapping[str, Any]) -> UsSimulationInputs:
             seats=seats, sources=sources, polls=polls,
             config=UsErrorConfig(**snapshot["config"]),
             central_rows=tuple(tuple(row) for row in snapshot["central_rows"]),
+            reference_seat_ids=(tuple(snapshot["reference_seat_ids"])
+                                if snapshot.get("reference_seat_ids") is not None
+                                else None),
         )
         if not inputs.seats or len(set(inputs.party_ids)) != len(inputs.party_ids):
             raise ValueError("invalid replay field")
@@ -109,6 +116,7 @@ def restore_inputs(snapshot: Mapping[str, Any]) -> UsSimulationInputs:
                     raise ValueError("source loading outside replay field")
                 if len(loading.coefficients) != len(inputs.party_ids):
                     raise ValueError("invalid loading shape")
+        inputs.reference_indices
         assert_zero_error_parity(inputs)
     except (KeyError, TypeError, IndexError) as exc:
         raise ValueError("invalid US replay snapshot") from exc
@@ -171,6 +179,41 @@ def senate_context(
     )
 
 
+def president_context(
+    inputs: UsSimulationInputs, *, map_id: int, target_cycle: int,
+    allocation: Mapping[int, int], options: Mapping[str, object],
+    comparability_id: str,
+) -> UsRunContext:
+    validate_president_field(inputs, allocation)
+    if target_cycle % 4:
+        raise ValueError("President target must be a presidential election year")
+    if (not isinstance(options.get("tracked_matchup"), str)
+            or not options["tracked_matchup"]):
+        raise ValueError("President requires its frozen tracked matchup")
+    return UsRunContext(
+        model="president", map_id=map_id, as_of_date=inputs.as_of_date.isoformat(),
+        target_cycle=target_cycle, matchup_id=fingerprint(options["tracked_matchup"]),
+        field_id=fingerprint([
+            [(seat.seat_id, seat.name, seat.state, seat.parent_id, seat.region_id)
+             for seat in inputs.seats], inputs.party_ids,
+            inputs.reference_seat_ids, PRESIDENT_REFERENCE_POLICY,
+        ]),
+        baseline_id=fingerprint([(seat.seat_id, seat.baseline, seat.turnout)
+                                 for seat in inputs.seats]),
+        central_options_id=fingerprint(options), comparability_id=comparability_id,
+        electoral_allocation_id=fingerprint(sorted(allocation.items())),
+    )
+
+
+def president_payload(
+    run: UsSimulationRun, context: UsRunContext, *, allocation: Mapping[int, int],
+    options: Mapping[str, object], provenance: Mapping[str, object],
+    interval: float = 0.9,
+) -> UncertaintyPayload:
+    return _run_payload(run, context, options=options, provenance=provenance,
+                        interval=interval, allocation=allocation)
+
+
 def senate_payload(
     run: UsSimulationRun, context: UsRunContext, *, cycle: SenateCycle,
     party_names: Mapping[int, str], options: Mapping[str, object],
@@ -198,19 +241,23 @@ def _run_payload(
     options: Mapping[str, object], provenance: Mapping[str, object],
     interval: float, cycle: SenateCycle | None = None,
     party_names: Mapping[int, str] | None = None,
+    allocation: Mapping[int, int] | None = None,
 ) -> UncertaintyPayload:
     """Tally rounded votes with model-specific counting and exact central rows."""
-    if (context.model not in {"house", "senate"}
+    if (context.model not in {"house", "senate", "president"}
             or run.inputs.model != f"us-{context.model}"):
         raise ValueError("US tally received another model")
-    expected = 435 if cycle is None else len(cycle.races)
+    if (context.model == "president") != (allocation is not None):
+        raise ValueError("President tally requires its frozen electoral allocation")
+    expected = (56 if allocation is not None else 435 if cycle is None
+                else len(cycle.races))
     if (len(run.inputs.seats) != expected
             or not np.all(run.seat_totals.sum(axis=1) == expected)):
         raise ValueError("US simulations must count the complete contested field")
     if (context.model == "senate") != (cycle is not None):
         raise ValueError("Senate tally requires its frozen counting context")
     if context.as_of_date != run.inputs.as_of_date.isoformat():
-        raise ValueError("House context date differs from frozen inputs")
+        raise ValueError("US context date differs from frozen inputs")
     if not 0 < interval < 1:
         raise ValueError("interval must be in (0, 1)")
     if interval != run.interval:
@@ -219,9 +266,9 @@ def _run_payload(
     simulations = len(run.winners)
     quantiles = [(1 - interval) / 2, 0.5, (1 + interval) / 2]
     central_seats = np.bincount(run.central.winners[0], minlength=len(parties))
-    central_votes = run.central.votes[0].sum(axis=0)
+    central_votes = us_popular_votes(run.inputs, run.central.votes)[0]
     if (run.vote_totals.sum(axis=1) <= 0).any() or central_votes.sum() <= 0:
-        raise ValueError("House national vote denominator must be positive")
+        raise ValueError("US national vote denominator must be positive")
     shares = run.vote_totals / run.vote_totals.sum(axis=1, keepdims=True) * 100
     seat_ranges = np.quantile(run.seat_totals, quantiles, axis=0, method="nearest")
     vote_ranges = np.quantile(shares, quantiles, axis=0)
@@ -275,6 +322,27 @@ def _run_payload(
         private.pop("largest_tie_rule")
         private["senate_cycle"] = senate_cycle_snapshot(cycle)
         private["senate_counting"] = arithmetic
+    if allocation is not None:
+        counts = president_counts(run.inputs, run.winners, allocation)
+        central_counts = president_counts(run.inputs, run.central.winners, allocation)
+        ranges = np.quantile(counts, quantiles, axis=0, method="nearest")
+        metrics.pop("house_seats")
+        metrics["electoral_votes"] = {
+            "unit": "electoral_votes", "domain": "party", "total": 538,
+            "central": {str(p): int(central_counts[0, j])
+                        for j, p in enumerate(parties)},
+            "ranges": {str(p): [int(v) for v in ranges[:, j]]
+                       for j, p in enumerate(parties)},
+        }
+        summary["outcomes"] = president_outcomes(counts, parties)
+        private.pop("largest")
+        private.pop("largest_tie_rule")
+        private["president_counting"] = {
+            "allocation": {str(seat_id): weight
+                           for seat_id, weight in allocation.items()},
+            "reference_policy": PRESIDENT_REFERENCE_POLICY,
+            "national_error_policy": PRESIDENT_NATIONAL_POLICY,
+        }
     # Includes config and stochastic outputs: a same-date rerun with identical
     # central rows must still refuse another run's raw archive.
     private["artifact_id"] = fingerprint([result_identity, summary, private])
@@ -358,6 +426,17 @@ def restore_run_inputs(document: Mapping[str, Any]) -> UsSimulationInputs:
         )
         if cycle.target_year != context.target_cycle:
             raise ValueError("Senate replay target differs from frozen cycle")
+    elif context.model == "president":
+        counting = private["president_counting"]
+        allocation = {int(key): value for key, value in counting["allocation"].items()}
+        if (counting["reference_policy"] != PRESIDENT_REFERENCE_POLICY
+                or counting["national_error_policy"] != PRESIDENT_NATIONAL_POLICY):
+            raise ValueError("unsupported President reference or national error policy")
+        expected_context = president_context(
+            inputs, map_id=context.map_id, target_cycle=context.target_cycle,
+            allocation=allocation, options=private["options"],
+            comparability_id=context.comparability_id,
+        )
     else:
         raise ValueError("unsupported US replay model")
     if expected_context != context:

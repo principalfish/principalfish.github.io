@@ -301,3 +301,11 @@ nor odds across the incomplete context, draws no connecting line, and exposes no
 ranges or chances for those dates. Missing or invalid saved counting evidence
 remains a gap. Legacy contested totals stay available to internal list readers
 and are never relabelled as full-chamber totals.
+
+
+President operational exports add a whitelisted `display` extension after the
+strict five-key public core is validated: `target_cycle` equals the saved context
+and `matchup` comes from the saved central options. These labels contain no poll
+records, sample sizes or sources. Current mutable tracked-matchup settings never
+supply labels for a previously saved result. The existing `basis` and opaque
+`uncertaintyId` cache extensions remain separate from the strict core.

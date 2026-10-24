@@ -92,6 +92,7 @@ def explore(
                         "no_majority": (
                             item.document["summary"]["outcomes"][
                                 "no_caucus_majority" if model == "senate"
+                                else "no_electoral_majority" if model == "president"
                                 else "no_majority"
                             ] * 100
                         ),

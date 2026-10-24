@@ -42,7 +42,7 @@ from _common import (
 )
 from run_us_house_model import SPEC as HOUSE_SPEC
 from run_us_senate_model import SPEC as SENATE_SPEC
-from model_support.us_release import SENATE_RELEASE
+from model_support.us_release import SENATE_RELEASE, PRESIDENT_RELEASE
 
 from console.db import get_db
 from console.paths import EXPORT_ELECTION_SCRIPT
@@ -148,6 +148,18 @@ def senate_uncertainty_hub() -> ResponseReturnValue:
             get_db(), map_name=SENATE_SPEC.map_name,
             release_path=SENATE_SPEC.uncertainty_release_config or SENATE_RELEASE,
             model="senate",
+        ),
+    )
+
+
+@bp.route("/us/president/uncertainty")
+def president_uncertainty_hub() -> ResponseReturnValue:
+    return render_template(
+        "us_uncertainty_hub.html",
+        title="US President uncertainty", chamber="president",
+        status=house_uncertainty_status(
+            get_db(), map_name="US Presidential 2024",
+            release_path=PRESIDENT_RELEASE, model="president",
         ),
     )
 

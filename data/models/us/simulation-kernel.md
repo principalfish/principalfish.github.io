@@ -60,3 +60,36 @@ seats as independent. Budget SDs are pre-clamp references, not outcome ranges.
 Persistence, accepted calibration, posterior/result summaries and public
 publication are separate subsequent stages. The existing Westminster engine
 and schema are unchanged.
+
+
+## Presidential counting and reference populations
+
+President simulations retain all 56 state/district allocation units for winner
+and raw-vote replay. The frozen `reference_seat_ids` selects only the 50 states
+and District of Columbia. National popular totals, national covariance shapes,
+pooled state covariance shapes and national error-budget weights all use those
+51 units. Maine/Nebraska district turnout cannot change those reference totals.
+House/Senate snapshots that predate this field retain their all-unit convention.
+
+The target-cycle allocation is resolved from the caller's database transaction,
+validated against the complete field and 538 EV total, and frozen alongside the
+reference policy. EV summary counts weight each unit winner by that allocation;
+raw `seat_totals` still means 56 allocation-unit wins. Majority requires 270 EVs.
+No electoral majority includes 269–269 and multi-party outcomes. No contingent
+winner is assigned. State/district parent residual sharing follows the actual
+central blend; national/state errors apply once to each outcome unit.
+
+The proposed national error policy transfers total historical national polling
+average error to the deployed individual-poll blend. It adds no separate
+national sampling term. Actual contributing individual polls still require valid
+sample-size evidence. Local sampling terms remain source-specific. This transfer,
+state/local/district decomposition, numerical calibration and allocation/baseline
+provenance remain unaccepted; `president-release.json` is disabled. Synthetic
+accepted settings in tests are test inputs, never production estimates.
+
+The saved context and artifact identity bind the allocation, reference selection,
+matchup, baseline, target and central options. Replay reads those saved inputs and
+uses the same popular-vote convention as the original run. Public export also
+compares the current allocation and exact recorded central votes before attaching
+ranges. The President trend array stays on its legacy contract until its tracker
+adapter is activated.

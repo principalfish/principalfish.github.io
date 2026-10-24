@@ -11,9 +11,11 @@ from pathlib import Path
 from typing import Any
 
 from model_support.us_simulation import US_KERNEL_VERSION, UsErrorConfig
+from model_support.us_president import PRESIDENT_NATIONAL_POLICY
 
 HOUSE_RELEASE = Path(__file__).resolve().parents[1] / "models/us/house-release.json"
 SENATE_RELEASE = HOUSE_RELEASE.with_name("senate-release.json")
+PRESIDENT_RELEASE = HOUSE_RELEASE.with_name("president-release.json")
 
 
 class UsReleaseError(ValueError):
@@ -99,18 +101,32 @@ def _release(path: Path, model: str) -> UsRelease:
         blockers = []
         if state.get("enabled") is not True:
             blockers.append("production release is disabled")
-        validation_key = "geography_validated" if model == "house" else "roster_validated"
+        validation_key = {
+            "house": "geography_validated", "senate": "roster_validated",
+            "president": "allocation_validated",
+        }[model]
         if state.get(validation_key) is not True:
-            blockers.append(
-                "target-cycle House geography/baseline is unresolved"
-                if model == "house" else "target-cycle Senate roster is unresolved"
-            )
+            blockers.append({
+                "house": "target-cycle House geography/baseline is unresolved",
+                "senate": "target-cycle Senate roster is unresolved",
+                "president": "target-cycle President allocation is unresolved",
+            }[model])
         if config.get("accepted") is not True:
             blockers.append("calibration and labelled assumptions are unaccepted")
         if config.get("kernel_version") != US_KERNEL_VERSION:
             blockers.append("calibration kernel version differs from the runner")
         if not isinstance(config.get("assumption_label"), str):
             blockers.append("accepted calibration needs its explicit assumption label")
+        if model == "president" and (
+            config.get("national_error_policy") != PRESIDENT_NATIONAL_POLICY
+            or config.get("national_sampling") is not False
+        ):
+            blockers.append(
+                "President requires total national proxy error "
+                "without extra national SRS",
+            )
+        if model == "president" and state["target_cycle"] % 4:
+            raise ValueError("President release target must be divisible by four")
         blockers.extend(messages)
         blockers.extend(str(message) for message in config.get("release_blockers", []))
         release = UsRelease(state, config, tuple(blockers), model)
@@ -190,6 +206,41 @@ def senate_publication_allowed(
             and calibration.get("accepted") is True
             and calibration.get("model") == "us-senate"
             and calibration.get("kernel_version") == US_KERNEL_VERSION
+            and not calibration.get("release_blockers", [])
+            and all(saved.get(key) == current.state[key] for key in (
+                "target_cycle", "map_name", "baseline_name", "comparability_id",
+            ))
+            and document["context"]["target_cycle"] == saved["target_cycle"]
+            and document["private"]["options"]["baseline_name"]
+            == saved["baseline_name"]
+        )
+    except (UsReleaseError, KeyError, TypeError, AttributeError):
+        return False
+
+
+def president_release(path: Path = PRESIDENT_RELEASE) -> UsRelease:
+    return _release(path, "president")
+
+
+def president_publication_allowed(
+    document: Mapping[str, Any], *, release_path: Path = PRESIDENT_RELEASE,
+) -> bool:
+    """Require both saved and current President calibration/allocation acceptance."""
+    try:
+        current = president_release(release_path)
+        provenance = document["private"]["provenance"]
+        saved, calibration = provenance["release"], provenance["calibration"]
+        return bool(
+            current.enabled and document["model"] == "president"
+            and saved.get("schema") == "pf-us-president-release-v1"
+            and saved.get("enabled") is True
+            and saved.get("allocation_validated") is True
+            and saved.get("blockers") == []
+            and calibration.get("accepted") is True
+            and calibration.get("model") == "us-president"
+            and calibration.get("kernel_version") == US_KERNEL_VERSION
+            and calibration.get("national_error_policy") == PRESIDENT_NATIONAL_POLICY
+            and calibration.get("national_sampling") is False
             and not calibration.get("release_blockers", [])
             and all(saved.get(key) == current.state[key] for key in (
                 "target_cycle", "map_name", "baseline_name", "comparability_id",

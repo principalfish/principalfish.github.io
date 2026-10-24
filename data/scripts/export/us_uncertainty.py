@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Sequence, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +14,9 @@ from model_support.public_uncertainty import (
     basis_label, public_us_document, public_us_regional_bands, public_us_seat_bands,
 )
 from model_support.us_release import (
-    HOUSE_RELEASE, SENATE_RELEASE, house_publication_allowed, senate_publication_allowed,
+    HOUSE_RELEASE, SENATE_RELEASE, PRESIDENT_RELEASE,
+    house_publication_allowed, senate_publication_allowed,
+    president_publication_allowed,
 )
 from model_support.us_run import fingerprint, restore_run_inputs
 from models import Election, ElectionType, Map, Vote
@@ -43,6 +45,7 @@ def house_uncertainty_export(
     election: Election, stored: StoredUncertainty | None,
     votes: Sequence[Vote], seats: Sequence[SeatRow],
     *, release_path: Path = HOUSE_RELEASE, model: str = "house",
+    allocation: Mapping[str, int] | None = None,
 ) -> ModelUncertaintyExport:
     """Fail closed for optional odds; central results remain exportable."""
     absent = ModelUncertaintyExport(None, None)
@@ -50,20 +53,37 @@ def house_uncertainty_export(
         return absent
     try:
         document: dict[str, Any] = stored.national
-        allowed = senate_publication_allowed if model == "senate" else house_publication_allowed
+        allowed = {
+            "house": house_publication_allowed, "senate": senate_publication_allowed,
+            "president": president_publication_allowed,
+        }[model]
         if stored.election_id != election.id or not allowed(
             document, release_path=release_path,
         ):
             return absent
         inputs = restore_run_inputs(document)
         context = document["context"]
-        scope = OutputScope(f"us_{model}_model", election.map_id,
-                            "US Senate UNS" if model == "senate" else HOUSE_PREFIX)
+        election_type = (
+            "us_presidential_model" if model == "president" else f"us_{model}_model"
+        )
+        scope = OutputScope(election_type, election.map_id, {
+            "house": HOUSE_PREFIX, "senate": "US Senate UNS",
+            "president": "US President UNS",
+        }[model])
         as_of = scope.date_from_name(election.name)
-        if (election.type.value != f"us_{model}_model" or as_of is None
+        if (election.type.value != election_type or as_of is None
                 or as_of.isoformat() != context["as_of_date"]
                 or election.map_id != context["map_id"]):
             return absent
+        if model == "president":
+            if (election.target_election_year != context["target_cycle"]
+                    or allocation is None
+                    or set(allocation) != {seat.name for seat in inputs.seats}):
+                return absent
+            saved_allocation = document["private"]["president_counting"]["allocation"]
+            if any(allocation[seat.name] != saved_allocation[str(seat.seat_id)]
+                   for seat in inputs.seats):
+                return absent
         actual = []
         for vote in votes:
             if vote.vote_total is None or vote.vote_total != int(vote.vote_total):
@@ -91,6 +111,11 @@ def house_uncertainty_export(
                for seat in inputs.seats):
             return absent
         core = public_us_document(document)
+        if model == "president":
+            core["display"] = {
+                "target_cycle": context["target_cycle"],
+                "matchup": private["options"]["tracked_matchup"],
+            }
         bands = public_us_seat_bands(document, stored.seats)
         if set(bands) != set(by_id) or any(
             set(row) != set(inputs.party_ids) for row in bands.values()
@@ -126,4 +151,15 @@ def senate_uncertainty_export(
 ) -> ModelUncertaintyExport:
     return house_uncertainty_export(
         election, stored, votes, seats, release_path=release_path, model="senate",
+    )
+
+
+def president_uncertainty_export(
+    election: Election, stored: StoredUncertainty | None,
+    votes: Sequence[Vote], seats: Sequence[SeatRow], *,
+    allocation: Mapping[str, int], release_path: Path = PRESIDENT_RELEASE,
+) -> ModelUncertaintyExport:
+    return house_uncertainty_export(
+        election, stored, votes, seats, release_path=release_path, model="president",
+        allocation=allocation,
     )

@@ -156,6 +156,21 @@ class UsSimulationInputs:
     # (seat id, party id, recorded count, elected), in deterministic row order.
     central_rows: tuple[tuple[int, int, int, bool], ...]
     version: str = US_KERNEL_VERSION
+    # None preserves the historical all-unit convention for House/Senate.
+    reference_seat_ids: tuple[int, ...] | None = None
+
+    @property
+    def reference_indices(self) -> tuple[int, ...]:
+        if self.reference_seat_ids is None:
+            return tuple(range(len(self.seats)))
+        selected = self.reference_seat_ids
+        field = {seat.seat_id for seat in self.seats}
+        if (not selected or len(set(selected)) != len(selected)
+                or any(type(value) is not int or value not in field
+                       for value in selected)):
+            raise ValueError("invalid nonoverlapping reference population")
+        return tuple(i for i, seat in enumerate(self.seats)
+                     if seat.seat_id in selected)
 
     @property
     def seed(self) -> int:
@@ -220,6 +235,7 @@ def freeze_us_central_inputs(
     party_names: tuple[str, ...],
     seats: tuple[UsSeatInput, ...],
     central_rows: Sequence[RecordedVoteRow],
+    reference_seat_ids: tuple[int, ...] | None = None,
 ) -> UsSimulationInputs:
     """Freeze central-only parity material without asserting usable poll evidence."""
     frozen_rows = tuple(
@@ -234,7 +250,7 @@ def freeze_us_central_inputs(
         UsErrorConfig(
             "Central-only parity; no stochastic error sources", sampling=False,
         ),
-        frozen_rows,
+        frozen_rows, reference_seat_ids=reference_seat_ids,
     )
     assert_zero_error_parity(inputs)
     return inputs
@@ -251,6 +267,7 @@ def build_us_simulation_inputs(
     polls: tuple[UsPollSnapshot, ...],
     config: UsErrorConfig,
     central_rows: Sequence[RecordedVoteRow],
+    reference_seat_ids: tuple[int, ...] | None = None,
 ) -> UsSimulationInputs:
     """Freeze a central estimator and its sparse source/loadings graph.
 
@@ -424,8 +441,16 @@ def build_us_simulation_inputs(
 
     for seat in seats:
         residuals(seat.seat_id)
+    reference_ids = set(reference_seat_ids) if reference_seat_ids is not None else index
+    if (not reference_ids or not set(reference_ids) <= set(index)
+            or (reference_seat_ids is not None
+                and len(reference_ids) != len(reference_seat_ids))):
+        raise ValueError("invalid nonoverlapping reference population")
+    reference_seats = tuple(seat for seat in seats if seat.seat_id in reference_ids)
+    if {seat.state for seat in reference_seats} != {seat.state for seat in seats}:
+        raise ValueError("reference population must cover every simulated state")
     pooled = tuple(
-        sum(seat.baseline[j] * seat.turnout for seat in seats)
+        sum(seat.baseline[j] * seat.turnout for seat in reference_seats)
         for j in range(k)
     )
     specifications["national"] = (
@@ -435,7 +460,7 @@ def build_us_simulation_inputs(
         pooled_state = tuple(
             sum(
                 seat.baseline[j] * seat.turnout
-                for seat in seats if seat.state == state
+                for seat in reference_seats if seat.state == state
             )
             for j in range(k)
         )
@@ -467,7 +492,7 @@ def build_us_simulation_inputs(
     )
     inputs = UsSimulationInputs(
         model, as_of_date, party_ids, party_names, seats, sources, polls,
-        config, frozen_rows,
+        config, frozen_rows, reference_seat_ids=reference_seat_ids,
     )
     assert_zero_error_parity(inputs)
     return inputs
@@ -632,7 +657,7 @@ def run_us_simulations(
         projection = project_us_seats(inputs, streams.draw(inputs, stop - start))
         share_samples[start:stop] = projection.shares
         winners[start:stop] = projection.winners
-        vote_totals[start:stop] = projection.votes.sum(axis=1)
+        vote_totals[start:stop] = us_popular_votes(inputs, projection.votes)
         for party_index in range(k):
             seat_totals[start:stop, party_index] = (
                 projection.winners == party_index
@@ -674,6 +699,11 @@ def run_us_simulations(
     )
 
 
+def us_popular_votes(inputs: UsSimulationInputs, votes: IntArray) -> IntArray:
+    """Count nonoverlapping reference units; retain every unit for EV winners."""
+    return votes[:, inputs.reference_indices, :].sum(axis=1)
+
+
 def us_error_budget(inputs: UsSimulationInputs) -> list[dict[str, object]]:
     """Per-seat/party pre-clamp variance, including shared-source loadings.
 
@@ -682,7 +712,8 @@ def us_error_budget(inputs: UsSimulationInputs) -> list[dict[str, object]]:
     """
     result: list[dict[str, object]] = []
     k = len(inputs.party_ids)
-    total_turnout = sum(seat.turnout for seat in inputs.seats)
+    reference_indices = set(inputs.reference_indices)
+    total_turnout = sum(inputs.seats[i].turnout for i in reference_indices)
     national: dict[str, list[float]] = defaultdict(lambda: [0.0] * k)
     per_seat: dict[tuple[int, str], list[float]] = defaultdict(lambda: [0.0] * k)
     for source in inputs.sources:
@@ -695,7 +726,10 @@ def us_error_budget(inputs: UsSimulationInputs) -> list[dict[str, object]]:
                 per_seat[(loading.seat_index, source.kind)][j] += (
                     coefficient**2 * variance
                 )
-                national_coefficients[j] += coefficient * seat.turnout / total_turnout
+                if loading.seat_index in reference_indices:
+                    national_coefficients[j] += (
+                        coefficient * seat.turnout / total_turnout
+                    )
         for j, variance in enumerate(source.variances):
             national[source.kind][j] += national_coefficients[j]**2 * variance
     kinds = ("national", "state", "race", "local_floor", "sampling")

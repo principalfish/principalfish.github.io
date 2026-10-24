@@ -406,13 +406,13 @@ def public_document(
 
 
 def public_us_document(national: Mapping[str, object]) -> dict[str, object]:
-    """Copy the strict House public core; operational acceptance is separate.
+    """Copy the strict US public core; operational acceptance is separate.
 
     Shares use two decimal places and exclusive outcomes use four decimal
     places with conserved total probability. No private snapshot is copied.
     """
     context = validate_document(national, public=False)
-    if context.model not in {"house", "senate"}:
+    if context.model not in {"house", "senate", "president"}:
         raise PublicUncertaintyError("unsupported US public uncertainty model")
     if context.model == "senate":
         # Preserve exclusive caucus probability conservation; formatting is a
@@ -445,11 +445,14 @@ def public_us_document(national: Mapping[str, object]) -> dict[str, object]:
             },
         }
     outcomes = _mapping(summary["outcomes"], "outcomes")
-    majority = _mapping(outcomes["majority"], "majority")
+    majority_key = "electoral_majority" if context.model == "president" else "majority"
+    absence_key = ("no_electoral_majority" if context.model == "president"
+                   else "no_majority")
+    majority = _mapping(outcomes[majority_key], majority_key)
     probabilities = _mapping(majority["probabilities"], "probabilities")
-    keys = [*sorted(probabilities, key=int), "no_majority"]
+    keys = [*sorted(probabilities, key=int), absence_key]
     values = [_number(probabilities[key], "probability") for key in keys[:-1]]
-    values.append(_number(outcomes["no_majority"], "no_majority"))
+    values.append(_number(outcomes[absence_key], absence_key))
     units = [math.floor(value * 10_000) for value in values]
     for index in sorted(range(len(values)), key=lambda i: -(values[i] * 10_000 - units[i]))[
         :10_000 - sum(units)
@@ -457,16 +460,16 @@ def public_us_document(national: Mapping[str, object]) -> dict[str, object]:
         units[index] += 1
     rounded = dict(zip(keys, (value / 10_000 for value in units)))
     result: dict[str, object] = {
-        "schema": US_PUBLIC_SCHEMA, "model": "house", "context": asdict(context),
+        "schema": US_PUBLIC_SCHEMA, "model": context.model, "context": asdict(context),
         "result_identity": national["result_identity"],
         "summary": {
             "simulations": summary["simulations"], "interval": summary["interval"],
             "metrics": published_metrics,
             "outcomes": {
-                "majority": {"domain": "party", "probabilities": {
+                majority_key: {"domain": "party", "probabilities": {
                     key: rounded[key] for key in keys[:-1]
                 }},
-                "no_majority": rounded["no_majority"],
+                absence_key: rounded[absence_key],
             },
         },
     }

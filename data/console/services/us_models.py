@@ -31,7 +31,7 @@ from model_support.persistence import (
     uncertainty_status,
 )
 from model_support.us_release import (
-    HOUSE_RELEASE, UsReleaseError, house_release, senate_release,
+    HOUSE_RELEASE, UsReleaseError, house_release, senate_release, president_release,
 )
 from model_support.us_replay import raw_detail_available, us_raw_path
 from models import ElectionType, Map
@@ -59,7 +59,8 @@ def house_uncertainty_status(
 ) -> dict[str, object]:
     """Present release and retention state without starting a model or loading draws."""
     try:
-        release = (senate_release if model == "senate" else house_release)(release_path)
+        release = {"house": house_release, "senate": senate_release,
+                   "president": president_release}[model](release_path)
         blockers = list(release.blockers)
         enabled = release.enabled
     except UsReleaseError as exc:
@@ -72,8 +73,11 @@ def house_uncertainty_status(
         map_id = session.scalar(select(Map.id).where(Map.name == map_name))
     if map_id is None:
         return result
-    scope = OutputScope(f"us_{model}_model", map_id,
-                        "US Senate UNS" if model == "senate" else "US House UNS")
+    scope = OutputScope(
+        "us_presidential_model" if model == "president" else f"us_{model}_model",
+        map_id, {"house": "US House UNS", "senate": "US Senate UNS",
+                 "president": "US President UNS"}[model],
+    )
     sqlite_path = Path(str(db.engine.url.database))
     latest = latest_saved_run(sqlite_path, scope)
     result["latest_run"] = latest[0] if latest else None

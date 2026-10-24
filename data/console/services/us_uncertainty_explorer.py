@@ -24,6 +24,7 @@ from model_support.us_run import fingerprint, restore_run_inputs
 from model_support.us_simulation import UsSimulationInputs
 from model_support.senate_cycles import senate_cycle_from_snapshot
 from model_support.us_senate import senate_counts, senate_outcomes
+from model_support.us_president import president_counts
 from model_support.us_uncertainty import US_STORED_SCHEMA, validate_document
 from models import Map
 
@@ -39,6 +40,7 @@ class UsExplorerModel:
     name_prefix: str
     metric: str
     majority: int
+    unit: str = "seats"
 
 
 # New models need their own validated adapter before joining this allowlist.
@@ -46,6 +48,10 @@ US_EXPLORER_MODELS = {
     "house": UsExplorerModel(
         "house", "US House", "US House Districts 2024", "us_house_model",
         "US House UNS", "house_seats", 218,
+    ),
+    "president": UsExplorerModel(
+        "president", "US President", "US Presidential 2024", "us_presidential_model",
+        "US President UNS", "electoral_votes", 270, "EVs",
     ),
     "senate": UsExplorerModel(
         "senate", "US Senate", "US Senate 2024", "us_senate_model",
@@ -139,7 +145,9 @@ def party_rows(run: SavedUsRun, model: UsExplorerModel) -> list[dict[str, Any]]:
             for party, center in seats["central"].items()
         ], key=lambda row: (-row["central"], row["name"]))
     votes = metrics["national_vote_share"]
-    majority = summary["outcomes"]["majority"]["probabilities"]
+    majority = summary["outcomes"][
+        "electoral_majority" if model.slug == "president" else "majority"
+    ]["probabilities"]
     rows = [
         {"id": party, "name": name, "central": seats["central"][str(party)],
          "range": seats["ranges"][str(party)],
@@ -193,7 +201,7 @@ def simulations_page(
     start = (page - 1) * PAGE_SIZE
     _, arrays = read_us_draw_rows(
         raw_path(model), run.stored, start=start, count=min(PAGE_SIZE, total - start),
-        detail=model.slug == "senate",
+        detail=model.slug in {"senate", "president"},
     )
     rows: list[dict[str, Any]] = []
     for offset, counts in enumerate(arrays["seat_totals"]):
@@ -219,6 +227,14 @@ def simulations_page(
                              if cycle.control_policy else None,
                          )})
             continue
+        if model.slug == "president":
+            allocation = {
+                int(key): value for key, value in run.document["private"]
+                ["president_counting"]["allocation"].items()
+            }
+            counts = president_counts(
+                run.inputs, arrays["winners"][offset:offset + 1], allocation,
+            )[0]
         rows.append({
             "index": start + offset,
             "parties": [
@@ -259,6 +275,18 @@ def simulation_detail(
                          "votes": int(replay.projection.votes[0, i, j])}
                         for j in order],
         })
+    if model.slug == "president":
+        allocation = {int(key): value for key, value in run.document["private"]
+                      ["president_counting"]["allocation"].items()}
+        counts = president_counts(
+            run.inputs, replay.projection.winners, allocation,
+        )[0]
+        references = replay.projection.votes[0, run.inputs.reference_indices].sum(axis=0)
+        result["president_tally"] = [
+            {"name": name, "electoral_votes": int(counts[j]),
+             "popular_share": float(references[j] / references.sum() * 100)}
+            for j, name in enumerate(run.inputs.party_names)
+        ]
     if model.slug == "senate":
         cycle = senate_cycle_from_snapshot(
             run.document["private"]["senate_cycle"], run.inputs.as_of_date,

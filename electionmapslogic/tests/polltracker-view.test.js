@@ -14,6 +14,17 @@ try {
 
 const fixture = JSON.parse(readFileSync(new URL("../../data/tests/fixtures/us_uncertainty/house-trend.json", import.meta.url), "utf8")
   .replaceAll('"1":', '"20":').replaceAll('"2":', '"21":'));
+const senateFixture = JSON.parse(readFileSync(new URL("../../data/tests/fixtures/us_uncertainty/senate-public.json", import.meta.url), "utf8")
+  .replaceAll('"1":', '"20":').replaceAll('"2":', '"21":'));
+function senateHistory({ known = true } = {}) {
+  const context = senateFixture.context;
+  const summary = senateFixture.summary;
+  return { schema: "pf-us-model-trends-v1", model: "senate", points: [{
+    as_of_date: context.as_of_date, context: known ? context : null,
+    segment_id: known ? "frozen-senate" : null,
+    metrics: summary.metrics, summary: known ? summary : null,
+  }] };
+}
 const shell = readFileSync(new URL("../shell.html", import.meta.url), "utf8");
 const fragment = readFileSync(new URL("../fragments/polltracker.html", import.meta.url), "utf8");
 
@@ -46,6 +57,8 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
       { id: 21, key: "republican", name: "Republican", colour: "#cc0000" },
     ], mapModes: {}, files: {}, parliamentFeatures: { us_house: {
       polltrackerDataPath: "results/us-house-trends.json", polltrackerDefaultParties: [20, 21],
+    }, us_senate: {
+      polltrackerDataPath: "results/us-senate-trends.json", polltrackerDefaultParties: [20, 21],
     } } });
     state.view = "polltracker";
     state.currentParliament = "us_house";
@@ -107,6 +120,70 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
     await loading;
     expect(state.pollTrackerData.timeline).toEqual([]);
     expect(document.querySelectorAll("#mapsPollTrackerChartWrap svg")).toHaveLength(0);
+  });
+
+  it("shows full Senate ranges and distinct caucus outcomes, with no chamber vote metric", async () => {
+    state.currentParliament = "us_senate";
+    fetchJson.mockResolvedValue(senateHistory());
+    await view.activatePollTrackerMode();
+    expect(state.pollTrackerData.seriesByParty.get("20").seats).toEqual([48]);
+    expect(document.getElementById("mapsPollTrackerMetricVotes").closest("label").hidden).toBe(true);
+    expect(document.getElementById("mapsPollTrackerMetricVotes").checked).toBe(false);
+    expect(document.getElementById("mapsPollTrackerMetricSeats").checked).toBe(true);
+    expect(document.getElementById("mapsPollTrackerShowUncertainty").checked).toBe(true);
+    expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(2);
+    expect(document.getElementById("mapsPollTrackerChartWrap").textContent).toContain("Full Senate seats (100)");
+    const chances = document.querySelector('[data-polltracker-view="chances"]');
+    chances.checked = true;
+    chances.dispatchEvent(new window.Event("change"));
+    expect(document.querySelector('[data-polltracker-chance="pMaj"]').parentElement.textContent).toContain("Caucus control");
+    expect(document.getElementById("mapsPollTrackerUncertaintyNote").textContent).toContain("overlaps control chances");
+    expect(document.getElementById("mapsPollTrackerChartWrap").textContent).toContain("50–50 / unresolved");
+    expect(document.getElementById("mapsPollTrackerChartWrap").textContent).not.toContain("Hung");
+    state.currentParliament = "us_house";
+    fetchJson.mockResolvedValue(history());
+    await view.activatePollTrackerMode();
+    expect(document.getElementById("mapsPollTrackerMetricVotes").closest("label").hidden).toBe(false);
+    expect(document.querySelector('[data-polltracker-chance="pMaj"]').parentElement.textContent).toContain("Majority");
+    expect(document.querySelector('[data-polltracker-view="totals"]').parentElement.textContent).toContain("Seats & votes");
+  });
+
+  it("explains unavailable legacy full Senate history without plotting contested seats", async () => {
+    state.currentParliament = "us_senate";
+    fetchJson.mockResolvedValue(senateHistory({ known: false }));
+    await view.activatePollTrackerMode();
+    expect(state.pollTrackerData.seriesByParty.size).toBe(0);
+    expect(document.getElementById("mapsPollTrackerUncertaintyNote").hidden).toBe(false);
+    expect(document.getElementById("mapsPollTrackerUncertaintyNote").textContent).toContain("Legacy seats-up totals are not full-chamber totals");
+    expect(document.getElementById("mapsPollTrackerViewControls").hidden).toBe(true);
+    expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(0);
+  });
+
+  it("draws isolated saved-roster Senate points without lines, ranges or chances", async () => {
+    state.currentParliament = "us_senate";
+    const data = senateHistory({ known: false });
+    const first = data.points[0];
+    first.metrics = { senate_full_seats: {
+      ...first.metrics.senate_full_seats,
+      central: first.metrics.senate_full_seats.central,
+    } };
+    delete first.metrics.senate_full_seats.ranges;
+    first.central_basis = { schema: "pf-us-senate-central-roster-v1",
+      map_id: 22, target_cycle: 2026, as_of_date: first.as_of_date,
+      roster_id: "saved-roster", field_id: "saved-field" };
+    const next = structuredClone(first);
+    next.as_of_date = "2026-10-21";
+    next.central_basis.as_of_date = next.as_of_date;
+    data.points.push(next);
+    fetchJson.mockResolvedValue(data);
+    await view.activatePollTrackerMode();
+    expect(document.querySelectorAll(".maps-polltracker-isolated-point")).toHaveLength(4);
+    expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(0);
+    expect(document.getElementById("mapsPollTrackerViewControls").hidden).toBe(true);
+    for (const line of document.querySelectorAll('#mapsPollTrackerChartWrap path[stroke="#1375E1"], #mapsPollTrackerChartWrap path[stroke="#E81B23"]')) {
+      expect(line.getAttribute("d")).not.toContain("L");
+    }
+    expect(document.getElementById("mapsPollTrackerUncertaintyNote").textContent).toContain("isolated points");
   });
 
   it("restores House defaults when reopening after changed toggles and dates", async () => {

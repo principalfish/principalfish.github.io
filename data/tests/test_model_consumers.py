@@ -89,12 +89,12 @@ def test_repaired_history_feeds_export_and_console(
     assert [entry["as_of_date"] for entry in entries] == [
         "2026-06-01",
         "2026-06-02",
-        *(["2026-06-03"] if model == "us-house" else []),
+        *(["2026-06-03"] if model in {"us-house", "us-senate"} else []),
         "2026-06-04",
     ]
     excluded_extra = model in {"holyrood", "us-president"}
     expected_a = [60.0, 70.0, 65.0] if excluded_extra else [15.0, 17.5, 16.2]
-    if model == "us-house":
+    if model in {"us-house", "us-senate"}:
         expected_a = [15.0, 17.5, 17.5, 16.2]
     assert [entry["parties"][str(party_a.id)]["v"] for entry in entries] == expected_a
     for entry in entries:

@@ -995,10 +995,12 @@ export class ElectionData {
    * @param {string|null} electionName - Display label (e.g. 'Predict 2029').
    * @returns {ElectionData}
    */
-  static fromSeats(seats, electionName = null) {
+  static fromSeats(seats, electionName = null, uncertaintySource = null) {
     const instance = Object.create(ElectionData.prototype);
     instance.electionName = electionName;
-    instance.uncertaintyId = null;
+    // Only an explicit saved-result derivation may retain that exact run's identity.
+    instance.uncertaintyId = uncertaintySource?.uncertaintyId ?? null;
+    instance.uncertaintySource = uncertaintySource;
     instance.uncertainty = null;
     instance.baseSeats = seats;
     instance.currentSeats = seats;

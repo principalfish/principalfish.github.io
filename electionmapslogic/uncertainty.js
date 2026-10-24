@@ -58,8 +58,18 @@ export function decodeUncertainty(payload, identity, resolveParty, regionsById, 
 
 /** Only the saved model result can use its uncertainty, never a user-created scenario. */
 export function activeUncertainty(state) {
-  return state.view === "election" && state.currentElection?.model
-    ? state.electionData?.uncertainty ?? null : null;
+  if (state.view !== "election" || !state.currentElection?.model) return null;
+  const data = state.electionData;
+  const source = data?.uncertaintySource;
+  const summary = source && source.uncertaintyId === data.uncertaintyId
+    ? source.uncertainty : data?.uncertainty;
+  if (summary?.descriptor?.model !== "senate" || data.uncertaintyScope !== "senate_full_seats") return summary ?? null;
+  // A mutable chamber snapshot must agree with the frozen full-chamber central tally.
+  const actual = data.summary.data.parties;
+  const expected = summary.full.central;
+  if (actual.some((row) => row.seats !== (expected[row.party] ?? 0))
+    || Object.entries(expected).some(([party, seats]) => seats !== (actual.find((row) => row.party === party)?.seats ?? 0))) return null;
+  return { ...summary, national: summary.full };
 }
 
 /** Whole-country and exactly-one-region totals have stored ranges; arbitrary slices do not. */
@@ -90,6 +100,13 @@ export function seatUncertaintyText(band) {
 
 export function uncertaintyHeadline(summary, labelParty) {
   if (!summary) return "";
+  if (summary.descriptor?.model === "senate") {
+    const outcomes = summary.outcomes;
+    return `Democratic caucus control ${uncertaintyNumber(outcomes.control.democratic * 100)}% · `
+      + `Republican caucus control ${uncertaintyNumber(outcomes.control.republican * 100)}% · `
+      + `50–50 caucuses ${uncertaintyNumber(outcomes.tied * 100)}% · `
+      + `Unresolved control ${uncertaintyNumber(outcomes.residual * 100)}% (if an election were held today)`;
+  }
   if (summary.descriptor?.model === "house") {
     const leaders = Object.entries(summary.national.parties)
       .filter(([, row]) => Number.isFinite(row.pm))

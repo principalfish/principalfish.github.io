@@ -7,11 +7,18 @@ import { decodeUncertainty } from "./uncertainty.js";
 export async function activateUncertaintyView() {
   const election = state.currentElection;
   const parliament = state.currentParliament;
-  const electionData = state.electionData;
-  const path = manifest.parliamentConfig(parliament).uncertaintyDataPath;
+  const config = manifest.parliamentConfig(parliament);
+  const electionData = config.uncertaintyModel === "senate"
+    ? state.electionData?.uncertaintySource ?? state.electionData : state.electionData;
+  const identity = electionData?.uncertaintyId;
+  const path = config.uncertaintyDataPath;
   if (state.view !== "election" || !election?.model || !path || !electionData?.uncertaintyId) return;
   const isCurrent = () => state.view === "election" && state.currentElection === election
-    && state.currentParliament === parliament && state.electionData === electionData;
+    && state.currentParliament === parliament && electionData.uncertaintyId === identity
+    && (state.electionData === electionData
+      || (manifest.parliamentConfig(parliament).uncertaintyModel === "senate"
+        && state.electionData?.uncertaintySource === electionData
+        && state.electionData.uncertaintyId === identity));
   try {
     const payload = await fetchJson(`${page.dataBase || "data"}/${path}`);
     if (!isCurrent()) return;
@@ -25,7 +32,7 @@ export async function activateUncertaintyView() {
     if (!isCurrent()) return;
     electionData.uncertainty = null;
   }
-  renderHeader(electionData.summary.text);
+  renderHeader(state.electionData.summary.text);
   renderVoteTotals();
   refreshOpenSeatPopup();
 }

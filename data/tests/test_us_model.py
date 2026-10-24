@@ -3113,7 +3113,7 @@ class TestSenateSpecialsEndToEnd:
             for party_id in (world.dem.id, world.rep.id)
         }
         assert totals == {world.rep.id: 20900.0, world.dem.id: 14100.0}
-        parties = json.loads(world.spec.trend_cache_json.read_text())[0]["parties"]
+        parties = json.loads(world.spec.trend_cache_json.read_text())["points"][0]["parties"]
         assert parties[str(world.rep.id)] == {"s": 35, "v": 59.7}
         assert parties[str(world.dem.id)] == {"s": 0, "v": 40.3}
 

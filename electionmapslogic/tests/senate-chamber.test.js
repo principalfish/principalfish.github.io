@@ -29,10 +29,11 @@ describe('buildSenateChamber', () => {
       seat.members.forEach((member, memberIndex) => {
         const original = chamber[index].members[memberIndex];
         if (original.class === contestedClass && projectedParty) {
+          expect(member.forecastStatus).toBe("contested");
           expect(member.party).toBe(projectedParty);
           expect(member.name).toBe(`${manifest.labelParty(projectedParty)} (projected)`);
         } else {
-          expect(member).toEqual(original);
+          expect(member).toEqual({ ...original, forecastStatus: "holdover" });
         }
       });
       expect(seat.votes).toEqual({});
@@ -50,12 +51,12 @@ describe('buildSenateChamber', () => {
       const projected = result.find((seat) => seat.seat === name);
       expect(projected.members.find((member) => member.class === 3).party).toBe('democrat');
       expect(projected.members.find((member) => member.class === 1)).toEqual(
-        original.members.find((member) => member.class === 1),
+        { ...original.members.find((member) => member.class === 1), forecastStatus: "holdover" },
       );
       expect(projected.winner).toBe('split');
     });
     expect(result.find((seat) => seat.seat === 'Alabama').members).toEqual(
-      chamber.find((seat) => seat.seat === 'Alabama').members,
+      chamber.find((seat) => seat.seat === 'Alabama').members.map((member) => ({ ...member, forecastStatus: "holdover" })),
     );
   });
 

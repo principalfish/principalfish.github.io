@@ -296,8 +296,16 @@
     },
     "us_senate": {
       "features": [
-        "predict"
+        "predict",
+        "pollTracker"
       ],
+      "polltrackerDataPath": "results/us-senate-trends.json",
+      "polltrackerDefaultParties": [
+        20,
+        21
+      ],
+      "uncertaintyDataPath": "results/us-senate-uncertainty.json",
+      "uncertaintyModel": "senate",
       "predictAnchorElectionId": "current-us-senate",
       "predictBaselineElectionId": "2020-us-senate",
       "nextElectionYear": 2026,

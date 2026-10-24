@@ -12,7 +12,7 @@ from typing import Any
 
 import numpy as np
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from db import Database
 from model_support.persistence import OutputScope, latest_saved_run, load_uncertainty
@@ -330,3 +330,141 @@ def test_explicit_unknown_vp_is_frozen_as_unresolved() -> None:
         np.array([[50, 50]]), restored.control_policy.vice_president,
     )
     assert events["unresolved_control"] == 1
+
+
+def test_senate_trends_use_frozen_full_metric_and_caucus_outcomes(
+    db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from console.services.trends import load_trend_entries
+    from model_support import trends
+    from model_support.trends import reconstruct_trends, trend_document
+    from model_support.us_release import senate_publication_allowed
+
+    cfg = _world(db, tmp_path)
+    monkeypatch.setattr(trends, "senate_publication_allowed", lambda document: (
+        senate_publication_allowed(
+            document, release_path=cfg.spec.uncertainty_release_config,
+        )
+    ))
+    run_simulation(db, cfg)
+    entries = reconstruct_trends(
+        database_file(db), OutputScope("us_senate_model", 1, "US Senate UNS"),
+    )
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry["context"] is not None and entry["segment_id"]
+    assert entry["metrics"]["senate_full_seats"]["total"] == 100
+    assert sum(entry["metrics"]["senate_full_seats"]["central"].values()) == 100
+    assert sum(row["s"] for row in entry["parties"].values()) == 35
+    assert "national_vote_share" not in entry["metrics"]
+    assert entry["summary"] is not None
+    assert entry["summary"]["outcomes"]["control"]["domain"] == "caucus"
+    assert "ranges" not in entry["metrics"]["senate_full_seats"]
+    document = trend_document(
+        OutputScope("us_senate_model", 1, "US Senate UNS"), entries,
+    )
+    assert isinstance(document, dict) and document["model"] == "senate"
+    cfg.spec.trend_cache_json.write_text(json.dumps(document))
+    assert load_trend_entries(cfg.spec.trend_cache_json) == entries
+
+
+def test_unaccepted_senate_trend_retains_only_validated_central_chamber(
+    db: Database, tmp_path: Path,
+) -> None:
+    from model_support.trends import reconstruct_trends
+
+    cfg = _world(db, tmp_path)
+    run_simulation(db, cfg)
+    scope = OutputScope("us_senate_model", 1, "US Senate UNS")
+    entry = reconstruct_trends(database_file(db), scope)[0]
+    assert entry["summary"] is None
+    assert entry["metrics"]["senate_full_seats"]["total"] == 100
+    run_simulation(db, replace(
+        cfg, as_of_date=TODAY + timedelta(days=1), no_uncertainty=True,
+        simulations=None,
+    ))
+    entries = reconstruct_trends(database_file(db), scope)
+    assert len(entries) == 2
+    assert entries[-1]["context"] is None
+    assert entries[-1]["segment_id"] is None
+    assert entries[-1]["central_basis"]["schema"] == "pf-us-senate-central-roster-v1"
+    assert sum(
+        entries[-1]["metrics"]["senate_full_seats"]["central"].values(),
+    ) == 100
+    assert entries[-1]["summary"] is None
+    # Existing internal callers still receive the central contested list contract.
+    assert sum(row["s"] for row in entries[-1]["parties"].values()) == 35
+
+
+def test_changed_recorded_senate_votes_cannot_supply_full_history(
+    db: Database, tmp_path: Path,
+) -> None:
+    from model_support.trends import reconstruct_trends
+
+    cfg = _world(db, tmp_path)
+    run_simulation(db, cfg)
+    stored = _saved(db, cfg)
+    with db.session() as session:
+        vote = session.scalars(select(Vote).where(
+            Vote.election_id == stored.election_id,
+        )).first()
+        assert vote is not None and vote.vote_total is not None
+        vote.vote_total += 1
+    entry = reconstruct_trends(
+        database_file(db), OutputScope("us_senate_model", 1, "US Senate UNS"),
+    )[0]
+    assert entry["metrics"] == {} and entry["context"] is None
+
+
+def test_central_roster_points_need_no_uncertainty_table(
+    db: Database, tmp_path: Path,
+) -> None:
+    from model_support.trends import reconstruct_trends
+
+    cfg = _world(db, tmp_path)
+    run_simulation(db, replace(cfg, no_uncertainty=True, simulations=None))
+    with db.session() as session:
+        assert session.execute(text(
+            "SELECT COUNT(*) FROM model_uncertainty",
+        )).scalar_one() == 0
+        session.execute(text("DROP TABLE model_uncertainty"))
+        assert session.execute(text(
+            "SELECT name FROM sqlite_master WHERE name='model_uncertainty'",
+        )).first() is None
+    scope = OutputScope("us_senate_model", 1, "US Senate UNS")
+    entry = reconstruct_trends(database_file(db), scope)[0]
+    assert entry["context"] is None and entry["segment_id"] is None
+    assert entry["summary"] is None
+    assert entry["central_basis"]["as_of_date"] == TODAY.isoformat()
+    full = entry["metrics"]["senate_full_seats"]
+    assert sum(full["central"].values()) == 100
+    assert "ranges" not in full
+    assert sum(row["s"] for row in entry["parties"].values()) == 35
+
+
+@pytest.mark.parametrize("invalid", [
+    "missing_roster", "corrupt_roster", "wrong_field", "duplicate_winner",
+    "ambiguous_party",
+])
+def test_invalid_central_roster_cannot_supply_full_history(
+    db: Database, tmp_path: Path, invalid: str,
+) -> None:
+    from model_support.trends import reconstruct_trends
+
+    cfg = _world(db, tmp_path)
+    run_simulation(db, replace(cfg, no_uncertainty=True, simulations=None))
+    if invalid == "ambiguous_party":
+        db.add_party("Democrat")
+    with db.session() as session:
+        if invalid == "missing_roster":
+            session.execute(text("DELETE FROM model_context"))
+        elif invalid == "corrupt_roster":
+            session.execute(text("UPDATE model_context SET payload_json='{}'"))
+        elif invalid == "wrong_field":
+            session.execute(text("UPDATE seats SET seat_name='Unknown' WHERE id=1"))
+        elif invalid == "duplicate_winner":
+            session.execute(text("UPDATE votes SET elected=1 WHERE seat_id=1"))
+    scope = OutputScope("us_senate_model", 1, "US Senate UNS")
+    entry = reconstruct_trends(database_file(db), scope)[0]
+    assert entry["metrics"] == {} and entry["context"] is None
+    assert entry["summary"] is None and "central_basis" not in entry

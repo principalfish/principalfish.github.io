@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../dom.js", () => ({
   renderHeader: vi.fn(),
+  renderVoteTotals: vi.fn(),
   renderMap: vi.fn(),
   renderMapControlOptions: vi.fn(),
   syncRightPanelHeight: vi.fn(),
@@ -15,6 +16,8 @@ vi.mock("../features/senate-forecast-view.js", () => ({
   renderSenateForecastComparison: vi.fn(),
 }));
 
+import { activateUncertaintyView } from "../uncertainty-controller.js";
+import { activeUncertainty } from "../uncertainty.js";
 import { activateSenateForecastView } from "../features/senate-forecast-controller.js";
 import { renderSenateForecastComparison, renderSenateForecastTabs } from "../features/senate-forecast-view.js";
 import { renderMap, refreshOpenSeatPopup } from "../dom.js";
@@ -118,6 +121,39 @@ describe("activateSenateForecastView", () => {
     expect(florida.members.find((member) => member.class === 3).name).toBe("Republican (projected)");
     expect(florida.members.find((member) => member.class === 1).name).toBe("Rick Scott");
     expect(manifest.getElectionFromId("current-us-senate").multiMember).toBeUndefined();
+  });
+
+  it.each(["seatsup", "chamber"])("attaches after a tab switch when loading starts from %s", async (startingTab) => {
+    const source = state.electionData;
+    source.uncertaintyId = "same-run";
+    await activateSenateForecastView();
+    if (startingTab === "chamber") latestTabs().onTabChange("chamber");
+    let resolve;
+    fetchJson.mockImplementation(() => new Promise((done) => { resolve = done; }));
+    const loading = activateUncertaintyView();
+    latestTabs().onTabChange(startingTab === "chamber" ? "seatsup" : "chamber");
+    latestTabs().onTabChange("chamber");
+    const chamber = state.electionData;
+    expect(chamber.uncertaintyId).toBe("same-run");
+    expect(chamber.uncertaintySource).toBe(source);
+    const value = JSON.parse(readFileSync(new URL("../../data/tests/fixtures/us_uncertainty/senate-public.json", import.meta.url)));
+    value.uncertaintyId = "same-run";
+    value.context.map_id = state.currentElection.mapId;
+    const byKey = manifest.partiesByKey;
+    const counts = expectedChamberTallies();
+    const central = Object.fromEntries(Object.entries(counts).map(([key, count]) => [byKey[key].id, count]));
+    value.summary.metrics.senate_full_seats.central = central;
+    value.summary.metrics.senate_full_seats.ranges = Object.fromEntries(Object.entries(central).map(([key, count]) => [key, [count, count, count]]));
+    resolve(value);
+    await loading;
+    expect(source.uncertainty).not.toBeNull();
+    expect(activeUncertainty(state).national).toEqual(source.uncertainty.full);
+    expect(state.voteTotals.columns.votePct).toBe(false);
+    expect(chamber.currentSeats.every((seat) => Object.keys(seat.u).length === 0)).toBe(true);
+    expect(chamber.currentSeats.flatMap((seat) => seat.members).filter((member) => member.forecastStatus === "holdover")).toHaveLength(65);
+    latestTabs().onTabChange("seatsup");
+    expect(activeUncertainty(state).national).toEqual(source.uncertainty.national);
+    expect(state.electionData).toBe(source);
   });
 
   it("repeatedly restores the original 35-seat forecast, vote shares and completed comparison", async () => {

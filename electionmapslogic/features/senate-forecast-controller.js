@@ -99,7 +99,8 @@ export async function activateSenateForecastView() {
     election.multiMember = fullChamber;
     if (fullChamber) {
       const seats = buildSenateChamber(chamberSeats, forecastData.currentSeats, specialClassBySeat);
-      state.setElectionDataFromSeats(seats, forecastData.electionName);
+      state.electionData = ElectionData.fromSeats(seats, forecastData.electionName, forecastData);
+      state.electionData.uncertaintyScope = "senate_full_seats";
       state.comparisonElectionData = ElectionData.fromSeats(chamberSeats);
     } else {
       state.electionData = forecastData;

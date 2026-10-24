@@ -1,7 +1,7 @@
 import { manifest } from '../state.js';
 import { DEFAULT_PARTY_COLOUR } from '../utils.js';
 import { WESTMINSTER_DESCRIPTOR } from "../model-descriptors.js";
-import { houseTrackerEntries } from "./polltracker-us.js";
+import { houseTrackerEntries, senateTrackerEntries } from "./polltracker-us.js";
 
 function probability(value) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1
@@ -67,9 +67,10 @@ function optionalFields(party, hasUncertainty) {
  * }} Chart-ready timeline and per-party series.
  */
 export function parsePollTrackerData(data) {
-  const house = !Array.isArray(data) ? houseTrackerEntries(data) : null;
-  const descriptor = house?.descriptor ?? WESTMINSTER_DESCRIPTOR;
-  data = house?.entries ?? (Array.isArray(data) ? data : []);
+  const us = !Array.isArray(data) ? houseTrackerEntries(data) ?? senateTrackerEntries(data) : null;
+  const descriptor = us?.descriptor ?? WESTMINSTER_DESCRIPTOR;
+  const senate = descriptor.model === "senate";
+  data = us?.entries ?? (Array.isArray(data) ? data : []);
   const partiesById = manifest.partiesById;
 
   // 1. Flatten: one row per (entry, party).
@@ -80,20 +81,23 @@ export function parsePollTrackerData(data) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(asOfDate)
         || !Number.isFinite(new Date(`${asOfDate}T00:00:00Z`).getTime())) continue;
     const hung = probability(entry.hung);
-    const residual = house ? probability(entry.residual) : hung;
-    runsByDate.set(asOfDate, { hung, residual, segment: entry.segment_id ?? null });
+    const residual = us ? probability(entry.residual) : hung;
+    runsByDate.set(asOfDate, { hung, residual, segment: entry.segment_id ?? null,
+      senateOutcomes: entry.senateOutcomes ?? null });
     for (const [partyIdStr, pdata] of Object.entries(entry.parties || {})) {
       const partyId = Number(partyIdStr);
       const seats = Number(pdata.s);
-      const votePct = Number(pdata.v);
-      if (!Number.isFinite(partyId) || !Number.isFinite(seats) || !Number.isFinite(votePct)) continue;
+      const votePct = senate ? null : Number(pdata.v);
+      if (!Number.isFinite(partyId) || !Number.isFinite(seats)
+        || (!senate && !Number.isFinite(votePct))) continue;
       rows.push({
         partyKey: String(partyId),
         asOfDate,
         seats,
         votePct,
         ...optionalFields(pdata, residual !== null),
-        ...(house ? { pLargest: null } : {}),
+        ...(us ? { pLargest: null } : {}),
+        ...(senate ? { pMaj: null } : {}),
       });
     }
   }
@@ -140,7 +144,7 @@ export function parsePollTrackerData(data) {
     }
     return entries;
   })();
-  if (house) {
+  if (us) {
     let previous;
     timeline = timeline.flatMap((entry) => {
       const current = runsByDate.get(entry.dateKey);
@@ -175,11 +179,15 @@ export function parsePollTrackerData(data) {
       }
       if (row) {
         lastSeats = Number(row.seats || 0);
-        lastVotePct = Number(row.votePct || 0);
+        lastVotePct = senate ? null : Number(row.votePct || 0);
+      }
+      if (senate && !row && runsByDate.has(entry.dateKey)) {
+        lastSeats = null;
+        lastVotePct = null;
       }
       // Calendar gaps carry forward; an explicit run clears any missing optional values.
       if (!entry.boundary && runsByDate.has(entry.dateKey)) lastOptional = row ?? optionalFields(null, false);
-      if (house && !runsByDate.has(entry.dateKey) && !lastContext) {
+      if (us && !runsByDate.has(entry.dateKey) && !lastContext) {
         lastSeats = null;
         lastVotePct = null;
         lastOptional = optionalFields(null, false);
@@ -199,6 +207,7 @@ export function parsePollTrackerData(data) {
       votePct,
       ...optional,
       latestSeats: lastSeats ?? 0,
+      ...(senate ? { noVotes: true } : {}),
     });
   });
 
@@ -215,9 +224,26 @@ export function parsePollTrackerData(data) {
       lastHung = run.hung;
       lastResidual = run.residual;
       lastSegment = run.segment;
-    } else if (house && !lastSegment) lastResidual = null;
+    } else if (us && !lastSegment) lastResidual = null;
     residual.push(lastResidual);
     return lastHung;
   });
-  return { timeline, seriesByParty, hung, ...(house ? { residual, descriptor } : {}) };
+  const senateChances = { control: { democratic: [], republican: [] },
+    majority: { democratic: [], republican: [] }, tied: [], unresolved: [] };
+  if (senate) {
+    let last = null;
+    timeline.forEach((entry) => {
+      const run = runsByDate.get(entry.dateKey);
+      if (entry.boundary || (run && !run.segment)) last = null;
+      else if (run) last = run.senateOutcomes;
+      for (const caucus of ["democratic", "republican"]) {
+        senateChances.control[caucus].push(last?.control[caucus] ?? null);
+        senateChances.majority[caucus].push(last?.majority[caucus] ?? null);
+      }
+      senateChances.tied.push(last?.tied ?? null);
+      senateChances.unresolved.push(last?.residual ?? null);
+    });
+  }
+  return { timeline, seriesByParty, hung, ...(us ? { residual, descriptor } : {}),
+    ...(senate ? { senateChances, hasRosterOnly: data.some((entry) => entry.rosterOnly) } : {}) };
 }

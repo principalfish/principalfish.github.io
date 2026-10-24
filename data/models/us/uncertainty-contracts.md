@@ -280,3 +280,24 @@ approving production odds. Publication checks both current and saved acceptance,
 frozen votes, context and artifact identity; stale or gated optional sidecars are
 removed independently. Senate trends retain their legacy contested-seat arrays
 until their map/tracker adapter is activated.
+
+## Senate central history with a saved roster
+
+A central-only Senate run can supply full-chamber counts without an uncertainty
+snapshot when its saved `model_context` validates for the recorded date, its
+contested winners cover exactly the pinned field, and its holdover party IDs are
+unambiguous. This never substitutes the current roster for missing history.
+
+Such a trend point has null `context`, `segment_id` and `summary`, plus a
+`central_basis` object with schema `pf-us-senate-central-roster-v1`, `map_id`,
+`as_of_date`, `target_cycle`, `roster_id` and `field_id`. Its sole explicit metric
+is central `senate_full_seats`, summing to 100. The basis identifies the saved
+counting evidence; it does not claim that baseline, options or calibration
+snapshots exist. An invalid existing uncertainty snapshot cannot be replaced by
+this weaker fallback.
+
+The tracker renders these as isolated central dots. It carries neither totals
+nor odds across the incomplete context, draws no connecting line, and exposes no
+ranges or chances for those dates. Missing or invalid saved counting evidence
+remains a gap. Legacy contested totals stay available to internal list readers
+and are never relabelled as full-chamber totals.

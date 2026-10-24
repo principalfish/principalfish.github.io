@@ -60,6 +60,23 @@ describe("optional uncertainty loading", () => {
     expect(renderVoteTotals).not.toHaveBeenCalled();
   });
 
+  it.each(["run", "unrelated-derived"])("rejects delayed results after a %s identity change", async (change) => {
+    manifest.parliamentFeatures.westminster.uncertaintyModel = "senate";
+    let resolve;
+    fetchJson.mockImplementation(() => new Promise((done) => { resolve = done; }));
+    const original = state.electionData;
+    const loading = activateUncertaintyView();
+    if (change === "run") original.uncertaintyId = "new-run";
+    else {
+      const unrelated = new ElectionData({ seats: [], uncertaintyId: "saved-run" });
+      state.electionData = ElectionData.fromSeats([], null, unrelated);
+    }
+    resolve(payload());
+    await loading;
+    expect(original.uncertainty).toBeNull();
+    expect(renderVoteTotals).not.toHaveBeenCalled();
+  });
+
   it.each([null, { ...payload(), uncertaintyId: "different-same-day-run" }, { schema: "unknown" }])(
     "ignores malformed or mismatched data: %j", async (data) => {
       fetchJson.mockResolvedValue(data);

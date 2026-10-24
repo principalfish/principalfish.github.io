@@ -11,6 +11,14 @@ export const HOUSE_DESCRIPTOR = Object.freeze({
   residualKey: "no_majority", largest: false,
 });
 
+export const SENATE_DESCRIPTOR = Object.freeze({
+  model: "senate", metric: "senate_full_seats", tallyLabel: "Full Senate seats",
+  rangeLabel: "seat", majorityLabel: "Caucus control", residualLabel: "Unresolved control",
+  residualShort: "Unresolved", residualKey: "unresolved_control", largest: false,
+  votes: false,
+});
+
 export function modelDescriptor(model) {
-  return model === "house" ? HOUSE_DESCRIPTOR : WESTMINSTER_DESCRIPTOR;
+  return model === "house" ? HOUSE_DESCRIPTOR
+    : model === "senate" ? SENATE_DESCRIPTOR : WESTMINSTER_DESCRIPTOR;
 }

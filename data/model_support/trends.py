@@ -57,7 +57,11 @@ from model_support.public_uncertainty import (
     trend_uncertainty,
     public_us_document,
 )
-from model_support.us_release import house_publication_allowed
+from model_support.senate_cycles import senate_cycle_from_snapshot
+from model_support.us_senate import senate_party
+from model_support.us_release import (
+    house_publication_allowed, senate_publication_allowed,
+)
 from model_support.us_run import fingerprint, restore_run_inputs
 from model_support.us_uncertainty import US_TREND_SCHEMA, keep_trend_point
 from polls.importers.us.us_geography import parent_seat_name
@@ -73,6 +77,7 @@ class TrendEntry(TypedDict):
     segment_id: NotRequired[str | None]
     metrics: NotRequired[dict[str, Any]]
     summary: NotRequired[dict[str, Any] | None]
+    central_basis: NotRequired[dict[str, Any]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -274,10 +279,15 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
                 if eid in metrics:
                     metrics[eid][str(pid)]["e"] += ev_by_election[eid][unit_name]
         uncertainty, unpolled = _trend_uncertainty(conn, scope, elections)
-        house = (
-            _house_metadata(conn, scope) if scope.election_type == "us_house_model"
+        us_metadata = (
+            _us_metadata(conn, scope)
+            if scope.election_type in {"us_house_model", "us_senate_model"}
             else None
         )
+        if scope.election_type == "us_senate_model":
+            partial = _senate_roster_metadata(conn, scope)
+            partial.update(us_metadata or {})
+            us_metadata = partial
         dates: set[str] = set()
         previous: tuple[dict[str, dict[str, int | float]], bool] | None = None
         previous_segment: str | None = None
@@ -296,17 +306,17 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             if eid in unpolled:
                 continue
             summary = uncertainty.get(eid)
-            metadata = house.get(eid, {}) if house is not None else None
+            metadata = us_metadata.get(eid, {}) if us_metadata is not None else None
             segment = metadata.get("segment_id") if metadata else None
             has_summary = bool(metadata.get("summary")) if metadata else summary is not None
-            if house is not None and previous is not None and not keep_trend_point(
+            if us_metadata is not None and previous is not None and not keep_trend_point(
                 previous_context=previous_segment, context=segment,
                 central_equal=previous[0] == parties,
                 previous_has_summary=previous[1], has_summary=has_summary,
             ):
                 continue
             if (
-                house is None
+                us_metadata is None
                 and
                 previous is not None
                 and previous[0] == parties
@@ -332,7 +342,7 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             }
             if summary is not None:
                 entry["hung"] = summary.hung
-            if house is not None:
+            if us_metadata is not None:
                 entry.update({
                     "context": metadata.get("context") if metadata else None,
                     "segment_id": segment,
@@ -348,11 +358,102 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
                     },
                     "summary": metadata.get("summary") if metadata else None,
                 })
+                if scope.election_type == "us_senate_model":
+                    # Contested votes cannot supply full-chamber seat counts or votes.
+                    # Only a validated frozen run may provide the 100-seat metric.
+                    entry["metrics"] = metadata.get("metrics", {}) if metadata else {}
+                    if metadata and "central_basis" in metadata:
+                        entry["central_basis"] = metadata["central_basis"]
             entries.append(entry)
     return entries
 
 
-def _house_metadata(
+def _senate_roster_metadata(
+    conn: sqlite3.Connection, scope: OutputScope,
+) -> dict[int, dict[str, Any]]:
+    """Recover isolated central chamber counts from saved deterministic rosters.
+
+    The roster and exact field can be checked without inventing unavailable model
+    options or calibration context. Such a point cannot supply odds or continuity.
+    """
+    result: dict[int, dict[str, Any]] = {}
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='model_context'",
+    ).fetchone():
+        return result
+    names = dict(conn.execute("SELECT id,name FROM parties"))
+    by_party: dict[str, list[int]] = {}
+    for party_id, name in names.items():
+        by_party.setdefault(senate_party(name), []).append(party_id)
+    has_uncertainty = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='model_uncertainty'",
+    ).fetchone() is not None
+    without_snapshot = (
+        "AND NOT EXISTS (SELECT 1 FROM model_uncertainty u "
+        "WHERE u.election_id=e.id)" if has_uncertainty else ""
+    )
+    for election_id, name, raw in conn.execute(
+        "SELECT e.id,e.name,c.payload_json FROM elections e "
+        "JOIN model_context c ON e.id=c.election_id "
+        f"WHERE e.type=? AND e.map_id=? {without_snapshot}",
+        (scope.election_type, scope.map_id),
+    ):
+        try:
+            as_of = scope.date_from_name(name)
+            if as_of is None:
+                continue
+            snapshot = json.loads(raw)
+            cycle = senate_cycle_from_snapshot(snapshot, as_of)
+            roster = cycle.require_chamber()
+            slots = {(race.state, race.seat_class) for race in cycle.races}
+            if len(cycle.states) != len(cycle.races):
+                continue
+            holdovers = [member for member in roster
+                         if (member.state, member.seat_class) not in slots]
+            if len(holdovers) + len(cycle.races) != 100:
+                continue
+            rows = list(conn.execute(
+                "SELECT s.seat_name,s.map_id,v.party_id,v.elected FROM votes v "
+                "JOIN seats s ON s.id=v.seat_id WHERE v.election_id=?",
+                (election_id,),
+            ))
+            winners = [(state, party) for state, _, party, elected in rows if elected]
+            if (any(map_id != scope.map_id or state not in cycle.states
+                    or party not in names for state, map_id, party, _ in rows)
+                    or len(winners) != len(cycle.races)
+                    or {state for state, _ in winners} != cycle.states):
+                continue
+            counts = {str(party): 0 for _, _, party, _ in rows}
+            for _, party in winners:
+                counts[str(party)] = counts.get(str(party), 0) + 1
+            for member in holdovers:
+                matches = by_party.get(member.party, [])
+                if len(matches) != 1:
+                    raise ValueError("Missing or ambiguous saved Senate party ID")
+                party = str(matches[0])
+                counts[party] = counts.get(party, 0) + 1
+            if sum(counts.values()) != 100:
+                continue
+            result[election_id] = {
+                "context": None, "segment_id": None, "summary": None,
+                "central_basis": {
+                    "schema": "pf-us-senate-central-roster-v1",
+                    "map_id": scope.map_id, "as_of_date": as_of.isoformat(),
+                    "target_cycle": cycle.target_year,
+                    "roster_id": fingerprint(snapshot),
+                    "field_id": fingerprint(sorted(slots)),
+                },
+                "metrics": {"senate_full_seats": {
+                    "unit": "seats", "domain": "party", "total": 100,
+                    "central": counts,
+                }},
+            }
+        except (ValueError, KeyError, TypeError, AttributeError):
+            continue
+    return result
+
+
+def _us_metadata(
     conn: sqlite3.Connection, scope: OutputScope,
 ) -> dict[int, dict[str, Any]]:
     result: dict[int, dict[str, Any]] = {}
@@ -374,6 +475,9 @@ def _house_metadata(
             if (document["context"]["map_id"] != scope.map_id
                     or inputs.as_of_date != as_of):
                 continue
+            model = scope.election_type.removeprefix("us_").removesuffix("_model")
+            if document["model"] != model:
+                continue
             private = document["private"]
             if private["artifact_id"] != fingerprint([
                 document["result_identity"], document["summary"],
@@ -387,7 +491,7 @@ def _house_metadata(
             actual = []
             for seat, party, votes, winner in rows:
                 if votes is None or votes != int(votes):
-                    raise ValueError("nonintegral recorded House vote")
+                    raise ValueError("nonintegral recorded US vote")
                 actual.append((seat, party, int(votes), bool(winner)))
             actual.sort()
             if actual != sorted(inputs.central_rows):
@@ -402,9 +506,15 @@ def _house_metadata(
                     inputs.version, config,
                     private["provenance"].get("calibration"),
                 ]),
+                "metrics": {
+                    key: {field: value for field, value in metric.items()
+                          if field != "ranges"}
+                    for key, metric in document["summary"]["metrics"].items()
+                },
                 "summary": (
                     public_us_document(document)["summary"]
-                    if house_publication_allowed(document) else None
+                    if (senate_publication_allowed(document) if model == "senate"
+                        else house_publication_allowed(document)) else None
                 ),
             }
         except (ValueError, KeyError, TypeError, AttributeError):
@@ -414,9 +524,10 @@ def _house_metadata(
 
 
 def trend_document(scope: OutputScope, entries: list[TrendEntry]) -> object:
-    """Activate the explicit US envelope for House; other models retain arrays."""
-    if scope.election_type == "us_house_model":
-        return {"schema": US_TREND_SCHEMA, "model": "house", "points": entries}
+    """Publish activated US models with explicit metric and context domains."""
+    if scope.election_type in {"us_house_model", "us_senate_model"}:
+        model = scope.election_type.removeprefix("us_").removesuffix("_model")
+        return {"schema": US_TREND_SCHEMA, "model": model, "points": entries}
     return entries
 
 
@@ -440,7 +551,7 @@ def _trend_uncertainty(
     """
     result: dict[int, TrendUncertainty] = {}
     unpolled: set[int] = set()
-    if scope.election_type == "us_house_model":
+    if scope.election_type in {"us_house_model", "us_senate_model"}:
         return result, unpolled
     try:
         for election_id, national in iter_national_blocks(conn, scope):

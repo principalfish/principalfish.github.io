@@ -1412,7 +1412,7 @@ function renderSeatPopup(seatName) {
     const rows = seat.members.map((member) => ({
       party: member.party,
       pct: 100,
-      label: member.name,
+      label: member.forecastStatus === "holdover" ? `${member.name} (holdover; fixed)` : member.name,
       years: Seat.memberTermYears(member),
     }));
     // The bar is just a colour accent here, so cap it short to clear the wide "last/up" value.

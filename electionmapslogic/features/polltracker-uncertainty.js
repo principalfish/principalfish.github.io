@@ -11,12 +11,13 @@ export function pollTrackerCapabilities(data) {
   const voteBands = hasBands("voteLo", "voteHi");
   return {
     bands: seatBands || voteBands, seatBands, voteBands,
-    chances: (data.residual ?? data.hung)?.some(Number.isFinite) || series.some((row) => [...(row.pMaj || []), ...(row.pLargest || [])].some(Number.isFinite)),
+    chances: (data.senateChances && Object.values(data.senateChances.control).some((values) => values.some(Number.isFinite))) || (data.residual ?? data.hung)?.some(Number.isFinite) || series.some((row) => [...(row.pMaj || []), ...(row.pLargest || [])].some(Number.isFinite)),
   };
 }
 
 export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes, bands = true, descriptor = WESTMINSTER_DESCRIPTOR }) {
   const basis = "if an election were held today, conditional on current polls and the model's error assumptions.";
+  if (chances && descriptor.model === "senate") return `Caucus control ${basis} A 50–50 caucus split can still give control through the saved vice-president policy; it overlaps control chances. Unresolved control is shown separately. A caucus majority requires 51 seats.`;
   if (chances) return `Chances ${basis} ${descriptor.residualShort} means no party wins a majority.`;
   if (!bands) return "Uncertainty hidden. Tick Uncertainty to show 90% ranges.";
   const metrics = [];
@@ -27,8 +28,21 @@ export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes
 }
 
 /** Reuse the percentage plotting axis for odds, while retaining the underlying series. */
-export function chanceSeries(series, metric, hung, descriptor = WESTMINSTER_DESCRIPTOR) {
+export function chanceSeries(series, metric, hung, descriptor = WESTMINSTER_DESCRIPTOR, senateChances = null) {
   const percent = (values) => values.map((value) => Number.isFinite(value) ? value * 100 : null);
+  if (descriptor.model === "senate") {
+    if (!senateChances) return [];
+    return [
+      ...[["democratic", "Democratic caucus", "#1375E1"], ["republican", "Republican caucus", "#E81B23"]]
+        .map(([partyKey, partyName, colour]) => ({ partyKey, partyName, colour,
+          votePct: percent(senateChances.control[partyKey]), chanceLabel: "Caucus control chance",
+          majorityPct: percent(senateChances.majority[partyKey]) })),
+      { partyKey: "tied_caucuses", partyName: "50–50 caucuses", colour: "#64748b",
+        votePct: percent(senateChances.tied), chanceLabel: "50–50 caucus split chance", isHung: true },
+      { partyKey: "unresolved_control", partyName: "Unresolved control", colour: "#475569",
+        votePct: percent(senateChances.unresolved), chanceLabel: "Unresolved control chance", isHung: true },
+    ];
+  }
   const label = metric === "pLargest" ? "Largest-party chance" : "Majority chance";
   return [
     ...series.map((row) => ({ ...row, votePct: percent(row[metric] || []), chanceLabel: label })),
@@ -47,10 +61,11 @@ export function chanceSeries(series, metric, hung, descriptor = WESTMINSTER_DESC
  */
 export function pollTrackerTooltipValues(series, index, { ranges = true } = {}) {
   const percent = (value) => Number.isFinite(value) ? `${formatPct(value)}%` : "Unavailable";
-  if (series.chanceLabel) return [[series.chanceLabel, percent(series.votePct[index])]];
+  if (series.chanceLabel) return [[series.chanceLabel, percent(series.votePct[index])],
+    ...(series.majorityPct ? [["Caucus majority chance (51+ seats)", percent(series.majorityPct[index])]] : [])];
   const values = [
     ["Seats", Number.isFinite(series.seats[index]) ? formatInt(series.seats[index]) : "Unavailable"],
-    ["Vote share", percent(series.votePct[index])],
+    ...(series.noVotes ? [] : [["Vote share", percent(series.votePct[index])]]),
   ];
   if (!ranges) return values;
   if (Number.isFinite(series.seatLo?.[index]) && Number.isFinite(series.seatHi?.[index])) {

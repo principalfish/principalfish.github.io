@@ -124,9 +124,15 @@ export function renderPollTracker() {
 function renderPollTrackerUncertaintyControls() {
   const descriptor = state.pollTrackerData.descriptor ?? WESTMINSTER_DESCRIPTOR;
   if (!descriptor.largest) chanceMetric = "pMaj";
+  const senate = descriptor.model === "senate";
+  pollTrackerMetricVotesInput.closest("label").hidden = senate;
+  if (senate) pollTrackerMetricVotesInput.checked = false;
+  document.querySelector('[data-polltracker-chance="pMaj"]').parentElement.lastChild.textContent = ` ${descriptor.majorityLabel}`;
+  document.querySelector('[data-polltracker-view="totals"]').parentElement.lastChild.textContent = senate ? " Full Senate seats" : " Seats & votes";
   const capabilities = pollTrackerCapabilities(state.pollTrackerData);
   if (!capabilities.chances) chartMode = "totals";
   const chances = chartMode === "chances";
+  document.getElementById("mapsPollTrackerPartyControls").hidden = senate && chances;
   document.getElementById("mapsPollTrackerViewControls").hidden = !capabilities.chances;
   document.getElementById("mapsPollTrackerChanceControls").hidden = !chances;
   document.querySelector('[data-polltracker-chance="pLargest"]').closest("label").hidden = !descriptor.largest;
@@ -140,12 +146,17 @@ function renderPollTrackerUncertaintyControls() {
     });
   }
   const note = document.getElementById("mapsPollTrackerUncertaintyNote");
-  note.hidden = !capabilities.bands && !capabilities.chances;
-  note.textContent = pollTrackerUncertaintyNote(capabilities, {
+  note.hidden = !senate && !capabilities.bands && !capabilities.chances;
+  note.textContent = senate && !state.pollTrackerData.seriesByParty.size
+    ? "Full Senate history is unavailable for these saved runs. Legacy seats-up totals are not full-chamber totals."
+    : pollTrackerUncertaintyNote(capabilities, {
     chances, seats: pollTrackerMetricSeatsInput?.checked, votes: pollTrackerMetricVotesInput?.checked,
     bands: pollTrackerUncertaintyShown(),
     descriptor,
   });
+  if (senate && !chances && state.pollTrackerData.hasRosterOnly) {
+    note.textContent += " Some saved central projections appear as isolated points; ranges and chances are unavailable for those dates.";
+  }
 }
 
 /**
@@ -210,7 +221,13 @@ function renderPollTrackerChart() {
   const selectedSeries = chances
     ? chanceSeries(ordinarySeries, chanceMetric,
       (state.pollTrackerData.residual ?? state.pollTrackerData.hung).slice(windowStart),
-      state.pollTrackerData.descriptor ?? WESTMINSTER_DESCRIPTOR) : ordinarySeries;
+      state.pollTrackerData.descriptor ?? WESTMINSTER_DESCRIPTOR,
+      state.pollTrackerData.senateChances ? {
+        control: Object.fromEntries(Object.entries(state.pollTrackerData.senateChances.control).map(([key, values]) => [key, values.slice(windowStart)])),
+        majority: Object.fromEntries(Object.entries(state.pollTrackerData.senateChances.majority).map(([key, values]) => [key, values.slice(windowStart)])),
+        tied: state.pollTrackerData.senateChances.tied.slice(windowStart),
+        unresolved: state.pollTrackerData.senateChances.unresolved.slice(windowStart),
+      } : null) : ordinarySeries;
   const { ySeats, yVotePct } = chances
     ? { ySeats: null, yVotePct: d3.scaleLinear().domain([0, 100]).range([innerHeight, 0]) }
     : pollTrackerYScales(selectedSeries, innerHeight);
@@ -564,6 +581,7 @@ function pollTrackerDrawLines(plot, {
       .filter((index) => index >= 0);
     definedIndices.filter((index) => !Number.isFinite(values[index - 1]) && !Number.isFinite(values[index + 1])).forEach((index) => {
       plot.append('circle')
+        .attr("class", "maps-polltracker-isolated-point")
         .attr('cx', xAt(index))
         .attr('cy', yScale(values[index]))
         .attr('r', 4.5)
@@ -624,8 +642,10 @@ function pollTrackerDrawLegend(svg, { width, margin, chances }) {
   const legend = svg.append('g').attr('transform', `translate(${width - margin.right},${margin.top - 2})`);
   legend.append('text')
     .text(chances
-      ? `Solid = ${chanceMetric === "pLargest" ? "Largest-party" : "Majority"} chance, Dotted = ${(state.pollTrackerData.descriptor ?? WESTMINSTER_DESCRIPTOR).residualShort}`
-      : 'Solid = Seats, Dashed = Vote %')
+      ? (state.pollTrackerData.descriptor?.model === "senate"
+        ? "Solid = Caucus control; dotted = 50–50 / unresolved"
+        : `Solid = ${chanceMetric === "pLargest" ? "Largest-party" : "Majority"} chance, Dotted = ${(state.pollTrackerData.descriptor ?? WESTMINSTER_DESCRIPTOR).residualShort}`)
+      : (state.pollTrackerData.descriptor?.model === "senate" ? "Full Senate seats (100)" : 'Solid = Seats, Dashed = Vote %'))
     .attr('fill', '#334155')
     .attr('text-anchor', 'end')
     .style('font', '700 11px "DM Sans", "Segoe UI", sans-serif');
@@ -693,7 +713,7 @@ export async function activatePollTrackerMode() {
   const data = await fetchJson(`${DATA_BASE}/${dataPath}`);
   if (version !== activationVersion || state.currentParliament !== parliament || state.view !== "polltracker") return;
   state.pollTrackerData = parsePollTrackerData(data);
-  if (state.pollTrackerData.descriptor?.model === "house") {
+  if (["house", "senate"].includes(state.pollTrackerData.descriptor?.model)) {
     pollTrackerMetricSeatsInput.checked = true;
     pollTrackerMetricVotesInput.checked = false;
     pollTrackerShowUncertaintyInput.checked = true;

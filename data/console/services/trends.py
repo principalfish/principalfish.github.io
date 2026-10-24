@@ -51,7 +51,7 @@ def load_trend_entries(path: Path) -> list[dict[str, Any]]:
         value = json.load(handle)
     if isinstance(value, dict):
         if (value.get("schema") != "pf-us-model-trends-v1"
-                or value.get("model") != "house"):
+                or value.get("model") not in {"house", "senate"}):
             raise ValueError("unsupported model trend envelope")
         value = value.get("points")
     if not isinstance(value, list):

@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
+{% set chamber = chamber|default('house') %}
 <section class="card">
-  <h2>US House uncertainty</h2>
+  <h2>{{ title }}</h2>
   {% if status.error %}<p class="alert">{{ status.error }}</p>{% endif %}
-  <p><a href="{{ url_for('home.home') }}">Console home</a> · <a href="{{ url_for('us.uncertainty_calibration', chamber='house') }}">Calibration</a> · <a href="{{ url_for('us.house_uncertainty_budget') }}">Parity / error budget</a></p>
+  <p><a href="{{ url_for('home.home') }}">Console home</a> · <a href="{{ url_for('us.uncertainty_calibration', chamber=chamber) }}">Calibration</a> · {% if chamber == 'house' %}<a href="{{ url_for('us.house_uncertainty_budget') }}">Parity / error budget</a>{% else %}<a href="{{ url_for('us_explorer.explore', model=chamber, view='budget') }}">Frozen error budget</a>{% endif %}</p>
   {% if status.enabled %}<p>Production uncertainty release enabled. Each run also requires complete contributing polling evidence.</p>
   {% else %}<p><strong>Production odds gated.</strong> Central projections remain available with <code>--no-uncertainty</code>.</p>{% endif %}
   <ul>{% for blocker in status.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>
   <p>Stored summaries: {{ status.stored_runs }}. Latest central run: {{ status.latest_run or 'none' }}. Detailed summary: {{ status.detail_run or 'none' }}.</p>
-  <p><a href="{{ url_for('us_explorer.explore', model='house', view='results') }}">Results</a> · <a href="{{ url_for('us_explorer.explore', model='house', view='history') }}">Odds history</a> · <a href="{{ url_for('us_explorer.explore', model='house', view='simulations') }}">Simulation explorer</a></p>
+  <p><a href="{{ url_for('us_explorer.explore', model=chamber, view='results') }}">Results</a> · <a href="{{ url_for('us_explorer.explore', model=chamber, view='history') }}">Odds history</a> · <a href="{{ url_for('us_explorer.explore', model=chamber, view='simulations') }}">Simulation explorer</a></p>
   <p>{% if status.raw_available %}Detailed draws available for the latest run.{% else %}Detailed draws unavailable: no matching retained archive. Historical compact summaries remain available when detail is pruned.{% endif %}</p>
 </section>
 {% endblock %}

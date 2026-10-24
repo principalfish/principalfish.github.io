@@ -88,8 +88,12 @@ def explore(
                         "election_id": item.stored.election_id,
                         "as_of": item.as_of,
                         "parties": party_rows(item, descriptor),
+                        "outcomes": item.document["summary"]["outcomes"],
                         "no_majority": (
-                            item.document["summary"]["outcomes"]["no_majority"] * 100
+                            item.document["summary"]["outcomes"][
+                                "no_caucus_majority" if model == "senate"
+                                else "no_majority"
+                            ] * 100
                         ),
                     })
             context["history"] = history

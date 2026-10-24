@@ -1,0 +1,14 @@
+{
+  "schema": "pf-us-senate-release-v1",
+  "enabled": false,
+  "roster_validated": true,
+  "target_cycle": 2026,
+  "map_name": "US Senate 2024",
+  "baseline_name": "2020 US Senate Election",
+  "comparability_id": "senate-held-today-v1",
+  "calibration_file": "calibration/senate-candidate.json",
+  "blockers": [
+    "Explicitly accept Senate-specific calibration and labelled generic-ballot exposure assumptions",
+    "Repair actual contributing poll metadata and sample sizes before uncertainty runs"
+  ]
+}

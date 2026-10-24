@@ -13,7 +13,9 @@ from model_support.persistence import OutputScope, StoredUncertainty, latest_run
 from model_support.public_uncertainty import (
     basis_label, public_us_document, public_us_regional_bands, public_us_seat_bands,
 )
-from model_support.us_release import HOUSE_RELEASE, house_publication_allowed
+from model_support.us_release import (
+    HOUSE_RELEASE, SENATE_RELEASE, house_publication_allowed, senate_publication_allowed,
+)
 from model_support.us_run import fingerprint, restore_run_inputs
 from models import Election, ElectionType, Map, Vote
 from scripts.export.payload import SeatRow
@@ -40,7 +42,7 @@ def latest_us_model_run(
 def house_uncertainty_export(
     election: Election, stored: StoredUncertainty | None,
     votes: Sequence[Vote], seats: Sequence[SeatRow],
-    *, release_path: Path = HOUSE_RELEASE,
+    *, release_path: Path = HOUSE_RELEASE, model: str = "house",
 ) -> ModelUncertaintyExport:
     """Fail closed for optional odds; central results remain exportable."""
     absent = ModelUncertaintyExport(None, None)
@@ -48,15 +50,17 @@ def house_uncertainty_export(
         return absent
     try:
         document: dict[str, Any] = stored.national
-        if stored.election_id != election.id or not house_publication_allowed(
+        allowed = senate_publication_allowed if model == "senate" else house_publication_allowed
+        if stored.election_id != election.id or not allowed(
             document, release_path=release_path,
         ):
             return absent
         inputs = restore_run_inputs(document)
         context = document["context"]
-        scope = OutputScope("us_house_model", election.map_id, HOUSE_PREFIX)
+        scope = OutputScope(f"us_{model}_model", election.map_id,
+                            "US Senate UNS" if model == "senate" else HOUSE_PREFIX)
         as_of = scope.date_from_name(election.name)
-        if (election.type != ElectionType.us_house_model or as_of is None
+        if (election.type.value != f"us_{model}_model" or as_of is None
                 or as_of.isoformat() != context["as_of_date"]
                 or election.map_id != context["map_id"]):
             return absent
@@ -77,7 +81,9 @@ def house_uncertainty_export(
             {key: value for key, value in private.items() if key != "artifact_id"},
         ]):
             return absent
-        by_id = {seat.seat_id: seat for seat in seats}
+        field_ids = {seat.seat_id for seat in inputs.seats}
+        by_id = {seat.seat_id: seat for seat in seats
+                 if model != "senate" or seat.seat_id in field_ids}
         if set(by_id) != {seat.seat_id for seat in inputs.seats}:
             return absent
         if any(by_id[seat.seat_id].seat_name != seat.name
@@ -90,7 +96,7 @@ def house_uncertainty_export(
             set(row) != set(inputs.party_ids) for row in bands.values()
         ):
             return absent
-        if stored.regions is not None:
+        if stored.regions is not None and model == "house":
             frozen_members = {
                 region: [seat.name for seat in inputs.seats if seat.region_id == region]
                 for region in {seat.region_id for seat in inputs.seats
@@ -111,3 +117,13 @@ def house_uncertainty_export(
         return ModelUncertaintyExport(bands, core, private["artifact_id"])
     except (ValueError, KeyError, TypeError, AttributeError):
         return absent
+
+
+def senate_uncertainty_export(
+    election: Election, stored: StoredUncertainty | None,
+    votes: Sequence[Vote], seats: Sequence[SeatRow], *,
+    release_path: Path = SENATE_RELEASE,
+) -> ModelUncertaintyExport:
+    return house_uncertainty_export(
+        election, stored, votes, seats, release_path=release_path, model="senate",
+    )

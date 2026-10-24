@@ -34,7 +34,7 @@ class SenateMember:
 @dataclass(frozen=True, slots=True)
 class SenateControlPolicy:
     identity: str
-    vice_president: str
+    vice_president: str | None
     alignments: tuple[tuple[str, str, str | None], ...]
     provenance: str
 
@@ -172,8 +172,12 @@ def _policy(value: object) -> SenateControlPolicy | None:
     if value is None:
         return None
     source = _object(value, "control policy")
-    vp = _text(source.get("vice_president"), "vice president")
-    if vp not in {"democrat", "republican"}:
+    if "vice_president" not in source:
+        raise ValueError("Senate control policy needs an explicit VP scenario")
+    vp = source["vice_president"]
+    if vp is not None and (
+        not isinstance(vp, str) or vp not in {"democrat", "republican"}
+    ):
         raise ValueError("Unsupported Senate vice-presidential caucus")
     alignments: list[tuple[str, str, str | None]] = []
     identities: set[tuple[str, str]] = set()

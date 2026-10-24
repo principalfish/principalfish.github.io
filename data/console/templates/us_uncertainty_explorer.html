@@ -8,7 +8,7 @@
   <h2>{{ title }}</h2>
   <nav aria-label="Uncertainty navigation">
     <a href="{{ url_for('home.home') }}">Console home</a> ·
-    <a href="{{ url_for('us.house_uncertainty_hub') }}">Uncertainty hub</a> ·
+    <a href="{{ url_for('us.senate_uncertainty_hub') if descriptor.slug == 'senate' else url_for('us.house_uncertainty_hub') }}">Uncertainty hub</a> ·
     <a href="{{ url_for('us.uncertainty_calibration', chamber=descriptor.slug) }}">Calibration</a> ·
     {{ link('results', 'Results', run.stored.election_id if run else none) }} ·
     {{ link('history', 'Odds history') }} ·
@@ -42,16 +42,29 @@
         <label>Through <input type="date" name="end" value="{{ end or '' }}"></label>
         <button type="submit">Filter dates</button>
       </form>
-      <table><thead><tr><th>As of / run</th><th>Majority chances</th><th>No majority</th></tr></thead>
+      <table><thead><tr><th>As of / run</th><th>{% if descriptor.slug == 'senate' %}Caucus control chances{% else %}Majority chances{% endif %}</th><th>{% if descriptor.slug == 'senate' %}No caucus majority{% else %}No majority{% endif %}</th></tr></thead>
         <tbody>{% for point in history %}<tr>
           <td>{{ link('results', point.as_of|string ~ ' / #' ~ point.election_id|string, point.election_id) }}</td>
-          <td>{% for party in point.parties %}{{ party.name }} {{ number(party.majority) }}%{% if not loop.last %}; {% endif %}{% endfor %}</td>
+          <td>{% if descriptor.slug == 'senate' %}{% for caucus, probability in point.outcomes.control.probabilities.items() %}{{ caucus }} control {{ number(probability * 100) }}%{% if not loop.last %}; {% endif %}{% endfor %}{% else %}{% for party in point.parties %}{{ party.name }} {{ number(party.majority) }}%{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}</td>
           <td>{{ number(point.no_majority) }}%</td>
         </tr>{% else %}<tr><td colspan="3">No stored uncertainty summaries in this date range.</td></tr>{% endfor %}</tbody>
       </table>
     {% elif not run %}
       <p>No stored uncertainty run is available for this model.</p>
     {% elif view == 'results' %}
+      {% if descriptor.slug == 'senate' %}
+      <p>Full chamber: 100 seats, including {{ run.document.private.senate_counting.holdovers|length }} fixed holdovers. Only the {{ run.inputs.seats|length }} contested races are simulated. Outright caucus majority requires 51 seats; the configured VP resolves exactly 50–50.</p>
+      <p>{{ run.document.private.senate_counting.generic_ballot_exposure }}</p>
+      <p>Configured vice-presidential caucus: {{ run.document.private.senate_counting.policy.vice_president }}. This control scenario is conditional on the frozen independent alignments.</p>
+      <table><thead><tr><th>Raw party</th><th>Full central seats</th><th>Full interval</th><th>Seats up central</th><th>Seats up interval</th></tr></thead><tbody>
+      {% for party in parties %}<tr><td>{{ party.name }}</td><td>{{ party.central }}</td><td>{{ party.range|join(' / ') }}</td><td>{{ party.contested }}</td><td>{{ party.contested_range|join(' / ') }}</td></tr>{% endfor %}
+      </tbody></table>
+      {% for caucus, probability in run.document.summary.outcomes.control.probabilities.items() %}
+      <p>{{ caucus }}: outright majority {{ number(run.document.summary.outcomes.majority.probabilities[caucus] * 100) }}%; control {{ number(probability * 100) }}%.</p>
+      {% endfor %}
+      <p>50–50 caucuses: {{ number(run.document.summary.outcomes.tied_caucuses * 100) }}%. Unresolved control: {{ number(run.document.summary.outcomes.unresolved_control * 100) }}%. No caucus majority: {{ number(run.document.summary.outcomes.no_caucus_majority * 100) }}%.</p>
+      <details><summary>Fixed holdovers (not simulated)</summary><ul>{% for member in run.document.private.senate_counting.holdovers %}<li>{{ member.state }}, Class {{ member.seat_class }}: {{ member.candidate }} ({{ member.party }}), fixed holdover.</li>{% endfor %}</ul></details>
+      {% else %}
       <p>Majority requires {{ descriptor.majority }} seats. Projected national vote share uses baseline turnout weights; it is not the generic-ballot share.</p>
       <table><thead><tr><th>Party</th><th>Central seats</th><th>Seat interval (low / median / high)</th><th>Central projected vote</th><th>Vote interval</th><th>Majority</th></tr></thead>
         <tbody>{% for party in parties %}<tr>
@@ -63,22 +76,24 @@
         </tr>{% endfor %}</tbody>
       </table>
       <p>No majority: {{ number(run.document.summary.outcomes.no_majority * 100) }}%.</p>
-      <h3>Frozen district field</h3>
+      {% endif %}
+      <h3>Frozen {{ 'race' if descriptor.slug == 'senate' else 'district' }} field</h3>
       <ul>{% for race in races %}<li>{{ link('race', race.name, run.stored.election_id, race.seat_id) }} ({{ race.state }})</li>{% endfor %}</ul>
     {% elif view == 'simulations' %}
       <p>Page {{ page }} of {{ pages }}. Simulation indices start at zero.</p>
-      <table><thead><tr><th>Simulation</th><th>Seats and projected vote shares</th></tr></thead>
+      <table><thead><tr><th>Simulation</th><th>{% if descriptor.slug == 'senate' %}Full chamber and seats up{% else %}Seats and projected vote shares{% endif %}</th></tr></thead>
         <tbody>{% for row in rows %}<tr>
           <td>{{ link('simulation', '#' ~ row.index|string, run.stored.election_id, index=row.index) }}</td>
-          <td>{% for party in row.parties %}{{ party.name }}: {{ party.seats }} seats, {{ number(party.vote) }}%{% if not loop.last %}; {% endif %}{% endfor %}</td>
+          <td>{% for party in row.parties %}{{ party.name }}: {{ party.seats }} seats{% if descriptor.slug == 'senate' %} ({{ party.contested }} contested){% else %}, {{ number(party.vote) }}%{% endif %}{% if not loop.last %}; {% endif %}{% endfor %}</td>
         </tr>{% endfor %}</tbody>
       </table>
       {% if page > 1 %}{{ link('simulations', 'Previous page', run.stored.election_id, page=page-1) }}{% endif %}
       {% if page < pages %}{{ link('simulations', 'Next page', run.stored.election_id, page=page+1) }}{% endif %}
     {% elif view == 'simulation' %}
       <h3>Simulation #{{ index }}</h3>
-      <p>Source errors, recorded counts, district winners and national totals match exact replay from frozen inputs.</p>
-      <table><thead><tr><th>District</th><th>Winner</th><th>Central → simulated shares</th></tr></thead>
+      {% if senate_tally %}<p>{% for party in senate_tally.parties %}{{ party.name }}: {{ party.full }} full seats ({{ party.contested }} contested); {% endfor %}caucuses: {{ senate_tally.caucuses }}.</p>{% endif %}
+      <p>Source errors, recorded counts, {{ 'race winners and contested totals' if descriptor.slug == 'senate' else 'district winners and national totals' }} match exact replay from frozen inputs.</p>
+      <table><thead><tr><th>{{ 'Race' if descriptor.slug == 'senate' else 'District' }}</th><th>Winner</th><th>Central → simulated shares</th></tr></thead>
         <tbody>{% for race in races %}<tr>
           <td>{{ link('decomposition', race.name, run.stored.election_id, race.id, index) }}</td>
           <td>{{ race.winner }}</td>

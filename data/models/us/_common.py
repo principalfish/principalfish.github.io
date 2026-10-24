@@ -79,11 +79,15 @@ from model_support.us_simulation import (
 )
 from model_support.us_release import (
     HOUSE_RELEASE,
+    SENATE_RELEASE,
+    senate_release,
     UsReleaseError,
     house_release,
     house_target_cycle,
 )
-from model_support.us_run import house_context, house_payload, json_data
+from model_support.us_run import (
+    house_context, house_payload, json_data, senate_context, senate_payload,
+)
 from model_support.us_replay import stage_us_draws, us_raw_path
 from model_support.io import publish_json, validate_output_target
 from model_support.trends import (
@@ -282,8 +286,10 @@ class UsSimulationConfig:
             raise ValueError("--simulations must be an integer in [1, 1000000]")
         if self.simulations is not None and self.no_uncertainty:
             raise ValueError("--simulations cannot be combined with --no-uncertainty")
-        if self.simulations is not None and self.spec.election_type != "us_house_model":
-            raise ValueError("uncertainty runner is currently enabled only for House")
+        if self.simulations is not None and self.spec.election_type not in {
+            "us_house_model", "us_senate_model",
+        }:
+            raise ValueError("uncertainty runner is enabled only for House and Senate")
         if self.spec.election_type == "us_presidential_model":
             self.target_election_year = allocation_year(
                 self.spec.election_type,
@@ -2498,8 +2504,8 @@ def freeze_house_central_inputs(
     This exposes no stochastic sources and does not waive evidence checks for
     an uncertainty run. The ordinary central estimator needs no polling N.
     """
-    if cfg.spec.election_type != "us_house_model":
-        raise ValueError("only the House adapter is enabled")
+    if cfg.spec.election_type not in {"us_house_model", "us_senate_model"}:
+        raise ValueError("only the House and Senate adapters are enabled")
     parties = prepared.party_ids
     names = tuple(prepared.party_name_by_id.get(party, str(party)) for party in parties)
     refs = {seat.id: seat for seat in prepared.seats}
@@ -2549,7 +2555,8 @@ def freeze_house_central_inputs(
             region_id=ref.region_id,
         ))
     return freeze_us_central_inputs(
-        model="us-house", as_of_date=cfg.as_of_date, party_ids=parties,
+        model=("us-senate" if cfg.spec.election_type == "us_senate_model"
+               else "us-house"), as_of_date=cfg.as_of_date, party_ids=parties,
         party_names=names, seats=tuple(frozen), central_rows=prepared.projected_votes,
     )
 
@@ -2653,9 +2660,14 @@ def _house_uncertainty(
     # numerical conversion import to avoid a module-initialization cycle.
     from model_support.us_calibration import national_source_scale
 
-    if cfg.no_uncertainty or cfg.spec.election_type != "us_house_model":
+    if cfg.no_uncertainty or cfg.spec.election_type not in {
+        "us_house_model", "us_senate_model",
+    }:
         return None
-    release = house_release(cfg.spec.uncertainty_release_config or HOUSE_RELEASE)
+    is_senate = cfg.spec.election_type == "us_senate_model"
+    load_release = senate_release if is_senate else house_release
+    default_release = SENATE_RELEASE if is_senate else HOUSE_RELEASE
+    release = load_release(cfg.spec.uncertainty_release_config or default_release)
     if not release.enabled and cfg.simulations is None:
         return None
     release.require_enabled()
@@ -2699,25 +2711,39 @@ def _house_uncertainty(
         "seat_matchup_policy": cfg.spec.seat_matchup_policy,
         "baseline_name": cfg.spec.baseline_election_name,
     }
-    context = house_context(
-        inputs, map_id=prepared.map_id, target_cycle=int(state["target_cycle"]),
-        options=options, comparability_id=str(state["comparability_id"]),
-    )
+    if is_senate:
+        if cfg.spec.senate_cycle is None:
+            raise ValueError("Senate uncertainty requires its pinned cycle")
+        context = senate_context(
+            inputs, map_id=prepared.map_id, cycle=cfg.spec.senate_cycle,
+            options=options, comparability_id=str(state["comparability_id"]),
+        )
+    else:
+        context = house_context(
+            inputs, map_id=prepared.map_id, target_cycle=int(state["target_cycle"]),
+            options=options, comparability_id=str(state["comparability_id"]),
+        )
     if cfg.dry_run:
         return None
     run = run_us_simulations(inputs, simulations=cfg.simulations or 10_000)
-    return house_payload(
-        run, context, options=options, provenance={
-            "release": dict(state), "calibration": dict(release.calibration),
-            "central_diagnostics": house_central_diagnostics(prepared, cfg),
-            "selected_polls": json_data([
-                asdict(poll) for poll in (
-                    *prepared.poll_window.national_evidence,
-                    *prepared.poll_window.seat_evidence,
-                )
-            ]),
-        },
-    ), run
+    provenance: dict[str, object] = {
+        "release": dict(state), "calibration": dict(release.calibration),
+        "central_diagnostics": house_central_diagnostics(prepared, cfg),
+        "selected_polls": json_data([
+            asdict(poll) for poll in (
+                *prepared.poll_window.national_evidence,
+                *prepared.poll_window.seat_evidence,
+            )
+        ]),
+    }
+    if is_senate:
+        assert cfg.spec.senate_cycle is not None
+        return senate_payload(
+            run, context, cycle=cfg.spec.senate_cycle,
+            party_names=prepared.party_name_by_id,
+            options=options, provenance=provenance,
+        ), run
+    return house_payload(run, context, options=options, provenance=provenance), run
 
 
 def run_simulation(
@@ -2811,7 +2837,8 @@ def run_simulation(
         latest is None or cfg.as_of_date >= latest[1]
     ):
         raw_path = us_raw_path(
-            Path(DatabaseConfig.from_env().simulations_path), "house",
+            Path(DatabaseConfig.from_env().simulations_path),
+            "senate" if spec.election_type == "us_senate_model" else "house",
         )
         validate_output_target(raw_path, database=sqlite_path)
         if any(raw_path.resolve() == path.resolve() for path in (
@@ -3344,12 +3371,16 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
                 raise ValueError(
                     "--simulations cannot be combined with --no-uncertainty",
                 )
-            if spec.election_type != "us_house_model":
+            if spec.election_type not in {"us_house_model", "us_senate_model"}:
                 raise ValueError(
-                    "uncertainty runner is currently enabled only for House",
+                    "uncertainty runner is enabled only for House and Senate",
                 )
-            release_path = spec.uncertainty_release_config or HOUSE_RELEASE
-            house_release(release_path).require_enabled()
+            is_senate = spec.election_type == "us_senate_model"
+            release_path = spec.uncertainty_release_config or (
+                SENATE_RELEASE if is_senate else HOUSE_RELEASE
+            )
+            load_release = senate_release if is_senate else house_release
+            load_release(release_path).require_enabled()
     except ValueError as err:
         parser.error(str(err))
     db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())

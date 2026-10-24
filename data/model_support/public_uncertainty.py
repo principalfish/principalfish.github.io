@@ -16,6 +16,7 @@ rather than publishing a guess. Numpy-free: it works on decoded JSON.
 
 from __future__ import annotations
 
+import json
 import math
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
@@ -411,8 +412,18 @@ def public_us_document(national: Mapping[str, object]) -> dict[str, object]:
     places with conserved total probability. No private snapshot is copied.
     """
     context = validate_document(national, public=False)
-    if context.model != "house":
-        raise PublicUncertaintyError("only House public uncertainty is enabled")
+    if context.model not in {"house", "senate"}:
+        raise PublicUncertaintyError("unsupported US public uncertainty model")
+    if context.model == "senate":
+        # Preserve exclusive caucus probability conservation; formatting is a
+        # view concern and no private counting snapshots cross this boundary.
+        senate_result: dict[str, object] = json.loads(json.dumps({
+            "schema": US_PUBLIC_SCHEMA, "model": "senate",
+            "context": asdict(context), "result_identity": national["result_identity"],
+            "summary": national["summary"],
+        }, allow_nan=False))
+        validate_document(senate_result, public=True)
+        return senate_result
     summary = _mapping(national["summary"], "summary")
     metrics = _mapping(summary["metrics"], "metrics")
     published_metrics: dict[str, object] = {}
@@ -472,7 +483,7 @@ def _sequence(value: object, where: str) -> list[object]:
 def _us_detail(
     national: Mapping[str, object], detail: Mapping[str, object], schema: str,
 ) -> None:
-    if detail.get("schema") != schema or detail.get("model") != "house":
+    if detail.get("schema") != schema or detail.get("model") != national.get("model"):
         raise PublicUncertaintyError("unsupported House detail schema or model")
     summary = _mapping(national["summary"], "summary")
     for key in ("context", "result_identity"):

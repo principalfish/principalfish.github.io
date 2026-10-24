@@ -13,6 +13,7 @@ from typing import Any
 from model_support.us_simulation import US_KERNEL_VERSION, UsErrorConfig
 
 HOUSE_RELEASE = Path(__file__).resolve().parents[1] / "models/us/house-release.json"
+SENATE_RELEASE = HOUSE_RELEASE.with_name("senate-release.json")
 
 
 class UsReleaseError(ValueError):
@@ -25,10 +26,11 @@ def house_target_cycle(as_of: date) -> int:
 
 
 @dataclass(frozen=True, slots=True)
-class HouseRelease:
+class UsRelease:
     state: Mapping[str, Any]
     calibration: Mapping[str, Any]
     blockers: tuple[str, ...]
+    model: str = "house"
 
     @property
     def enabled(self) -> bool:
@@ -37,7 +39,8 @@ class HouseRelease:
     def require_enabled(self) -> None:
         if self.blockers:
             raise UsReleaseError(
-                "House uncertainty is gated: " + "; ".join(self.blockers)
+                f"{self.model.title()} uncertainty is gated: "
+                + "; ".join(self.blockers)
                 + ". Use --no-uncertainty for the central projection.",
             )
 
@@ -58,24 +61,27 @@ class HouseRelease:
         )
 
 
-def house_release(path: Path = HOUSE_RELEASE) -> HouseRelease:
+HouseRelease = UsRelease
+
+
+def _release(path: Path, model: str) -> UsRelease:
     """Read release and accepted calibration; never upgrade a candidate implicitly."""
     try:
         state = json.loads(path.read_text())
         if (
             not isinstance(state, dict)
-            or state.get("schema") != "pf-us-house-release-v1"
+            or state.get("schema") != f"pf-us-{model}-release-v1"
         ):
-            raise ValueError("unsupported House release format")
+            raise ValueError(f"unsupported {model.title()} release format")
         calibration_path = path.parent / state["calibration_file"]
         config = json.loads(calibration_path.read_text())
         if not isinstance(config, dict):
             raise ValueError("calibration must be an object")
         if (
-            config.get("schema") != "pf-us-house-calibration-candidate-v1"
-            or config.get("model") != "us-house"
+            config.get("schema") != f"pf-us-{model}-calibration-candidate-v1"
+            or config.get("model") != f"us-{model}"
         ):
-            raise ValueError("unsupported House calibration format or model")
+            raise ValueError(f"unsupported {model.title()} calibration format or model")
         if (
             type(state.get("target_cycle")) is not int
             or state["target_cycle"] <= 0
@@ -93,8 +99,12 @@ def house_release(path: Path = HOUSE_RELEASE) -> HouseRelease:
         blockers = []
         if state.get("enabled") is not True:
             blockers.append("production release is disabled")
-        if state.get("geography_validated") is not True:
-            blockers.append("target-cycle House geography/baseline is unresolved")
+        validation_key = "geography_validated" if model == "house" else "roster_validated"
+        if state.get(validation_key) is not True:
+            blockers.append(
+                "target-cycle House geography/baseline is unresolved"
+                if model == "house" else "target-cycle Senate roster is unresolved"
+            )
         if config.get("accepted") is not True:
             blockers.append("calibration and labelled assumptions are unaccepted")
         if config.get("kernel_version") != US_KERNEL_VERSION:
@@ -103,7 +113,7 @@ def house_release(path: Path = HOUSE_RELEASE) -> HouseRelease:
             blockers.append("accepted calibration needs its explicit assumption label")
         blockers.extend(messages)
         blockers.extend(str(message) for message in config.get("release_blockers", []))
-        release = HouseRelease(state, config, tuple(blockers))
+        release = UsRelease(state, config, tuple(blockers), model)
         if release.enabled:
             release.error_config()
             sigma = config.get("national_margin_sigma")
@@ -119,7 +129,17 @@ def house_release(path: Path = HOUSE_RELEASE) -> HouseRelease:
                 )
         return release
     except (OSError, ValueError, KeyError, TypeError) as exc:
-        raise UsReleaseError(f"Cannot load House release settings: {exc}") from exc
+        raise UsReleaseError(
+            f"Cannot load {model.title()} release settings: {exc}",
+        ) from exc
+
+
+def house_release(path: Path = HOUSE_RELEASE) -> UsRelease:
+    return _release(path, "house")
+
+
+def senate_release(path: Path = SENATE_RELEASE) -> UsRelease:
+    return _release(path, "senate")
 
 
 def house_publication_allowed(
@@ -148,6 +168,35 @@ def house_publication_allowed(
             ))
             and document["context"]["target_cycle"] == saved["target_cycle"]
             and private["options"]["baseline_name"] == saved["baseline_name"]
+        )
+    except (UsReleaseError, KeyError, TypeError, AttributeError):
+        return False
+
+
+def senate_publication_allowed(
+    document: Mapping[str, Any], *, release_path: Path = SENATE_RELEASE,
+) -> bool:
+    """Require current and saved Senate calibration/roster acceptance."""
+    try:
+        current = senate_release(release_path)
+        provenance = document["private"]["provenance"]
+        saved, calibration = provenance["release"], provenance["calibration"]
+        return bool(
+            current.enabled and document["model"] == "senate"
+            and saved.get("schema") == "pf-us-senate-release-v1"
+            and saved.get("enabled") is True
+            and saved.get("roster_validated") is True
+            and saved.get("blockers") == []
+            and calibration.get("accepted") is True
+            and calibration.get("model") == "us-senate"
+            and calibration.get("kernel_version") == US_KERNEL_VERSION
+            and not calibration.get("release_blockers", [])
+            and all(saved.get(key) == current.state[key] for key in (
+                "target_cycle", "map_name", "baseline_name", "comparability_id",
+            ))
+            and document["context"]["target_cycle"] == saved["target_cycle"]
+            and document["private"]["options"]["baseline_name"]
+            == saved["baseline_name"]
         )
     except (UsReleaseError, KeyError, TypeError, AttributeError):
         return False

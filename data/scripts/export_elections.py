@@ -112,6 +112,7 @@ from scripts.export.uncertainty import (
 )
 from scripts.export.us_uncertainty import (
     HOUSE_MAP_NAME, HOUSE_PREFIX, house_uncertainty_export, latest_us_model_run,
+    senate_uncertainty_export,
 )
 
 DEM_PARTY_ID = 20   # Democratic — see uselectionmaps/data/map-modes.json parties[]
@@ -719,14 +720,18 @@ def _export_page(
         published: ModelUncertaintyExport | None = None
         if election.type == ElectionType.model_uns:
             published = model_uncertainty or ModelUncertaintyExport(None, None)
-        elif election.type == ElectionType.us_house_model:
+        elif election.type in {
+            ElectionType.us_house_model, ElectionType.us_senate_model,
+        }:
             try:
                 stored = load_uncertainty(
                     Path(str(session.get_bind().engine.url.database)), election.id,
                 )
             except (ValueError, UncertaintyStoreError):
                 stored = None
-            published = house_uncertainty_export(election, stored, votes, seats)
+            published = (senate_uncertainty_export
+                         if election.type == ElectionType.us_senate_model
+                         else house_uncertainty_export)(election, stored, votes, seats)
         result_payload = build_result_payload(
             seats,
             votes,
@@ -846,6 +851,8 @@ def _export_page(
                 results_dir, uncertainty_document, dry_run=args.dry_run,
                 filename=("us-house-uncertainty.json"
                           if election.type == ElectionType.us_house_model
+                          else "us-senate-uncertainty.json"
+                          if election.type == ElectionType.us_senate_model
                           else "prediction-uncertainty.json"),
             )
 
@@ -1037,6 +1044,13 @@ def _export_page(
         sync_uncertainty_file(
             results_dir, None, dry_run=args.dry_run,
             filename="us-house-uncertainty.json",
+        )
+
+    if (senate_election is None and "us_senate" in parliaments
+            and not single_election_mode):
+        sync_uncertainty_file(
+            results_dir, None, dry_run=args.dry_run,
+            filename="us-senate-uncertainty.json",
         )
 
     expected_map_filenames = {Path(path).name for path in map_files_by_id.values()}

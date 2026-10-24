@@ -252,3 +252,31 @@ Senate and presidential trends retain their legacy arrays until their slices.
 Optional actual DOM tests use an existing jsdom 24 installation via
 `PF_TEST_JSDOM=/absolute/path/to/jsdom npm test`; no DOM library ships to the
 browser. Scratch previews contain synthetic data and do not enable production.
+
+## Senate saved runs and release boundary
+
+The Senate runner uses the same frozen source graph and bounded raw archive as
+House, with its own `us-senate-latest.npz`. Its saved context additionally pins
+the full roster, contested `(state, class)` substitutions and control policy.
+Florida and Ohio specials replace only their Class 3 slots. Every draw contains
+35 contested winners and 65 unchanged holdovers in the configured 2026 field.
+The 2028 field cannot produce full-chamber uncertainty without a verified roster.
+
+Raw party seat metrics and caucus outcomes are separate. Independent holdovers
+King and Sanders retain their raw Independent party while joining the Democratic
+caucus under the frozen policy. The Nebraska independent scenario is explicitly
+unaligned. An unspecified or ambiguous independent alignment remains unresolved;
+a holdover's alignment is never borrowed by a different candidate in that state.
+The configured VP resolves exactly 50–50, which is also reported separately from
+outright 51-seat majority. No full-chamber popular-vote metric is published;
+internal vote totals cover contested races only.
+
+`senate-release.json` is disabled and its candidate calibration is unaccepted.
+It contains no adopted numerical defaults. The generic-ballot exposure after
+local blending is an explicit assumption awaiting Senate calibration acceptance.
+Default runs remain central-only while gated, and `--simulations` explains the
+release blockers. Synthetic accepted fixtures exercise the software without
+approving production odds. Publication checks both current and saved acceptance,
+frozen votes, context and artifact identity; stale or gated optional sidecars are
+removed independently. Senate trends retain their legacy contested-seat arrays
+until their map/tracker adapter is activated.

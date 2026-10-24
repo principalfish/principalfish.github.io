@@ -22,6 +22,8 @@ from model_support.us_replay import (
 )
 from model_support.us_run import fingerprint, restore_run_inputs
 from model_support.us_simulation import UsSimulationInputs
+from model_support.senate_cycles import senate_cycle_from_snapshot
+from model_support.us_senate import senate_counts, senate_outcomes
 from model_support.us_uncertainty import US_STORED_SCHEMA, validate_document
 from models import Map
 
@@ -44,6 +46,10 @@ US_EXPLORER_MODELS = {
     "house": UsExplorerModel(
         "house", "US House", "US House Districts 2024", "us_house_model",
         "US House UNS", "house_seats", 218,
+    ),
+    "senate": UsExplorerModel(
+        "senate", "US Senate", "US Senate 2024", "us_senate_model",
+        "US Senate UNS", "senate_full_seats", 51,
     ),
 }
 
@@ -122,6 +128,16 @@ def party_rows(run: SavedUsRun, model: UsExplorerModel) -> list[dict[str, Any]]:
     summary = run.document["summary"]
     metrics = summary["metrics"]
     seats = metrics[model.metric]
+    if model.slug == "senate":
+        names = run.document["private"]["senate_counting"]["party_names"]
+        contested = metrics["senate_contested_seats"]
+        return sorted([
+            {"id": int(party), "name": names[party], "central": center,
+             "range": seats["ranges"][party],
+             "contested": contested["central"][party],
+             "contested_range": contested["ranges"][party]}
+            for party, center in seats["central"].items()
+        ], key=lambda row: (-row["central"], row["name"]))
     votes = metrics["national_vote_share"]
     majority = summary["outcomes"]["majority"]["probabilities"]
     rows = [
@@ -177,6 +193,7 @@ def simulations_page(
     start = (page - 1) * PAGE_SIZE
     _, arrays = read_us_draw_rows(
         raw_path(model), run.stored, start=start, count=min(PAGE_SIZE, total - start),
+        detail=model.slug == "senate",
     )
     rows: list[dict[str, Any]] = []
     for offset, counts in enumerate(arrays["seat_totals"]):
@@ -184,6 +201,24 @@ def simulations_page(
         if ((counts < 0).any() or counts.sum() != len(run.inputs.seats)
                 or (votes < 0).any() or votes.sum() <= 0):
             raise ValueError("Invalid saved simulation totals")
+        if model.slug == "senate":
+            cycle = senate_cycle_from_snapshot(
+                run.document["private"]["senate_cycle"], run.inputs.as_of_date,
+            )
+            names = {int(p): name for p, name in
+                     run.document["private"]["senate_counting"]["party_names"].items()}
+            tally = senate_counts(
+                run.inputs, arrays["winners"][offset:offset + 1], cycle, names,
+            )
+            rows.append({"index": start + offset,
+                         "parties": [{"name": name, "seats": int(tally.full[0, j]),
+                                      "contested": int(tally.contested[0, j])}
+                                     for j, name in enumerate(tally.party_names)],
+                         "outcomes": senate_outcomes(
+                             tally.caucuses, cycle.control_policy.vice_president
+                             if cycle.control_policy else None,
+                         )})
+            continue
         rows.append({
             "index": start + offset,
             "parties": [
@@ -224,6 +259,20 @@ def simulation_detail(
                          "votes": int(replay.projection.votes[0, i, j])}
                         for j in order],
         })
+    if model.slug == "senate":
+        cycle = senate_cycle_from_snapshot(
+            run.document["private"]["senate_cycle"], run.inputs.as_of_date,
+        )
+        names = {int(p): name for p, name in
+                 run.document["private"]["senate_counting"]["party_names"].items()}
+        tally = senate_counts(run.inputs, replay.projection.winners, cycle, names)
+        result["senate_tally"] = {
+            "parties": [{"name": name, "full": int(tally.full[0, j]),
+                         "contested": int(tally.contested[0, j])}
+                        for j, name in enumerate(tally.party_names)],
+            "caucuses": dict(zip(("democratic", "republican"),
+                                 map(int, tally.caucuses[0]))),
+        }
     if seat_index is None:
         return result
     seat = run.inputs.seats[seat_index]

@@ -1,4 +1,4 @@
-"""House summaries and immutable, JSON-only replay snapshots."""
+"""US summaries and immutable, JSON-only replay snapshots."""
 
 from __future__ import annotations
 
@@ -12,6 +12,10 @@ from typing import Any
 import numpy as np
 
 from model_support.persistence import UncertaintyPayload
+from model_support.senate_cycles import (
+    SenateCycle, senate_cycle_snapshot, senate_cycle_from_snapshot,
+)
+from model_support.us_senate import senate_summary
 from model_support.us_outcomes import UsRunContext
 from model_support.us_simulation import (
     US_KERNEL_VERSION,
@@ -141,6 +145,42 @@ def house_context(
     )
 
 
+def senate_context(
+    inputs: UsSimulationInputs, *, map_id: int, cycle: SenateCycle,
+    options: Mapping[str, object], comparability_id: str,
+) -> UsRunContext:
+    cycle.require_chamber()
+    if (inputs.model != "us-senate" or len(inputs.seats) != len(cycle.races)
+            or {seat.state for seat in inputs.seats} != cycle.states):
+        raise ValueError("Senate uncertainty requires its complete pinned field")
+    snapshot = senate_cycle_snapshot(cycle)
+    assert cycle.control_policy is not None
+    return UsRunContext(
+        model="senate", map_id=map_id, as_of_date=inputs.as_of_date.isoformat(),
+        target_cycle=cycle.target_year,
+        matchup_id=fingerprint(sorted({poll.matchup or "generic-ballot"
+                                       for poll in inputs.polls})),
+        field_id=fingerprint([[(seat.seat_id, seat.name, seat.state)
+                               for seat in inputs.seats], inputs.party_ids,
+                              [asdict(race) for race in cycle.races]]),
+        baseline_id=fingerprint([(seat.seat_id, seat.baseline, seat.turnout)
+                                 for seat in inputs.seats]),
+        central_options_id=fingerprint(options), comparability_id=comparability_id,
+        roster_id=fingerprint(snapshot),
+        control_policy_id=fingerprint(asdict(cycle.control_policy)),
+    )
+
+
+def senate_payload(
+    run: UsSimulationRun, context: UsRunContext, *, cycle: SenateCycle,
+    party_names: Mapping[int, str], options: Mapping[str, object],
+    provenance: Mapping[str, object], interval: float = 0.9,
+) -> UncertaintyPayload:
+    return _run_payload(run, context, options=options, provenance=provenance,
+                        interval=interval, cycle=cycle, party_names=party_names)
+
+
+
 def house_payload(
     run: UsSimulationRun,
     context: UsRunContext,
@@ -149,11 +189,26 @@ def house_payload(
     provenance: Mapping[str, object],
     interval: float = 0.9,
 ) -> UncertaintyPayload:
-    """Tally actual rounded votes and House outcomes, keeping central rows exact."""
-    if context.model != "house" or run.inputs.model != "us-house":
-        raise ValueError("House tally received another model")
-    if len(run.inputs.seats) != 435 or not np.all(run.seat_totals.sum(axis=1) == 435):
-        raise ValueError("House simulations must count exactly 435 districts")
+    return _run_payload(run, context, options=options, provenance=provenance,
+                        interval=interval)
+
+
+def _run_payload(
+    run: UsSimulationRun, context: UsRunContext, *,
+    options: Mapping[str, object], provenance: Mapping[str, object],
+    interval: float, cycle: SenateCycle | None = None,
+    party_names: Mapping[int, str] | None = None,
+) -> UncertaintyPayload:
+    """Tally rounded votes with model-specific counting and exact central rows."""
+    if (context.model not in {"house", "senate"}
+            or run.inputs.model != f"us-{context.model}"):
+        raise ValueError("US tally received another model")
+    expected = 435 if cycle is None else len(cycle.races)
+    if (len(run.inputs.seats) != expected
+            or not np.all(run.seat_totals.sum(axis=1) == expected)):
+        raise ValueError("US simulations must count the complete contested field")
+    if (context.model == "senate") != (cycle is not None):
+        raise ValueError("Senate tally requires its frozen counting context")
     if context.as_of_date != run.inputs.as_of_date.isoformat():
         raise ValueError("House context date differs from frozen inputs")
     if not 0 < interval < 1:
@@ -209,11 +264,22 @@ def house_payload(
             "no_majority": float(np.mean(~majority.any(axis=1))),
         },
     }
+    if cycle is not None:
+        if party_names is None:
+            raise ValueError("Senate tally requires frozen raw party identities")
+        senate_metrics, senate_events, arithmetic = senate_summary(
+            run.inputs, run.winners, run.central.winners, cycle, party_names, quantiles,
+        )
+        summary["metrics"], summary["outcomes"] = senate_metrics, senate_events
+        private.pop("largest")
+        private.pop("largest_tie_rule")
+        private["senate_cycle"] = senate_cycle_snapshot(cycle)
+        private["senate_counting"] = arithmetic
     # Includes config and stochastic outputs: a same-date rerun with identical
     # central rows must still refuse another run's raw archive.
     private["artifact_id"] = fingerprint([result_identity, summary, private])
     document: dict[str, object] = {
-        "schema": US_STORED_SCHEMA, "model": "house", "context": context_json,
+        "schema": US_STORED_SCHEMA, "model": context.model, "context": context_json,
         "result_identity": result_identity, "summary": summary, "private": private,
     }
     validate_document(document, public=False)
@@ -241,7 +307,7 @@ def house_payload(
         for i, seat in enumerate(run.inputs.seats)
     }
     regions: dict[str, object] | None = None
-    if run.regions:
+    if run.regions and context.model == "house":
         regions = {
             "schema": "pf-us-region-summary-v1", "model": "house",
             "context": context_json, "result_identity": result_identity,
@@ -264,7 +330,7 @@ def house_payload(
             },
         }
     return UncertaintyPayload(document, regions=regions, seats={
-        "schema": "pf-us-race-summary-v1", "model": "house",
+        "schema": "pf-us-race-summary-v1", "model": context.model,
         "context": context_json, "result_identity": result_identity,
         "simulations": simulations, "interval": interval, "seats": seats,
         "share_precision": "float32 samples; float64 quantiles rounded to 2dp",
@@ -279,10 +345,21 @@ def restore_run_inputs(document: Mapping[str, Any]) -> UsSimulationInputs:
     if private.get("schema") != US_REPLAY_SCHEMA:
         raise ValueError("unsupported US private replay schema")
     inputs = restore_inputs(private["inputs"])
-    expected_context = house_context(
-        inputs, map_id=context.map_id, target_cycle=context.target_cycle,
-        options=private["options"], comparability_id=context.comparability_id,
-    )
+    if context.model == "house":
+        expected_context = house_context(
+            inputs, map_id=context.map_id, target_cycle=context.target_cycle,
+            options=private["options"], comparability_id=context.comparability_id,
+        )
+    elif context.model == "senate":
+        cycle = senate_cycle_from_snapshot(private["senate_cycle"], inputs.as_of_date)
+        expected_context = senate_context(
+            inputs, map_id=context.map_id, cycle=cycle,
+            options=private["options"], comparability_id=context.comparability_id,
+        )
+        if cycle.target_year != context.target_cycle:
+            raise ValueError("Senate replay target differs from frozen cycle")
+    else:
+        raise ValueError("unsupported US replay model")
     if expected_context != context:
         raise ValueError("US replay snapshot differs from declared counting context")
     if document["result_identity"] != fingerprint([

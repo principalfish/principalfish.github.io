@@ -41,6 +41,8 @@ from _common import (
     prepare_us_projection,
 )
 from run_us_house_model import SPEC as HOUSE_SPEC
+from run_us_senate_model import SPEC as SENATE_SPEC
+from model_support.us_release import SENATE_RELEASE
 
 from console.db import get_db
 from console.paths import EXPORT_ELECTION_SCRIPT
@@ -134,6 +136,18 @@ def house_uncertainty_hub() -> ResponseReturnValue:
             get_db(), map_name=HOUSE_SPEC.map_name,
             release_path=HOUSE_SPEC.uncertainty_release_config
             or Path(__file__).resolve().parents[2] / "models/us/house-release.json",
+        ),
+    )
+
+
+@bp.route("/us/senate/uncertainty")
+def senate_uncertainty_hub() -> ResponseReturnValue:
+    return render_template(
+        "us_uncertainty_hub.html", title="US Senate uncertainty", chamber="senate",
+        status=house_uncertainty_status(
+            get_db(), map_name=SENATE_SPEC.map_name,
+            release_path=SENATE_SPEC.uncertainty_release_config or SENATE_RELEASE,
+            model="senate",
         ),
     )
 

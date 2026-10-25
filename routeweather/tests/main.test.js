@@ -16,8 +16,9 @@ import { formatDateTime } from "../js/display.js";
 const here = (rel) => fileURLToPath(new URL(rel, import.meta.url).href);
 
 // Real Open-Meteo response (Lake District + London), 2026-10-26 09:00–14:00
-// UTC. The mock below repeats its six hours across whatever window is asked
-// for, so the page's full 7-day request gets a full 7-day answer.
+// UTC (cloud_cover and sunshine_duration added by hand). The mock below
+// repeats its six hours across whatever window is asked for, so the page's
+// full 7-day request gets a full 7-day answer.
 const FIXTURE = JSON.parse(readFileSync(here("./fixtures/forecast-2loc.json"), "utf8"));
 
 const PAGE = readFileSync(here("../index.html"), "utf8");
@@ -94,7 +95,8 @@ function mockFetch({
     if (url.searchParams.get("timezone") === "auto") {
       zoneCalls.push(href);
       if (timeZone === null) return new Response("{}", { status: 500 });
-      return new Response(JSON.stringify({ latitude: lats[0], longitude: lons[0], timezone: timeZone }));
+      const body = { latitude: lats[0], longitude: lons[0], timezone: timeZone };
+      return new Response(JSON.stringify(body));
     }
     calls.forecast++;
     // Deliberately ignores the abort signal: proves the controller drops a
@@ -604,7 +606,10 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     expect($("speedUnit").textContent).toBe("km/h");
     expect($("speedInput").value).toBe("5");
     expect([...$("chartsPanel").querySelectorAll(".strip-title")].map((t) => t.textContent))
-      .toEqual(["Elevation (m)", "Temperature (°C)", "Head/tailwind (mph)", "Rain (mm/h)"]);
+      .toEqual([
+        "Elevation (m)", "Temperature (°C)", "Head/tailwind (mph)", "Rain (mm/h)",
+        "Sky (cloud %, sunshine)",
+      ]);
 
     expect(urlParams().get("units")).toBe("metric");
     expect(urlParams().get("wind")).toBe("mph");
@@ -868,6 +873,22 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     await waitForLoad(page);
     expect(page.state.timeZone).toBe("Asia/Tokyo");
     expect(fetch.zoneCalls).toHaveLength(2);
+  });
+
+  it("shows the sun and sky in the summary, table and readout", async () => {
+    const { page } = startPage({ fetchOptions: { timeZone: "Europe/London" } });
+    await loadRoute(page);
+    const summary = $("summaryList").textContent;
+    // 26 Oct at 54.45°N, 3.2°W.
+    expect(summary).toMatch(/Sun at the start↑ 07:\d\d · ↓ 16:\d\d/);
+    expect(summary).toMatch(/Sunshine on the route~\d+\.\d h of \d+\.\d h daylight/);
+    expect(page.state.daylight.startsInDark).toBe(false);
+    const row = $("pointsBody").rows[0].cells;
+    expect(row[11].textContent).toMatch(/^\d+%$/);
+    expect(row[12].textContent).toMatch(/^\d+ min\/h$/);
+    expect($("playback").querySelector(".readout-light dd").textContent)
+      .toMatch(/^Daylight · sunset 16:\d\d \(in /);
+    expect($("chartsPanel").querySelectorAll(".strip")).toHaveLength(5);
   });
 
   it("passes a reason to registered views", async () => {

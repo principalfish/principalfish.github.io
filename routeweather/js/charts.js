@@ -1,4 +1,4 @@
-// Charts along the route: one SVG of four stacked strips sharing a distance x
+// Charts along the route: one SVG of five stacked strips sharing a distance x
 // axis, with a cursor line at the playback position.
 //
 //   1. Elevation       the route's profile (area), summits ▲ and valleys ▼ at
@@ -13,6 +13,14 @@
 //   4. Rain            precipitation per hour as one bar per sample, over a
 //                      faint step area of the chance of rain (0–100 % of the
 //                      strip's height, marked "100%" at the right edge)
+//   5. Sky             cloud cover (area, 0–100 %) and sunshine as one bar per
+//                      sample (minutes per hour; full height = 60), estimated
+//                      sunshine fainter (weather.js sunshineAt), with ☀↑ / ☀↓
+//                      where you pass sunrise or sunset
+//
+// Stretches walked in the dark (daylight.js routeDaylight, state.daylight)
+// are shaded across every strip, with a dashed line at each sunrise and
+// sunset.
 //
 // Rain and its chance are per-hour buckets taken from the NEARER sample (see
 // along-route.js), so both draw as steps that change halfway between samples:
@@ -120,6 +128,17 @@ const OUTSIDE_LEGEND = {
   name: "Grey",
   items: [{ cls: "outside", label: "outside the forecast: nearest hour shown", swatch: "band" }],
 };
+
+// The night shading's legend group, shown when part of the route is dark.
+const NIGHT_LEGEND = {
+  name: "Dark",
+  items: [{
+    cls: "night", label: "after sunset / before sunrise (flat horizon)", swatch: "night",
+  }],
+};
+
+// Sunrise / sunset marks in the sky strip.
+const SUN_EVENT_MARK = { sunrise: "☀↑", sunset: "☀↓" };
 
 // --- data ---
 
@@ -229,7 +248,8 @@ function yDomain(values, include = [], minSpan = 1) {
 // ctx: { route, samples, rows ([{ km, s, r }] per sample), units (a units
 // set), unit (labels), cv (converters), xk (km -> x px), left, right, totalKm,
 // line(y, get) (a d3 line skipping gaps), stepArea(y) (a d3 area over
-// stepPoints, down to the strip's bottom), timeAt(km) (arrival epoch ms) }.
+// stepPoints, down to the strip's bottom), timeAt(km) (arrival epoch ms),
+// daylight (state.daylight or null) }.
 
 function drawElevation(ctx, h) {
   const { route, samples, units, unit, cv, xk, left, right } = ctx;
@@ -342,6 +362,40 @@ function drawRain(ctx, h) {
     .attr("y", (b) => y(rain(b.d))).attr("height", (b) => h - y(rain(b.d)));
 }
 
+// Sky: cloud cover as an area against the 0–100 % axis (linear between
+// samples, as it is interpolated in time), and the sunshine in each sample's
+// hour as a bar over its nearer-sample stretch, 60 minutes being full height;
+// estimated sunshine (past the end of the forecast's sunshine data) is drawn
+// fainter. ☀↑ / ☀↓ mark where you pass sunrise and sunset.
+function drawSky(ctx, h) {
+  const { rows, samples, xk, totalKm, daylight } = ctx;
+  const y = d3.scaleLinear().domain([0, 100]).range([h, 0]);
+  const axis = d3.axisLeft(y).tickValues([0, 50, 100]).tickFormat((v) => `${v}%`)
+    .tickSizeOuter(0);
+  const g = ctx.frame("Sky (cloud %, sunshine)", y, axis);
+
+  const cloud = (d) => d.r.cloudPct;
+  g.append("path").attr("class", "cloud-area").attr("d", d3.area()
+    .defined((d) => isNum(cloud(d))).x((d) => xk(d.km)).y0(h).y1((d) => y(cloud(d)))(rows));
+
+  const sun = (d) => d.r.sunMin;
+  const bars = rows.map((d, i) => {
+    const [from, to] = nearestSpan(samples, i, totalKm);
+    return { d, x0: xk(from), x1: xk(to) };
+  }).filter((b) => isNum(sun(b.d)) && sun(b.d) > 0);
+  const yOf = (b) => y(Math.min(60, sun(b.d)) * (100 / 60));
+  g.append("g").attr("class", "sun-bars").selectAll("rect").data(bars).join("rect")
+    .attr("class", (b) => (b.d.r.sunEstimated ? "s-sun est" : "s-sun"))
+    .attr("x", (b) => b.x0 + 1).attr("width", (b) => Math.max(1, b.x1 - b.x0 - 2))
+    .attr("y", yOf).attr("height", (b) => h - yOf(b));
+
+  g.append("g").attr("class", "sun-events").selectAll("text")
+    .data(daylight?.events ?? []).join("text")
+    .attr("class", (e) => `sun-event-label ${e.kind}`)
+    .attr("x", (e) => xk(e.km)).attr("y", 10).attr("text-anchor", "middle")
+    .text((e) => SUN_EVENT_MARK[e.kind]);
+}
+
 // Legend groups are named by their strip, so a colour never means two things
 // in one group.
 const STRIPS = [
@@ -394,6 +448,20 @@ const STRIPS = [
       items: [
         { cls: "rain", label: "rain per hour", swatch: "bar" },
         { cls: "prob", label: "chance of rain", swatch: "area" },
+      ],
+    },
+  },
+  {
+    key: "sky",
+    name: "sky (cloud and sunshine)",
+    height: 64,
+    draw: drawSky,
+    legend: {
+      name: "Sky",
+      items: [
+        { cls: "cloud", label: "cloud cover", swatch: "area" },
+        { cls: "sun", label: "sunshine (full height = 60 min/h)", swatch: "bar" },
+        { cls: "sun-est", label: "estimated sunshine", swatch: "bar" },
       ],
     },
   },
@@ -474,8 +542,9 @@ export function createChartsUI(container, {
     cursorX = null;
   }
 
-  function buildLegend(hasOutside) {
+  function buildLegend(hasOutside, hasNight) {
     const groups = STRIPS.map((strip) => strip.legend).filter(Boolean);
+    if (hasNight) groups.push(NIGHT_LEGEND);
     if (hasOutside) groups.push(OUTSIDE_LEGEND);
     legend.replaceChildren(...groups.map(({ name, items }) => {
       const li = doc.createElement("li");
@@ -537,6 +606,19 @@ export function createChartsUI(container, {
     svg.append("g").attr("class", "grid").selectAll("line").data(ticks).join("line")
       .attr("x1", (d) => x(d)).attr("x2", (d) => x(d)).attr("y1", plotTop).attr("y2", plotBottom);
 
+    // Dark stretches, behind the outside-forecast hatch, with a line at each
+    // sunrise and sunset.
+    const daylight = state.daylight ?? null;
+    const nightSpans = daylight?.nightSpans ?? [];
+    svg.append("g").attr("class", "night-bands").selectAll("rect").data(nightSpans).join("rect")
+      .attr("x", (d) => xk(d[0])).attr("width", (d) => Math.max(1, xk(d[1]) - xk(d[0])))
+      .attr("y", plotTop).attr("height", plotBottom - plotTop);
+    svg.append("g").attr("class", "sun-event-lines").selectAll("line")
+      .data(daylight?.events ?? []).join("line")
+      .attr("class", (e) => `sun-event-line ${e.kind}`)
+      .attr("x1", (e) => xk(e.km)).attr("x2", (e) => xk(e.km))
+      .attr("y1", plotTop).attr("y2", plotBottom);
+
     // Hatched, so the band reads as a region even over the grey profile.
     const hatch = svg.append("defs").append("pattern").attr("id", hatchId)
       .attr("class", "outside-hatch").attr("patternUnits", "userSpaceOnUse")
@@ -555,7 +637,7 @@ export function createChartsUI(container, {
       .x((d) => xk(d.km)).y0((d) => y.range()[0]).y1((d) => y(d.v));
     const ctx = {
       route, samples, rows, units, unit, cv, xk, left: MARGIN.left, right, totalKm, line,
-      stepArea, timeAt: (km) => timeAtDistance(state, km),
+      stepArea, timeAt: (km) => timeAtDistance(state, km), daylight,
     };
     STRIPS.forEach((strip, i) => {
       strip.draw({ ...ctx, frame: (...args) => frame(strip.key, tops[i], ...args) }, strip.height);
@@ -575,7 +657,7 @@ export function createChartsUI(container, {
       .attr("y", plotTop).attr("width", right - MARGIN.left).attr("height", plotBottom - plotTop)
       .node();
 
-    buildLegend(spans.length > 0);
+    buildLegend(spans.length > 0, nightSpans.length > 0);
     built = true;
     setCursor(cursorKm);
   }

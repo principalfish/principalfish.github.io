@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  compassPoint, formatArrival, formatCell, formatClock, formatCrossWind, formatDateTime,
-  formatDuration, formatHeadWind,
+  compassPoint, formatArrival, formatCell, formatClock, formatCloud, formatCrossWind,
+  formatDateTime, formatDaylight, formatDuration, formatHeadWind, formatHours, formatSun,
 } from "../js/display.js";
 import { MISSING, resolveUnits } from "../js/units.js";
 
@@ -30,6 +30,28 @@ describe("times", () => {
     expect(formatDuration((3 * 60 + 5) * 60000 + 20000)).toBe("3 h 05 min");
     expect(formatDuration(NaN)).toBe(MISSING);
     expect(formatDuration(-1)).toBe(MISSING);
+  });
+});
+
+describe("sky", () => {
+  it("formats cloud, sunshine and hours", () => {
+    expect(formatCloud(71.6)).toBe("72%");
+    expect(formatCloud(NaN)).toBe(MISSING);
+    expect(formatSun(12.4)).toBe("12 min/h");
+    expect(formatSun(12.4, true)).toBe("12 min/h est.");
+    expect(formatSun(null)).toBe(MISSING);
+    expect(formatHours(2.44 * 3600 * 1000)).toBe("2.4 h");
+    expect(formatHours(NaN)).toBe(MISSING);
+  });
+
+  it("describes daylight at a position", () => {
+    const t = Date.UTC(2026, 9, 26, 20, 0);
+    const next = { kind: "sunrise", tMs: Date.UTC(2026, 9, 27, 6, 44) };
+    expect(formatDaylight({ up: false, next }, t, "UTC"))
+      .toBe("Dark · sunrise 06:44 (in 10 h 44 min)");
+    expect(formatDaylight({ up: true, next: null }, t, "UTC")).toBe("Daylight (sun up all day)");
+    expect(formatDaylight({ up: false, next: null }, t, "UTC")).toBe("Dark (sun down all day)");
+    expect(formatDaylight(null, t)).toBe(MISSING);
   });
 });
 

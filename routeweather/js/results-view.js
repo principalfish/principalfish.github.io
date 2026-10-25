@@ -9,9 +9,10 @@ import {
   formatDistance, formatElevation, formatPrecip, formatTemp, formatWind, MISSING,
 } from "./units.js";
 import {
-  compassPoint, formatArrival, formatCell, formatCrossWind, formatDateTime, formatDuration,
-  formatHeadWind, KIND_LABELS,
+  compassPoint, formatArrival, formatCell, formatClock, formatCloud, formatCrossWind,
+  formatDateTime, formatDuration, formatHeadWind, formatHours, formatSun, KIND_LABELS,
 } from "./display.js";
+import { startDaySun } from "./daylight.js";
 import { HOUR_MS } from "./schedule.js";
 import { zoneLabel } from "./zone.js";
 
@@ -20,6 +21,9 @@ const OUTSIDE_NOTE = "outside the forecast window: nearest forecast hour shown";
 // Points above the forecast's top level (weather.js aboveProfile): the height
 // in each preset's units, rounded (the 700 hPa level wanders ±200 m).
 const TOP_LEVEL_TEXT = { metric: "about 3,000 m", imperial: "about 9,800 ft" };
+const FLAT_HORIZON_NOTE = "Sunrise and sunset are for a flat horizon; hills and valleys "
+  + "can hide the sun for longer.";
+
 const heldNote = (units) => `Above ${TOP_LEVEL_TEXT[units.system]}, temperature and wind are `
   + `held at their ${TOP_LEVEL_TEXT[units.system].replace("about ", "~")} values.`;
 
@@ -44,17 +48,47 @@ function el(doc, tag, text, className) {
 
 // Notes under the summary list, as plain strings; [] without results.
 export function summaryNotes(state) {
-  const { results, units } = state;
+  const { results, units, daylight, timeZone } = state;
   if (!results) return [];
   const notes = [];
   if (results.some((r) => r.aboveProfile)) notes.push(heldNote(units));
+  if (daylight) {
+    const where = (e) => `${formatClock(e.tMs, timeZone)}, ${formatDistance(e.km, units)} in`;
+    const sunrise = daylight.events.find((e) => e.kind === "sunrise");
+    const sunset = daylight.events.find((e) => e.kind === "sunset");
+    if (daylight.startsInDark && daylight.events.length === 0) {
+      notes.push("The whole route is in the dark.");
+    } else if (daylight.startsInDark) {
+      notes.push(`Starts before sunrise: the sun rises at ${where(sunrise)}.`);
+    }
+    if (sunset) notes.push(`Runs past sunset: the sun sets at ${where(sunset)}.`);
+    if (daylight.startsInDark || sunset) notes.push(FLAT_HORIZON_NOTE);
+  }
   return notes;
+}
+
+// "↑ 06:43 · ↓ 16:44" at the start point on the start day, or "Up all day" /
+// "Down all day".
+function startDaySunText(state) {
+  const sun = startDaySun(state);
+  if (!sun) return MISSING;
+  if (sun.allDay === "up") return "Up all day";
+  if (sun.allDay === "down") return "Down all day";
+  const clock = (ms) => (ms === null ? MISSING : formatClock(ms, state.timeZone));
+  return `↑ ${clock(sun.sunriseMs)} · ↓ ${clock(sun.sunsetMs)}`;
+}
+
+// "~2.4 h of 9.5 h daylight", flagged when part of it is estimated.
+function sunshineText({ sunshine, daylight }) {
+  if (!sunshine || !daylight) return MISSING;
+  const text = `~${formatHours(sunshine.sunMs)} of ${formatHours(daylight.daylightMs)} daylight`;
+  return sunshine.estimated ? `${text} (partly est.)` : text;
 }
 
 export function createSummaryUI(doc) {
   const $ = (id) => doc.getElementById(id);
   const changed = createChangeCheck([
-    "route", "routeName", "samples", "results", "speedKmh", "units", "timeZone",
+    "route", "routeName", "samples", "results", "speedKmh", "units", "timeZone", "startMs",
   ]);
 
   function update(state) {
@@ -77,6 +111,8 @@ export function createSummaryUI(doc) {
       ["Moving time", formatDuration(durationMs)],
       ["Start → finish", timing],
       ["Weather points", state.samples ? String(state.samples.length) : MISSING],
+      ["Sun at the start", startDaySunText(state)],
+      ["Sunshine on the route", sunshineText(state)],
     ];
     // Labelled at the start, so the abbreviation is the one in force then.
     if (timeZone) rows.push(["Times in", zoneLabel(times?.[0] ?? state.startMs, timeZone)]);
@@ -140,6 +176,8 @@ function pointRow(doc, state, i) {
     el(doc, "td", formatHeadWind(w.headKmh, units)),
     el(doc, "td", formatCrossWind(w.crossKmh, units)),
     el(doc, "td", `${formatPrecip(w.precipMm, units)} · ${rainChance}`),
+    el(doc, "td", formatCloud(w.cloudPct)),
+    el(doc, "td", formatSun(w.sunMin, w.sunEstimated)),
     el(doc, "td", formatCell(cells[i], units)),
     el(doc, "td", formatElevation(w.cellElev, units)),
   );

@@ -15,6 +15,7 @@
 
 import { PRESSURE_LEVELS } from "./config.js";
 import { MISSING } from "./units.js";
+import { daylightMinutes } from "./sun.js";
 
 // Heights above the model terrain of the surface variables.
 export const SCREEN_HEIGHT_M = 2;
@@ -138,6 +139,31 @@ function gustExcessAt(loc, tMs) {
   const speeds = loc.vars.wind_speed_10m;
   const meanWind10 = i === 0 ? speeds[0] : (speeds[i - 1] + speeds[i]) / 2;
   return Math.max(0, loc.vars.wind_gusts_10m[i] - meanWind10);
+}
+
+// --- sky ---
+
+const HOUR_MS = 3600 * 1000;
+
+// Sunshine in the hour bucket containing `tMs`, as minutes:
+// { sunMin, sunEstimated }. Open-Meteo's own sunshine_duration where it has
+// one; past the end of its sunshine data (NaN), an estimate: the bucket
+// hour's daylight minutes at (lat, lon) (sun.js) times the clear-sky fraction,
+// 1 − mean cloud cover over the hour. NaN with nothing to go on.
+export function sunshineAt(loc, tMs, lat, lon) {
+  const i = bucketIndex(loc.timesMs, tMs);
+  if (i < 0) return { sunMin: NaN, sunEstimated: false };
+  const seconds = loc.vars.sunshine_duration[i];
+  if (Number.isFinite(seconds)) {
+    return { sunMin: Math.min(60, Math.max(0, seconds / 60)), sunEstimated: false };
+  }
+  const cloud = loc.vars.cloud_cover;
+  const meanCloud = i === 0 ? cloud[0] : (cloud[i - 1] + cloud[i]) / 2;
+  const endMs = loc.timesMs[i];
+  const daylight = daylightMinutes(endMs - HOUR_MS, endMs, lat, lon);
+  const clear = 1 - Math.min(100, Math.max(0, meanCloud)) / 100;
+  const sunMin = daylight * clear;
+  return { sunMin, sunEstimated: Number.isFinite(sunMin) };
 }
 
 // --- vertical profile ---
@@ -273,6 +299,11 @@ export function isAboveProfile(profile, eleM) {
 // hourly time (values are then clamped to the nearest end), so the page can
 // flag it.
 //
+// cloudPct is linear in time; sunMin (minutes of sunshine in the hour) comes
+// from the same hour bucket as precipMm, estimated where Open-Meteo has no
+// sunshine (sunEstimated, see sunshineAt), at the sample's own position (the
+// cell centre for a sample without one).
+//
 // aboveProfile is true when the walker's 2 m or 10 m height is above the top
 // of its profile (the 700 hPa level, ~3,000 m): temperature or wind is then
 // held at that level's value rather than read off the profile.
@@ -283,6 +314,9 @@ export function weatherForSample(loc, sample, tMs, bearingDeg) {
   const { headKmh, crossKmh } = headCross(wind.fromDeg, wind.speed, bearingDeg);
   const bucket = (name) => bucketHourly(loc.timesMs, loc.vars[name], tMs);
   const { timesMs } = loc;
+  const lat = Number.isFinite(sample.lat) ? sample.lat : loc.cellLat;
+  const lon = Number.isFinite(sample.lon) ? sample.lon : loc.cellLon;
+  const { sunMin, sunEstimated } = sunshineAt(loc, tMs, lat, lon);
   return {
     tempC: temperatureAt(profile, eleUsed),
     windKmh: wind.speed,
@@ -293,6 +327,9 @@ export function weatherForSample(loc, sample, tMs, bearingDeg) {
     precipMm: bucket("precipitation"),
     precipProb: bucket("precipitation_probability"),
     code: bucket("weather_code"),
+    cloudPct: interpHourly(timesMs, loc.vars.cloud_cover, tMs),
+    sunMin,
+    sunEstimated,
     model10mWindKmh: profile.model10mWindKmh,
     model10mGustKmh: profile.gust10Kmh,
     model2mTempC: profile.model2mTempC,

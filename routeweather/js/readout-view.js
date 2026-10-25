@@ -12,15 +12,17 @@ import {
   formatDistance, formatElevation, formatPrecip, formatTemp, formatWind, MISSING,
 } from "./units.js";
 import {
-  compassPoint, formatCrossWind, formatDateTime, formatDuration, formatHeadWind,
-  isFiniteNumber as isNum,
+  compassPoint, formatCloud, formatCrossWind, formatDateTime, formatDaylight, formatDuration,
+  formatHeadWind, formatSun, isFiniteNumber as isNum,
 } from "./display.js";
 import { positionAtDistance } from "./route.js";
 import { timeAtDistance } from "./along-route.js";
+import { daylightAt } from "./daylight.js";
 
 const FIELDS = [
   ["time", "Time"],
   ["elapsed", "Elapsed"],
+  ["light", "Light"],
   ["distance", "Distance"],
   ["elevation", "Elevation"],
   ["weather", "Weather"],
@@ -28,11 +30,12 @@ const FIELDS = [
   ["wind", "Wind"],
   ["relative", "Head / cross"],
   ["rain", "Rain"],
+  ["sky", "Sky"],
   ["model", "Model"],
 ];
 
 // Fields that need the weather (dashes without it).
-const WEATHER_KEYS = ["weather", "temp", "wind", "relative", "rain", "model"];
+const WEATHER_KEYS = ["weather", "temp", "wind", "relative", "rain", "sky", "model"];
 
 const OUTSIDE_NOTE = "outside the forecast: nearest hour shown";
 
@@ -65,6 +68,7 @@ export function readoutValues(state, weather, distKm, tMs = timeAtDistance(state
       ? `${formatDistance(distKm, units)} of ${formatDistance(route.totalDistKm, units)}`
       : MISSING,
     elevation: route ? elevationText(state, w, distKm, units) : MISSING,
+    light: formatDaylight(daylightAt(state, distKm, tMs), tMs, state.timeZone),
   };
   if (!w) {
     return { ...values, ...Object.fromEntries(WEATHER_KEYS.map((key) => [key, MISSING])) };
@@ -80,6 +84,7 @@ export function readoutValues(state, weather, distKm, tMs = timeAtDistance(state
       + (w.aboveProfile ? ` ${HELD_NOTE}` : ""),
     relative: `${formatHeadWind(w.headKmh, units)} · ${formatCrossWind(w.crossKmh, units)}`,
     rain: `${formatPrecip(w.precipMm, units)} · ${chance}`,
+    sky: `${formatCloud(w.cloudPct)} cloud · sun ${formatSun(w.sunMin, w.sunEstimated)}`,
     model: `10 m wind ${formatWind(w.model10mWindKmh, units)}`
       + ` · cell elevation ${formatElevation(w.cellElev, units)}`,
   };

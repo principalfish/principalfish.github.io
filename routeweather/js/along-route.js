@@ -7,8 +7,8 @@
 //
 //   tempC, model2mTempC, gustKmh,      linear. Head/crosswind are interpolated
 //   model10mWindKmh, model10mGustKmh,  rather than recomputed from the route's
-//   headKmh, crossKmh, eleUsed         bearing at the position: the raw GPX
-//                                      bearing flips at every switchback, and
+//   headKmh, crossKmh, eleUsed,        bearing at the position: the raw GPX
+//   cloudPct                           bearing flips at every switchback, and
 //                                      the charts draw these as straight lines
 //                                      between samples, so the readout matches
 //                                      the cursor on the chart.
@@ -17,7 +17,7 @@
 //                                      height), so 350° and 10° meet at north.
 //   precipMm, precipProb, code,        from the NEARER sample (a tie at
 //   cellElev, eleFromModel,            exactly halfway: the earlier). These are
-//   aboveProfile                       per-hour buckets / per-cell facts, not
+//   aboveProfile, sunMin, sunEstimated per-hour buckets / per-cell facts, not
 //                                      quantities that vary smoothly along a
 //                                      path; the precipitation chart draws one
 //                                      bar per sample reaching halfway to its
@@ -37,9 +37,11 @@ import { isFiniteNumber as isNum } from "./display.js";
 
 const LINEAR_KEYS = [
   "tempC", "model2mTempC", "gustKmh", "model10mWindKmh", "model10mGustKmh",
-  "headKmh", "crossKmh", "eleUsed",
+  "headKmh", "crossKmh", "eleUsed", "cloudPct",
 ];
-const NEAREST_KEYS = ["precipMm", "precipProb", "code", "cellElev", "aboveProfile"];
+const NEAREST_KEYS = [
+  "precipMm", "precipProb", "code", "cellElev", "aboveProfile", "sunMin", "sunEstimated",
+];
 
 // --- position ---
 

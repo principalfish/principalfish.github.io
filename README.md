@@ -87,6 +87,18 @@ when you get there. Everything runs in the browser; there is no build step
   plus the 10 m gust's excess over the 10 m mean wind.
 - Wind is also given relative to the direction of travel (headwind and
   crosswind).
+- Sky: cloud cover and sunshine per hour, shown as a "Sky" chart strip, in
+  the readout and table, and as a route total ("~X h of Y h daylight").
+  `ukmo_seamless` only has `sunshine_duration` for about the first 2¾ days
+  (the UKV range); after that it is estimated as the hour's daylight minutes
+  × (1 − cloud cover) and labelled "est.".
+- Sunrise and sunset are computed in the browser with NOAA's solar position
+  algorithm (no API call), at the walker's position and arrival time. The
+  summary gives the start day's times at the start point and says when the
+  route starts before sunrise or runs past sunset; the charts shade the dark
+  stretches and mark ☀↑ / ☀↓ where you pass them; the readout says whether
+  it is light and how long until the next change. They are for a flat
+  horizon: terrain can hide the sun for longer.
 - Units: Metric / Imperial is the preset (distance, elevation, speed);
   "Customise units" overrides wind (km/h | mph), rain (mm | in) and
   temperature (°C | °F) one by one, and picking a preset resets them. The URL
@@ -108,8 +120,8 @@ out at the 700 hPa level (about 3,000 m): above it, temperature and wind are
 held at that level's values, and the page says so (a summary note, a "Held"
 badge on the table row and a note in the readout).
 
-**API budget.** A full 150-point route costs about 345 of Open-Meteo's weighted
-calls (23 hourly variables count as 2.3 calls per location), plus 1 for the
+**API budget.** A full 150-point route costs about 375 of Open-Meteo's weighted
+calls (25 hourly variables count as 2.5 calls per location), plus 1 for the
 time zone lookup. The free tier allows
 600 a minute and 10,000 a day per IP. Open-Meteo sends no rate-limit headers, so
 the page prints an estimate of this browser's usage to the console after each

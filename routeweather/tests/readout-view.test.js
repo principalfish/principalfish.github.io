@@ -152,8 +152,8 @@ describe("createReadoutUI", () => {
     createReadoutUI(container);
     const labels = [...container.querySelectorAll("dt")].map((dt) => dt.textContent);
     expect(labels).toEqual([
-      "Time", "Elapsed", "Distance", "Elevation", "Weather", "Temperature", "Wind",
-      "Head / cross", "Rain", "Model",
+      "Time", "Elapsed", "Light", "Distance", "Elevation", "Weather", "Temperature", "Wind",
+      "Head / cross", "Rain", "Sky", "Model",
     ]);
     expect(valueOf("temp")).toBe(MISSING);
   });

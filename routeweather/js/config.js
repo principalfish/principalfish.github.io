@@ -40,6 +40,12 @@ const SURFACE_VARS = [
   "wind_speed_10m",
   "wind_direction_10m",
   "wind_gusts_10m",
+  // Sky: cloud cover is instantaneous (%), sunshine_duration the seconds of
+  // sunshine in the PRECEDING hour. ukmo_seamless only has sunshine for about
+  // the first 2¾ days (the UKV range; nulls after), so weather.js estimates it
+  // beyond that from cloud cover and daylight.
+  "cloud_cover",
+  "sunshine_duration",
 ];
 
 const PRESSURE_LEVEL_VARS = [

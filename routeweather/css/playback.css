@@ -16,6 +16,10 @@
    distinct from the grey elevation profile. */
   --outside: rgba(154, 160, 166, 0.12);
   --outside-line: rgba(154, 160, 166, 0.35);
+  /* Sky strip and night shading. */
+  --sun: #e8c547;
+  --cloud: rgba(200, 205, 212, 0.28);
+  --night: rgba(70, 90, 170, 0.18);
 }
 
 /* --- charts --- */
@@ -63,6 +67,15 @@
 /* Chance of rain: a faint wash behind the solid rain bars. */
 .route-charts .prob-area { fill: var(--series-2); opacity: 0.22; }
 .route-charts .prob-max { fill: var(--chart-ink); font-size: 10px; }
+.route-charts .cloud-area { fill: var(--cloud); }
+.route-charts .s-sun { fill: var(--sun); }
+.route-charts .s-sun.est { fill: var(--sun); opacity: 0.4; }
+.route-charts .night-bands rect { fill: var(--night); }
+.route-charts .sun-event-line { stroke: var(--sun); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.7; }
+.route-charts .sun-event-label {
+  fill: var(--sun); font-size: 10px;
+  paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round;
+}
 
 .route-charts .chart-cursor { stroke: var(--chart-cursor); stroke-width: 1.5; pointer-events: none; }
 .route-charts .chart-hit { fill: transparent; cursor: ew-resize; }
@@ -80,6 +93,10 @@
 .swatch-area { width: 12px; height: 10px; border-radius: 2px; }
 .swatch.s-rain { background: var(--series-1); }
 .swatch.s-prob { background: var(--series-2); opacity: 0.45; }
+.swatch.s-cloud { background: var(--cloud); }
+.swatch.s-sun { background: var(--sun); }
+.swatch.s-sun-est { background: var(--sun); opacity: 0.4; }
+.swatch-night { width: 14px; height: 10px; border: 1px solid var(--line); background: var(--night); }
 .swatch-band {
   width: 14px; height: 10px; border: 1px solid var(--line);
   background: repeating-linear-gradient(
@@ -137,7 +154,8 @@
   margin: 2px 0 0; font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
 }
 /* Long two-part values get a wider cell. */
-.readout-wind, .readout-relative, .readout-model, .readout-weather { grid-column: span 2; }
+.readout-wind, .readout-relative, .readout-model, .readout-weather, .readout-light,
+.readout-sky { grid-column: span 2; }
 .readout-model dd { color: var(--muted); font-size: 13px; }
 .readout.outside .readout-weather dd { color: var(--muted); font-style: italic; }
 
@@ -146,5 +164,6 @@
   #playback { padding: 10px; }
   .pb-slider { flex-basis: 100%; order: 3; }
   .readout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .readout-wind, .readout-relative, .readout-model, .readout-weather { grid-column: 1 / -1; }
+  .readout-wind, .readout-relative, .readout-model, .readout-weather, .readout-light,
+  .readout-sky { grid-column: 1 / -1; }
 }

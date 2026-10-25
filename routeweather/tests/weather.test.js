@@ -5,7 +5,9 @@ import { describe, it, expect } from "vitest";
 import {
   toUV, fromUV, interpHourly, bucketHourly, profileAt, temperatureAt, windAt, headCross,
   weatherForSample, describeWeather, WMO_DESCRIPTIONS, LAPSE_RATE_K_PER_M, isAboveProfile,
+  sunshineAt,
 } from "../js/weather.js";
+import { daylightMinutes } from "../js/sun.js";
 import { normaliseLocation } from "../js/openmeteo.js";
 import { HOURLY_VARS, PRESSURE_LEVELS } from "../js/config.js";
 import { MISSING } from "../js/units.js";
@@ -14,7 +16,8 @@ const HOUR = 3600 * 1000;
 const T0 = Date.UTC(2026, 9, 26, 9);
 
 // Real Open-Meteo response: [upland cell at 509 m, lowland cell at 18 m],
-// 2026-10-26 09:00–14:00 UTC.
+// 2026-10-26 09:00–14:00 UTC. cloud_cover and sunshine_duration were added by
+// hand afterwards (plausible for that wet day), not fetched.
 const FIXTURE = JSON.parse(
   readFileSync(new URL("./fixtures/forecast-2loc.json", import.meta.url), "utf8"),
 );
@@ -41,6 +44,8 @@ function makeLoc({ cellElev = 0, hours = 3, ...series } = {}) {
     wind_speed_10m: 0,
     wind_direction_10m: 0,
     wind_gusts_10m: 0,
+    cloud_cover: 0,
+    sunshine_duration: 0,
   };
   for (const level of PRESSURE_LEVELS) {
     defaults[`temperature_${level}hPa`] = 0;
@@ -437,11 +442,12 @@ describe("weatherForSample", () => {
         [lowland, {}, 45],
       ];
       for (const [loc, sample, bearing] of cases) {
-        const { outsideForecast, aboveProfile, ...numbers } = weatherForSample(
+        const { outsideForecast, aboveProfile, sunEstimated, ...numbers } = weatherForSample(
           loc, sample, t, bearing,
         );
         expect(outsideForecast).toBe(false);
         expect(aboveProfile).toBe(false);
+        expect(sunEstimated).toBe(false);
         for (const [key, value] of Object.entries(numbers)) {
           expect(Number.isFinite(value), `${key} = ${value}`).toBe(true);
         }
@@ -507,6 +513,44 @@ describe("isAboveProfile", () => {
   it("is reported per sample", () => {
     expect(weatherForSample(loc, { ele: 3500 }, T0, 0).aboveProfile).toBe(true);
     expect(weatherForSample(loc, { ele: 500 }, T0, 0).aboveProfile).toBe(false);
+  });
+});
+
+describe("sunshineAt", () => {
+  // T0 is 09:00 UTC on 26 Oct; at 54°N, 3°W the sun is well up by then.
+  const LAT = 54;
+  const LON = -3;
+
+  it("uses the forecast's own sunshine, in minutes", () => {
+    const loc = makeLoc({ sunshine_duration: [0, 1800, 3600] });
+    // 09:20 reads the 10:00 bucket (09–10).
+    expect(sunshineAt(loc, T0 + HOUR / 3, LAT, LON)).toEqual({ sunMin: 30, sunEstimated: false });
+    expect(sunshineAt(loc, T0 + 2 * HOUR, LAT, LON).sunMin).toBe(60);
+  });
+
+  it("estimates from cloud and daylight where the forecast has none", () => {
+    const loc = makeLoc({ sunshine_duration: NaN, cloud_cover: [40, 60, 80] });
+    // 09–10 bucket: fully light, mean cloud 50% -> half the hour.
+    const day = sunshineAt(loc, T0 + HOUR / 3, LAT, LON);
+    expect(day.sunEstimated).toBe(true);
+    expect(day.sunMin).toBeCloseTo(daylightMinutes(T0, T0 + HOUR, LAT, LON) * 0.5, 9);
+    expect(day.sunMin).toBeCloseTo(30, 9);
+  });
+
+  it("estimates no sun at night and nothing without cloud cover", () => {
+    const night = makeLoc({ sunshine_duration: NaN, cloud_cover: 0 });
+    const midnight = { ...night, timesMs: night.timesMs.map((t) => t - 9 * HOUR) };
+    expect(sunshineAt(midnight, T0 - 9 * HOUR + HOUR / 2, LAT, LON).sunMin).toBe(0);
+    const gap = makeLoc({ sunshine_duration: NaN, cloud_cover: NaN });
+    expect(sunshineAt(gap, T0 + HOUR / 2, LAT, LON)).toEqual({ sunMin: NaN, sunEstimated: false });
+  });
+
+  it("is reported per sample with cloud cover", () => {
+    const loc = makeLoc({ sunshine_duration: 600, cloud_cover: [20, 40, 60] });
+    const w = weatherForSample(loc, { ele: 10, lat: LAT, lon: LON }, T0 + HOUR / 2, 0);
+    expect(w.cloudPct).toBe(30);
+    expect(w.sunMin).toBe(10);
+    expect(w.sunEstimated).toBe(false);
   });
 });
 

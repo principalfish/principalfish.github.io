@@ -3,11 +3,11 @@
 //
 // Flow: a GPX file is parsed, built into a route and sampled, then the route's
 // time zone, the forecast (and, without GPX elevation, the terrain elevation)
-// are fetched ONCE for the whole available forecast window. A full route costs ~345 weighted
-// calls against a 600/minute limit, so changing activity, speed or start only
-// recomputes arrival times and per-sample weather from the stored locations,
-// and changing units only re-renders. A new file (or Retry) aborts whatever the
-// previous load still had in flight.
+// are fetched ONCE for the whole available forecast window. A full route
+// costs ~375 weighted calls against a 600/minute limit, so changing activity,
+// speed or start only recomputes arrival times and per-sample weather from the
+// stored locations, and changing units only re-renders. A new file (or Retry)
+// aborts whatever the previous load still had in flight.
 //
 // Views: `addView(update)` registers `update(state, reason)`, called on EVERY
 // render() in registration order. `reason` says what prompted the render:
@@ -48,6 +48,7 @@ import {
 } from "./schedule.js";
 import { formatDateTime, formatDuration } from "./display.js";
 import { isValidTimeZone } from "./zone.js";
+import { routeDaylight, routeSunshine } from "./daylight.js";
 import { createFormUI } from "./form-view.js";
 import { createPointsTableUI, createSummaryUI } from "./results-view.js";
 import { createMapUI } from "./map-view.js";
@@ -148,6 +149,8 @@ export function init({
     nowMs: now(),
     times: null, // arrival epoch ms, parallel to samples
     results: null, // weatherForSample(), parallel to samples; null = nothing to show
+    daylight: null, // daylight.js routeDaylight(), with results
+    sunshine: null, // daylight.js routeSunshine(), with results
     startBounds: { minMs: now(), maxMs: now() },
     // messages
     status: { kind: "info", message: "Choose a GPX file to get started." },
@@ -209,6 +212,8 @@ export function init({
     state.nowMs = now();
     state.times = null;
     state.results = null;
+    state.daylight = null;
+    state.sunshine = null;
     state.planError = null;
     updateStartBounds();
 
@@ -236,6 +241,8 @@ export function init({
     state.results = samples.map(
       (s, i) => weatherForSample(locations[i], s, times[i], s.bearingDeg),
     );
+    state.daylight = routeDaylight(state);
+    state.sunshine = routeSunshine(state);
   }
 
   // --- fetching (once per GPX load) ---

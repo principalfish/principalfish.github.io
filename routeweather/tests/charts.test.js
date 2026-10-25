@@ -32,6 +32,7 @@ function makeState(route = buildRoute(POINTS), overrides = {}) {
     headKmh: [5, -10, 15, 0][i], crossKmh: [3, 4, -6, 2][i], precipMm: [0, 0.4, 1.2, 0][i],
     precipProb: [10, 40, 80, 20][i], code: 61, model10mWindKmh: 15, model10mGustKmh: 30,
     cellElev: 300, eleUsed: s.ele, outsideForecast: i === 3,
+    cloudPct: [90, 60, 30, 0][i], sunMin: [0, 20, 45, NaN][i], sunEstimated: i === 2,
   }));
   return { route, samples, results, units: METRIC, ...overrides };
 }
@@ -240,13 +241,14 @@ describe("createChartsUI", () => {
     expect(svgOf(container).children).toHaveLength(0);
   });
 
-  it("builds one SVG with four strips, the series and one cursor", () => {
+  it("builds one SVG with five strips, the series and one cursor", () => {
     charts.update(makeState());
     expect(container.querySelectorAll("svg")).toHaveLength(1);
     expect(titles(container)).toEqual([
       "Elevation (m)", "Temperature (°C)", "Head/tailwind (km/h)", "Rain (mm/h)",
+      "Sky (cloud %, sunshine)",
     ]);
-    expect(container.querySelectorAll(".strip")).toHaveLength(4);
+    expect(container.querySelectorAll(".strip")).toHaveLength(5);
     const classes = ["elev-area", "s-temp", "s-temp-model", "s-head", "s-gust", "prob-area"];
     for (const cls of classes) {
       expect(container.querySelector(`.${cls}`), cls).not.toBeNull();
@@ -260,9 +262,42 @@ describe("createChartsUI", () => {
   });
 
   it("names the strips in the SVG's accessible name", () => {
-    expect(svgOf(container).getAttribute("aria-label")).toMatch(
-      /^Elevation, temperature, head\/tailwind and rain \(amount and chance\) along the route\./,
-    );
+    expect(svgOf(container).getAttribute("aria-label")).toMatch(new RegExp(
+      "^Elevation, temperature, head/tailwind, rain \\(amount and chance\\) "
+      + "and sky \\(cloud and sunshine\\) along the route\\.",
+    ));
+  });
+
+  it("draws cloud and sunshine in the sky strip, estimates fainter", () => {
+    charts.update(makeState());
+    expect(container.querySelector(".cloud-area")).not.toBeNull();
+    const bars = [...container.querySelectorAll(".sun-bars rect")];
+    // No bar for no sun or a gap.
+    expect(bars.map((b) => b.getAttribute("class"))).toEqual(["s-sun", "s-sun est"]);
+    expect(container.querySelectorAll(".night-bands rect")).toHaveLength(0);
+    expect(container.querySelector(".chart-legend").textContent).not.toContain("sunset");
+  });
+
+  it("shades the dark stretches and marks sunrise and sunset", () => {
+    const state = makeState();
+    const total = state.route.totalDistKm;
+    const daylight = {
+      startsInDark: false,
+      events: [
+        { kind: "sunset", km: total * 0.25, tMs: 0 },
+        { kind: "sunrise", km: total * 0.75, tMs: 0 },
+      ],
+      nightSpans: [[total * 0.25, total * 0.75]],
+      daylightMs: 0,
+    };
+    charts.update({ ...state, daylight });
+    expect(container.querySelectorAll(".night-bands rect")).toHaveLength(1);
+    expect(container.querySelectorAll(".sun-event-line")).toHaveLength(2);
+    expect([...container.querySelectorAll(".sun-event-label")].map((t) => t.textContent))
+      .toEqual(["☀↓", "☀↑"]);
+    const names = [...container.querySelectorAll(".chart-legend .legend-strip")]
+      .map((n) => n.textContent);
+    expect(names).toContain("Dark");
   });
 
   it("leaves crosswind out of the wind strip", () => {
@@ -359,7 +394,7 @@ describe("createChartsUI", () => {
     charts.update(makeState());
     const groups = [...container.querySelectorAll(".chart-legend > li")];
     const names = groups.map((li) => li.querySelector(".legend-strip").textContent);
-    expect(names).toEqual(["Elevation", "Temperature", "Head/tailwind", "Rain", "Grey"]);
+    expect(names).toEqual(["Elevation", "Temperature", "Head/tailwind", "Rain", "Sky", "Grey"]);
     const items = (li) => [...li.querySelectorAll(".legend-item")].map((item) => item.textContent);
     expect(items(groups[0])).toEqual(["summit", "valley"]);
     expect(items(groups[2])).toEqual(["headwind + / tailwind −", "gust"]);
@@ -437,6 +472,7 @@ describe("createChartsUI", () => {
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (mi)");
     expect(titles(container)).toEqual([
       "Elevation (ft)", "Temperature (°F)", "Head/tailwind (mph)", "Rain (in/h)",
+      "Sky (cloud %, sunshine)",
     ]);
     // Ticks are in miles: the last tick can't exceed the route length in miles.
     const ticks = [...container.querySelectorAll(".axis-x .tick text")]
@@ -455,11 +491,13 @@ describe("createChartsUI", () => {
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (km)");
     expect(titles(container)).toEqual([
       "Elevation (m)", "Temperature (°F)", "Head/tailwind (mph)", "Rain (mm/h)",
+      "Sky (cloud %, sunshine)",
     ]);
     charts.update({ ...state, units: resolveUnits("imperial", { rain: "mm", temp: "c" }) });
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (mi)");
     expect(titles(container)).toEqual([
       "Elevation (ft)", "Temperature (°C)", "Head/tailwind (mph)", "Rain (mm/h)",
+      "Sky (cloud %, sunshine)",
     ]);
   });
 
@@ -472,13 +510,15 @@ describe("createChartsUI", () => {
     const metric = stripTicks();
     charts.update({ ...state, units: IMPERIAL });
     const imperial = stripTicks();
-    metric.forEach((ticks, i) => expect(imperial[i]).not.toEqual(ticks));
-    // Strips: elevation, temperature, head/tailwind, rain. Each mixed set's
-    // strips match the preset its own unit comes from.
+    // Strips: elevation, temperature, head/tailwind, rain, then sky, whose
+    // percentages have no unit. Each mixed set's strips match the preset its
+    // own unit comes from.
+    metric.slice(0, 4).forEach((ticks, i) => expect(imperial[i]).not.toEqual(ticks));
+    expect(imperial[4]).toEqual(metric[4]);
     charts.update({ ...state, units: resolveUnits("metric", { wind: "mph", rain: "in" }) });
-    expect(stripTicks()).toEqual([metric[0], metric[1], imperial[2], imperial[3]]);
+    expect(stripTicks()).toEqual([metric[0], metric[1], imperial[2], imperial[3], metric[4]]);
     charts.update({ ...state, units: resolveUnits("imperial", { temp: "c" }) });
-    expect(stripTicks()).toEqual([imperial[0], metric[1], imperial[2], imperial[3]]);
+    expect(stripTicks()).toEqual([imperial[0], metric[1], imperial[2], imperial[3], metric[4]]);
   });
 
   it("still accepts a plain system string", () => {

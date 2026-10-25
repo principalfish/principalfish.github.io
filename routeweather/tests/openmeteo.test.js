@@ -10,7 +10,8 @@ import {
 import { HOURLY_VARS } from "../js/config.js";
 
 // Real Open-Meteo response for an upland (Lake District) and a lowland
-// (London) point, 2026-10-26 09:00–14:00 UTC, every HOURLY_VARS variable.
+// (London) point, 2026-10-26 09:00–14:00 UTC, every HOURLY_VARS variable
+// (cloud_cover and sunshine_duration added by hand afterwards).
 const FIXTURE = JSON.parse(
   readFileSync(new URL("./fixtures/forecast-2loc.json", import.meta.url), "utf8"),
 );

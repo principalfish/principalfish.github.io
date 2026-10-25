@@ -57,6 +57,37 @@ export function formatDuration(ms) {
   return h === 0 ? `${m} min` : `${h} h ${pad2(m)} min`;
 }
 
+// Duration -> hours to 1 dp ("2.4 h"), for sunshine and daylight totals.
+export function formatHours(ms) {
+  if (!isFiniteNumber(ms) || ms < 0) return MISSING;
+  return `${(Math.round(ms / 360000) / 10).toFixed(1)} h`;
+}
+
+// --- sky ---
+
+// Cloud cover -> "72%".
+export function formatCloud(pct) {
+  return isFiniteNumber(pct) ? `${Math.round(pct)}%` : MISSING;
+}
+
+// Minutes of sunshine in the hour -> "12 min/h", "est." added when it is
+// estimated rather than forecast (weather.js sunshineAt).
+export function formatSun(sunMin, estimated = false) {
+  if (!isFiniteNumber(sunMin)) return MISSING;
+  return `${Math.round(sunMin)} min/h${estimated ? " est." : ""}`;
+}
+
+// daylight.js daylightAt() -> "Daylight · sunset 16:44 (in 1 h 20 min)" /
+// "Dark · sunrise 06:43 (in 9 h 05 min)"; polar day or night without a next
+// event within two days.
+export function formatDaylight(daylight, tMs, timeZone) {
+  if (!daylight) return MISSING;
+  const now = daylight.up ? "Daylight" : "Dark";
+  if (!daylight.next) return `${now} (${daylight.up ? "sun up all day" : "sun down all day"})`;
+  const { kind, tMs: at } = daylight.next;
+  return `${now} · ${kind} ${formatClock(at, timeZone)} (in ${formatDuration(at - tMs)})`;
+}
+
 // --- directions ---
 
 // Degrees -> compass point; `points` is 16 (wind) or 8 (offsets).

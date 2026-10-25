@@ -6,6 +6,8 @@ import { resolveUnits } from "../js/units.js";
 
 const metric = resolveUnits("metric");
 
+const event = (kind, km, tMs) => ({ kind, km, tMs });
+
 describe("summaryNotes", () => {
   it("has nothing to say without results", () => {
     expect(summaryNotes({ results: null, units: metric })).toEqual([]);
@@ -20,5 +22,27 @@ describe("summaryNotes", () => {
       "Above about 9,800 ft, temperature and wind are held at their ~9,800 ft values.",
     ]);
     expect(summaryNotes({ results: [{ aboveProfile: false }], units: metric })).toEqual([]);
+  });
+
+  it("says when the route starts before sunrise or runs past sunset", () => {
+    const results = [{}];
+    const base = { results, units: metric, timeZone: "UTC" };
+    const flat = "Sunrise and sunset are for a flat horizon; hills and valleys can hide the sun "
+      + "for longer.";
+    const dawn = {
+      startsInDark: true, events: [event("sunrise", 3.4, Date.UTC(2026, 9, 26, 6, 43))],
+    };
+    expect(summaryNotes({ ...base, daylight: dawn })).toEqual([
+      "Starts before sunrise: the sun rises at 06:43, 3.4 km in.", flat,
+    ]);
+    const dusk = {
+      startsInDark: false, events: [event("sunset", 12.3, Date.UTC(2026, 9, 26, 16, 44))],
+    };
+    expect(summaryNotes({ ...base, daylight: dusk })).toEqual([
+      "Runs past sunset: the sun sets at 16:44, 12.3 km in.", flat,
+    ]);
+    expect(summaryNotes({ ...base, daylight: { startsInDark: true, events: [] } }))
+      .toEqual(["The whole route is in the dark.", flat]);
+    expect(summaryNotes({ ...base, daylight: { startsInDark: false, events: [] } })).toEqual([]);
   });
 });

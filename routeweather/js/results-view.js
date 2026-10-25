@@ -67,19 +67,27 @@ export function summaryNotes(state) {
   return notes;
 }
 
-// "−3 °C at 6.2 km (13:20)": the coldest feels-like temperature on the route.
-export function coldestFeelsText({ results, samples, times, units, nowMs, timeZone }) {
+// The route's most extreme value of `key` (the lowest when `lowest`, else the
+// highest) as "−3 °C at 6.2 km (13:20)", formatted with `format(value,
+// units)`; the first sample wins a tie. MISSING without results or values.
+function extremeText(state, key, format, lowest) {
+  const { results, samples, times, units, nowMs, timeZone } = state;
   if (!results) return MISSING;
-  let coldest = -1;
+  let best = -1;
   results.forEach((r, i) => {
-    if (!Number.isFinite(r.feelsLikeC)) return;
-    if (coldest < 0 || r.feelsLikeC < results[coldest].feelsLikeC) coldest = i;
+    if (!Number.isFinite(r[key])) return;
+    const beats = lowest ? r[key] < results[best]?.[key] : r[key] > results[best]?.[key];
+    if (best < 0 || beats) best = i;
   });
-  if (coldest < 0) return MISSING;
-  const where = formatDistance(samples[coldest].cumDistKm, units);
-  const when = formatArrival(times[coldest], nowMs, timeZone);
-  return `${formatTemp(results[coldest].feelsLikeC, units)} at ${where} (${when})`;
+  if (best < 0) return MISSING;
+  const where = formatDistance(samples[best].cumDistKm, units);
+  const when = formatArrival(times[best], nowMs, timeZone);
+  return `${format(results[best][key], units)} at ${where} (${when})`;
 }
+
+export const coldestTempText = (state) => extremeText(state, "tempC", formatTemp, true);
+export const coldestFeelsText = (state) => extremeText(state, "feelsLikeC", formatTemp, true);
+export const strongestWindText = (state) => extremeText(state, "windKmh", formatWind, false);
 
 // "↑ 06:43 · ↓ 16:44" at the start point on the start day, or "Up all day" /
 // "Down all day".
@@ -125,7 +133,9 @@ export function createSummaryUI(doc) {
       ["Moving time", formatDuration(durationMs)],
       ["Start → finish", timing],
       ["Weather points", state.samples ? String(state.samples.length) : MISSING],
+      ["Coldest", coldestTempText(state)],
       ["Coldest feels-like", coldestFeelsText(state)],
+      ["Strongest wind", strongestWindText(state)],
       ["Sun at the start", startDaySunText(state)],
       ["Sunshine on the route", sunshineText(state)],
     ];

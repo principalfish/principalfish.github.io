@@ -8,12 +8,12 @@
 //                      there (dotted), and the model's own 2 m value at its
 //                      grid cell's terrain height as a faint dashed line, so
 //                      the altitude correction is visible
-//   3. Head/tailwind   the wind along your direction of travel (+ in your
-//                      face, − behind you) with a zero line, and the gust as
-//                      a dashed line (crosswind is in the readout and table)
-//   4. Rain            precipitation per hour as one bar per sample, over a
-//                      faint step area of the chance of rain (0–100 % of the
-//                      strip's height, marked "100%" at the right edge)
+//   3. Wind            the wind speed at your altitude (line) and the gust as
+//                      a dashed line (head/tail and crosswind are in the
+//                      readout and table)
+//   4. Rain            precipitation per hour as one bar per sample, with the
+//                      chance of rain as a step line in front of them (0–100 %
+//                      of the strip's height, marked "100%" at the right edge)
 //   5. Sky             cloud cover (area, 0–100 %) and sunshine as one bar per
 //                      sample (minutes per hour; full height = 60), estimated
 //                      sunshine fainter (weather.js sunshineAt), with ☀↑ / ☀↓
@@ -248,8 +248,7 @@ function yDomain(values, include = [], minSpan = 1) {
 //
 // ctx: { route, samples, rows ([{ km, s, r }] per sample), units (a units
 // set), unit (labels), cv (converters), xk (km -> x px), left, right, totalKm,
-// line(y, get) (a d3 line skipping gaps), stepArea(y) (a d3 area over
-// stepPoints, down to the strip's bottom), timeAt(km) (arrival epoch ms),
+// line(y, get) (a d3 line skipping gaps), timeAt(km) (arrival epoch ms),
 // daylight (state.daylight or null) }.
 
 function drawElevation(ctx, h) {
@@ -318,28 +317,25 @@ function drawTemperature(ctx, h) {
 }
 
 function drawWind(ctx, h) {
-  const { rows, unit, cv, line, left, right } = ctx;
-  const head = (d) => cv.wind(d.r.headKmh);
+  const { rows, unit, cv, line } = ctx;
+  const wind = (d) => cv.wind(d.r.windKmh);
   const gust = (d) => cv.wind(d.r.gustKmh);
   const y = d3.scaleLinear()
-    .domain(yDomain([...rows.map(head), ...rows.map(gust)], [0], 10))
+    .domain(yDomain([...rows.map(wind), ...rows.map(gust)], [0], 10))
     .nice().range([h, 0]);
-  const g = ctx.frame(`Head/tailwind (${unit.wind})`, y);
-  g.append("line").attr("class", "zero-line").attr("x1", left)
-    .attr("x2", right).attr("y1", y(0)).attr("y2", y(0));
+  const g = ctx.frame(`Wind (${unit.wind})`, y);
   g.append("path").attr("class", "series s-gust").attr("d", line(y, gust)(rows));
-  g.append("path").attr("class", "series s-head").attr("d", line(y, head)(rows));
+  g.append("path").attr("class", "series s-wind").attr("d", line(y, wind)(rows));
 }
 
 // Rain: the amount per hour as one bar per sample (left axis), over the
 // stretch that sample is the nearer one for, with a 2 px gap between
-// neighbours; nothing where it is 0 or missing. Behind the bars, the chance
-// of rain as a faint step area (stepPoints: it changes halfway between
+// neighbours; nothing where it is 0 or missing. In front of the bars, the
+// chance of rain as a step line (stepPoints: it changes halfway between
 // samples, the nearer-sample rule again) scaled 0–100 % to the strip's full
 // height, with a single "100%" mark at the right edge rather than a second
-// axis. The user asked for both in one strip; the shaded area and the solid
-// bars are deliberately different encodings so the two don't read as one
-// scale.
+// axis. The user asked for both in one strip; the line and the solid bars are
+// deliberately different encodings so the two don't read as one scale.
 function drawRain(ctx, h) {
   const { rows, samples, units, unit, cv, xk, totalKm, right } = ctx;
   const rain = (d) => cv.rain(d.r.precipMm);
@@ -349,12 +345,6 @@ function drawRain(ctx, h) {
   const axis = d3.axisLeft(y).ticks(RAIN_TICKS).tickSizeOuter(0);
   const g = ctx.frame(`Rain (${unit.rain})`, y, axis);
 
-  const yProb = d3.scaleLinear().domain([0, 100]).range([h, 0]);
-  const steps = stepPoints(samples, rows.map((d) => d.r.precipProb), totalKm);
-  g.append("path").attr("class", "prob-area").attr("d", ctx.stepArea(yProb)(steps));
-  g.append("text").attr("class", "prob-max").attr("x", right + 3).attr("y", 4)
-    .attr("dominant-baseline", "middle").text("100%");
-
   const bars = rows.map((d, i) => {
     const [from, to] = nearestSpan(samples, i, totalKm);
     return { d, x0: xk(from), x1: xk(to) };
@@ -363,6 +353,13 @@ function drawRain(ctx, h) {
     .attr("class", "s-rain")
     .attr("x", (b) => b.x0 + 1).attr("width", (b) => Math.max(1, b.x1 - b.x0 - 2))
     .attr("y", (b) => y(rain(b.d))).attr("height", (b) => h - y(rain(b.d)));
+
+  const yProb = d3.scaleLinear().domain([0, 100]).range([h, 0]);
+  const steps = stepPoints(samples, rows.map((d) => d.r.precipProb), totalKm);
+  const probLine = d3.line().defined((d) => isNum(d.v)).x((d) => xk(d.km)).y((d) => yProb(d.v));
+  g.append("path").attr("class", "prob-line").attr("d", probLine(steps));
+  g.append("text").attr("class", "prob-max").attr("x", right + 3).attr("y", 4)
+    .attr("dominant-baseline", "middle").text("100%");
 }
 
 // Sky: cloud cover as an area against the 0–100 % axis (linear between
@@ -431,13 +428,13 @@ const STRIPS = [
   },
   {
     key: "wind",
-    name: "head/tailwind",
+    name: "wind",
     height: 80,
     draw: drawWind,
     legend: {
-      name: "Head/tailwind",
+      name: "Wind",
       items: [
-        { cls: "head", label: "headwind + / tailwind −" },
+        { cls: "wind", label: "wind speed" },
         { cls: "gust", label: "gust" },
       ],
     },
@@ -451,7 +448,7 @@ const STRIPS = [
       name: "Rain",
       items: [
         { cls: "rain", label: "rain per hour", swatch: "bar" },
-        { cls: "prob", label: "chance of rain", swatch: "area" },
+        { cls: "prob", label: "chance of rain (full height = 100%)" },
       ],
     },
   },
@@ -471,8 +468,8 @@ const STRIPS = [
   },
 ];
 
-// "Elevation, temperature, head/tailwind and rain (amount and chance)": the
-// start of the SVG's accessible name, from STRIPS.
+// "Elevation, temperature, wind, rain (amount and chance) and sky (cloud and
+// sunshine)": the start of the SVG's accessible name, from STRIPS.
 const CHART_LABEL = (() => {
   const names = STRIPS.map((strip) => strip.name);
   const text = names.length > 1
@@ -637,11 +634,9 @@ export function createChartsUI(container, {
     const rows = samples.map((s, i) => ({ km: s.cumDistKm, s, r: results[i] }));
     const line = (y, get) => d3.line().defined((d) => isNum(get(d)))
       .x((d) => xk(d.km)).y((d) => y(get(d)));
-    const stepArea = (y) => d3.area().defined((d) => isNum(d.v))
-      .x((d) => xk(d.km)).y0((d) => y.range()[0]).y1((d) => y(d.v));
     const ctx = {
       route, samples, rows, units, unit, cv, xk, left: MARGIN.left, right, totalKm, line,
-      stepArea, timeAt: (km) => timeAtDistance(state, km), daylight,
+      timeAt: (km) => timeAtDistance(state, km), daylight,
     };
     STRIPS.forEach((strip, i) => {
       strip.draw({ ...ctx, frame: (...args) => frame(strip.key, tops[i], ...args) }, strip.height);

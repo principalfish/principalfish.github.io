@@ -166,7 +166,7 @@ describe("stepPoints", () => {
     charts.update({
       ...state, results: state.results.map((r, i) => ({ ...r, precipProb: probs[i] })),
     });
-    const d = container.querySelector(".prob-area").getAttribute("d");
+    const d = container.querySelector(".prob-line").getAttribute("d");
     // Two separate runs (the gap splits the path).
     expect(d.match(/M/g)).toHaveLength(2);
     const { left, right } = plotRange(container);
@@ -246,12 +246,12 @@ describe("createChartsUI", () => {
     charts.update(makeState());
     expect(container.querySelectorAll("svg")).toHaveLength(1);
     expect(titles(container)).toEqual([
-      "Elevation (m)", "Temperature (°C)", "Head/tailwind (km/h)", "Rain (mm/h)",
+      "Elevation (m)", "Temperature (°C)", "Wind (km/h)", "Rain (mm/h)",
       "Sky (cloud %, sunshine)",
     ]);
     expect(container.querySelectorAll(".strip")).toHaveLength(5);
     const classes = [
-      "elev-area", "s-temp", "s-feels", "s-temp-model", "s-head", "s-gust", "prob-area",
+      "elev-area", "s-temp", "s-feels", "s-temp-model", "s-wind", "s-gust", "prob-line",
     ];
     for (const cls of classes) {
       expect(container.querySelector(`.${cls}`), cls).not.toBeNull();
@@ -266,7 +266,7 @@ describe("createChartsUI", () => {
 
   it("names the strips in the SVG's accessible name", () => {
     expect(svgOf(container).getAttribute("aria-label")).toMatch(new RegExp(
-      "^Elevation, temperature, head/tailwind, rain \\(amount and chance\\) "
+      "^Elevation, temperature, wind, rain \\(amount and chance\\) "
       + "and sky \\(cloud and sunshine\\) along the route\\.",
     ));
   });
@@ -319,13 +319,13 @@ describe("createChartsUI", () => {
     expect(labels().map(([, text]) => text)).toEqual(["1312 ft", "656 ft"]);
   });
 
-  it("shades chance of rain behind the bars, marked 100% at the right edge only", () => {
+  it("draws chance of rain in front of the bars, marked 100% at the right edge only", () => {
     charts.update(makeState());
     const rainStrip = container.querySelectorAll(".strip")[3];
-    const area = rainStrip.querySelector(".prob-area");
+    const probLine = rainStrip.querySelector(".prob-line");
     const bars = rainStrip.querySelector(".rain-bars");
-    // Behind: earlier in document order.
-    expect(area.compareDocumentPosition(bars) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // In front: later in document order.
+    expect(probLine.compareDocumentPosition(bars) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(container.querySelector(".axis-right")).toBeNull();
     expect(svgOf(container).querySelector(".s-prob")).toBeNull();
     expect(rainStrip.querySelector(".prob-max").textContent).toBe("100%");
@@ -336,7 +336,7 @@ describe("createChartsUI", () => {
   it("draws chance of rain as steps that change halfway between samples", () => {
     const state = makeState();
     charts.update(state);
-    const d = container.querySelector(".prob-area").getAttribute("d");
+    const d = container.querySelector(".prob-line").getAttribute("d");
     const coords = d.replace(/^M/, "").replace(/Z$/, "").split("L")
       .map((p) => p.split(",").map(Number));
     // Horizontal and vertical segments only.
@@ -397,11 +397,11 @@ describe("createChartsUI", () => {
     charts.update(makeState());
     const groups = [...container.querySelectorAll(".chart-legend > li")];
     const names = groups.map((li) => li.querySelector(".legend-strip").textContent);
-    expect(names).toEqual(["Elevation", "Temperature", "Head/tailwind", "Rain", "Sky", "Grey"]);
+    expect(names).toEqual(["Elevation", "Temperature", "Wind", "Rain", "Sky", "Grey"]);
     const items = (li) => [...li.querySelectorAll(".legend-item")].map((item) => item.textContent);
     expect(items(groups[0])).toEqual(["summit", "valley"]);
-    expect(items(groups[2])).toEqual(["headwind + / tailwind −", "gust"]);
-    expect(items(groups[3])).toEqual(["rain per hour", "chance of rain"]);
+    expect(items(groups[2])).toEqual(["wind speed", "gust"]);
+    expect(items(groups[3])).toEqual(["rain per hour", "chance of rain (full height = 100%)"]);
   });
 
   it("leaves headroom above the profile for a peak marker", () => {
@@ -474,7 +474,7 @@ describe("createChartsUI", () => {
     charts.update({ ...state, units: IMPERIAL });
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (mi)");
     expect(titles(container)).toEqual([
-      "Elevation (ft)", "Temperature (°F)", "Head/tailwind (mph)", "Rain (in/h)",
+      "Elevation (ft)", "Temperature (°F)", "Wind (mph)", "Rain (in/h)",
       "Sky (cloud %, sunshine)",
     ]);
     // Ticks are in miles: the last tick can't exceed the route length in miles.
@@ -493,13 +493,13 @@ describe("createChartsUI", () => {
     charts.update({ ...state, units: resolveUnits("metric", { wind: "mph", temp: "f" }) });
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (km)");
     expect(titles(container)).toEqual([
-      "Elevation (m)", "Temperature (°F)", "Head/tailwind (mph)", "Rain (mm/h)",
+      "Elevation (m)", "Temperature (°F)", "Wind (mph)", "Rain (mm/h)",
       "Sky (cloud %, sunshine)",
     ]);
     charts.update({ ...state, units: resolveUnits("imperial", { rain: "mm", temp: "c" }) });
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (mi)");
     expect(titles(container)).toEqual([
-      "Elevation (ft)", "Temperature (°C)", "Head/tailwind (mph)", "Rain (mm/h)",
+      "Elevation (ft)", "Temperature (°C)", "Wind (mph)", "Rain (mm/h)",
       "Sky (cloud %, sunshine)",
     ]);
   });
@@ -513,7 +513,7 @@ describe("createChartsUI", () => {
     const metric = stripTicks();
     charts.update({ ...state, units: IMPERIAL });
     const imperial = stripTicks();
-    // Strips: elevation, temperature, head/tailwind, rain, then sky, whose
+    // Strips: elevation, temperature, wind, rain, then sky, whose
     // percentages have no unit. Each mixed set's strips match the preset its
     // own unit comes from.
     metric.slice(0, 4).forEach((ticks, i) => expect(imperial[i]).not.toEqual(ticks));
@@ -611,10 +611,10 @@ describe("createChartsUI", () => {
 
   it("treats a missing value as a gap in imperial units too, not as 0", () => {
     const state = makeState(undefined, { units: IMPERIAL });
-    const results = state.results.map((r, i) => (i === 1 ? { ...r, tempC: null, headKmh: null } : r));
+    const results = state.results.map((r, i) => (i === 1 ? { ...r, tempC: null, windKmh: null } : r));
     charts.update({ ...state, results });
     expect(container.querySelector(".s-temp").getAttribute("d").match(/M/g)).toHaveLength(2);
-    expect(container.querySelector(".s-head").getAttribute("d").match(/M/g)).toHaveLength(2);
+    expect(container.querySelector(".s-wind").getAttribute("d").match(/M/g)).toHaveLength(2);
   });
 
   it("starts a seek only from the plot area, not titles or axes", () => {

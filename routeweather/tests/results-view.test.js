@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 
-import { coldestFeelsText, summaryNotes } from "../js/results-view.js";
+import {
+  coldestFeelsText, coldestTempText, strongestWindText, summaryNotes,
+} from "../js/results-view.js";
 import { resolveUnits } from "../js/units.js";
 
 const metric = resolveUnits("metric");
@@ -21,6 +23,24 @@ describe("coldestFeelsText", () => {
     expect(coldestFeelsText(state)).toBe("-3 °C at 6.2 km (13:20)");
     expect(coldestFeelsText({ ...state, results: [{ feelsLikeC: NaN }] })).toBe("–");
     expect(coldestFeelsText({ ...state, results: null })).toBe("–");
+  });
+
+  it("names the coldest temperature and the strongest wind the same way", () => {
+    const state = {
+      results: [
+        { tempC: 4, windKmh: 20 }, { tempC: 1.2, windKmh: 47.6 }, { tempC: 1.2, windKmh: 30 },
+      ],
+      samples: [{ cumDistKm: 0 }, { cumDistKm: 6.2 }, { cumDistKm: 9 }],
+      times: [Date.UTC(2026, 9, 26, 11), Date.UTC(2026, 9, 26, 13, 20), Date.UTC(2026, 9, 26, 14)],
+      units: metric,
+      nowMs: Date.UTC(2026, 9, 26, 9),
+      timeZone: "UTC",
+    };
+    // A tie keeps the first.
+    expect(coldestTempText(state)).toBe("1 °C at 6.2 km (13:20)");
+    expect(strongestWindText(state)).toBe("48 km/h at 6.2 km (13:20)");
+    expect(strongestWindText({ ...state, units: resolveUnits("metric", { wind: "mph" }) }))
+      .toBe("30 mph at 6.2 km (13:20)");
   });
 });
 

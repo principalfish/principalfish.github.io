@@ -85,8 +85,10 @@ when you get there. Everything runs in the browser; there is no build step
   GPX altitude. Below the lowest profile point temperature follows a 6.5 K/km
   lapse rate; above 700 hPa it clamps. Gusts at altitude are the altitude wind
   plus the 10 m gust's excess over the 10 m mean wind.
-- Wind is also given relative to the direction of travel (headwind and
-  crosswind).
+- The wind chart shows wind speed and gusts at your altitude; wind relative
+  to the direction of travel (headwind and crosswind) is in the readout and
+  table. The summary gives the coldest temperature, the coldest feels-like and
+  the strongest wind on the route, with where and when.
 - Sky: cloud cover and sunshine per hour, shown as a "Sky" chart strip, in
   the readout and table, and as a route total ("~X h of Y h daylight").
   `ukmo_seamless` only has `sunshine_duration` for about the first 2¾ days

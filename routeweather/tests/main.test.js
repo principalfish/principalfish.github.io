@@ -608,7 +608,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     expect($("speedInput").value).toBe("5");
     expect([...$("chartsPanel").querySelectorAll(".strip-title")].map((t) => t.textContent))
       .toEqual([
-        "Elevation (m)", "Temperature (°C)", "Head/tailwind (mph)", "Rain (mm/h)",
+        "Elevation (m)", "Temperature (°C)", "Wind (mph)", "Rain (mm/h)",
         "Sky (cloud %, sunshine)",
       ]);
 

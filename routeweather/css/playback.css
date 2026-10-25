@@ -5,7 +5,7 @@
    --panel). */
 
 :root {
-  --series-1: #3987e5;  /* headwind; rain bars (own strip) */
+  --series-1: #3987e5;  /* wind speed; rain bars (own strip) */
   --series-2: #d95926;  /* temperature; chance of rain (own strip) */
   --series-3: #199e70;  /* gust (dashed too, beside the blue headwind) */
   --chart-ink: var(--muted);
@@ -43,7 +43,6 @@
 .route-charts .axis-label { fill: var(--chart-ink); font-size: 10px; }
 .route-charts .chart-note { fill: var(--chart-ink); font-style: italic; }
 .route-charts .grid line { stroke: var(--chart-grid); stroke-width: 1; }
-.route-charts .zero-line { stroke: var(--muted); stroke-width: 1; opacity: 0.6; }
 /* The band's fill is a hatch pattern (charts.js): a light wash plus lines. */
 .route-charts .outside-hatch rect { fill: var(--outside); }
 .route-charts .outside-hatch line { stroke: var(--outside-line); stroke-width: 2; }
@@ -62,11 +61,15 @@
 .route-charts .s-temp { stroke: var(--series-2); }
 .route-charts .s-feels { stroke: var(--series-2); stroke-width: 1.75; stroke-dasharray: 1 3; opacity: 0.85; }
 .route-charts .s-temp-model { stroke: var(--muted); stroke-width: 1.25; stroke-dasharray: 4 3; opacity: 0.8; }
-.route-charts .s-head { stroke: var(--series-1); }
+.route-charts .s-wind { stroke: var(--series-1); }
 .route-charts .s-gust { stroke: var(--series-3); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .route-charts .s-rain { fill: var(--series-1); }
-/* Chance of rain: a faint wash behind the solid rain bars. */
-.route-charts .prob-area { fill: var(--series-2); opacity: 0.22; }
+/* Chance of rain: a step line in front of the solid rain bars, edged in the
+   panel colour so it stays readable where it crosses them. */
+.route-charts .prob-line {
+  fill: none; stroke: var(--series-2); stroke-width: 2; stroke-linejoin: round;
+  filter: drop-shadow(0 0 1.5px var(--panel));
+}
 .route-charts .prob-max { fill: var(--chart-ink); font-size: 10px; }
 .route-charts .cloud-area { fill: var(--cloud); }
 .route-charts .s-sun { fill: var(--sun); }
@@ -93,7 +96,7 @@
 .swatch-bar { width: 10px; height: 10px; border-radius: 2px; }
 .swatch-area { width: 12px; height: 10px; border-radius: 2px; }
 .swatch.s-rain { background: var(--series-1); }
-.swatch.s-prob { background: var(--series-2); opacity: 0.45; }
+.swatch.s-prob { border-color: var(--series-2); }
 .swatch.s-cloud { background: var(--cloud); }
 .swatch.s-sun { background: var(--sun); }
 .swatch.s-sun-est { background: var(--sun); opacity: 0.4; }
@@ -109,7 +112,7 @@
 .swatch.s-temp { border-color: var(--series-2); }
 .swatch.s-feels { border-top-style: dotted; border-color: var(--series-2); }
 .swatch.s-temp-model { border-top-style: dashed; border-color: var(--muted); }
-.swatch.s-head { border-color: var(--series-1); }
+.swatch.s-wind { border-color: var(--series-1); }
 .swatch.s-gust { border-top-style: dashed; border-color: var(--series-3); }
 
 /* --- playback controls --- */

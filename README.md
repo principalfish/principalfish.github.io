@@ -1023,6 +1023,36 @@ Both matchup pages have an optional "rebuild history" checkbox for their own
 chamber, and **Run US Models** on the home page has one for all three (see
 `--rebuild-history`).
 
+### Offline uncertainty calibration comparisons
+
+The Senate and President comparison reports use committed, hash-pinned evidence
+under `data/models/us/calibration/`. They remain **unaccepted** and do not nominate
+runtime coefficients or enable odds. Their official-outcome-conditioned references
+measure combined fallback error and alternative state/race allocations; they do not
+validate historical chamber control, presidential district outcomes, or early
+held-today forecasts. Local polling averages remain separate total-error proxies,
+without invented sample sizes or blend weights.
+
+The Senate baseline-only panel has an observed-minus-projected D−R mean of about
++12.5 points in both 2022 and 2024, even with official House national inputs.
+The selected Senate field and national House generic ballot need a compatible
+baseline anchor. Operational Senate calibration awaits that separate central-model
+correction and a rerun of these comparisons; the current central model is unchanged.
+
+From `data/`, reproduce the JSON and Markdown reports without database access:
+
+```bash
+./election_data/bin/python scripts/calibrate_us_uncertainty.py --model senate --output-dir models/us/calibration
+./election_data/bin/python scripts/calibrate_us_uncertainty.py --model president --output-dir models/us/calibration
+```
+
+Omit `--output-dir` to print the review document without writing files. The default
+model remains House. The read-only console views are
+`/us/senate/uncertainty/calibration` and `/us/president/uncertainty/calibration`.
+Each report records source normalization, raw/decided denominator alternatives,
+exact central parity, independent kernel recovery, whole-election conditional
+holdouts, and the assumptions still requiring a decision before release.
+
 ### Model runs
 
 **Run US Models** (home page) runs House → President → Senate → export. Its

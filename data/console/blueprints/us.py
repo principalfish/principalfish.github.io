@@ -28,6 +28,7 @@ from flask.typing import ResponseReturnValue
 from db import Database
 from model_support.us_simulation import UsErrorConfig, us_error_budget
 from model_support.us_calibration import read_house_report
+from model_support.us_calibration_comparison import read_comparison_report
 
 # The forecast runners are standalone modules; models.py owns the name models.
 _US_RUNNERS = Path(__file__).resolve().parents[2] / "models" / "us"
@@ -121,8 +122,14 @@ def uncertainty_calibration(chamber: str) -> ResponseReturnValue:
             report = read_house_report()
         except (OSError, ValueError) as exc:
             error = f"Calibration report unavailable: {exc}"
+    else:
+        try:
+            report = read_comparison_report(chamber)
+        except (OSError, ValueError) as exc:
+            error = f"Comparison report unavailable: {exc}"
     return render_template(
-        "us_uncertainty_calibration.html",
+        "us_uncertainty_calibration.html" if chamber == "house"
+        else "us_uncertainty_comparison.html",
         title=f"US {chamber.title()} uncertainty calibration",
         chamber=chamber, report=report, error=error,
     )

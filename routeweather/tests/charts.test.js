@@ -251,7 +251,7 @@ describe("createChartsUI", () => {
     ]);
     expect(container.querySelectorAll(".strip")).toHaveLength(5);
     const classes = [
-      "elev-area", "s-temp", "s-feels", "s-temp-model", "s-wind", "s-gust", "prob-line",
+      "elev-area", "s-temp", "s-feels", "s-wind", "s-gust", "prob-line",
     ];
     for (const cls of classes) {
       expect(container.querySelector(`.${cls}`), cls).not.toBeNull();

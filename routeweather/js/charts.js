@@ -311,7 +311,6 @@ function drawTemperature(ctx, h) {
   const all = [...rows.map(at), ...rows.map(model), ...rows.map(feels)];
   const y = d3.scaleLinear().domain(yDomain(all, [], 4)).nice().range([h, 0]);
   const g = ctx.frame(`Temperature (${unit.temp})`, y);
-  g.append("path").attr("class", "series s-temp-model").attr("d", line(y, model)(rows));
   g.append("path").attr("class", "series s-feels").attr("d", line(y, feels)(rows));
   g.append("path").attr("class", "series s-temp").attr("d", line(y, at)(rows));
 }
@@ -422,7 +421,6 @@ const STRIPS = [
       items: [
         { cls: "temp", label: "at your altitude" },
         { cls: "feels", label: "feels like" },
-        { cls: "temp-model", label: "model 2 m (grid cell)" },
       ],
     },
   },

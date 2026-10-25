@@ -10,6 +10,7 @@
   <ul>{% for blocker in status.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>
   <p>Stored summaries: {{ status.stored_runs }}. Latest central run: {{ status.latest_run or 'none' }}. Detailed summary: {{ status.detail_run or 'none' }}.</p>
   <p><a href="{{ url_for('us_explorer.explore', model=chamber, view='results') }}">Results</a> · <a href="{{ url_for('us_explorer.explore', model=chamber, view='history') }}">Odds history</a> · <a href="{{ url_for('us_explorer.explore', model=chamber, view='simulations') }}">Simulation explorer</a></p>
+  {% if chamber in ('house', 'senate') %}<p><a href="{{ url_for('us.uncertainty_validation', chamber=chamber) }}">2026 validation preregistration / readiness</a></p>{% endif %}
   <p>{% if status.raw_available %}Detailed draws available for the latest run.{% else %}Detailed draws unavailable: no matching retained archive. Historical compact summaries remain available when detail is pruned.{% endif %}</p>
 </section>
 {% endblock %}

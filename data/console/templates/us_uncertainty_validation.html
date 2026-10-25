@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>{{ title }}</h2>
+  <p><a href="{{ url_for('us.' ~ chamber ~ '_uncertainty_hub') }}">Uncertainty overview</a></p>
+  <p><strong>Pending official results. No 2026 validation score is available.</strong></p>
+  <p>Polling day: {{ readiness.polling_day }}. These definitions are fixed before results; this page does not run or reconstruct forecasts.</p>
+  <h3>Preregistered scoring</h3>
+  <ul>{% for definition in readiness.definitions %}<li>{{ definition }}</li>{% endfor %}</ul>
+  <h3>Required offline inputs</h3>
+  <ul>{% for requirement in readiness.requirements %}<li>{{ requirement }}</li>{% endfor %}</ul>
+  <ul>{% for limitation in readiness.limitations %}<li>{{ limitation }}</li>{% endfor %}</ul>
+  <p>The repository runbook is <code>data/models/us/validation-2026.md</code>. The CLI requires explicit snapshot, official manifest and local output paths.</p>
+</section>
+{% endblock %}

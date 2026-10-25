@@ -29,6 +29,7 @@ from db import Database
 from model_support.us_simulation import UsErrorConfig, us_error_budget
 from model_support.us_calibration import read_house_report
 from model_support.us_calibration_comparison import read_comparison_report
+from model_support.us_validation_io import readiness as validation_readiness
 
 # The forecast runners are standalone modules; models.py owns the name models.
 _US_RUNNERS = Path(__file__).resolve().parents[2] / "models" / "us"
@@ -108,6 +109,18 @@ RUN_INTERRUPTED_NOTE = (
 )
 
 bp = Blueprint("us", __name__)
+
+
+@bp.route("/us/<chamber>/uncertainty/validation")
+def uncertainty_validation(chamber: str) -> ResponseReturnValue:
+    """Display preregistered definitions without scoring or executing a model."""
+    if chamber not in ("house", "senate"):
+        abort(404)
+    return render_template(
+        "us_uncertainty_validation.html",
+        title=f"US {chamber.title()} 2026 validation",
+        chamber=chamber, readiness=validation_readiness(chamber),
+    )
 
 
 @bp.route("/us/<chamber>/uncertainty/calibration")

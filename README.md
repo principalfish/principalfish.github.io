@@ -1053,6 +1053,17 @@ Each report records source normalization, raw/decided denominator alternatives,
 exact central parity, independent kernel recovery, whole-election conditional
 holdouts, and the assumptions still requiring a decision before release.
 
+### 2026 validation preregistration
+
+The [2026 validation preregistration](data/models/us/validation-2026.md) defines
+offline House/Senate capture and scoring. The read-only console views at
+`/us/house/uncertainty/validation` and `/us/senate/uncertainty/validation` show fixed
+definitions and missing-input requirements; certified 2026 scoring and evaluation
+basis review remain pending. `scripts/validate_us_uncertainty.py` requires explicit
+database, snapshot, official-source manifest and new local output paths for the
+respective commands. It never imports results, reconstructs simulations or changes
+releases. Scoring requires an explicitly reviewed policy frozen with the snapshot.
+
 ### Model runs
 
 **Run US Models** (home page) runs House → President → Senate → export. Its

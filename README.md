@@ -1066,6 +1066,13 @@ releases. Scoring requires an explicitly reviewed policy frozen with the snapsho
 
 ### Model runs
 
+For gated uncertainty rollout, scratch isolation, timing, retained snapshots and
+separately approved live steps, see the
+[US uncertainty operations runbook](data/models/us/uncertainty-operations.md).
+All three releases remain disabled pending model-specific prerequisites; ordinary
+runs retain central-only behavior, while an explicit `--simulations` request
+requires an accepted release.
+
 **Run US Models** (home page) runs House → President → Senate → export. Its
 **Rebuild all US history** box appends `--rebuild-history` to all three runners
 (each under the long rebuild timeout), after a confirmation: one blocking request

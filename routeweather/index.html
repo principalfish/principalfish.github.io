@@ -105,7 +105,9 @@
     <section id="chartsPanel" aria-label="Charts along the route" hidden></section>
     <div id="playback" role="region" aria-label="Route playback" hidden></div>
 
-    <details id="pointsDetails" class="panel points" open hidden>
+    <!-- Collapsed by default: the summary, charts and readout cover most
+    uses; the table is the full detail. -->
+    <details id="pointsDetails" class="panel points" hidden>
       <summary>Weather points</summary>
       <p class="muted small">
         One row per sampled point. Temperature and wind are corrected from the forecast model's

@@ -303,6 +303,8 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     expect(page.state.results).toHaveLength(page.state.samples.length);
     expect(page.state.times).toHaveLength(page.state.samples.length);
     expect($("pointsDetails").hidden).toBe(false);
+    // Shown, but left collapsed until opened.
+    expect($("pointsDetails").open).toBe(false);
     expect($("chartsPanel").hidden).toBe(false);
     expect($("playback").hidden).toBe(false);
     expect(rows[0].textContent).toContain("Start");

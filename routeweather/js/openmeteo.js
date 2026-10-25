@@ -86,10 +86,20 @@ function chunk(items, size) {
   return chunks;
 }
 
-// Rethrows a timed-out request (or body read) as one clear Error.
-// AbortSignal.timeout rejects with a TimeoutError; some fetch implementations
-// surface it as a plain AbortError.
-function throwIfTimeout(err, what) {
+// A caller's abort (a newer route superseding this one) is reported as its own
+// error, named "AbortError" so callers can tell it from a timeout and ignore it.
+function abortedError(what, cause) {
+  const err = new Error(`Open-Meteo ${what} request was aborted`, { cause });
+  err.name = "AbortError";
+  return err;
+}
+
+// Rethrows a caller abort or a timed-out request (or body read) as one clear
+// Error. AbortSignal.timeout rejects with a TimeoutError; some fetch
+// implementations surface it as a plain AbortError, so the caller's own signal
+// is checked first.
+function throwIfAbortedOrTimeout(err, what, signal) {
+  if (signal?.aborted) throw abortedError(what, err);
   if (err?.name === "TimeoutError" || err?.name === "AbortError") {
     throw new Error(
       `Open-Meteo ${what} request timed out after ${REQUEST_TIMEOUT_MS / 1000} s`,
@@ -98,15 +108,93 @@ function throwIfTimeout(err, what) {
   }
 }
 
+// --- abort signals ---
+
+// Feature-detected so older browsers (AbortSignal.any: Chrome < 116, Firefox
+// < 124, Safari < 17.4; AbortSignal.timeout: Safari < 16) still work. Each
+// helper returns { signal, cleanup }; call cleanup once the request settles.
+
+const noCleanup = () => {};
+
+// Aborts with a TimeoutError after `ms`.
+function timeoutSignal(ms) {
+  if (typeof AbortSignal.timeout === "function") {
+    return { signal: AbortSignal.timeout(ms), cleanup: noCleanup };
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new DOMException("The operation timed out", "TimeoutError")),
+    ms,
+  );
+  return { signal: controller.signal, cleanup: () => clearTimeout(timer) };
+}
+
+// Aborts as soon as any of `signals` does, with that signal's reason. The
+// fallback's listeners are removed on cleanup, so a long-lived caller signal
+// doesn't collect one per request.
+function anySignal(signals) {
+  if (typeof AbortSignal.any === "function") {
+    return { signal: AbortSignal.any(signals), cleanup: noCleanup };
+  }
+  const controller = new AbortController();
+  const listeners = [];
+  for (const source of signals) {
+    if (source.aborted) {
+      controller.abort(source.reason);
+      break;
+    }
+    const onAbort = () => controller.abort(source.reason);
+    source.addEventListener("abort", onAbort, { once: true });
+    listeners.push([source, onAbort]);
+  }
+  const cleanup = () => {
+    for (const [source, onAbort] of listeners) source.removeEventListener("abort", onAbort);
+  };
+  return { signal: controller.signal, cleanup };
+}
+
+// The per-request signal: the timeout, plus the caller's signal if given.
+function requestSignal(callerSignal) {
+  const timeout = timeoutSignal(REQUEST_TIMEOUT_MS);
+  if (!callerSignal) return timeout;
+  const combined = anySignal([callerSignal, timeout.signal]);
+  return {
+    signal: combined.signal,
+    cleanup: () => {
+      combined.cleanup();
+      timeout.cleanup();
+    },
+  };
+}
+
 // GET `url` and return its JSON, turning every failure into one descriptive
 // Error. Open-Meteo reports bad requests as `{ error: true, reason }` (HTTP
 // 400), so the reason is surfaced whenever the body has one.
-async function getJson(url, fetchImpl, what) {
+//
+// `signal` (optional) is the caller's abort signal, combined with the
+// per-request timeout. `onSent` runs once the request has been handed to
+// fetch, before its response, so a caller can count the quota spent even when
+// the request then fails.
+async function getJson(url, fetchImpl, what, { signal, onSent } = {}) {
+  if (signal?.aborted) throw abortedError(what, signal.reason);
+  const request = requestSignal(signal);
+  try {
+    return await sendAndRead(url, fetchImpl, what, { signal, onSent, combined: request.signal });
+  } finally {
+    request.cleanup();
+  }
+}
+
+async function sendAndRead(url, fetchImpl, what, { signal, onSent, combined }) {
+  // The async wrapper turns a synchronous throw from fetchImpl into a
+  // rejection, so onSent still runs in order and the catch below sees it.
+  const pending = (async () => fetchImpl(url, { signal: combined }))();
+  onSent?.();
   let res;
   try {
-    res = await fetchImpl(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    res = await pending;
   } catch (err) {
-    throwIfTimeout(err, what);
+    throwIfAbortedOrTimeout(err, what, signal);
     throw new Error(`Could not reach Open-Meteo for ${what}: ${err.message}`, { cause: err });
   }
   if (res.status === 429) {
@@ -118,7 +206,7 @@ async function getJson(url, fetchImpl, what) {
   } catch (err) {
     // The timeout signal also covers reading the body, so a timeout after the
     // headers arrive surfaces here.
-    throwIfTimeout(err, what);
+    throwIfAbortedOrTimeout(err, what, signal);
     // Otherwise a non-JSON body (e.g. a proxy's HTML error page): reported below.
   }
   const reason = body && body.error ? `: ${body.reason ?? "unknown error"}` : "";
@@ -131,10 +219,18 @@ async function getJson(url, fetchImpl, what) {
 // Hourly forecast for every sample over `range` ({ startHour, endHour }, epoch
 // ms). Returns one normalised location (see normaliseLocation) per sample, in
 // sample order.
-export async function fetchForecast(samples, range, fetchImpl = fetch) {
+//
+// Options: `signal` aborts the remaining requests (rejecting with an Error
+// named "AbortError"); `onRequest({ locations })` is called as each chunk's
+// request is sent, with that chunk's location count, for usage accounting.
+export async function fetchForecast(samples, range, fetchImpl = fetch, options = {}) {
+  const { signal, onRequest } = options;
   const locations = [];
   for (const part of chunk(samples, CHUNK_SIZE)) {
-    const json = await getJson(buildForecastUrl(part, range), fetchImpl, "forecast");
+    const json = await getJson(buildForecastUrl(part, range), fetchImpl, "forecast", {
+      signal,
+      onSent: () => onRequest?.({ locations: part.length }),
+    });
     // A single-location request returns a bare object rather than an array.
     const list = Array.isArray(json) ? json : [json];
     if (list.length !== part.length) {
@@ -156,11 +252,15 @@ export async function fetchForecast(samples, range, fetchImpl = fetch) {
 }
 
 // Terrain elevation (m) for each `{ lat, lon }` point, in order. NaN where the
-// API has no value.
-export async function fetchElevations(points, fetchImpl = fetch) {
+// API has no value. Options as for fetchForecast.
+export async function fetchElevations(points, fetchImpl = fetch, options = {}) {
+  const { signal, onRequest } = options;
   const elevations = [];
   for (const part of chunk(points, ELEVATION_CHUNK_SIZE)) {
-    const json = await getJson(buildElevationUrl(part), fetchImpl, "elevation");
+    const json = await getJson(buildElevationUrl(part), fetchImpl, "elevation", {
+      signal,
+      onSent: () => onRequest?.({ locations: part.length }),
+    });
     const list = json.elevation;
     if (!Array.isArray(list) || list.length !== part.length) {
       const got = Array.isArray(list) ? list.length : 0;

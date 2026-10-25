@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
 
 import {
   buildForecastUrl, buildElevationUrl, fetchForecast, fetchElevations, normaliseLocation,
@@ -235,6 +235,137 @@ describe("fetchForecast", () => {
   });
 });
 
+describe("fetchForecast options", () => {
+  it("calls onRequest as each chunk is sent, with its location count", async () => {
+    const mock = forecastFetch();
+    const sent = [];
+    await fetchForecast(samplesN(CHUNK_SIZE + 1), RANGE, mock.impl, {
+      onRequest: (info) => sent.push(info),
+    });
+    expect(sent).toEqual([{ locations: CHUNK_SIZE }, { locations: 1 }]);
+  });
+
+  it("still reports a request that then fails", async () => {
+    const sent = [];
+    const impl = async () => new Response("", { status: 429 });
+    await expect(fetchForecast(samplesN(2), RANGE, impl, { onRequest: (i) => sent.push(i) }))
+      .rejects.toThrow(/rate limited/);
+    expect(sent).toEqual([{ locations: 2 }]);
+  });
+
+  it("sends nothing once the caller's signal is aborted", async () => {
+    const mock = forecastFetch();
+    const controller = new AbortController();
+    controller.abort();
+    const onRequest = vi.fn();
+    const err = await fetchForecast(samplesN(1), RANGE, mock.impl, {
+      signal: controller.signal,
+      onRequest,
+    }).catch((e) => e);
+    expect(err.name).toBe("AbortError");
+    expect(err.message).toMatch(/forecast request was aborted/);
+    expect(mock.calls).toHaveLength(0);
+    expect(onRequest).not.toHaveBeenCalled();
+  });
+
+  it("reports a caller abort mid-request as aborted, not timed out", async () => {
+    const controller = new AbortController();
+    let seen;
+    const impl = (url, { signal }) => new Promise((resolve, reject) => {
+      seen = signal;
+      signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+    });
+    const pending = fetchForecast(samplesN(1), RANGE, impl, { signal: controller.signal });
+    controller.abort();
+    const err = await pending.catch((e) => e);
+    expect(seen.aborted).toBe(true);
+    expect(err.name).toBe("AbortError");
+    expect(err.message).toMatch(/aborted/);
+    expect(err.message).not.toMatch(/timed out/);
+  });
+
+  it("keeps the timeout on a combined signal", async () => {
+    const mock = forecastFetch();
+    await fetchForecast(samplesN(1), RANGE, mock.impl, { signal: new AbortController().signal });
+    expect(mock.calls[0].signal).toBeInstanceOf(AbortSignal);
+    expect(mock.calls[0].signal.aborted).toBe(false);
+  });
+});
+
+// Older browsers lack AbortSignal.any / AbortSignal.timeout; the client
+// falls back to its own controllers.
+describe("without AbortSignal.any and AbortSignal.timeout", () => {
+  const { any, timeout } = AbortSignal;
+  beforeEach(() => {
+    AbortSignal.any = undefined;
+    AbortSignal.timeout = undefined;
+  });
+  afterEach(() => {
+    AbortSignal.any = any;
+    AbortSignal.timeout = timeout;
+    vi.useRealTimers();
+  });
+
+  // Fetch that settles only when its signal aborts, with the signal's reason.
+  const hangingFetch = (url, { signal }) => new Promise((resolve, reject) => {
+    signal.addEventListener("abort", () => reject(signal.reason));
+  });
+
+  it("still loads, with and without a caller signal", async () => {
+    const mock = forecastFetch();
+    const controller = new AbortController();
+    const locations = await fetchForecast(samplesN(CHUNK_SIZE + 1), RANGE, mock.impl, {
+      signal: controller.signal,
+    });
+    expect(locations).toHaveLength(CHUNK_SIZE + 1);
+    for (const call of mock.calls) expect(call.signal.aborted).toBe(false);
+    expect(await fetchForecast(samplesN(1), RANGE, mock.impl)).toHaveLength(1);
+  });
+
+  it("reports a caller abort as aborted", async () => {
+    const controller = new AbortController();
+    const pending = fetchForecast(samplesN(1), RANGE, hangingFetch, { signal: controller.signal });
+    controller.abort();
+    const err = await pending.catch((e) => e);
+    expect(err.name).toBe("AbortError");
+    expect(err.message).toMatch(/forecast request was aborted/);
+  });
+
+  it("times out, and clears its timer once a request settles", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const pending = fetchForecast(samplesN(1), RANGE, hangingFetch, { signal: controller.signal })
+      .catch((e) => e);
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
+    const err = await pending;
+    expect(err.message).toMatch(`timed out after ${REQUEST_TIMEOUT_MS / 1000} s`);
+
+    const quick = async (url) => jsonResponse(fakeLocation(50, -3));
+    await fetchForecast(samplesN(1), RANGE, quick);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("leaves no listeners on the caller's signal across chunks", async () => {
+    const controller = new AbortController();
+    const { signal } = controller;
+    let active = 0;
+    const add = signal.addEventListener.bind(signal);
+    const remove = signal.removeEventListener.bind(signal);
+    signal.addEventListener = (...args) => { active++; add(...args); };
+    signal.removeEventListener = (...args) => { active--; remove(...args); };
+
+    const mock = forecastFetch();
+    await fetchForecast(samplesN(CHUNK_SIZE * 2 + 1), RANGE, mock.impl, { signal });
+    expect(mock.calls).toHaveLength(3);
+    expect(active).toBe(0);
+
+    // Also after a failed request.
+    const limited = async () => new Response("", { status: 429 });
+    await expect(fetchForecast(samplesN(1), RANGE, limited, { signal })).rejects.toThrow();
+    expect(active).toBe(0);
+  });
+});
+
 describe("normaliseLocation", () => {
   const [upland, lowland] = FIXTURE.map(normaliseLocation);
 
@@ -337,5 +468,21 @@ describe("fetchElevations", () => {
     await expect(fetchElevations(samplesN(1), bad)).rejects.toThrow(/Too many coordinates/);
     const limited = async () => new Response("", { status: 429 });
     await expect(fetchElevations(samplesN(1), limited)).rejects.toThrow(/try again in a minute/);
+  });
+
+  it("supports onRequest and an abort signal", async () => {
+    const sent = [];
+    const impl = async (url) => (
+      jsonResponse({ elevation: listParam(url, "latitude").map(() => 1) })
+    );
+    await fetchElevations(samplesN(ELEVATION_CHUNK_SIZE + 1), impl, {
+      onRequest: (info) => sent.push(info),
+    });
+    expect(sent).toEqual([{ locations: ELEVATION_CHUNK_SIZE }, { locations: 1 }]);
+
+    const controller = new AbortController();
+    controller.abort();
+    await expect(fetchElevations(samplesN(1), impl, { signal: controller.signal }))
+      .rejects.toThrow(/elevation request was aborted/);
   });
 });

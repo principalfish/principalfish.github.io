@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Route Weather</title>
+  <meta name="description"
+    content="See the forecast weather at each point of a GPX route when you get there." />
+  <link rel="icon" type="image/png" href="/imgs/logo.png" />
+  <script src="../site/ga-setup.js"></script>
+  <link rel="stylesheet" href="../site/topbar.min.css">
+  <link rel="stylesheet" href="css/routeweather.css">
+</head>
+<body data-topbar-back-href="../">
+  <header>
+    <h1>Route Weather</h1>
+  </header>
+  <main>
+    <section class="panel inputs" aria-label="Route and plan">
+      <label id="dropZone" class="drop-zone" for="gpxFile">
+        <input type="file" id="gpxFile" accept=".gpx,application/gpx+xml,application/xml,text/xml">
+        <span class="drop-title">Choose a GPX file</span>
+        <span class="muted small">or drop one here</span>
+      </label>
+
+      <fieldset class="field">
+        <legend class="field-label">Activity</legend>
+        <div class="segmented">
+          <label><input type="radio" name="activity" value="walk"> Walk</label>
+          <label><input type="radio" name="activity" value="run"> Run</label>
+          <label><input type="radio" name="activity" value="cycle"> Cycle</label>
+          <label><input type="radio" name="activity" value="custom"> Custom</label>
+        </div>
+      </fieldset>
+
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">Average speed (<span id="speedUnit">km/h</span>)</span>
+          <input type="number" id="speedInput" inputmode="decimal" step="0.1" min="0">
+        </label>
+        <label class="field">
+          <span class="field-label">Start (your local time)</span>
+          <input type="datetime-local" id="startInput" step="60">
+        </label>
+      </div>
+
+      <fieldset class="field">
+        <legend class="field-label">Units</legend>
+        <div class="segmented">
+          <label><input type="radio" name="units" value="metric"> Metric</label>
+          <label><input type="radio" name="units" value="imperial"> Imperial</label>
+        </div>
+      </fieldset>
+
+      <div class="status-row">
+        <p id="status" class="status muted" role="status" aria-live="polite"
+          tabindex="-1">Choose a GPX file to get started.</p>
+        <button type="button" id="retryButton" class="secondary" hidden>Retry</button>
+      </div>
+      <!-- Always rendered (empty when there is no error) so the live region is
+           announced when text appears; CSS collapses it while empty. -->
+      <p id="planError" class="status error" role="status"></p>
+    </section>
+
+    <section id="summary" class="panel summary" hidden>
+      <h2 id="routeName"></h2>
+      <dl id="summaryList" class="summary-list"></dl>
+    </section>
+
+    <!-- Mount points for the map (piece 6) and charts + playback (piece 7). -->
+    <section id="mapPanel" hidden></section>
+    <section id="chartsPanel" hidden></section>
+    <div id="playback" hidden></div>
+
+    <details id="pointsDetails" class="panel points" open hidden>
+      <summary>Weather points</summary>
+      <p class="muted small">
+        One row per sampled point. Temperature and wind are corrected from the forecast model's
+        grid cell to the route's own elevation; the model columns show the uncorrected values.
+      </p>
+      <div class="table-scroll">
+        <table id="pointsTable" class="points-table">
+          <caption class="sr-only">Forecast weather at each sampled point along the route</caption>
+          <thead>
+            <tr>
+              <th>Distance</th>
+              <th>Arrival</th>
+              <th>Elevation</th>
+              <th>Point</th>
+              <th>Weather</th>
+              <th>Temp</th>
+              <th>Wind (from)</th>
+              <th>Gust</th>
+              <th>Head / tail</th>
+              <th>Cross</th>
+              <th>Rain</th>
+              <th>Model 10 m wind</th>
+              <th>Forecast cell</th>
+              <th>Model cell elevation</th>
+            </tr>
+          </thead>
+          <tbody id="pointsBody"></tbody>
+        </table>
+      </div>
+    </details>
+  </main>
+  <footer>
+    <p id="attribution" class="small muted"></p>
+    <p class="small muted">
+      Your route stays in your browser; only the sampled point coordinates are sent to
+      Open-Meteo to get the forecast.
+    </p>
+  </footer>
+  <script type="module" src="../site/topbar.min.js"></script>
+  <script type="module" src="js/entry.js"></script>
+</body>
+</html>

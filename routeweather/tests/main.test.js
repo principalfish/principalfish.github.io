@@ -315,6 +315,19 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     expect(() => page.mapView.setPosition(page.state.route.totalDistKm / 2)).not.toThrow();
   });
 
+  it("moves the readout and slider together when playback ticks", async () => {
+    const { page } = startPage();
+    await loadRoute(page);
+
+    const distance = () => $("playback").querySelector(".readout-distance dd").textContent;
+    const slider = () => $("playback").querySelector("input[type=range]");
+    const before = distance();
+    page.playback.tick(0.5);
+    expect(distance()).not.toBe(before);
+    expect(Number(slider().value)).toBe(500);
+    expect(slider().getAttribute("aria-valuetext")).toContain("km");
+  });
+
   it("shows each point's forecast cell and its offset", async () => {
     const { page } = startPage();
     await loadRoute(page);
@@ -326,6 +339,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     const col = headers.indexOf("Forecast cell");
     expect(col).toBeGreaterThan(-1);
     expect(headers[col + 1]).toBe("Model cell elevation");
+    expect(headers).not.toContain("Model 10 m wind");
 
     expect(page.state.cells).toHaveLength(page.state.samples.length);
     for (const cell of page.state.cells) {

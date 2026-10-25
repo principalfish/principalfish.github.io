@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="../site/vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/routeweather.css">
   <link rel="stylesheet" href="css/map.css">
+  <link rel="stylesheet" href="css/playback.css">
 </head>
 <body data-topbar-back-href="../">
   <header>
@@ -71,8 +72,8 @@
 
     <!-- Map, charts and playback panels; main.js shows them as data arrives. -->
     <section id="mapPanel" class="panel map-panel" aria-label="Route map" hidden></section>
-    <section id="chartsPanel" hidden></section>
-    <div id="playback" hidden></div>
+    <section id="chartsPanel" aria-label="Charts along the route" hidden></section>
+    <div id="playback" role="region" aria-label="Route playback" hidden></div>
 
     <details id="pointsDetails" class="panel points" open hidden>
       <summary>Weather points</summary>
@@ -96,7 +97,6 @@
               <th>Head / tail</th>
               <th>Cross</th>
               <th>Rain</th>
-              <th>Model 10 m wind</th>
               <th>Forecast cell</th>
               <th>Model cell elevation</th>
             </tr>

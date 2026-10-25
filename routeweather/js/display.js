@@ -14,7 +14,9 @@ const COMPASS_16 = [
 const COMPASS_8 = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
 const pad2 = (n) => String(n).padStart(2, "0");
-const isFiniteNumber = (v) => typeof v === "number" && Number.isFinite(v);
+// A real number: not NaN, ±Infinity, null or a numeric string. Shared by the
+// playback modules.
+export const isFiniteNumber = (v) => typeof v === "number" && Number.isFinite(v);
 
 // --- time ---
 

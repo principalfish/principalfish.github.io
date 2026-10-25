@@ -114,7 +114,6 @@ function pointRow(doc, state, i) {
     el(doc, "td", formatHeadWind(w.headKmh, units)),
     el(doc, "td", formatCrossWind(w.crossKmh, units)),
     el(doc, "td", `${formatPrecip(w.precipMm, units)} · ${rainChance}`),
-    el(doc, "td", formatSpeed(w.model10mWindKmh, units)),
     el(doc, "td", formatCell(cells[i], units)),
     el(doc, "td", formatElevation(w.cellElev, units)),
   );

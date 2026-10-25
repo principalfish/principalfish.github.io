@@ -47,6 +47,7 @@ import { formatDateTime, formatDuration } from "./display.js";
 import { createFormUI } from "./form-view.js";
 import { createPointsTableUI, createSummaryUI } from "./results-view.js";
 import { createMapUI } from "./map-view.js";
+import { createPlaybackController } from "./playback-controller.js";
 
 // Larger GPX files are rejected before reading: a multi-day track is a few MB,
 // and parsing hundreds of MB of XML would hang the tab.
@@ -426,6 +427,13 @@ export function init({
   // first measures itself.
   const mapView = createMapUI($("mapPanel"));
   addView(mapView.update);
+  // After the map, so each playback tick lands after the map's own update.
+  const playback = createPlaybackController({
+    mapView,
+    chartsEl: $("chartsPanel"),
+    playbackEl: $("playback"),
+  });
+  addView(playback.update);
 
   // A constant string from config.js, not user input.
   $("attribution").innerHTML = OPEN_METEO_ATTRIBUTION;
@@ -435,5 +443,5 @@ export function init({
   recompute();
   render("load");
 
-  return { state, addView, render, recompute, mapView };
+  return { state, addView, render, recompute, mapView, playback };
 }

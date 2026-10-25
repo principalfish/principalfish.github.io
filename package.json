@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "vendor:d3": "esbuild node_modules/d3/src/index.js --bundle --format=esm --platform=browser --minify --outfile=site/vendor/d3.v7.esm.js",
+    "vendor:leaflet": "esbuild node_modules/leaflet/dist/leaflet-src.esm.js --bundle --format=esm --platform=browser --minify --outfile=site/vendor/leaflet/leaflet.esm.js && cp node_modules/leaflet/dist/leaflet.css site/vendor/leaflet/leaflet.css && mkdir -p site/vendor/leaflet/images && cp node_modules/leaflet/dist/images/* site/vendor/leaflet/images/",
     "minify:electionmaps": "esbuild electionmaps/electionmaps.js --bundle --format=esm --platform=browser --minify-syntax --minify-whitespace --external:'*/d3.v7.esm.js' --external:'*/topojson-client.v3.esm.js' --outfile=electionmaps/electionmaps.min.js && esbuild uselectionmaps/uselectionmaps.js --bundle --format=esm --platform=browser --minify-syntax --minify-whitespace --external:'*/d3.v7.esm.js' --external:'*/topojson-client.v3.esm.js' --outfile=uselectionmaps/uselectionmaps.min.js && esbuild electionmapslogic/shell-loader.js --bundle --format=esm --platform=browser --minify-syntax --minify-whitespace --outfile=electionmapslogic/shell-loader.min.js && terser electionmapslogic/mobile-sidebar.js --compress --mangle --output electionmapslogic/mobile-sidebar.min.js && terser site/topbar.js --compress --mangle --output site/topbar.min.js && cleancss -O2 -o electionmapslogic/maps.min.css electionmapslogic/maps.css && cleancss -O2 -o electionmapslogic/mobile-sidebar.min.css electionmapslogic/mobile-sidebar.css && cleancss -O2 -o site/styles.min.css site/styles.css && cleancss -O2 -o site/topbar.min.css site/topbar.css",
     "test": "vitest run",
     "benchmark:referdle": "node referdle-solver/benchmarks/runner.mjs",
@@ -14,7 +15,9 @@
     "clean-css-cli": "^5.6.3",
     "d3": "^7.9.0",
     "esbuild": "^0.28.2",
+    "jsdom": "^24.1.3",
+    "leaflet": "^1.9.4",
     "terser": "^5.39.0",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   }
 }

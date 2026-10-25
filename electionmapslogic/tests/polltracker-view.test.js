@@ -60,6 +60,7 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
     ], mapModes: {}, files: {}, parliamentFeatures: { us_house: {
       polltrackerDataPath: "results/us-house-trends.json", polltrackerDefaultParties: [20, 21],
     }, us_senate: {
+      uncertaintyModel: "senate",
       polltrackerDataPath: "results/us-senate-trends.json", polltrackerDefaultParties: [20, 21],
     }, us_presidential: {
       polltrackerDataPath: "results/us-president-trends.json", polltrackerDefaultParties: [20, 21],
@@ -155,7 +156,9 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
 
   it("explains unavailable legacy full Senate history without plotting contested seats", async () => {
     state.currentParliament = "us_senate";
-    fetchJson.mockResolvedValue(senateHistory({ known: false }));
+    fetchJson.mockResolvedValue(JSON.parse(readFileSync(
+      new URL("../../data/tests/fixtures/us_uncertainty/senate-legacy-trend.json", import.meta.url), "utf8",
+    )));
     await view.activatePollTrackerMode();
     expect(state.pollTrackerData.seriesByParty.size).toBe(0);
     expect(document.getElementById("mapsPollTrackerUncertaintyNote").hidden).toBe(false);

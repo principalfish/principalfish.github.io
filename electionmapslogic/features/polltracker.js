@@ -67,8 +67,8 @@ function optionalFields(party, hasUncertainty) {
  * }} Chart-ready timeline and per-party series.
  */
 export function parsePollTrackerData(data, model = null) {
-  if (Array.isArray(data) && model === "president") {
-    data = { schema: "pf-us-model-trends-v1", model: "president", points: data };
+  if (Array.isArray(data) && ["president", "senate"].includes(model)) {
+    data = { schema: "pf-us-model-trends-v1", model, points: data };
   }
   const us = !Array.isArray(data) ? houseTrackerEntries(data) ?? senateTrackerEntries(data) ?? presidentTrackerEntries(data) : null;
   const descriptor = us?.descriptor ?? WESTMINSTER_DESCRIPTOR;

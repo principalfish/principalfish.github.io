@@ -2146,7 +2146,10 @@ export function wireInit() {
   wireMapViewControls();
   wireSeatSearch();
   wireVoteTotalsToggle();
-  wireUncertaintyToggle(uncertaintyToggle, state, renderVoteTotals);
+  wireUncertaintyToggle(uncertaintyToggle, state, () => {
+    renderVoteTotals();
+    refreshOpenSeatPopup();
+  });
   wireVoteTotalsCollapse();
   wireVoteTotalsSorting();
   wireWindowResize();

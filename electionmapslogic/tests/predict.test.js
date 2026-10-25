@@ -593,6 +593,28 @@ describe('SenatePredict (seats-up projection + full-chamber composition)', () =>
     expect(gamma.winner).toBe('republican');
   });
 
+  it("uses a configured Class 3 for the interactive full-chamber projection", () => {
+    const model = new SenatePredict(2028, { ...config, regularClass: 3 });
+    const chamber = buildChamberSeats();
+    chamber.forEach((seat) => seat.members.forEach((member) => {
+      if (member.class === 2) member.class = 3;
+      else if (member.class === 3) member.class = 2;
+    }));
+    model.setChamberSeats(chamber);
+    model.setActiveTab("chamber");
+    model.setShare("national", "democrat", 60);
+    model.setShare("national", "republican", 40);
+    const projected = model.project();
+    const alpha = projected.find((seat) => seat.seat === "Alpha");
+    expect(alpha.members.find((member) => member.class === 3))
+      .toMatchObject({ party: "democrat", forecastStatus: "contested" });
+    expect(alpha.members.find((member) => member.class === 1))
+      .toMatchObject({ party: "democrat", forecastStatus: "holdover" });
+    const beta = projected.find((seat) => seat.seat === "Beta");
+    expect(beta.members.find((member) => member.class === 2))
+      .toMatchObject({ name: "Beta D3", forecastStatus: "holdover" });
+  });
+
   it('comparisonSeatsForView targets the 2020 base for seats-up, the current chamber for Full Senate', () => {
     const model = new SenatePredict(2026, config);
     model.setChamberSeats(buildChamberSeats());

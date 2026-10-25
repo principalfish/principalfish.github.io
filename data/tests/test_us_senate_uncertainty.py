@@ -32,7 +32,7 @@ from tests.console_fixtures import app
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models/us"))
 from _common import (
     UsModelSpec, UsSimulationConfig, database_file, freeze_house_central_inputs,
-    prepare_us_projection, run_simulation,
+    main_for_spec, prepare_us_projection, run_simulation,
 )
 
 TODAY = date(2026, 10, 19)
@@ -468,3 +468,66 @@ def test_invalid_central_roster_cannot_supply_full_history(
     entry = reconstruct_trends(database_file(db), scope)[0]
     assert entry["metrics"] == {} and entry["context"] is None
     assert entry["summary"] is None and "central_basis" not in entry
+
+
+@pytest.mark.parametrize("no_uncertainty", [True, False])
+def test_cli_binds_senate_field_before_poll_endpoint_and_cached_window(
+    db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    no_uncertainty: bool,
+) -> None:
+    cfg = _world(db, tmp_path)
+    with db.session() as session:
+        map_id = session.scalar(select(Seat.map_id).limit(1))
+        parties = [
+            party for party in session.scalars(select(Vote.party_id).distinct())
+            if party is not None
+        ]
+    assert map_id is not None
+    california = db.add_seat(map_id, "California")
+    pollster = db.add_pollster("Synthetic local", "synthetic-local")
+    off_field = db.add_poll(
+        pollster.id, map_id, TODAY + timedelta(days=1), TODAY + timedelta(days=1),
+        seat_id=california.id, matchup="Synthetic D vs R", sample_size=1000,
+        evidence_kind="individual_poll", population_type="LV",
+    )
+    db.set_tracked_matchup(map_id, california.id, "Synthetic D vs R", source="manual")
+    for party, share in zip(parties, (55, 45)):
+        db.add_poll_row(off_field.id, party, share)
+    earlier = db.add_poll(
+        pollster.id, map_id, date(2026, 8, 15), date(2026, 8, 15),
+        evidence_kind="aggregate_estimate",
+        evidence_source="https://example.org/synthetic-older-average",
+    )
+    for party, share in zip(parties, (40, 55)):
+        db.add_poll_row(earlier.id, party, share)
+    # The capped window begins twelve days earlier than the request's window.
+    # Its cached contributors must match a fresh direct run at that capped date.
+    args = ["senate", "--as-of-date", "2026-10-21", "--since-date", "2026-08-22"]
+    args += ["--no-uncertainty"] if no_uncertainty else ["--simulations", "31"]
+    monkeypatch.setattr(sys, "argv", args)
+    assert main_for_spec(cfg.spec, lambda: db) == 0
+    metadata = json.loads(cfg.spec.trend_cache_meta_json.read_text())
+    assert "2026-10-09" in json.dumps(metadata)
+    assert "2026-10-20" not in json.dumps(metadata)
+    direct = prepare_us_projection(db, replace(
+        cfg, as_of_date=date(2026, 10, 9), since_date=date(2026, 8, 10),
+    ))
+    with db.session() as session:
+        election = session.scalar(select(Election).where(
+            Election.type == ElectionType.us_senate_model,
+        ))
+        assert election is not None
+        rows = list(session.execute(
+            select(Vote.seat_id, Vote.party_id, Vote.vote_total)
+            .where(Vote.election_id == election.id),
+        ))
+    assert sorted(rows) == sorted(
+        (row["seat_id"], row["party_id"], row["vote_total"])
+        for row in direct.projected_votes
+    )
+    assert california.id not in {row[0] for row in rows}
+    if not no_uncertainty:
+        document = _saved(db, cfg).national
+        inputs = restore_run_inputs(document)
+        assert len(inputs.seats) == 35
+        assert california.id not in {seat.seat_id for seat in inputs.seats}

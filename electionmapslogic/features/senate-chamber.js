@@ -3,15 +3,16 @@ import { seatLookupKey } from '../utils.js';
 
 /**
  * Merges contested winners into the current Senate while carrying over other members.
- * The regular 2026 election replaces Class 2; special elections specify another class.
+ * The saved regular class is replaced; special elections specify another class.
  * State colours represent a shared party or a split delegation, and chamber seats have
  * no vote totals because carried-over senators did not stand in this election.
  * @param {Seat[]} chamberSeats
  * @param {Seat[]} contestedSeats
  * @param {Map<string, number>} [specialClassBySeat] - Normalised state key → contested class.
+ * @param {number} [regularClass] - Saved regular class; legacy 2026 defaults to Class 2.
  * @returns {Seat[]}
  */
-export function buildSenateChamber(chamberSeats, contestedSeats, specialClassBySeat = new Map()) {
+export function buildSenateChamber(chamberSeats, contestedSeats, specialClassBySeat = new Map(), regularClass = 2) {
   if (!chamberSeats.length) return contestedSeats;
   const winnerByState = new Map();
   contestedSeats.forEach((seat) => winnerByState.set(seatLookupKey(seat.seat), seat.winner));
@@ -19,7 +20,7 @@ export function buildSenateChamber(chamberSeats, contestedSeats, specialClassByS
   return chamberSeats.map((seat) => {
     const seatKey = seatLookupKey(seat.seat);
     const projectedWinner = winnerByState.get(seatKey);
-    const contestedClass = specialClassBySeat.get(seatKey) ?? 2;
+    const contestedClass = specialClassBySeat.get(seatKey) ?? regularClass;
     const members = (seat.members || []).map((member) => {
       if (Number(member?.class) !== contestedClass || !projectedWinner) return { ...member, forecastStatus: "holdover" };
       return { ...member, forecastStatus: "contested", party: projectedWinner, name: `${manifest.labelParty(projectedWinner)} (projected)` };

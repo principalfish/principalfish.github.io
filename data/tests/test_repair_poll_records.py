@@ -908,3 +908,98 @@ class TestCorrections:
         assert "3 change, 0 unchanged, 0 skip" in out
         with closing(sqlite3.connect(live_path)) as conn:
             assert _poll(conn, 271)[2] == 367
+
+
+@pytest.mark.parametrize("mutation", [
+    "start", "end", "source", "map", "pollster", "deleted", "reused", "shares",
+])
+def test_repair_revalidates_full_identity_atomically(
+    conn: sqlite3.Connection, seeded: Seeded, mutation: str,
+) -> None:
+    repairs = plan_repairs(conn, fake_fetch)
+    poll_id = seeded.techne["good"]
+    if mutation in {"start", "end", "source"}:
+        column, value = {
+            "start": ("fieldwork_start", "2026-02-03"),
+            "end": ("fieldwork_end", "2026-02-06"),
+            "source": ("source_url", "https://example.org/replaced.pdf"),
+        }[mutation]
+        conn.execute(f"UPDATE polls SET {column} = ? WHERE id = ?", (value, poll_id))
+    elif mutation == "map":
+        conn.execute(
+            "UPDATE polls SET map_id = "
+            "(SELECT map_id FROM polls WHERE id = ?) WHERE id = ?",
+            (seeded.bmg_other_map, poll_id),
+        )
+    elif mutation == "pollster":
+        conn.execute(
+            "UPDATE polls SET pollster_id = "
+            "(SELECT pollster_id FROM polls WHERE id = ?) WHERE id = ?",
+            (seeded.bmg_good, poll_id),
+        )
+    elif mutation in {"deleted", "reused"}:
+        row = list(conn.execute(
+            "SELECT * FROM polls WHERE id = ?", (poll_id,),
+        ).fetchone())
+        conn.execute("DELETE FROM polls WHERE id = ?", (poll_id,))
+        if mutation == "reused":
+            columns = [row[1] for row in conn.execute("PRAGMA table_info(polls)")]
+            row[columns.index("source_url")] = "https://example.org/new-survey.pdf"
+            placeholders = ",".join("?" for _ in row)
+            conn.execute(f"INSERT INTO polls VALUES ({placeholders})", row)
+    else:
+        party_id = conn.execute("SELECT id FROM parties LIMIT 1").fetchone()
+        if party_id is None:
+            conn.execute("INSERT INTO parties (name) VALUES ('Synthetic')")
+            party_id = conn.execute("SELECT id FROM parties LIMIT 1").fetchone()
+        conn.execute(
+            "INSERT INTO poll_rows (poll_id, party_id, percentage) "
+            "VALUES (?, ?, 40)",
+            (poll_id, party_id[0]),
+        )
+    conn.commit()
+    before = _samples(conn)
+    with pytest.raises(StaleRowError, match=f"poll {poll_id}"):
+        apply_repairs(conn, repairs)
+    assert _samples(conn) == before
+
+
+def test_repair_detects_identity_change_during_pdf_fetch(
+    conn: sqlite3.Connection, seeded: Seeded,
+) -> None:
+    def changed_fetch(url: str) -> str:
+        conn.execute(
+            "UPDATE polls SET source_url = ? WHERE id = ?",
+            ("https://example.org/changed.pdf", seeded.techne["good"]),
+        )
+        conn.commit()
+        return fake_fetch(url)
+
+    repairs = plan_repairs(conn, changed_fetch)
+    before = _samples(conn)
+    with pytest.raises(StaleRowError):
+        apply_repairs(conn, repairs)
+    assert _samples(conn) == before
+
+
+def test_repair_validates_same_poll_multiple_corrections_before_writing(
+    conn: sqlite3.Connection, seeded: Seeded,
+) -> None:
+    poll_id = seeded.yougov_mrp
+    head = conn.execute(
+        "SELECT sample_size, fieldwork_start FROM polls WHERE id = ?", (poll_id,),
+    ).fetchone()
+    corrections = [
+        Correction(poll_id, "yougov", "sample_size", head[0], 1500, "synthetic"),
+        Correction(
+            poll_id, "yougov", "fieldwork_start", head[1], "2024-01-01", "synthetic",
+        ),
+    ]
+    repairs = [
+        repair for repair in plan_repairs(conn, fake_fetch, corrections)
+        if repair.poll_id == poll_id
+    ]
+    assert apply_repairs(conn, repairs) == 2
+    assert conn.execute(
+        "SELECT sample_size, fieldwork_start FROM polls WHERE id = ?", (poll_id,),
+    ).fetchone() == (1500, "2024-01-01")

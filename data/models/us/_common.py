@@ -3428,10 +3428,18 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
         parser.error(str(err))
     db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
 
-    # Resolved first, so a president with no matchup writes no election, no trend
-    # entry and no meta file.
+    # Bind the dated field before selecting contributors or the as-of endpoint.
+    # A president with no matchup still writes no outputs.
+    cfg = (
+        None if args.start_date and args.end_date
+        else _build_config_from_args(spec, args)
+    )
+    scope_spec = (
+        spec_for_date(spec, date.fromisoformat(args.start_date))
+        if cfg is None else cfg.spec
+    )
     try:
-        scope = resolve_poll_scope(db, spec)
+        scope = resolve_poll_scope(db, scope_spec)
     except TrackedMatchupMissing as exc:
         print(f"ERROR {exc}", file=sys.stderr)
         return 2
@@ -3445,8 +3453,7 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
         run_retrospective(db, spec, args)
         return 0
 
-    cfg = _build_config_from_args(spec, args)
-
+    assert cfg is not None
     first_poll, latest_end, selected_polls = candidate_poll_date_bounds(
         db,
         scope,

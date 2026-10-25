@@ -333,6 +333,7 @@ def test_export_metadata_uses_forecast_cycle_not_export_clock() -> None:
         features = output["parliamentFeatures"]
         senate = features["us_senate"]
         assert senate["nextElectionYear"] == year
+        assert senate["predict"]["regularClass"] == cycle.regular_class
         modes = build_map_modes_with_regions(output["mapModes"], {}, current_year=2035,
                                              parliament_features=features)
         assert modes["23"]["senateClassNextElection"][str(cycle.regular_class)] == year
@@ -496,3 +497,19 @@ def test_latest_senate_export_does_not_fall_back_to_a_custom_map(db: Database) -
     )
     with db.session() as session:
         assert latest_senate_run(session) is None
+
+
+def test_cli_retrospective_does_not_bind_today_outside_pinned_cycles(
+    db: Database, senate_world: UsModelSpec, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class LaterDate(date):
+        @classmethod
+        def today(cls) -> LaterDate:
+            return cls(2035, 1, 1)
+
+    monkeypatch.setattr(_common, "date", LaterDate)
+    monkeypatch.setattr(sys, "argv", [
+        "senate", "--start-date", "2026-10-19", "--end-date", "2026-10-19",
+        "--dry-run", "--no-uncertainty",
+    ])
+    assert _common.main_for_spec(senate_world, lambda: db) == 0

@@ -117,10 +117,12 @@ def configure_senate_forecast(
         return result
     # No known counting context means no derived full-chamber view.
     predict.pop("chamberElectionId", None)
+    predict.pop("regularClass", None)
     predict["tabs"] = [{"key": "seatsup", "label": "Seats up"}]
     if forecast is None:
         return result
     year = forecast["targetYear"]
+    predict["regularClass"] = forecast["regularClass"]
     feature["nextElectionYear"] = year
     feature["nextElectionDate"] = forecast["nextElectionDate"]
     feature["predictBaselineElectionId"] = forecast["baselineElectionId"]

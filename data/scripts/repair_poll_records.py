@@ -59,7 +59,7 @@ import sys
 from collections import Counter
 from collections.abc import Callable, Sequence
 from contextlib import closing
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
 from typing import Literal
@@ -196,6 +196,7 @@ class Repair:
     status: Status
     note: str = ""
     column: Column = "sample_size"
+    snapshot: tuple[object, ...] | None = field(default=None, compare=False)
 
     def line(self) -> str:
         """Return the poll as one row of the report table."""
@@ -391,6 +392,17 @@ def _plan_correction(conn: sqlite3.Connection, correction: Correction) -> Repair
     return result("change", current, correction.new, correction.source)
 
 
+def _poll_snapshot(conn: sqlite3.Connection, poll_id: int) -> tuple[object, ...] | None:
+    """Bind source evidence to the complete poll head and its recorded shares."""
+    head = conn.execute("SELECT * FROM polls WHERE id = ?", (poll_id,)).fetchone()
+    if head is None:
+        return None
+    shares = conn.execute(
+        "SELECT * FROM poll_rows WHERE poll_id = ? ORDER BY id", (poll_id,),
+    ).fetchall()
+    return tuple(head), tuple(tuple(row) for row in shares)
+
+
 def plan_repairs(
     conn: sqlite3.Connection,
     fetch_pdf_text: PdfFetcher = techne_import.extract_pdf_text,
@@ -414,7 +426,7 @@ def plan_repairs(
     """
     rows = conn.execute(
         "SELECT pl.identifier, p.id, p.fieldwork_start, p.fieldwork_end,"
-        " p.sample_size, p.source_url"
+        " p.sample_size, p.source_url, p.*"
         " FROM polls AS p"
         " JOIN pollsters AS pl ON pl.id = p.pollster_id"
         " JOIN maps AS m ON m.id = p.map_id"
@@ -423,18 +435,28 @@ def plan_repairs(
         (MAP_NAME, BMG_IDENTIFIER, TECHNE_IDENTIFIER),
     ).fetchall()
 
+    # Capture every source identity before the first potentially slow PDF fetch.
+    snapshots = {
+        row[1]: (tuple(row[6:]), tuple(tuple(share) for share in conn.execute(
+            "SELECT * FROM poll_rows WHERE poll_id = ? ORDER BY id", (row[1],),
+        ))) for row in rows
+    }
     repairs: list[Repair] = []
     for identifier, *fields in rows:
-        poll = _PollRow(*fields)
-        if identifier == BMG_IDENTIFIER:
-            repairs.append(
-                _plan_bmg(poll.poll_id, poll.fieldwork_end, poll.sample_size)
-            )
-        else:
-            repairs.append(_plan_techne(poll, fetch_pdf_text))
+        poll = _PollRow(*fields[:5])
+        snapshot = snapshots[poll.poll_id]
+        repair = (
+            _plan_bmg(poll.poll_id, poll.fieldwork_end, poll.sample_size)
+            if identifier == BMG_IDENTIFIER else _plan_techne(poll, fetch_pdf_text)
+        )
+        repairs.append(replace(repair, snapshot=snapshot))
     if corrections is None:
         corrections = CORRECTIONS
-    repairs.extend(_plan_correction(conn, c) for c in corrections)
+    for correction in corrections:
+        correction_snapshot = _poll_snapshot(conn, correction.poll_id)
+        repairs.append(replace(
+            _plan_correction(conn, correction), snapshot=correction_snapshot,
+        ))
     return repairs
 
 
@@ -449,9 +471,9 @@ def _update_params(repair: Repair) -> tuple[Value, ...]:
 def apply_repairs(conn: sqlite3.Connection, repairs: Sequence[Repair]) -> int:
     """Write every ``change`` repair in one transaction.
 
-    Each update is guarded, at write time, on the row still holding the
-    planned old value and belonging to the planned pollster, and a date update
-    on the window staying ordered, so a row edited since planning aborts the
+    Every planned poll head and its shares are revalidated under the write
+    lock before any updates. Each update also checks its old value and pollster,
+    and date updates check the window stays ordered. An edited row aborts the
     whole transaction instead of being overwritten.
 
     Args:
@@ -472,6 +494,17 @@ def apply_repairs(conn: sqlite3.Connection, repairs: Sequence[Repair]) -> int:
     # ``with conn`` commits, or rolls back and re-raises.
     conn.execute("BEGIN IMMEDIATE")
     with conn:
+        # Validate the entire batch before any update, including multiple fixes
+        # to the same poll. The write lock prevents edits after this check.
+        for repair in changes:
+            if (
+                repair.snapshot is None
+                or _poll_snapshot(conn, repair.poll_id) != repair.snapshot
+            ):
+                raise StaleRowError(
+                    f"poll {repair.poll_id} no longer has {repair.column} {repair.old}"
+                    " with its planned identity and shares; re-run to re-plan"
+                )
         for repair in changes:
             cursor = conn.execute(_UPDATE_SQL[repair.column], _update_params(repair))
             if cursor.rowcount != 1:

@@ -1113,8 +1113,9 @@ export class SenatePredict extends FPTPPredict {
     /** @type {Seat[]} Full 100-member chamber snapshot; empty until the controller loads it. */
     this.chamberSeats = [];
     /** @type {Map<string, number>} seat lookup key → the class contested at a special election
-     * there this cycle. Populated by `setSpecialSeats`; seats absent from it contest Class 2. */
+     * there this cycle. Populated by `setSpecialSeats`; other seats use the saved regular class. */
     this.specialClassBySeat = new Map();
+    this.regularClass = config.regularClass ?? 2;
     // Snapshot the projection baseline (the 2020 Class-2 seats, currently in comparisonElectionData)
     // so projecting stays independent of comparisonElectionData — which the controller repoints at
     // the current chamber for the full-Senate view's delta column. Ballot swing baselines were
@@ -1203,7 +1204,7 @@ export class SenatePredict extends FPTPPredict {
       ? base.map((seat) => new Seat({ ...seat, candidates: {} }))
       : base.map((seat) => projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig));
     if (this.activeTab !== 'chamber') return projectedContested;
-    return buildSenateChamber(this.chamberSeats, projectedContested, this.specialClassBySeat);
+    return buildSenateChamber(this.chamberSeats, projectedContested, this.specialClassBySeat, this.regularClass);
   }
 }
 

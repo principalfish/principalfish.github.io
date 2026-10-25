@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { parsePollTrackerData } from '../features/polltracker.js';
 import { manifest } from '../state.js';
@@ -14,6 +15,18 @@ describe('parsePollTrackerData', () => {
     ] });
   });
   afterEach(() => { manifest.init({ ...emptyManifest }); });
+
+  it("rejects shipped legacy Senate seats-up history as full-chamber data", () => {
+    const legacy = JSON.parse(readFileSync(new URL(
+      "../../data/tests/fixtures/us_uncertainty/senate-legacy-trend.json", import.meta.url,
+    ), "utf8"));
+    expect(Array.isArray(legacy)).toBe(true);
+    expect(Object.values(legacy.at(-1).parties).reduce((total, row) => total + row.s, 0)).toBe(35);
+    const parsed = parsePollTrackerData(legacy, "senate");
+    expect(parsed.descriptor.model).toBe("senate");
+    expect(parsed.seriesByParty.size).toBe(0);
+    expect(parsed.hung.every((value) => value === null)).toBe(true);
+  });
 
   it('returns empty structures for empty input', () => {
     const { timeline, seriesByParty } = parsePollTrackerData([]);

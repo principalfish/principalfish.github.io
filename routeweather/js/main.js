@@ -46,6 +46,7 @@ import {
 import { formatDateTime, formatDuration } from "./display.js";
 import { createFormUI } from "./form-view.js";
 import { createPointsTableUI, createSummaryUI } from "./results-view.js";
+import { createMapUI } from "./map-view.js";
 
 // Larger GPX files are rejected before reading: a multi-day track is a few MB,
 // and parsing hundreds of MB of XML would hang the tab.
@@ -409,9 +410,9 @@ export function init({
   const form = createFormUI(doc, onChange);
   addView(form.update);
   addView(createSummaryUI(doc).update);
-  // Mount points for pieces 6/7: the map as soon as there is a route (it can
-  // draw it while the forecast loads), charts and playback once there are
-  // results. Only touched when visibility actually changes.
+  // Panel visibility: the map as soon as there is a route (it can draw it
+  // while the forecast loads), charts and playback once there are results.
+  // Only touched when visibility actually changes.
   const show = (id, visible) => {
     if ($(id).hidden === visible) $(id).hidden = !visible;
   };
@@ -421,6 +422,10 @@ export function init({
     show("playback", Boolean(s.results));
   });
   addView(createPointsTableUI(doc).update);
+  // After the visibility view, so the map's panel is already shown when it
+  // first measures itself.
+  const mapView = createMapUI($("mapPanel"));
+  addView(mapView.update);
 
   // A constant string from config.js, not user input.
   $("attribution").innerHTML = OPEN_METEO_ATTRIBUTION;
@@ -430,5 +435,5 @@ export function init({
   recompute();
   render("load");
 
-  return { state, addView, render, recompute };
+  return { state, addView, render, recompute, mapView };
 }

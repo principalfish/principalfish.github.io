@@ -9,7 +9,9 @@
   <link rel="icon" type="image/png" href="/imgs/logo.png" />
   <script src="../site/ga-setup.js"></script>
   <link rel="stylesheet" href="../site/topbar.min.css">
+  <link rel="stylesheet" href="../site/vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/routeweather.css">
+  <link rel="stylesheet" href="css/map.css">
 </head>
 <body data-topbar-back-href="../">
   <header>
@@ -67,8 +69,8 @@
       <dl id="summaryList" class="summary-list"></dl>
     </section>
 
-    <!-- Mount points for the map (piece 6) and charts + playback (piece 7). -->
-    <section id="mapPanel" hidden></section>
+    <!-- Map, charts and playback panels; main.js shows them as data arrives. -->
+    <section id="mapPanel" class="panel map-panel" aria-label="Route map" hidden></section>
     <section id="chartsPanel" hidden></section>
     <div id="playback" hidden></div>
 

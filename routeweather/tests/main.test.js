@@ -297,6 +297,24 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     expect(rows[0].textContent).toContain("Start");
   });
 
+  it("draws the route map once and keeps it across recomputes and reloads", async () => {
+    const { page } = startPage();
+    await loadRoute(page);
+
+    const panel = $("mapPanel");
+    expect(panel.hidden).toBe(false);
+    expect(panel.querySelectorAll(".leaflet-container")).toHaveLength(1);
+    expect(panel.querySelectorAll(".leaflet-rwCells-pane path"))
+      .toHaveLength(page.state.samples.length * 2);
+
+    $("speedInput").value = "7";
+    $("speedInput").dispatchEvent(new Event("change", { bubbles: true }));
+    await loadRoute(page);
+    expect(panel.querySelectorAll(".leaflet-container")).toHaveLength(1);
+
+    expect(() => page.mapView.setPosition(page.state.route.totalDistKm / 2)).not.toThrow();
+  });
+
   it("shows each point's forecast cell and its offset", async () => {
     const { page } = startPage();
     await loadRoute(page);

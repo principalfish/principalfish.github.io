@@ -94,3 +94,11 @@ export function formatCell(cell, system) {
   const direction = compassPoint(cell.offsetBearingDeg, 8);
   return `${where} · ${formatDistance(cell.offsetKm, system)} ${direction}`;
 }
+
+// Labels for sample kinds that get a badge or marker; fillers have none.
+export const KIND_LABELS = Object.freeze({
+  start: "Start",
+  end: "Finish",
+  peak: "Peak",
+  valley: "Valley",
+});

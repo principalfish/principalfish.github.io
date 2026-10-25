@@ -10,13 +10,11 @@ import {
 } from "./units.js";
 import {
   compassPoint, formatArrival, formatCell, formatCrossWind, formatDateTime, formatDuration,
-  formatHeadWind,
+  formatHeadWind, KIND_LABELS,
 } from "./display.js";
 import { HOUR_MS } from "./schedule.js";
 
 const OUTSIDE_NOTE = "outside the forecast window: nearest forecast hour shown";
-
-const KIND_LABELS = { start: "Start", end: "Finish", peak: "Peak", valley: "Valley" };
 
 // True when any of `keys` differs from the last call's snapshot (then stored).
 function createChangeCheck(keys) {

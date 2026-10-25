@@ -75,6 +75,11 @@ when you get there. Everything runs in the browser; there is no build step
   Leaflet 1.9.4, vendored with `npm run vendor:leaflet`.
 
 **How it works**
+- The forecast is requested from now to 7 days ahead. Open-Meteo returns
+  nulls past the model's last step (the Met Office global model's run started
+  hours earlier, so its 7 days end a little sooner), and the page uses the
+  last hour with data everywhere as the forecast's end: the status line says
+  when that is, and the latest valid start follows it.
 - The route is sampled at up to 150 points (about every 1 km, plus every
   summit and valley with at least 30 m of prominence), and every sample is
   fetched once per GPX load. Speed, start and units changes only recompute.

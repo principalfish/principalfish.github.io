@@ -66,9 +66,12 @@ export const HOURLY_VARS = [
   ),
 ];
 
-// Open-Meteo forecast length in hours (7 days). The window starts at 00:00 UTC
-// today, not now, so check a route's finish against the last hour the API
-// actually returns rather than now + FORECAST_HOURS.
+// How far ahead of now the forecast is requested, in hours (7 days). Open-Meteo
+// accepts this whatever the model, but pads hours past the model's last run
+// step with nulls (the Met Office global model reaches about 7 days from its
+// run time, which is hours in the past), so check a route's finish against the
+// last hour with data (schedule.js forecastSpan), not now + FORECAST_HOURS.
+// Up to 14 days costs no more per location (usage.js).
 export const FORECAST_HOURS = 168;
 
 // OpenTopoMap base layer.

@@ -25,7 +25,7 @@ const PAGE = readFileSync(here("../index.html"), "utf8");
 const BODY = /<body[^>]*>([\s\S]*)<\/body>/.exec(PAGE)[1]
   .replace(/<script[\s\S]*?<\/script>/g, "");
 
-// Inside the fixture's day: the forecast window is 09:00 Oct 26 to 23:00 Nov 1.
+// Inside the fixture's day: the forecast window is 09:00 Oct 26 to 09:00 Nov 2.
 const NOW = Date.UTC(2026, 9, 26, 9, 20);
 const HOUR_MS = 3600 * 1000;
 const WINDOW = forecastWindow(NOW);
@@ -730,8 +730,8 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     const { page, calls } = startPage();
     await loadRoute(page);
     const durationMs = page.state.times.at(-1) - page.state.times[0];
-    // Forecast ends Nov 1 23:00 UTC; starting half an hour before can't fit.
-    typeInto("startInput", toLocalInputValue(Date.UTC(2026, 10, 1, 22, 30)));
+    // Forecast ends Nov 2 09:00 UTC; starting half an hour before can't fit.
+    typeInto("startInput", toLocalInputValue(Date.UTC(2026, 10, 2, 8, 30)));
 
     expect(calls.forecast).toBe(1);
     expect(page.state.results).toBeNull();

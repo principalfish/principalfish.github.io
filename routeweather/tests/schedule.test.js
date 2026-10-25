@@ -20,16 +20,16 @@ function pinTimeZone(zone) {
 // --- zone-independent ---
 
 describe("forecastWindow", () => {
-  it("runs from the current UTC hour to the last hour of today's run", () => {
+  it("runs from the current UTC hour to 7 days after it", () => {
     const range = forecastWindow(Date.UTC(2026, 9, 26, 9, 20, 15));
     expect(range.startHour).toBe(Date.UTC(2026, 9, 26, 9));
-    expect(range.endHour).toBe(Date.UTC(2026, 9, 26) + (FORECAST_HOURS - 1) * HOUR_MS);
-    expect(new Date(range.endHour).toISOString()).toBe("2026-11-01T23:00:00.000Z");
+    expect(range.endHour).toBe(range.startHour + FORECAST_HOURS * HOUR_MS);
+    expect(new Date(range.endHour).toISOString()).toBe("2026-11-02T09:00:00.000Z");
   });
 
   it("counts hours inclusively", () => {
     expect(windowHours({ startHour: 0, endHour: 0 })).toBe(1);
-    expect(windowHours(forecastWindow(Date.UTC(2026, 9, 26, 0, 0)))).toBe(FORECAST_HOURS);
+    expect(windowHours(forecastWindow(Date.UTC(2026, 9, 26, 0, 0)))).toBe(FORECAST_HOURS + 1);
   });
 });
 

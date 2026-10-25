@@ -10,22 +10,18 @@ import { zonedParts, zonedTimeToMs } from "./zone.js";
 
 export const MINUTE_MS = 60 * 1000;
 export const HOUR_MS = 60 * MINUTE_MS;
-const DAY_MS = 24 * HOUR_MS;
 
 const pad2 = (n) => String(n).padStart(2, "0");
 
 // --- forecast window ---
 
-// The whole window Open-Meteo can serve right now: from the current hour
-// (floored, UTC) to the last hour of its FORECAST_HOURS run, which starts at
-// 00:00 UTC today, not now. The page fetches this once per route so any start
-// inside it can be recomputed without another request.
+// The window to request: from the current hour (floored, UTC) to
+// FORECAST_HOURS after it. The page fetches this once per route so any start
+// inside it can be recomputed without another request; the hours the model
+// actually covers are found afterwards (forecastSpan).
 export function forecastWindow(nowMs) {
-  const todayUtc = Math.floor(nowMs / DAY_MS) * DAY_MS;
-  return {
-    startHour: Math.floor(nowMs / HOUR_MS) * HOUR_MS,
-    endHour: todayUtc + (FORECAST_HOURS - 1) * HOUR_MS,
-  };
+  const startHour = Math.floor(nowMs / HOUR_MS) * HOUR_MS;
+  return { startHour, endHour: startHour + FORECAST_HOURS * HOUR_MS };
 }
 
 // Hours spanned by a window, both ends inclusive (what Open-Meteo returns).

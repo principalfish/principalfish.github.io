@@ -33,6 +33,7 @@ function makeState(route = buildRoute(POINTS), overrides = {}) {
     precipProb: [10, 40, 80, 20][i], code: 61, model10mWindKmh: 15, model10mGustKmh: 30,
     cellElev: 300, eleUsed: s.ele, outsideForecast: i === 3,
     cloudPct: [90, 60, 30, 0][i], sunMin: [0, 20, 45, NaN][i], sunEstimated: i === 2,
+    feelsLikeC: 4 - i,
   }));
   return { route, samples, results, units: METRIC, ...overrides };
 }
@@ -249,7 +250,9 @@ describe("createChartsUI", () => {
       "Sky (cloud %, sunshine)",
     ]);
     expect(container.querySelectorAll(".strip")).toHaveLength(5);
-    const classes = ["elev-area", "s-temp", "s-temp-model", "s-head", "s-gust", "prob-area"];
+    const classes = [
+      "elev-area", "s-temp", "s-feels", "s-temp-model", "s-head", "s-gust", "prob-area",
+    ];
     for (const cls of classes) {
       expect(container.querySelector(`.${cls}`), cls).not.toBeNull();
     }

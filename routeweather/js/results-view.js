@@ -67,6 +67,20 @@ export function summaryNotes(state) {
   return notes;
 }
 
+// "−3 °C at 6.2 km (13:20)": the coldest feels-like temperature on the route.
+export function coldestFeelsText({ results, samples, times, units, nowMs, timeZone }) {
+  if (!results) return MISSING;
+  let coldest = -1;
+  results.forEach((r, i) => {
+    if (!Number.isFinite(r.feelsLikeC)) return;
+    if (coldest < 0 || r.feelsLikeC < results[coldest].feelsLikeC) coldest = i;
+  });
+  if (coldest < 0) return MISSING;
+  const where = formatDistance(samples[coldest].cumDistKm, units);
+  const when = formatArrival(times[coldest], nowMs, timeZone);
+  return `${formatTemp(results[coldest].feelsLikeC, units)} at ${where} (${when})`;
+}
+
 // "↑ 06:43 · ↓ 16:44" at the start point on the start day, or "Up all day" /
 // "Down all day".
 function startDaySunText(state) {
@@ -111,6 +125,7 @@ export function createSummaryUI(doc) {
       ["Moving time", formatDuration(durationMs)],
       ["Start → finish", timing],
       ["Weather points", state.samples ? String(state.samples.length) : MISSING],
+      ["Coldest feels-like", coldestFeelsText(state)],
       ["Sun at the start", startDaySunText(state)],
       ["Sunshine on the route", sunshineText(state)],
     ];
@@ -171,6 +186,7 @@ function pointRow(doc, state, i) {
     kindCell(doc, sample.kind, w.aboveProfile, units),
     el(doc, "td", describeWeather(w.code)),
     el(doc, "td", formatTemp(w.tempC, units)),
+    el(doc, "td", formatTemp(w.feelsLikeC, units)),
     el(doc, "td", wind),
     el(doc, "td", formatWind(w.gustKmh, units)),
     el(doc, "td", formatHeadWind(w.headKmh, units)),

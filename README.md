@@ -99,6 +99,15 @@ when you get there. Everything runs in the browser; there is no build step
   stretches and mark ☀↑ / ☀↓ where you pass them; the readout says whether
   it is light and how long until the next change. They are for a flat
   horizon: terrain can hide the sun for longer.
+- Feels like: Steadman's apparent temperature without radiation, as the
+  Australian Bureau of Meteorology uses it: AT = T + 0.33·e − 0.70·v − 4.00,
+  with T the altitude-corrected temperature (°C), v the altitude-corrected
+  wind (m/s) and e = (RH/100)·6.105·exp(17.27·T/(237.7+T)) hPa from the
+  model's 2 m relative humidity. Shown in the table, the readout, a dotted line
+  on the temperature chart and the summary (coldest on the route). Its fixed
+  −4 °C term means calm, dry air already "feels" 4 °C colder than it is, and
+  it only reads warmer than the air when it is humid and still; it ignores
+  sunshine.
 - Units: Metric / Imperial is the preset (distance, elevation, speed);
   "Customise units" overrides wind (km/h | mph), rain (mm | in) and
   temperature (°C | °F) one by one, and picking a preset resets them. The URL
@@ -120,8 +129,8 @@ out at the 700 hPa level (about 3,000 m): above it, temperature and wind are
 held at that level's values, and the page says so (a summary note, a "Held"
 badge on the table row and a note in the readout).
 
-**API budget.** A full 150-point route costs about 375 of Open-Meteo's weighted
-calls (25 hourly variables count as 2.5 calls per location), plus 1 for the
+**API budget.** A full 150-point route costs about 390 of Open-Meteo's weighted
+calls (26 hourly variables count as 2.6 calls per location), plus 1 for the
 time zone lookup. The free tier allows
 600 a minute and 10,000 a day per IP. Open-Meteo sends no rate-limit headers, so
 the page prints an estimate of this browser's usage to the console after each

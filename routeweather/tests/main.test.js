@@ -16,9 +16,9 @@ import { formatDateTime } from "../js/display.js";
 const here = (rel) => fileURLToPath(new URL(rel, import.meta.url).href);
 
 // Real Open-Meteo response (Lake District + London), 2026-10-26 09:00–14:00
-// UTC (cloud_cover and sunshine_duration added by hand). The mock below
-// repeats its six hours across whatever window is asked for, so the page's
-// full 7-day request gets a full 7-day answer.
+// UTC (cloud_cover, sunshine_duration and relative_humidity_2m added by
+// hand). The mock below repeats its six hours across whatever window is asked
+// for, so the page's full 7-day request gets a full 7-day answer.
 const FIXTURE = JSON.parse(readFileSync(here("./fixtures/forecast-2loc.json"), "utf8"));
 
 const PAGE = readFileSync(here("../index.html"), "utf8");
@@ -549,12 +549,13 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
 
   // --- per-quantity units ---
 
-  // A table row's cells by column: distance, temp, wind, gust, head/tail, cross, rain.
+  // A table row's cells by column: distance, temp, feels like, wind, gust,
+  // head/tail, cross, rain.
   const rowText = (row) => {
     const cells = [...row.querySelectorAll("td")].map((td) => td.textContent);
     return {
-      distance: cells[0], temp: cells[5], wind: cells[6], gust: cells[7], head: cells[8],
-      cross: cells[9], rain: cells[10],
+      distance: cells[0], temp: cells[5], feels: cells[6], wind: cells[7], gust: cells[8],
+      head: cells[9], cross: cells[10], rain: cells[11],
     };
   };
   const firstRow = () => rowText($("pointsBody").querySelector("tr"));
@@ -624,6 +625,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     clickRadio("tempUnit", "c");
     const row = firstRow();
     expect(row.temp).toMatch(/°C$/);
+    expect(row.feels).toMatch(/°C$/);
     expect(row.rain).toMatch(/ mm · /);
     expect(row.wind).toMatch(/mph/);
     expect(row.distance).toMatch(/mi$/);
@@ -884,8 +886,8 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     expect(summary).toMatch(/Sunshine on the route~\d+\.\d h of \d+\.\d h daylight/);
     expect(page.state.daylight.startsInDark).toBe(false);
     const row = $("pointsBody").rows[0].cells;
-    expect(row[11].textContent).toMatch(/^\d+%$/);
-    expect(row[12].textContent).toMatch(/^\d+ min\/h$/);
+    expect(row[12].textContent).toMatch(/^\d+%$/);
+    expect(row[13].textContent).toMatch(/^\d+ min\/h$/);
     expect($("playback").querySelector(".readout-light dd").textContent)
       .toMatch(/^Daylight · sunset 16:\d\d \(in /);
     expect($("chartsPanel").querySelectorAll(".strip")).toHaveLength(5);

@@ -4,9 +4,10 @@
 //   1. Elevation       the route's profile (area), summits ▲ and valleys ▼ at
 //                      the sampled extremes, labelled with their elevation
 //                      where the label fits; a note when there is no profile
-//   2. Temperature     at your altitude (line), and the model's own 2 m value
-//                      at its grid cell's terrain height as a faint dashed
-//                      line, so the altitude correction is visible
+//   2. Temperature     at your altitude (line), the feels-like temperature
+//                      there (dotted), and the model's own 2 m value at its
+//                      grid cell's terrain height as a faint dashed line, so
+//                      the altitude correction is visible
 //   3. Head/tailwind   the wind along your direction of travel (+ in your
 //                      face, − behind you) with a zero line, and the gust as
 //                      a dashed line (crosswind is in the readout and table)
@@ -307,10 +308,12 @@ function drawTemperature(ctx, h) {
   const { rows, unit, cv, line } = ctx;
   const at = (d) => cv.temp(d.r.tempC);
   const model = (d) => cv.temp(d.r.model2mTempC);
-  const y = d3.scaleLinear().domain(yDomain([...rows.map(at), ...rows.map(model)], [], 4))
-    .nice().range([h, 0]);
+  const feels = (d) => cv.temp(d.r.feelsLikeC);
+  const all = [...rows.map(at), ...rows.map(model), ...rows.map(feels)];
+  const y = d3.scaleLinear().domain(yDomain(all, [], 4)).nice().range([h, 0]);
   const g = ctx.frame(`Temperature (${unit.temp})`, y);
   g.append("path").attr("class", "series s-temp-model").attr("d", line(y, model)(rows));
+  g.append("path").attr("class", "series s-feels").attr("d", line(y, feels)(rows));
   g.append("path").attr("class", "series s-temp").attr("d", line(y, at)(rows));
 }
 
@@ -421,6 +424,7 @@ const STRIPS = [
       name: "Temperature",
       items: [
         { cls: "temp", label: "at your altitude" },
+        { cls: "feels", label: "feels like" },
         { cls: "temp-model", label: "model 2 m (grid cell)" },
       ],
     },

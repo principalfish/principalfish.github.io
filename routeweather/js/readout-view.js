@@ -27,6 +27,7 @@ const FIELDS = [
   ["elevation", "Elevation"],
   ["weather", "Weather"],
   ["temp", "Temperature"],
+  ["feels", "Feels like"],
   ["wind", "Wind"],
   ["relative", "Head / cross"],
   ["rain", "Rain"],
@@ -35,7 +36,7 @@ const FIELDS = [
 ];
 
 // Fields that need the weather (dashes without it).
-const WEATHER_KEYS = ["weather", "temp", "wind", "relative", "rain", "sky", "model"];
+const WEATHER_KEYS = ["weather", "temp", "feels", "wind", "relative", "rain", "sky", "model"];
 
 const OUTSIDE_NOTE = "outside the forecast: nearest hour shown";
 
@@ -80,6 +81,7 @@ export function readoutValues(state, weather, distKm, tMs = timeAtDistance(state
     ...values,
     weather: w.outsideForecast ? `${description} (${OUTSIDE_NOTE})` : description,
     temp: `${formatTemp(w.tempC, units)}${w.aboveProfile ? ` ${HELD_NOTE}` : ""}`,
+    feels: formatTemp(w.feelsLikeC, units),
     wind: `${formatWind(w.windKmh, units)}${from} · gusts ${formatWind(w.gustKmh, units)}`
       + (w.aboveProfile ? ` ${HELD_NOTE}` : ""),
     relative: `${formatHeadWind(w.headKmh, units)} · ${formatCrossWind(w.crossKmh, units)}`,

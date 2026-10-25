@@ -1,12 +1,28 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 
-import { summaryNotes } from "../js/results-view.js";
+import { coldestFeelsText, summaryNotes } from "../js/results-view.js";
 import { resolveUnits } from "../js/units.js";
 
 const metric = resolveUnits("metric");
 
 const event = (kind, km, tMs) => ({ kind, km, tMs });
+
+describe("coldestFeelsText", () => {
+  it("names the coldest feels-like temperature, where and when", () => {
+    const state = {
+      results: [{ feelsLikeC: 2 }, { feelsLikeC: -3.4 }, { feelsLikeC: NaN }],
+      samples: [{ cumDistKm: 0 }, { cumDistKm: 6.2 }, { cumDistKm: 9 }],
+      times: [Date.UTC(2026, 9, 26, 11), Date.UTC(2026, 9, 26, 13, 20), Date.UTC(2026, 9, 26, 14)],
+      units: metric,
+      nowMs: Date.UTC(2026, 9, 26, 9),
+      timeZone: "UTC",
+    };
+    expect(coldestFeelsText(state)).toBe("-3 °C at 6.2 km (13:20)");
+    expect(coldestFeelsText({ ...state, results: [{ feelsLikeC: NaN }] })).toBe("–");
+    expect(coldestFeelsText({ ...state, results: null })).toBe("–");
+  });
+});
 
 describe("summaryNotes", () => {
   it("has nothing to say without results", () => {

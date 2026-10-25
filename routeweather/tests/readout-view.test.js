@@ -93,6 +93,11 @@ describe("readoutValues", () => {
     expect(readoutValues(state, null, 1).elevation).toBe(MISSING);
   });
 
+  it("shows the feels-like temperature", () => {
+    expect(readoutValues(makeState(), { ...WEATHER, feelsLikeC: 2.6 }, 5).feels).toBe("3 °C");
+    expect(readoutValues(makeState(), WEATHER, 5).feels).toBe(MISSING);
+  });
+
   it("says when temperature and wind are held above the top level", () => {
     const v = readoutValues(makeState(), { ...WEATHER, aboveProfile: true }, 5);
     expect(v.temp).toBe("8 °C (held at the ~3,000 m value)");
@@ -152,8 +157,8 @@ describe("createReadoutUI", () => {
     createReadoutUI(container);
     const labels = [...container.querySelectorAll("dt")].map((dt) => dt.textContent);
     expect(labels).toEqual([
-      "Time", "Elapsed", "Light", "Distance", "Elevation", "Weather", "Temperature", "Wind",
-      "Head / cross", "Rain", "Sky", "Model",
+      "Time", "Elapsed", "Light", "Distance", "Elevation", "Weather", "Temperature",
+      "Feels like", "Wind", "Head / cross", "Rain", "Sky", "Model",
     ]);
     expect(valueOf("temp")).toBe(MISSING);
   });

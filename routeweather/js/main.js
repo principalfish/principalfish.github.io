@@ -4,7 +4,7 @@
 // Flow: a GPX file is parsed, built into a route and sampled, then the route's
 // time zone, the forecast (and, without GPX elevation, the terrain elevation)
 // are fetched ONCE for the whole available forecast window. A full route
-// costs ~375 weighted calls against a 600/minute limit, so changing activity,
+// costs ~390 weighted calls against a 600/minute limit, so changing activity,
 // speed or start only recomputes arrival times and per-sample weather from the
 // stored locations, and changing units only re-renders. A new file (or Retry)
 // aborts whatever the previous load still had in flight.

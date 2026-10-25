@@ -46,6 +46,8 @@ const SURFACE_VARS = [
   // beyond that from cloud cover and daylight.
   "cloud_cover",
   "sunshine_duration",
+  // For the feels-like temperature (weather.js apparentTemperatureC).
+  "relative_humidity_2m",
 ];
 
 const PRESSURE_LEVEL_VARS = [

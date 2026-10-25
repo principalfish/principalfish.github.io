@@ -141,6 +141,21 @@ function gustExcessAt(loc, tMs) {
   return Math.max(0, loc.vars.wind_gusts_10m[i] - meanWind10);
 }
 
+// --- feels like ---
+
+// Steadman's apparent temperature without radiation, as the Australian Bureau
+// of Meteorology uses it: AT = T + 0.33·e − 0.70·v − 4.00, with T the air
+// temperature (°C), e the water vapour pressure (hPa) from relative humidity
+// and v the wind speed (m/s). The fixed −4 °C means it reads 4 °C below the
+// air temperature in calm, dry air, and above it only when humid and still.
+// NaN when any input is missing.
+export function apparentTemperatureC(tempC, rhPct, windKmh) {
+  if (![tempC, rhPct, windKmh].every(Number.isFinite)) return NaN;
+  const rh = Math.min(100, Math.max(0, rhPct));
+  const vapourHpa = (rh / 100) * 6.105 * Math.exp((17.27 * tempC) / (237.7 + tempC));
+  return tempC + 0.33 * vapourHpa - 0.7 * (windKmh / 3.6) - 4;
+}
+
 // --- sky ---
 
 const HOUR_MS = 3600 * 1000;
@@ -299,6 +314,9 @@ export function isAboveProfile(profile, eleM) {
 // hourly time (values are then clamped to the nearest end), so the page can
 // flag it.
 //
+// feelsLikeC is apparentTemperatureC from the altitude-corrected temperature
+// and wind with the model's 2 m relative humidity (rhPct, linear in time).
+//
 // cloudPct is linear in time; sunMin (minutes of sunshine in the hour) comes
 // from the same hour bucket as precipMm, estimated where Open-Meteo has no
 // sunshine (sunEstimated, see sunshineAt), at the sample's own position (the
@@ -317,8 +335,12 @@ export function weatherForSample(loc, sample, tMs, bearingDeg) {
   const lat = Number.isFinite(sample.lat) ? sample.lat : loc.cellLat;
   const lon = Number.isFinite(sample.lon) ? sample.lon : loc.cellLon;
   const { sunMin, sunEstimated } = sunshineAt(loc, tMs, lat, lon);
+  const tempC = temperatureAt(profile, eleUsed);
+  const rhPct = interpHourly(timesMs, loc.vars.relative_humidity_2m, tMs);
   return {
-    tempC: temperatureAt(profile, eleUsed),
+    tempC,
+    feelsLikeC: apparentTemperatureC(tempC, rhPct, wind.speed),
+    rhPct,
     windKmh: wind.speed,
     windFromDeg: wind.fromDeg,
     gustKmh: wind.speed + profile.gustExcessKmh,

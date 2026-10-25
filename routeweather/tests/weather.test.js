@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 import {
   toUV, fromUV, interpHourly, bucketHourly, profileAt, temperatureAt, windAt, headCross,
   weatherForSample, describeWeather, WMO_DESCRIPTIONS, LAPSE_RATE_K_PER_M, isAboveProfile,
-  sunshineAt,
+  sunshineAt, apparentTemperatureC,
 } from "../js/weather.js";
 import { daylightMinutes } from "../js/sun.js";
 import { normaliseLocation } from "../js/openmeteo.js";
@@ -16,8 +16,9 @@ const HOUR = 3600 * 1000;
 const T0 = Date.UTC(2026, 9, 26, 9);
 
 // Real Open-Meteo response: [upland cell at 509 m, lowland cell at 18 m],
-// 2026-10-26 09:00–14:00 UTC. cloud_cover and sunshine_duration were added by
-// hand afterwards (plausible for that wet day), not fetched.
+// 2026-10-26 09:00–14:00 UTC. cloud_cover, sunshine_duration and
+// relative_humidity_2m were added by hand afterwards (plausible for that wet
+// day), not fetched.
 const FIXTURE = JSON.parse(
   readFileSync(new URL("./fixtures/forecast-2loc.json", import.meta.url), "utf8"),
 );
@@ -46,6 +47,7 @@ function makeLoc({ cellElev = 0, hours = 3, ...series } = {}) {
     wind_gusts_10m: 0,
     cloud_cover: 0,
     sunshine_duration: 0,
+    relative_humidity_2m: 50,
   };
   for (const level of PRESSURE_LEVELS) {
     defaults[`temperature_${level}hPa`] = 0;
@@ -513,6 +515,34 @@ describe("isAboveProfile", () => {
   it("is reported per sample", () => {
     expect(weatherForSample(loc, { ele: 3500 }, T0, 0).aboveProfile).toBe(true);
     expect(weatherForSample(loc, { ele: 500 }, T0, 0).aboveProfile).toBe(false);
+  });
+});
+
+describe("apparentTemperatureC", () => {
+  it("follows the BoM formula", () => {
+    // e = 0.5 × 6.105 × exp(17.27 × 20 / 257.7) = 11.66 hPa; calm.
+    expect(apparentTemperatureC(20, 50, 0)).toBeCloseTo(20 + 0.33 * 11.661 - 4, 2);
+    // e = 0.8 × 6.105 = 4.884 hPa at 0 °C; 36 km/h is 10 m/s.
+    expect(apparentTemperatureC(0, 80, 36)).toBeCloseTo(0.33 * 4.884 - 7 - 4, 2);
+  });
+
+  it("reads 4 °C below the air in calm, dry air", () => {
+    expect(apparentTemperatureC(10, 0, 0)).toBeCloseTo(6, 9);
+  });
+
+  it("clamps humidity and is NaN for missing input", () => {
+    expect(apparentTemperatureC(10, 120, 0)).toBe(apparentTemperatureC(10, 100, 0));
+    expect(apparentTemperatureC(NaN, 50, 0)).toBeNaN();
+    expect(apparentTemperatureC(10, NaN, 0)).toBeNaN();
+    expect(apparentTemperatureC(10, 50, NaN)).toBeNaN();
+  });
+
+  it("uses the altitude-corrected temperature and wind per sample", () => {
+    const loc = makeLoc({ temperature_2m: 5, wind_speed_10m: 18, relative_humidity_2m: [60, 80] });
+    const w = weatherForSample(loc, { ele: 0 }, T0 + HOUR / 2, 0);
+    expect(w.rhPct).toBe(70);
+    expect(w.feelsLikeC).toBeCloseTo(apparentTemperatureC(w.tempC, 70, w.windKmh), 9);
+    expect(w.feelsLikeC).toBeLessThan(w.tempC);
   });
 });
 

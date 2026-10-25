@@ -1,8 +1,12 @@
 // Display helpers for the results views: local times, durations, compass
 // points, wind relative to travel and forecast-cell offsets. Pure functions
 // returning plain text (always rendered with textContent).
+//
+// Times are wall-clock times in `timeZone`: the route's IANA zone once it is
+// known, or the browser's own zone for null/undefined (zone.js).
 
 import { formatDistance, formatWind, MISSING } from "./units.js";
+import { sameZonedDay, zonedParts } from "./zone.js";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -21,27 +25,27 @@ export const isFiniteNumber = (v) => typeof v === "number" && Number.isFinite(v)
 // --- time ---
 
 // Local "HH:MM".
-export function formatClock(ms) {
-  const d = new Date(ms);
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+export function formatClock(ms, timeZone) {
+  if (!isFiniteNumber(ms)) return MISSING;
+  const p = zonedParts(ms, timeZone);
+  return `${pad2(p.hour)}:${pad2(p.minute)}`;
 }
-
-const sameLocalDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
 
 // Local "HH:MM", prefixed with the weekday ("Tue 09:30") when not on the same
 // local day as `nowMs`. For table rows, where the full date would be noise.
-export function formatArrival(ms, nowMs) {
+export function formatArrival(ms, nowMs, timeZone) {
   if (!isFiniteNumber(ms)) return MISSING;
-  const clock = formatClock(ms);
-  return sameLocalDay(ms, nowMs) ? clock : `${WEEKDAYS[new Date(ms).getDay()]} ${clock}`;
+  const clock = formatClock(ms, timeZone);
+  if (sameZonedDay(ms, nowMs, timeZone)) return clock;
+  return `${WEEKDAYS[zonedParts(ms, timeZone).weekday]} ${clock}`;
 }
 
 // Local "Mon 26 Oct 10:00". English names are fixed (the page is en-GB) rather
 // than toLocaleString, whose output varies by engine and locale.
-export function formatDateTime(ms) {
+export function formatDateTime(ms, timeZone) {
   if (!isFiniteNumber(ms)) return MISSING;
-  const d = new Date(ms);
-  return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${formatClock(ms)}`;
+  const p = zonedParts(ms, timeZone);
+  return `${WEEKDAYS[p.weekday]} ${p.day} ${MONTHS[p.month - 1]} ${formatClock(ms, timeZone)}`;
 }
 
 // Duration -> "3 h 05 min" / "45 min", rounded to the minute.

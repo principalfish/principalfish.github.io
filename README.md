@@ -91,15 +91,26 @@ when you get there. Everything runs in the browser; there is no build step
   "Customise units" overrides wind (km/h | mph), rain (mm | in) and
   temperature (°C | °F) one by one, and picking a preset resets them. The URL
   carries `wind`, `rain` and `temp` only when they differ from the preset.
+- Times: once a route loads, one extra `timezone=auto` request for its first
+  point gives the route's IANA time zone, and every time on the page — the
+  start input included — is shown in it (labelled with the zone name). Until
+  then, or if that lookup fails, times are in the browser's zone. The URL's
+  `start` is always UTC. A wall time that happens twice when clocks go back
+  reads as the earlier one; one skipped when clocks go forward moves on by the
+  gap.
 
 **Limits of the altitude adjustment.** It is linear interpolation between a
 handful of heights, so it captures broad inversions and stronger winds aloft but
 not local effects: valley cold pools below the model terrain, wind acceleration
 over a ridge, or sheltering in a corrie. Beyond about 2 days the forecast comes
-from the 10 km global model, whose terrain is much smoother.
+from the 10 km global model, whose terrain is much smoother. The profile tops
+out at the 700 hPa level (about 3,000 m): above it, temperature and wind are
+held at that level's values, and the page says so (a summary note, a "Held"
+badge on the table row and a note in the readout).
 
 **API budget.** A full 150-point route costs about 345 of Open-Meteo's weighted
-calls (23 hourly variables count as 2.3 calls per location). The free tier allows
+calls (23 hourly variables count as 2.3 calls per location), plus 1 for the
+time zone lookup. The free tier allows
 600 a minute and 10,000 a day per IP. Open-Meteo sends no rate-limit headers, so
 the page prints an estimate of this browser's usage to the console after each
 load (`routeweather/js/usage.js`).

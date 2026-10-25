@@ -27,6 +27,7 @@
 
 import { kmhToSpeed, UNIT_CHOICES } from "./units.js";
 import { toLocalInputValue } from "./schedule.js";
+import { zoneLabel } from "./zone.js";
 
 const SPEED_UNIT = { metric: "km/h", imperial: "mph" };
 
@@ -109,8 +110,9 @@ export function createFormUI(doc, onChange) {
     if (Number.isFinite(value)) $("speedInput").value = String(Math.round(value * 10) / 10);
   }
 
-  function syncStart({ startMs }) {
-    $("startInput").value = Number.isFinite(startMs) ? toLocalInputValue(startMs) : "";
+  // In the route's zone once it is known (state.timeZone), else the browser's.
+  function syncStart({ startMs, timeZone }) {
+    $("startInput").value = Number.isFinite(startMs) ? toLocalInputValue(startMs, timeZone) : "";
   }
 
   // Expands the "Customise units" disclosure (e.g. when the URL overrides a
@@ -137,8 +139,11 @@ export function createFormUI(doc, onChange) {
     setProp($("speedUnit"), "textContent", SPEED_UNIT[units.system]);
 
     const start = $("startInput");
-    setProp(start, "min", toLocalInputValue(state.startBounds.minMs));
-    setProp(start, "max", toLocalInputValue(state.startBounds.maxMs));
+    const { timeZone } = state;
+    setProp(start, "min", toLocalInputValue(state.startBounds.minMs, timeZone));
+    setProp(start, "max", toLocalInputValue(state.startBounds.maxMs, timeZone));
+    const zone = timeZone ? `route time: ${zoneLabel(state.startMs, timeZone)}` : "your local time";
+    setProp($("startZone"), "textContent", zone);
 
     const status = $("status");
     const isError = state.status.kind === "error";

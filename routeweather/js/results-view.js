@@ -13,8 +13,15 @@ import {
   formatHeadWind, KIND_LABELS,
 } from "./display.js";
 import { HOUR_MS } from "./schedule.js";
+import { zoneLabel } from "./zone.js";
 
 const OUTSIDE_NOTE = "outside the forecast window: nearest forecast hour shown";
+
+// Points above the forecast's top level (weather.js aboveProfile): the height
+// in each preset's units, rounded (the 700 hPa level wanders ±200 m).
+const TOP_LEVEL_TEXT = { metric: "about 3,000 m", imperial: "about 9,800 ft" };
+const heldNote = (units) => `Above ${TOP_LEVEL_TEXT[units.system]}, temperature and wind are `
+  + `held at their ${TOP_LEVEL_TEXT[units.system].replace("about ", "~")} values.`;
 
 // True when any of `keys` differs from the last call's snapshot (then stored).
 function createChangeCheck(keys) {
@@ -35,10 +42,19 @@ function el(doc, tag, text, className) {
 
 // --- summary ---
 
+// Notes under the summary list, as plain strings; [] without results.
+export function summaryNotes(state) {
+  const { results, units } = state;
+  if (!results) return [];
+  const notes = [];
+  if (results.some((r) => r.aboveProfile)) notes.push(heldNote(units));
+  return notes;
+}
+
 export function createSummaryUI(doc) {
   const $ = (id) => doc.getElementById(id);
   const changed = createChangeCheck([
-    "route", "routeName", "samples", "results", "speedKmh", "units",
+    "route", "routeName", "samples", "results", "speedKmh", "units", "timeZone",
   ]);
 
   function update(state) {
@@ -52,9 +68,9 @@ export function createSummaryUI(doc) {
     const down = formatElevation(route.descentM, units);
     const climb = route.hasElevation ? `${up} up · ${down} down` : "No elevation data";
     const durationMs = (route.totalDistKm / state.speedKmh) * HOUR_MS;
-    const timing = results
-      ? `${formatDateTime(times[0])} → ${formatDateTime(times[times.length - 1])}`
-      : MISSING;
+    const { timeZone } = state;
+    const at = (ms) => formatDateTime(ms, timeZone);
+    const timing = results ? `${at(times[0])} → ${at(times[times.length - 1])}` : MISSING;
     const rows = [
       ["Distance", formatDistance(route.totalDistKm, units)],
       ["Ascent / descent", climb],
@@ -62,6 +78,8 @@ export function createSummaryUI(doc) {
       ["Start → finish", timing],
       ["Weather points", state.samples ? String(state.samples.length) : MISSING],
     ];
+    // Labelled at the start, so the abbreviation is the one in force then.
+    if (timeZone) rows.push(["Times in", zoneLabel(times?.[0] ?? state.startMs, timeZone)]);
 
     const list = $("summaryList");
     list.innerHTML = "";
@@ -70,6 +88,9 @@ export function createSummaryUI(doc) {
       item.append(el(doc, "dt", term), el(doc, "dd", value));
       list.append(item);
     }
+
+    const notes = summaryNotes(state);
+    $("summaryNotes").replaceChildren(...notes.map((text) => el(doc, "li", text)));
   }
 
   return { update };
@@ -77,9 +98,14 @@ export function createSummaryUI(doc) {
 
 // --- weather points table ---
 
-function kindCell(doc, kind) {
+function kindCell(doc, kind, aboveProfile, units) {
   const td = el(doc, "td");
   if (KIND_LABELS[kind]) td.append(el(doc, "span", KIND_LABELS[kind], `badge badge-${kind}`));
+  if (aboveProfile) {
+    const badge = el(doc, "span", "Held", "badge badge-held");
+    badge.title = heldNote(units);
+    td.append(badge, el(doc, "span", ` (${heldNote(units)})`, "sr-only"));
+  }
   return td;
 }
 
@@ -104,9 +130,9 @@ function pointRow(doc, state, i) {
   }
   tr.append(
     distance,
-    el(doc, "td", formatArrival(times[i], state.nowMs)),
+    el(doc, "td", formatArrival(times[i], state.nowMs, state.timeZone)),
     el(doc, "td", elevation),
-    kindCell(doc, sample.kind),
+    kindCell(doc, sample.kind, w.aboveProfile, units),
     el(doc, "td", describeWeather(w.code)),
     el(doc, "td", formatTemp(w.tempC, units)),
     el(doc, "td", wind),
@@ -123,7 +149,9 @@ function pointRow(doc, state, i) {
 export function createPointsTableUI(doc) {
   const $ = (id) => doc.getElementById(id);
   // results is replaced on every recompute; cells/samples change with a load.
-  const changed = createChangeCheck(["results", "samples", "cells", "units", "nowMs"]);
+  const changed = createChangeCheck([
+    "results", "samples", "cells", "units", "nowMs", "timeZone",
+  ]);
 
   function update(state) {
     if (!changed(state)) return;

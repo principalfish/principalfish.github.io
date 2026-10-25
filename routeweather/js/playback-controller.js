@@ -103,7 +103,9 @@ export function createPlaybackController({ mapView, chartsEl, playbackEl, clockO
     readout.update(state, weather, distKm, tMs);
     const where = formatDistance(distKm, state.units);
     // The weekday too when the time isn't today (multi-day routes).
-    const when = Number.isFinite(tMs) ? formatArrival(tMs, state.nowMs ?? Date.now()) : "";
+    const when = Number.isFinite(tMs)
+      ? formatArrival(tMs, state.nowMs ?? Date.now(), state.timeZone)
+      : "";
     const elapsed = Number.isFinite(tMs) ? formatDuration(tMs - state.startMs) : "";
     ui.setPosition(
       fraction,

@@ -1,9 +1,9 @@
 // Route weather page controller. Owns the single `state` object, wires the
 // views to it and is the only module that starts Open-Meteo requests.
 //
-// Flow: a GPX file is parsed, built into a route and sampled, then the
-// forecast (and, without GPX elevation, the terrain elevation) is fetched ONCE
-// for the whole available forecast window. A full route costs ~345 weighted
+// Flow: a GPX file is parsed, built into a route and sampled, then the route's
+// time zone, the forecast (and, without GPX elevation, the terrain elevation)
+// are fetched ONCE for the whole available forecast window. A full route costs ~345 weighted
 // calls against a 600/minute limit, so changing activity, speed or start only
 // recomputes arrival times and per-sample weather from the stored locations,
 // and changing units only re-renders. A new file (or Retry) aborts whatever the
@@ -12,8 +12,9 @@
 // Views: `addView(update)` registers `update(state, reason)`, called on EVERY
 // render() in registration order. `reason` says what prompted the render:
 //
-//   "load"     the route changed: a file was loaded or cleared, or the samples
-//              got their elevations (state.route / state.samples)
+//   "load"     the route changed: a file was loaded or cleared, the samples
+//              got their elevations (state.route / state.samples), or the
+//              route's time zone became known (state.timeZone)
 //   "results"  the forecast arrived: locations, cells, times, results
 //   "inputs"   activity, speed or start changed: times/results recomputed
 //   "units"    display units changed only (the preset or a per-quantity
@@ -34,7 +35,7 @@ import {
 } from "./config.js";
 import { parseGpx } from "./gpx.js";
 import { arrivalTimes, bearingDeg, buildRoute, haversineKm, sampleRoute } from "./route.js";
-import { fetchElevations, fetchForecast } from "./openmeteo.js";
+import { fetchElevations, fetchForecast, fetchTimeZone } from "./openmeteo.js";
 import { weatherForSample } from "./weather.js";
 import { isCustomised, kmhToSpeed, resolveUnits, speedToKmh } from "./units.js";
 import { readState, writeState } from "./urlstate.js";
@@ -46,6 +47,7 @@ import {
   nextWholeHour, windowHours,
 } from "./schedule.js";
 import { formatDateTime, formatDuration } from "./display.js";
+import { isValidTimeZone } from "./zone.js";
 import { createFormUI } from "./form-view.js";
 import { createPointsTableUI, createSummaryUI } from "./results-view.js";
 import { createMapUI } from "./map-view.js";
@@ -92,14 +94,17 @@ function speedRangeText(units) {
   return `${show(SPEED_RANGE_KMH.min)}–${show(SPEED_RANGE_KMH.max)} ${SPEED_UNIT[units.system]}`;
 }
 
-// A URL start is only honoured if it is still ahead and inside the window.
-function initialStartMs(isoStart, nowMs) {
+// A URL start is only honoured if it is still ahead and inside the window;
+// null when it isn't (the caller then defaults to the next whole hour).
+function urlStartMs(isoStart, nowMs) {
   const ms = isoStart === null ? NaN : Date.parse(isoStart);
-  const ok = ms >= nowMs && ms <= forecastWindow(nowMs).endHour;
-  return ok ? ms : nextWholeHour(nowMs);
+  return ms >= nowMs && ms <= forecastWindow(nowMs).endHour ? ms : null;
 }
 
 const routeDurationMs = (route, speedKmh) => (route.totalDistKm / speedKmh) * HOUR_MS;
+
+// The time zone lookup's weight: one location, one variable, one day.
+const TIME_ZONE_CALLS = 1;
 
 // --- init ---
 
@@ -113,15 +118,25 @@ export function init({
   const $ = (id) => doc.getElementById(id);
   const usage = createUsageLog(storage, now);
   const fromUrl = readState(win.location.search);
+  const linkedStartMs = urlStartMs(fromUrl.start, now());
+  // True while the start is the page's own default (the next whole hour), not
+  // one the user or a link chose: it is re-snapped to the next whole hour in
+  // the route's zone once that is known (a +5:30 browser's default would
+  // otherwise land on :30 in a whole-hour zone).
+  let startIsDefault = linkedStartMs === null;
 
   const state = {
     // inputs (internal units: km/h, epoch ms)
     activity: fromUrl.activity,
     speedKmh: fromUrl.speed, // NaN while the typed speed is invalid
-    startMs: initialStartMs(fromUrl.start, now()),
+    startMs: linkedStartMs ?? nextWholeHour(now()),
     // { system, wind, rain, temp }: replaced, never mutated (resolveUnits)
     units: resolveUnits(fromUrl.units, fromUrl),
     // per GPX load
+    // The route's IANA zone (first sample), used for every displayed time and
+    // the start input; null (the browser's zone) until known or if the lookup
+    // failed.
+    timeZone: null,
     routeName: null,
     route: null, // buildRoute()
     samples: null, // sampleRoute(), ele filled from the elevation API if needed
@@ -151,6 +166,8 @@ export function init({
   // Set once this route's elevation request has succeeded, so Retry never
   // repeats it — even when the API had no value for some points (left null).
   let elevationFetched = false;
+  // Likewise the time zone lookup, once it has succeeded for this route.
+  let zoneFetched = false;
   function beginLoad() {
     loadController?.abort();
     loadController = new AbortController();
@@ -170,21 +187,22 @@ export function init({
 
   // Checks the plan against the forecast; an error message, or null if it fits.
   function planProblem(times) {
+    const at = (ms) => formatDateTime(ms, state.timeZone);
     const startMs = times[0];
     const finishMs = times[times.length - 1];
     if (startMs < state.forecastStartMs) {
-      return `The forecast starts at ${formatDateTime(state.forecastStartMs)}; `
+      return `The forecast starts at ${at(state.forecastStartMs)}; `
         + "pick a later start.";
     }
     if (finishMs <= state.forecastEndMs) return null;
-    const ends = formatDateTime(state.forecastEndMs);
+    const ends = at(state.forecastEndMs);
     const latest = latestStartMs(state.forecastEndMs, finishMs - startMs);
     if (latest < Math.max(state.startBounds.minMs, state.forecastStartMs)) {
       return `At this speed the route takes ${formatDuration(finishMs - startMs)}, longer `
         + `than the forecast has left (it ends ${ends}). Try a higher speed.`;
     }
-    return `You'd finish at ${formatDateTime(finishMs)}, after the forecast ends (${ends}). `
-      + `Latest valid start: ${formatDateTime(latest)}.`;
+    return `You'd finish at ${at(finishMs)}, after the forecast ends (${ends}). `
+      + `Latest valid start: ${at(latest)}.`;
   }
 
   function recompute() {
@@ -204,7 +222,8 @@ export function init({
     }
     // The input's `min` only guides the picker; typed values aren't held to it.
     if (state.startMs < state.startBounds.minMs) {
-      state.planError = `Pick a start from ${formatDateTime(state.startBounds.minMs)} onwards.`;
+      const from = formatDateTime(state.startBounds.minMs, state.timeZone);
+      state.planError = `Pick a start from ${from} onwards.`;
       return;
     }
     if (!state.locations) return;
@@ -236,6 +255,28 @@ export function init({
     const options = { signal };
 
     try {
+      // The zone first: one call, and every time shown from here on uses it.
+      // A failed lookup isn't worth failing the load for; times then stay in
+      // the browser's zone, and a Retry tries again.
+      if (!zoneFetched) {
+        setStatus("loading", "Looking up the route's time zone…");
+        render("status");
+        try {
+          const zone = await fetchTimeZone(state.samples[0], fetchImpl, {
+            ...options,
+            onRequest: () => spend(TIME_ZONE_CALLS),
+          });
+          if (signal.aborted) return;
+          if (isValidTimeZone(zone)) {
+            zoneFetched = true;
+            setTimeZone(zone);
+          }
+        } catch (err) {
+          if (signal.aborted) return;
+          console.warn(`Route weather: ${err.message}; showing times in your own time zone.`);
+        }
+      }
+
       // Elevation only when the GPX had none, and only until it has succeeded
       // once for this route (a Retry after a forecast failure skips it).
       if (!state.route.hasElevation && !elevationFetched) {
@@ -273,7 +314,8 @@ export function init({
       state.forecastStartMs = span.startMs;
       state.forecastEndMs = span.endMs;
       state.retry = null;
-      setStatus("info", `Forecast loaded for ${n} points, up to ${formatDateTime(span.endMs)}.`);
+      const until = formatDateTime(span.endMs, state.timeZone);
+      setStatus("info", `Forecast loaded for ${n} points, up to ${until}.`);
       recompute();
       render("results");
     } catch (err) {
@@ -289,8 +331,21 @@ export function init({
     }
   }
 
+  // Switches every displayed time (and the start input) to `zone`, or back to
+  // the browser's for null. The start instant is kept, except a default start
+  // re-snaps to the next whole hour on the new clock.
+  function setTimeZone(zone) {
+    if (zone === state.timeZone) return;
+    state.timeZone = zone;
+    if (startIsDefault) state.startMs = nextWholeHour(now(), zone);
+    form.syncStart(state);
+    recompute();
+    render("load");
+  }
+
   function clearRoute() {
     elevationFetched = false;
+    zoneFetched = false;
     Object.assign(state, {
       routeName: null,
       route: null,
@@ -306,6 +361,11 @@ export function init({
   async function loadFile(file) {
     const signal = beginLoad();
     clearRoute();
+    // Until the new route's zone is known, back to the browser's.
+    if (state.timeZone !== null) {
+      state.timeZone = null;
+      form.syncStart(state);
+    }
     recompute();
     if (file.size > MAX_GPX_BYTES) {
       const mb = (file.size / 1024 / 1024).toFixed(1);
@@ -396,7 +456,8 @@ export function init({
         render("inputs");
         return;
       case "start":
-        state.startMs = fromLocalInputValue(event.value);
+        startIsDefault = false;
+        state.startMs = fromLocalInputValue(event.value, state.timeZone);
         recompute();
         render("inputs");
         return;

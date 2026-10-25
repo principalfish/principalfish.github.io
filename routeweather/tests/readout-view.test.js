@@ -93,6 +93,18 @@ describe("readoutValues", () => {
     expect(readoutValues(state, null, 1).elevation).toBe(MISSING);
   });
 
+  it("says when temperature and wind are held above the top level", () => {
+    const v = readoutValues(makeState(), { ...WEATHER, aboveProfile: true }, 5);
+    expect(v.temp).toBe("8 °C (held at the ~3,000 m value)");
+    expect(v.wind).toBe("24 km/h from SW · gusts 41 km/h (held at the ~3,000 m value)");
+  });
+
+  it("shows the time in the route's zone", () => {
+    const v = readoutValues(makeState({ timeZone: "Asia/Tokyo" }), WEATHER, 5);
+    // 10:00 UTC is 19:00 in Tokyo.
+    expect(v.time).toBe("Mon 26 Oct 19:00");
+  });
+
   it("says when the position is outside the forecast", () => {
     const v = readoutValues(makeState(), { ...WEATHER, outsideForecast: true }, 5);
     expect(v.weather).toBe("Light rain (outside the forecast: nearest hour shown)");

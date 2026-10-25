@@ -42,7 +42,7 @@
           <input type="number" id="speedInput" inputmode="decimal" step="0.1" min="0">
         </label>
         <label class="field">
-          <span class="field-label">Start (your local time)</span>
+          <span class="field-label">Start (<span id="startZone">your local time</span>)</span>
           <input type="datetime-local" id="startInput" step="60">
         </label>
       </div>
@@ -97,6 +97,7 @@
     <section id="summary" class="panel summary" hidden>
       <h2 id="routeName"></h2>
       <dl id="summaryList" class="summary-list"></dl>
+      <ul id="summaryNotes" class="summary-notes"></ul>
     </section>
 
     <!-- Map, charts and playback panels; main.js shows them as data arrives. -->

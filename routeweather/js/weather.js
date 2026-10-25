@@ -242,6 +242,16 @@ export function headCross(windFromDeg, speed, bearingDeg) {
   return { headKmh: speed * Math.cos(rel), crossKmh: speed * Math.sin(rel) };
 }
 
+// True when height `eleM` (the ground under the walker) puts the 2 m
+// temperature or the 10 m wind above the highest pressure level of its
+// profile. False without elevation or without any usable pressure level (a
+// surface-only profile isn't "held at ~3,000 m").
+export function isAboveProfile(profile, eleM) {
+  if (!Number.isFinite(eleM)) return false;
+  const top = (points) => (points.length > 1 ? points[points.length - 1].heightM : Infinity);
+  return eleM + SCREEN_HEIGHT_M > top(profile.temps) || eleM + WIND_HEIGHT_M > top(profile.winds);
+}
+
 // --- per sample ---
 
 // Everything the page shows for one sample (`{ ele }`; ele may be null,
@@ -262,6 +272,10 @@ export function headCross(windFromDeg, speed, bearingDeg) {
 // outsideForecast is true when `tMs` is before the first or after the last
 // hourly time (values are then clamped to the nearest end), so the page can
 // flag it.
+//
+// aboveProfile is true when the walker's 2 m or 10 m height is above the top
+// of its profile (the 700 hPa level, ~3,000 m): temperature or wind is then
+// held at that level's value rather than read off the profile.
 export function weatherForSample(loc, sample, tMs, bearingDeg) {
   const eleUsed = Number.isFinite(sample.ele) ? sample.ele : loc.cellElev;
   const profile = profileAt(loc, tMs);
@@ -284,6 +298,7 @@ export function weatherForSample(loc, sample, tMs, bearingDeg) {
     model2mTempC: profile.model2mTempC,
     cellElev: loc.cellElev,
     eleUsed,
+    aboveProfile: isAboveProfile(profile, eleUsed),
     // Also true for a NaN time or an empty series.
     outsideForecast: !(tMs >= timesMs[0] && tMs <= timesMs[timesMs.length - 1]),
   };

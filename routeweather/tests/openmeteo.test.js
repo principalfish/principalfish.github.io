@@ -4,6 +4,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 
 import {
   buildForecastUrl, buildElevationUrl, fetchForecast, fetchElevations, normaliseLocation,
+  buildTimeZoneUrl, fetchTimeZone,
   CHUNK_SIZE, ELEVATION_CHUNK_SIZE, FORECAST_URL, ELEVATION_URL, REQUEST_TIMEOUT_MS,
 } from "../js/openmeteo.js";
 import { HOURLY_VARS } from "../js/config.js";
@@ -484,5 +485,32 @@ describe("fetchElevations", () => {
     controller.abort();
     await expect(fetchElevations(samplesN(1), impl, { signal: controller.signal }))
       .rejects.toThrow(/elevation request was aborted/);
+  });
+});
+
+describe("fetchTimeZone", () => {
+  it("asks for the zone at one point with a single cheap variable", () => {
+    const url = new URL(buildTimeZoneUrl({ lat: 46.5, lon: 7.9 }));
+    expect(`${url.origin}${url.pathname}`).toBe(FORECAST_URL);
+    expect(url.searchParams.get("latitude")).toBe("46.5");
+    expect(url.searchParams.get("longitude")).toBe("7.9");
+    expect(url.searchParams.get("timezone")).toBe("auto");
+    expect(url.searchParams.get("hourly")).toBe("temperature_2m");
+    expect(url.searchParams.get("forecast_days")).toBe("1");
+  });
+
+  it("returns the zone name and reports the request", async () => {
+    const onRequest = vi.fn();
+    const impl = async () => jsonResponse({ timezone: "Europe/Zurich", latitude: 46.5 });
+    await expect(fetchTimeZone({ lat: 46.5, lon: 7.9 }, impl, { onRequest }))
+      .resolves.toBe("Europe/Zurich");
+    expect(onRequest).toHaveBeenCalledWith({ locations: 1 });
+  });
+
+  it("throws without a zone name, or on an API error", async () => {
+    const empty = async () => jsonResponse({ latitude: 46.5 });
+    await expect(fetchTimeZone({ lat: 46.5, lon: 7.9 }, empty)).rejects.toThrow(/no time zone/);
+    const bad = async () => jsonResponse({ error: true, reason: "Latitude out of range" }, 400);
+    await expect(fetchTimeZone({ lat: 99, lon: 0 }, bad)).rejects.toThrow(/Latitude out of range/);
   });
 });

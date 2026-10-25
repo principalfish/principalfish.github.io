@@ -66,11 +66,15 @@ function syntheticLocation(lat, lon, i, times, { leadingNulls, trailingNulls }) 
 //   maxHours       serve at most this many hours from the requested start
 //   leadingNulls / trailingNulls   null temperature_2m at the window's ends
 //   nullElevation  the elevation API has no value for the first point
+//   timeZone       the zone the time zone lookup answers with (default: the
+//                  test's own TZ, so times read as before); null fails it
+// Time zone lookups are counted in `zoneCalls`, not `calls`.
 function mockFetch({
   failForecast = 0, holdFirst = null, maxHours = Infinity, leadingNulls = 0, trailingNulls = 0,
-  nullElevation = false,
+  nullElevation = false, timeZone = process.env.TZ,
 } = {}) {
   const calls = { forecast: 0, elevation: 0 };
+  const zoneCalls = [];
   const signals = [];
   let failuresLeft = failForecast;
   let release;
@@ -87,6 +91,11 @@ function mockFetch({
       return new Response(JSON.stringify({ elevation }));
     }
     if (!href.startsWith(FORECAST_URL)) throw new Error(`unexpected URL ${href}`);
+    if (url.searchParams.get("timezone") === "auto") {
+      zoneCalls.push(href);
+      if (timeZone === null) return new Response("{}", { status: 500 });
+      return new Response(JSON.stringify({ latitude: lats[0], longitude: lons[0], timezone: timeZone }));
+    }
     calls.forecast++;
     // Deliberately ignores the abort signal: proves the controller drops a
     // superseded response even when it still arrives.
@@ -105,7 +114,7 @@ function mockFetch({
     );
     return new Response(JSON.stringify(locations.length === 1 ? locations[0] : locations));
   };
-  return { impl, calls, signals, release: () => release() };
+  return { impl, calls, zoneCalls, signals, release: () => release() };
 }
 
 // ~4.5 km east-west at 54.45°N; the default name proves textContent rendering.
@@ -779,11 +788,12 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     const failing = startPage({ fetchOptions: { failForecast: 1 } });
     await loadRoute(failing.page, { withElevation: false });
     expect(usageReports()).toHaveLength(1);
-    // Elevation plus the failed forecast request, both counted.
+    // The time zone lookup (1 call), elevation and the failed forecast
+    // request, all counted.
     const n = failing.page.state.samples.length;
     const forecastWeight = n * (HOURLY_VARS.length / 10);
     const spent = Number(/used ~([\d.]+) calls/.exec(usageReports()[0])[1]);
-    expect(spent).toBeCloseTo(n + forecastWeight, 1);
+    expect(spent).toBeCloseTo(1 + n + forecastWeight, 1);
 
     $("retryButton").click();
     await vi.waitFor(() => expect(failing.page.state.status.kind).toBe("info"));
@@ -792,6 +802,73 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
   });
 
   // --- view API ---
+
+  it("shows times in the route's zone once it is known", async () => {
+    const { page, fetch } = startPage({ fetchOptions: { timeZone: "Asia/Tokyo" } });
+    expect($("startZone").textContent).toBe("your local time");
+    await loadRoute(page);
+    expect(fetch.zoneCalls).toHaveLength(1);
+    expect(new URL(fetch.zoneCalls[0]).searchParams.get("timezone")).toBe("auto");
+    expect(page.state.timeZone).toBe("Asia/Tokyo");
+    // The default start re-snaps to the next whole hour on the route's clock.
+    expect(page.state.startMs).toBe(nextWholeHour(NOW, "Asia/Tokyo"));
+    expect($("startInput").value).toBe(toLocalInputValue(page.state.startMs, "Asia/Tokyo"));
+    expect($("startInput").min).toBe(toLocalInputValue(NOW, "Asia/Tokyo"));
+    expect($("startZone").textContent).toBe("route time: Asia/Tokyo (GMT+9)");
+    expect($("summaryList").textContent).toContain("Times inAsia/Tokyo (GMT+9)");
+    expect($("summaryList").textContent)
+      .toContain(formatDateTime(page.state.times[0], "Asia/Tokyo"));
+    expect($("pointsBody").rows[0].cells[1].textContent)
+      .toBe(formatDateTime(page.state.times[0], "Asia/Tokyo").slice(-5));
+  });
+
+  it("keeps a linked start's instant when the zone arrives", async () => {
+    const start = "2026-10-26T12:00Z";
+    const { page } = startPage({
+      search: `?start=${start}`, fetchOptions: { timeZone: "Asia/Tokyo" },
+    });
+    await loadRoute(page);
+    expect(page.state.startMs).toBe(Date.parse(start));
+    expect($("startInput").value).toBe("2026-10-26T21:00");
+  });
+
+  it("reads a typed start in the route's zone", async () => {
+    const { page } = startPage({ fetchOptions: { timeZone: "Asia/Tokyo" } });
+    await loadRoute(page);
+    typeInto("startInput", "2026-10-27T08:00");
+    expect(page.state.startMs).toBe(Date.UTC(2026, 9, 26, 23, 0));
+    commit("startInput");
+    expect(window.location.search).toContain("start=2026-10-26T23%3A00Z");
+  });
+
+  it("stays in the browser's zone when the zone lookup fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { page, calls } = startPage({ fetchOptions: { timeZone: null } });
+    await loadRoute(page);
+    expect(page.state.timeZone).toBeNull();
+    expect(page.state.results).not.toBeNull();
+    expect(calls.forecast).toBe(1);
+    expect($("startZone").textContent).toBe("your local time");
+    expect($("summaryList").textContent).not.toContain("Times in");
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/your own time zone/));
+  });
+
+  it("returns to the browser's zone for a new file until its zone is known", async () => {
+    const { page, fetch } = startPage({
+      fetchOptions: { timeZone: "Asia/Tokyo", holdFirst: "forecast" },
+    });
+    chooseFile(gpxFile(gpxText()));
+    await vi.waitFor(() => expect(page.state.timeZone).toBe("Asia/Tokyo"));
+    fetch.release();
+    await waitForLoad(page);
+    chooseFile(gpxFile(gpxText({ name: "Second" })));
+    expect(page.state.timeZone).toBeNull();
+    expect($("startZone").textContent).toBe("your local time");
+    await vi.waitFor(() => expect(page.state.routeName).toBe("Second"));
+    await waitForLoad(page);
+    expect(page.state.timeZone).toBe("Asia/Tokyo");
+    expect(fetch.zoneCalls).toHaveLength(2);
+  });
 
   it("passes a reason to registered views", async () => {
     const { page } = startPage();

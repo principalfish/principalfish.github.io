@@ -16,8 +16,8 @@
 //                                      u/v (as weather.js blends in time and
 //                                      height), so 350° and 10° meet at north.
 //   precipMm, precipProb, code,        from the NEARER sample (a tie at
-//                                      exactly halfway: the earlier). These are
-//   cellElev, eleFromModel             per-hour buckets / per-cell facts, not
+//   cellElev, eleFromModel,            exactly halfway: the earlier). These are
+//   aboveProfile                       per-hour buckets / per-cell facts, not
 //                                      quantities that vary smoothly along a
 //                                      path; the precipitation chart draws one
 //                                      bar per sample reaching halfway to its
@@ -39,7 +39,7 @@ const LINEAR_KEYS = [
   "tempC", "model2mTempC", "gustKmh", "model10mWindKmh", "model10mGustKmh",
   "headKmh", "crossKmh", "eleUsed",
 ];
-const NEAREST_KEYS = ["precipMm", "precipProb", "code", "cellElev"];
+const NEAREST_KEYS = ["precipMm", "precipProb", "code", "cellElev", "aboveProfile"];
 
 // --- position ---
 

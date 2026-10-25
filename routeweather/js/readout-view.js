@@ -36,6 +36,9 @@ const WEATHER_KEYS = ["weather", "temp", "wind", "relative", "rain", "model"];
 
 const OUTSIDE_NOTE = "outside the forecast: nearest hour shown";
 
+// Above the forecast's top level (weather.js aboveProfile).
+const HELD_NOTE = "(held at the ~3,000 m value)";
+
 // --- values ---
 
 // Elevation here: the GPX's own (interpolated along the route) when it has
@@ -56,7 +59,7 @@ export function readoutValues(state, weather, distKm, tMs = timeAtDistance(state
   const { units, route } = state;
   const w = weather;
   const values = {
-    time: formatDateTime(tMs),
+    time: formatDateTime(tMs, state.timeZone),
     elapsed: isNum(tMs) ? formatDuration(tMs - state.startMs) : MISSING,
     distance: route
       ? `${formatDistance(distKm, units)} of ${formatDistance(route.totalDistKm, units)}`
@@ -72,8 +75,9 @@ export function readoutValues(state, weather, distKm, tMs = timeAtDistance(state
   return {
     ...values,
     weather: w.outsideForecast ? `${description} (${OUTSIDE_NOTE})` : description,
-    temp: formatTemp(w.tempC, units),
-    wind: `${formatWind(w.windKmh, units)}${from} · gusts ${formatWind(w.gustKmh, units)}`,
+    temp: `${formatTemp(w.tempC, units)}${w.aboveProfile ? ` ${HELD_NOTE}` : ""}`,
+    wind: `${formatWind(w.windKmh, units)}${from} · gusts ${formatWind(w.gustKmh, units)}`
+      + (w.aboveProfile ? ` ${HELD_NOTE}` : ""),
     relative: `${formatHeadWind(w.headKmh, units)} · ${formatCrossWind(w.crossKmh, units)}`,
     rain: `${formatPrecip(w.precipMm, units)} · ${chance}`,
     model: `10 m wind ${formatWind(w.model10mWindKmh, units)}`

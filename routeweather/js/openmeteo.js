@@ -78,6 +78,19 @@ export function buildElevationUrl(points) {
   return `${ELEVATION_URL}?${coordParams(points).join("&")}`;
 }
 
+// The cheapest forecast request that names the time zone at `point`:
+// `timezone=auto` resolves it from the coordinates. One location, one
+// variable, one day: a single weighted call.
+export function buildTimeZoneUrl(point) {
+  const params = [
+    ...coordParams([point]),
+    "timezone=auto",
+    "hourly=temperature_2m",
+    "forecast_days=1",
+  ];
+  return `${FORECAST_URL}?${params.join("&")}`;
+}
+
 // --- requests ---
 
 function chunk(items, size) {
@@ -269,6 +282,22 @@ export async function fetchElevations(points, fetchImpl = fetch, options = {}) {
     elevations.push(...list.map(toNumber));
   }
   return elevations;
+}
+
+// The IANA time zone at `point` (`{ lat, lon }`), e.g. "Europe/Zurich".
+// Throws when the response has no usable zone name. Options as for
+// fetchForecast (`onRequest` gets `{ locations: 1 }`).
+export async function fetchTimeZone(point, fetchImpl = fetch, options = {}) {
+  const { signal, onRequest } = options;
+  const json = await getJson(buildTimeZoneUrl(point), fetchImpl, "time zone", {
+    signal,
+    onSent: () => onRequest?.({ locations: 1 }),
+  });
+  const zone = json?.timezone;
+  if (typeof zone !== "string" || zone === "") {
+    throw new Error("Open-Meteo returned no time zone for this route");
+  }
+  return zone;
 }
 
 // --- normalising ---

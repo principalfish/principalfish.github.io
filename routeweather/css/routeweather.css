@@ -136,6 +136,10 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 }
 .summary-item dd { margin: 2px 0 0; }
 
+.summary-notes { margin: 10px 0 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+.summary-notes:empty { display: none; }
+.summary-notes li + li { margin-top: 2px; }
+
 /* --- weather points table --- */
 
 .points > summary {
@@ -167,3 +171,5 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .badge-peak { color: var(--peak); border-color: var(--peak); }
 .badge-valley { color: var(--valley); border-color: var(--valley); }
 .badge-start, .badge-end { color: var(--good); border-color: var(--good); }
+.badge + .badge { margin-left: 4px; }
+.badge-held { cursor: help; }

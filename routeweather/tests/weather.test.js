@@ -4,7 +4,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   toUV, fromUV, interpHourly, bucketHourly, profileAt, temperatureAt, windAt, headCross,
-  weatherForSample, describeWeather, WMO_DESCRIPTIONS, LAPSE_RATE_K_PER_M,
+  weatherForSample, describeWeather, WMO_DESCRIPTIONS, LAPSE_RATE_K_PER_M, isAboveProfile,
 } from "../js/weather.js";
 import { normaliseLocation } from "../js/openmeteo.js";
 import { HOURLY_VARS, PRESSURE_LEVELS } from "../js/config.js";
@@ -437,8 +437,11 @@ describe("weatherForSample", () => {
         [lowland, {}, 45],
       ];
       for (const [loc, sample, bearing] of cases) {
-        const { outsideForecast, ...numbers } = weatherForSample(loc, sample, t, bearing);
+        const { outsideForecast, aboveProfile, ...numbers } = weatherForSample(
+          loc, sample, t, bearing,
+        );
         expect(outsideForecast).toBe(false);
+        expect(aboveProfile).toBe(false);
         for (const [key, value] of Object.entries(numbers)) {
           expect(Number.isFinite(value), `${key} = ${value}`).toBe(true);
         }
@@ -478,6 +481,32 @@ describe("weatherForSample", () => {
       expect(w.eleUsed).toBe(950);
       expect(w.cellElev).toBe(509);
     });
+  });
+});
+
+describe("isAboveProfile", () => {
+  // Only 700 hPa above ground, at 3000 m.
+  const loc = makeLoc({ geopotential_height_700hPa: 3000 });
+  const profile = profileAt(loc, T0);
+
+  it("is false below the top level", () => {
+    expect(isAboveProfile(profile, 2000)).toBe(false);
+    expect(isAboveProfile(profile, 2990)).toBe(false);
+  });
+
+  it("is true once the 10 m wind height passes the top level", () => {
+    expect(isAboveProfile(profile, 2991)).toBe(true);
+    expect(isAboveProfile(profile, 4000)).toBe(true);
+  });
+
+  it("is false without an elevation or any pressure level", () => {
+    expect(isAboveProfile(profile, NaN)).toBe(false);
+    expect(isAboveProfile(profileAt(makeLoc(), T0), 4000)).toBe(false);
+  });
+
+  it("is reported per sample", () => {
+    expect(weatherForSample(loc, { ele: 3500 }, T0, 0).aboveProfile).toBe(true);
+    expect(weatherForSample(loc, { ele: 500 }, T0, 0).aboveProfile).toBe(false);
   });
 });
 

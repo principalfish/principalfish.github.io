@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { createPlaybackController } from "../js/playback-controller.js";
 import { buildRoute } from "../js/route.js";
+import { resolveUnits } from "../js/units.js";
 
 // --- fixtures ---
 
@@ -26,7 +27,7 @@ function makeState(route = buildRoute(POINTS)) {
     bearingDeg: p.bearingDeg, kind: "filler",
   }));
   return {
-    route, samples, results: makeResults(samples), units: "metric",
+    route, samples, results: makeResults(samples), units: resolveUnits("metric"),
     startMs: Date.UTC(2026, 9, 26, 9, 0), speedKmh: 5,
   };
 }
@@ -138,8 +139,13 @@ describe("createPlaybackController", () => {
   it("re-renders the readout on a units change", () => {
     const state = makeState();
     controller.update(state, "load");
-    controller.update({ ...state, units: "imperial" }, "units");
+    controller.update({ ...state, units: resolveUnits("imperial") }, "units");
     expect(temp()).toBe("50 °F");
+    // A per-quantity override alone is a units change too.
+    controller.update({ ...state, units: resolveUnits("metric", { temp: "f" }) }, "units");
+    expect(temp()).toBe("50 °F");
+    controller.update(state, "units");
+    expect(temp()).toBe("10 °C");
   });
 
   it("ignores renders that change nothing it shows", () => {

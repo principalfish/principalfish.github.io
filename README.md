@@ -87,6 +87,10 @@ when you get there. Everything runs in the browser; there is no build step
   plus the 10 m gust's excess over the 10 m mean wind.
 - Wind is also given relative to the direction of travel (headwind and
   crosswind).
+- Units: Metric / Imperial is the preset (distance, elevation, speed);
+  "Customise units" overrides wind (km/h | mph), rain (mm | in) and
+  temperature (°C | °F) one by one, and picking a preset resets them. The URL
+  carries `wind`, `rain` and `temp` only when they differ from the preset.
 
 **Limits of the altitude adjustment.** It is linear interpolation between a
 handful of heights, so it captures broad inversions and stronger winds aloft but

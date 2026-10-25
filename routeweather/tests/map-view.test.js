@@ -7,6 +7,10 @@ import {
 } from "../js/map-view.js";
 import { buildRoute, positionAtDistance } from "../js/route.js";
 import { TILE_ATTRIBUTION, TILE_MAX_ZOOM, TILE_SUBDOMAINS, TILE_URL } from "../js/config.js";
+import { resolveUnits } from "../js/units.js";
+
+const METRIC = resolveUnits("metric");
+const IMPERIAL = resolveUnits("imperial");
 
 // --- fake Leaflet ---
 
@@ -115,7 +119,7 @@ function makeState(route = buildRoute(POINTS), overrides = {}) {
     cellElev: 509 + i,
     eleUsed: s.ele + 7, // smoothed, so not the raw GPX value
   }));
-  return { route, samples, cells, results, units: "metric", ...overrides };
+  return { route, samples, cells, results, units: METRIC, ...overrides };
 }
 
 const lngs = (latlngs) => latlngs.map((ll) => ll.lng);
@@ -195,7 +199,7 @@ describe("createMapUI (fake Leaflet)", () => {
   });
 
   it("creates the map on the first route and draws it before any forecast", () => {
-    ui.update({ route: null, samples: null, cells: null, results: null, units: "metric" });
+    ui.update({ route: null, samples: null, cells: null, results: null, units: METRIC });
     ui.setPosition(1);
     expect(made.maps).toHaveLength(0);
 
@@ -244,7 +248,7 @@ describe("createMapUI (fake Leaflet)", () => {
     dot.tooltip.content.textContent = "untouched";
     ui.update({ ...state }, "status");
     expect(dot.tooltip.content.textContent).toBe("untouched");
-    ui.update({ ...state, units: "imperial" }, "units");
+    ui.update({ ...state, units: IMPERIAL }, "units");
     expect(dot.tooltip.content.textContent).toContain("0.4 mi SW");
   });
 
@@ -285,7 +289,7 @@ describe("createMapUI (fake Leaflet)", () => {
       { lat: -16.8, lon, offsetKm: 5, offsetBearingDeg: 90 }
     ));
     const results = samples.map(() => ({ windKmh: 10, windFromDeg: 0, cellElev: 0, eleUsed: 0 }));
-    ui.update({ route, samples, cells, results, units: "metric" });
+    ui.update({ route, samples, cells, results, units: METRIC });
 
     const fitted = lngs(map().fits[0].bounds.latlngs);
     expect(fitted[0]).toBe(179.9);
@@ -337,8 +341,12 @@ describe("createMapUI (fake Leaflet)", () => {
     expect(node.nodeType).toBe(1); // a DOM node, not an HTML string
     expect(node.textContent).toBe("Forecast cell 54.448, −3.211 · 0.7 km SW · model elevation 509 m");
 
-    ui.update({ ...state, units: "imperial" });
+    ui.update({ ...state, units: IMPERIAL });
     expect(node.textContent).toBe("Forecast cell 54.448, −3.211 · 0.4 mi SW · model elevation 1670 ft");
+
+    // Wind, rain and temperature overrides leave distance and elevation on the preset.
+    ui.update({ ...state, units: resolveUnits("metric", { wind: "mph", rain: "in", temp: "f" }) });
+    expect(node.textContent).toBe("Forecast cell 54.448, −3.211 · 0.7 km SW · model elevation 509 m");
   });
 
   it("toggles the forecast-cell layer from the checkbox", () => {
@@ -420,7 +428,7 @@ describe("createMapUI (fake Leaflet)", () => {
     });
     const route = buildRoute(points);
     const samples = [sampleAt(route, 0, "start"), sampleAt(route, n - 1, "end")];
-    ui.update({ route, samples, cells: null, results: null, units: "metric" });
+    ui.update({ route, samples, cells: null, results: null, units: METRIC });
 
     const { rest, done } = lastLines();
     expect(rest.latlngs.length).toBeLessThan(1000);
@@ -493,10 +501,10 @@ describe("createMapUI (fake Leaflet)", () => {
     const state = makeState();
     ui.update(state);
     ui.setPosition(1, { windKmh: 50, windFromDeg: 45 });
-    ui.update({ ...state, units: "imperial" });
+    ui.update({ ...state, units: IMPERIAL });
     expect(arrow().style.transform).toBe("rotate(225deg)"); // not snapped to a sample
 
-    ui.update({ ...state, units: "imperial", results: state.results.map((r) => ({ ...r })) });
+    ui.update({ ...state, units: IMPERIAL, results: state.results.map((r) => ({ ...r })) });
     // New results: back to the nearest sample (the start, from 270).
     expect(arrow().style.transform).toBe("rotate(90deg)");
 
@@ -583,16 +591,16 @@ describe("createMapUI (fake Leaflet)", () => {
     const mapEl = container.querySelector(".route-map");
     Object.defineProperty(mapEl, "clientWidth", { value: 800, configurable: true });
     Object.defineProperty(mapEl, "clientHeight", { value: 440, configurable: true });
-    ui.update({ ...state, units: "imperial" });
+    ui.update({ ...state, units: IMPERIAL });
     expect(map().invalidated).toBe(1);
     expect(map().fits).toHaveLength(2);
-    ui.update({ ...state, units: "metric" });
+    ui.update({ ...state, units: METRIC });
     expect(map().fits).toHaveLength(2);
   });
 
   it("clears the overlays when the route goes away", () => {
     ui.update(makeState());
-    ui.update({ route: null, samples: null, cells: null, results: null, units: "metric" });
+    ui.update({ route: null, samples: null, cells: null, results: null, units: METRIC });
     const overlays = [...map().layers].filter((l) => !made.tileLayers.includes(l));
     expect(overlays).toEqual([]);
   });
@@ -635,7 +643,7 @@ describe("createMapUI (real Leaflet under jsdom)", () => {
     expect(position.classList.contains("wind-breezy")).toBe(true);
 
     // Same route, imperial: no rebuild, same arrow, explicit wind kept.
-    ui.update({ ...state, units: "imperial" });
+    ui.update({ ...state, units: IMPERIAL });
     expect(mapEl.querySelector(".rw-position .rw-wind")).toBe(position);
     expect(position.style.transform).toBe("rotate(20deg)");
 

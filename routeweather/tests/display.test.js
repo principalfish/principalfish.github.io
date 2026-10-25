@@ -4,7 +4,7 @@ import {
   compassPoint, formatArrival, formatCell, formatClock, formatCrossWind, formatDateTime,
   formatDuration, formatHeadWind,
 } from "../js/display.js";
-import { MISSING } from "../js/units.js";
+import { MISSING, resolveUnits } from "../js/units.js";
 
 const local = (...args) => new Date(...args).getTime();
 
@@ -57,6 +57,13 @@ describe("relative wind", () => {
     expect(formatCrossWind(8, "metric")).toBe("8 km/h from right");
     expect(formatCrossWind(-16.0934, "imperial")).toBe("10 mph from left");
     expect(formatCrossWind(null, "metric")).toBe(MISSING);
+  });
+
+  it("follows the wind setting, not the preset", () => {
+    const units = resolveUnits("metric", { wind: "mph" });
+    expect(formatHeadWind(16.0934, units)).toBe("10 mph headwind");
+    expect(formatCrossWind(-16.0934, resolveUnits("imperial", { wind: "kmh" })))
+      .toBe("16 km/h from left");
   });
 });
 

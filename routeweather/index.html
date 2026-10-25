@@ -55,6 +55,35 @@
         </div>
       </fieldset>
 
+      <!-- Per-quantity overrides of the preset above; picking a preset resets
+           them. Distance, elevation and speed always follow the preset. -->
+      <details id="unitsCustomise" class="units-customise">
+        <summary>Customise units</summary>
+        <div class="unit-toggles">
+          <fieldset class="field">
+            <legend class="field-label">Wind speed</legend>
+            <div class="segmented compact">
+              <label><input type="radio" name="windUnit" value="kmh"> km/h</label>
+              <label><input type="radio" name="windUnit" value="mph"> mph</label>
+            </div>
+          </fieldset>
+          <fieldset class="field">
+            <legend class="field-label">Rain</legend>
+            <div class="segmented compact">
+              <label><input type="radio" name="rainUnit" value="mm"> mm</label>
+              <label><input type="radio" name="rainUnit" value="in"> in</label>
+            </div>
+          </fieldset>
+          <fieldset class="field">
+            <legend class="field-label">Temperature</legend>
+            <div class="segmented compact">
+              <label><input type="radio" name="tempUnit" value="c"> °C</label>
+              <label><input type="radio" name="tempUnit" value="f"> °F</label>
+            </div>
+          </fieldset>
+        </div>
+      </details>
+
       <div class="status-row">
         <p id="status" class="status muted" role="status" aria-live="polite"
           tabindex="-1">Choose a GPX file to get started.</p>

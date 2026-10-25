@@ -16,7 +16,9 @@
 //              got their elevations (state.route / state.samples)
 //   "results"  the forecast arrived: locations, cells, times, results
 //   "inputs"   activity, speed or start changed: times/results recomputed
-//   "units"    display units changed only
+//   "units"    display units changed only (the preset or a per-quantity
+//              toggle; state.units is a units.js units set, interned, so it
+//              is a new object exactly when some unit changed)
 //   "status"   only messages changed (status line, Retry, plan error)
 //
 // State objects are replaced, never mutated in place, so a view that does
@@ -34,7 +36,7 @@ import { parseGpx } from "./gpx.js";
 import { arrivalTimes, bearingDeg, buildRoute, haversineKm, sampleRoute } from "./route.js";
 import { fetchElevations, fetchForecast } from "./openmeteo.js";
 import { weatherForSample } from "./weather.js";
-import { kmhToSpeed, speedToKmh } from "./units.js";
+import { isCustomised, kmhToSpeed, resolveUnits, speedToKmh } from "./units.js";
 import { readState, writeState } from "./urlstate.js";
 import {
   createUsageLog, elevationCallWeight, forecastCallWeight, formatUsageReport,
@@ -87,7 +89,7 @@ function cellsFor(samples, locations) {
 
 function speedRangeText(units) {
   const show = (kmh) => Math.round(kmhToSpeed(kmh, units) * 10) / 10;
-  return `${show(SPEED_RANGE_KMH.min)}–${show(SPEED_RANGE_KMH.max)} ${SPEED_UNIT[units]}`;
+  return `${show(SPEED_RANGE_KMH.min)}–${show(SPEED_RANGE_KMH.max)} ${SPEED_UNIT[units.system]}`;
 }
 
 // A URL start is only honoured if it is still ahead and inside the window.
@@ -117,7 +119,8 @@ export function init({
     activity: fromUrl.activity,
     speedKmh: fromUrl.speed, // NaN while the typed speed is invalid
     startMs: initialStartMs(fromUrl.start, now()),
-    units: fromUrl.units,
+    // { system, wind, rain, temp }: replaced, never mutated (resolveUnits)
+    units: resolveUnits(fromUrl.units, fromUrl),
     // per GPX load
     routeName: null,
     route: null, // buildRoute()
@@ -350,11 +353,15 @@ export function init({
   // Written on committed changes only (radios, and `change` on the text
   // inputs), not per keystroke, so the history isn't rewritten as you type.
   function writeUrl() {
+    const { system, wind, rain, temp } = state.units;
     win.history.replaceState(null, "", writeState({
       activity: state.activity,
       speed: state.speedKmh,
       start: Number.isFinite(state.startMs) ? toIsoStart(state.startMs) : null,
-      units: state.units,
+      units: system,
+      wind,
+      rain,
+      temp,
     }));
   }
 
@@ -393,14 +400,32 @@ export function init({
         recompute();
         render("inputs");
         return;
-      case "units":
-        state.units = event.value;
+      case "units": {
+        // Picking a preset resets wind, rain and temperature to its defaults.
+        const units = resolveUnits(event.value);
+        if (units === state.units) return; // re-picked with nothing to reset
+        state.units = units;
         if (Number.isFinite(state.speedKmh)) form.syncSpeed(state);
         // Local maths only; keeps the speed-range message in the new units.
         recompute();
         writeUrl();
         render("units");
         return;
+      }
+      case "unit": {
+        // One quantity overridden; the preset (and so distance, elevation and
+        // the speed input) stays. Nothing to recompute: only the speed-range
+        // message depends on units, and it follows the preset.
+        const units = resolveUnits(state.units.system, {
+          ...state.units,
+          [event.quantity]: event.value,
+        });
+        if (units === state.units) return;
+        state.units = units;
+        writeUrl();
+        render("units");
+        return;
+      }
       default:
         // Unknown events are ignored.
     }
@@ -440,6 +465,8 @@ export function init({
 
   form.syncSpeed(state);
   form.syncStart(state);
+  // A link that overrides a unit shows the toggles it set.
+  if (isCustomised(state.units)) form.openCustomise();
   recompute();
   render("load");
 

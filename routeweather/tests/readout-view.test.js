@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createReadoutUI, readoutValues } from "../js/readout-view.js";
 import { buildRoute } from "../js/route.js";
 import { formatDateTime } from "../js/display.js";
-import { MISSING } from "../js/units.js";
+import { MISSING, resolveUnits } from "../js/units.js";
 
 // --- fixtures ---
 
@@ -20,7 +20,7 @@ function makeState(overrides = {}) {
     route: buildRoute(POINTS),
     startMs: START,
     speedKmh: 5,
-    units: "metric",
+    units: resolveUnits("metric"),
     ...overrides,
   };
 }
@@ -63,11 +63,26 @@ describe("readoutValues", () => {
   });
 
   it("uses imperial units", () => {
-    const v = readoutValues(makeState({ units: "imperial" }), WEATHER, 5);
+    const v = readoutValues(makeState({ units: resolveUnits("imperial") }), WEATHER, 5);
     expect(v.distance).toMatch(/^3\.1 mi of /);
     expect(v.temp).toBe("46 °F");
     expect(v.wind).toBe("15 mph from SW · gusts 25 mph");
     expect(v.rain).toBe("0.02 in · 62% chance");
+    // A plain system string reads as that preset.
+    expect(readoutValues(makeState({ units: "imperial" }), WEATHER, 5)).toEqual(v);
+  });
+
+  it("shows every wind in the wind unit, temperature and rain in theirs", () => {
+    const units = resolveUnits("metric", { wind: "mph", rain: "in", temp: "f" });
+    const v = readoutValues(makeState({ units }), WEATHER, 5);
+    expect(v.wind).toBe("15 mph from SW · gusts 25 mph");
+    expect(v.relative).toBe("7 mph headwind · 5 mph from left");
+    expect(v.model).toBe("10 m wind 9 mph · cell elevation 340 m");
+    expect(v.temp).toBe("46 °F");
+    expect(v.rain).toBe("0.02 in · 62% chance");
+    // Distance and elevation stay on the preset.
+    expect(v.distance).toMatch(/^5\.0 km of /);
+    expect(v.elevation).toMatch(/^\d+ m$/);
   });
 
   it("marks a model-only elevation when the route has none", () => {

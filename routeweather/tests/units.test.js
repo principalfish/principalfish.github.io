@@ -1,10 +1,117 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  formatDistance, formatSpeed, formatTemp, formatPrecip, formatElevation,
+  formatDistance, formatSpeed, formatTemp, formatPrecip, formatElevation, formatWind,
   kmhToSpeed, speedToKmh, isValidSpeedKmh, MISSING,
+  asUnits, isCustomised, resolveUnits, UNIT_CHOICES, UNIT_LABELS,
 } from "../js/units.js";
 import { SPEED_RANGE_KMH } from "../js/config.js";
+
+// Metric preset with every overridable quantity in imperial, and the reverse.
+const METRIC_OVERRIDDEN = resolveUnits("metric", { wind: "mph", rain: "in", temp: "f" });
+const IMPERIAL_OVERRIDDEN = resolveUnits("imperial", { wind: "kmh", rain: "mm", temp: "c" });
+
+describe("resolveUnits", () => {
+  it("gives each preset's defaults", () => {
+    expect(resolveUnits("metric"))
+      .toEqual({ system: "metric", wind: "kmh", rain: "mm", temp: "c" });
+    expect(resolveUnits("imperial"))
+      .toEqual({ system: "imperial", wind: "mph", rain: "in", temp: "f" });
+  });
+
+  it("treats an unknown or missing system as metric", () => {
+    expect(resolveUnits(undefined)).toBe(resolveUnits("metric"));
+    expect(resolveUnits("nautical")).toBe(resolveUnits("metric"));
+  });
+
+  it("applies each valid override, leaving the rest at the preset's default", () => {
+    expect(resolveUnits("metric", { wind: "mph" }))
+      .toEqual({ system: "metric", wind: "mph", rain: "mm", temp: "c" });
+    expect(resolveUnits("imperial", { temp: "c" }))
+      .toEqual({ system: "imperial", wind: "mph", rain: "in", temp: "c" });
+  });
+
+  it("ignores invalid overrides and unknown keys", () => {
+    const units = resolveUnits("imperial", {
+      wind: "knots", rain: null, temp: "C", system: "metric", extra: "x",
+    });
+    expect(units).toBe(resolveUnits("imperial"));
+    expect(resolveUnits("metric", null)).toBe(resolveUnits("metric"));
+  });
+
+  it("returns the same frozen object for the same combination", () => {
+    const a = resolveUnits("metric", { wind: "mph" });
+    expect(resolveUnits("metric", { wind: "mph", rain: "mm" })).toBe(a);
+    expect(Object.isFrozen(a)).toBe(true);
+    expect(resolveUnits("metric", { wind: "kmh" })).not.toBe(a);
+  });
+
+  it("has a label for every choice", () => {
+    for (const [quantity, choices] of Object.entries(UNIT_CHOICES)) {
+      for (const choice of choices) {
+        expect(UNIT_LABELS[quantity][choice]).toEqual(expect.any(String));
+      }
+    }
+  });
+});
+
+describe("asUnits", () => {
+  it("reads a system string as its preset", () => {
+    expect(asUnits("imperial")).toBe(resolveUnits("imperial"));
+    expect(asUnits(undefined)).toBe(resolveUnits("metric"));
+  });
+
+  it("passes a units set through and completes a partial one", () => {
+    expect(asUnits(METRIC_OVERRIDDEN)).toBe(METRIC_OVERRIDDEN);
+    expect(asUnits({ system: "imperial", wind: "kmh" }))
+      .toBe(resolveUnits("imperial", { wind: "kmh" }));
+  });
+});
+
+describe("isCustomised", () => {
+  it("is false for the presets and true with any override", () => {
+    expect(isCustomised("metric")).toBe(false);
+    expect(isCustomised(resolveUnits("imperial"))).toBe(false);
+    expect(isCustomised(resolveUnits("metric", { temp: "f" }))).toBe(true);
+    expect(isCustomised(IMPERIAL_OVERRIDDEN)).toBe(true);
+  });
+});
+
+describe("formatWind", () => {
+  it("follows the preset given a system string", () => {
+    expect(formatWind(20, "metric")).toBe("20 km/h");
+    expect(formatWind(10, "imperial")).toBe("6 mph");
+  });
+
+  it("follows the wind setting, not the preset", () => {
+    expect(formatWind(10, METRIC_OVERRIDDEN)).toBe("6 mph");
+    expect(formatWind(20, IMPERIAL_OVERRIDDEN)).toBe("20 km/h");
+  });
+
+  it("returns the missing placeholder for invalid input", () => {
+    expect(formatWind(null, METRIC_OVERRIDDEN)).toBe(MISSING);
+  });
+});
+
+describe("unit overrides", () => {
+  it("convert temperature and rain by their own settings", () => {
+    expect(formatTemp(0, METRIC_OVERRIDDEN)).toBe("32 °F");
+    expect(formatTemp(12.4, IMPERIAL_OVERRIDDEN)).toBe("12 °C");
+    expect(formatPrecip(25.4, METRIC_OVERRIDDEN)).toBe("1.00 in");
+    expect(formatPrecip(2.34, IMPERIAL_OVERRIDDEN)).toBe("2.3 mm");
+  });
+
+  it("leave distance, elevation and the activity speed on the preset", () => {
+    expect(formatDistance(12.34, METRIC_OVERRIDDEN)).toBe("12.3 km");
+    expect(formatElevation(1000, IMPERIAL_OVERRIDDEN)).toBe("3281 ft");
+    expect(formatSpeed(20, METRIC_OVERRIDDEN)).toBe("20 km/h");
+    expect(formatSpeed(10, IMPERIAL_OVERRIDDEN)).toBe("6 mph");
+    expect(kmhToSpeed(10, IMPERIAL_OVERRIDDEN)).toBeCloseTo(6.21371, 5);
+    expect(kmhToSpeed(10, METRIC_OVERRIDDEN)).toBe(10);
+    expect(speedToKmh("10", IMPERIAL_OVERRIDDEN)).toBeCloseTo(16.0934, 3);
+    expect(speedToKmh("10", METRIC_OVERRIDDEN)).toBe(10);
+  });
+});
 
 describe("formatDistance", () => {
   it("passes metric through with 1 decimal", () => {

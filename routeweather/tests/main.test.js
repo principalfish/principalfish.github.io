@@ -536,6 +536,142 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     expect(window.location.search).toContain("units=imperial");
   });
 
+  // --- per-quantity units ---
+
+  // A table row's cells by column: distance, temp, wind, gust, head/tail, cross, rain.
+  const rowText = (row) => {
+    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent);
+    return {
+      distance: cells[0], temp: cells[5], wind: cells[6], gust: cells[7], head: cells[8],
+      cross: cells[9], rain: cells[10],
+    };
+  };
+  const firstRow = () => rowText($("pointsBody").querySelector("tr"));
+  const readoutText = (key) => $("playback").querySelector(`.readout-${key} dd`).textContent;
+  const urlParams = () => new URLSearchParams(window.location.search);
+
+  it("starts with the toggles on the preset's defaults and the disclosure closed", () => {
+    const { page } = startPage();
+    expect(page.state.units).toEqual({ system: "metric", wind: "kmh", rain: "mm", temp: "c" });
+    expect(checkedValue("windUnit")).toBe("kmh");
+    expect(checkedValue("rainUnit")).toBe("mm");
+    expect(checkedValue("tempUnit")).toBe("c");
+    expect($("unitsCustomise").open).toBe(false);
+  });
+
+  it("shows wind in mph over metric without touching distance, speed or the data", async () => {
+    const { page, calls } = startPage();
+    const reasons = [];
+    page.addView((state, reason) => reasons.push(reason));
+    await loadRoute(page);
+    // Through the clock, so the position survives the units re-render.
+    page.playback.clock.seek(0.5);
+    const { results, times } = page.state;
+    const before = firstRow();
+    const distanceBefore = readoutText("distance");
+
+    clickRadio("windUnit", "mph");
+
+    expect(reasons.at(-1)).toBe("units");
+    expect(calls.forecast).toBe(1);
+    // No recompute: the same results and times.
+    expect(page.state.results).toBe(results);
+    expect(page.state.times).toBe(times);
+    expect(page.state.units).toEqual({ system: "metric", wind: "mph", rain: "mm", temp: "c" });
+    expect(checkedValue("units")).toBe("metric");
+
+    const after = firstRow();
+    for (const key of ["wind", "gust", "head", "cross"]) {
+      expect(after[key], key).toMatch(/mph/);
+      expect(after[key], key).not.toMatch(/km\/h/);
+    }
+    expect(after.distance).toBe(before.distance);
+    expect(after.temp).toBe(before.temp);
+    expect(after.rain).toBe(before.rain);
+    expect(readoutText("wind")).toMatch(/^\d+ mph .*gusts \d+ mph$/);
+    expect(readoutText("relative")).not.toMatch(/km\/h/);
+    expect(readoutText("model")).toMatch(/^10 m wind \d+ mph · cell elevation \d+ m$/);
+    expect(readoutText("distance")).toBe(distanceBefore);
+    expect($("speedUnit").textContent).toBe("km/h");
+    expect($("speedInput").value).toBe("5");
+    expect([...$("chartsPanel").querySelectorAll(".strip-title")].map((t) => t.textContent))
+      .toEqual(["Elevation (m)", "Temperature (°C)", "Head/tailwind (mph)", "Rain (mm/h)"]);
+
+    expect(urlParams().get("units")).toBe("metric");
+    expect(urlParams().get("wind")).toBe("mph");
+    expect(urlParams().has("rain")).toBe(false);
+    expect(urlParams().has("temp")).toBe(false);
+  });
+
+  it("shows rain and temperature in their own units", async () => {
+    const { page } = startPage({ search: "?units=imperial" });
+    await loadRoute(page);
+    clickRadio("rainUnit", "mm");
+    clickRadio("tempUnit", "c");
+    const row = firstRow();
+    expect(row.temp).toMatch(/°C$/);
+    expect(row.rain).toMatch(/ mm · /);
+    expect(row.wind).toMatch(/mph/);
+    expect(row.distance).toMatch(/mi$/);
+    expect(urlParams().get("rain")).toBe("mm");
+    expect(urlParams().get("temp")).toBe("c");
+    expect(urlParams().has("wind")).toBe(false);
+  });
+
+  it("resets the toggles when a preset is picked, even the one already picked", async () => {
+    const { page } = startPage();
+    await loadRoute(page);
+    clickRadio("windUnit", "mph");
+    clickRadio("tempUnit", "f");
+
+    clickRadio("units", "imperial");
+    expect(page.state.units).toEqual({ system: "imperial", wind: "mph", rain: "in", temp: "f" });
+    expect(checkedValue("rainUnit")).toBe("in");
+    expect(urlParams().get("units")).toBe("imperial");
+    for (const key of ["wind", "rain", "temp"]) expect(urlParams().has(key), key).toBe(false);
+
+    clickRadio("tempUnit", "c");
+    expect(page.state.units.temp).toBe("c");
+    clickRadio("units", "imperial");
+    expect(page.state.units.temp).toBe("f");
+    expect(checkedValue("tempUnit")).toBe("f");
+    expect(firstRow().temp).toMatch(/°F$/);
+
+    clickRadio("units", "metric");
+    expect(page.state.units).toEqual({ system: "metric", wind: "kmh", rain: "mm", temp: "c" });
+    expect(checkedValue("windUnit")).toBe("kmh");
+  });
+
+  it("ignores re-picking a preset or toggle with nothing to change", () => {
+    const { page } = startPage();
+    const reasons = [];
+    page.addView((state, reason) => reasons.push(reason));
+    const units = page.state.units;
+    clickRadio("units", "metric");
+    clickRadio("windUnit", "kmh");
+    expect(page.state.units).toBe(units);
+    expect(reasons).toEqual([]);
+  });
+
+  it("restores unit overrides from the URL and opens the disclosure", async () => {
+    const { page } = startPage({ search: "?units=metric&wind=mph&temp=f" });
+    expect(page.state.units).toEqual({ system: "metric", wind: "mph", rain: "mm", temp: "f" });
+    expect($("unitsCustomise").open).toBe(true);
+    expect(checkedValue("units")).toBe("metric");
+    expect(checkedValue("windUnit")).toBe("mph");
+    expect(checkedValue("rainUnit")).toBe("mm");
+    expect(checkedValue("tempUnit")).toBe("f");
+    await loadRoute(page);
+    expect(firstRow().temp).toMatch(/°F$/);
+    expect(firstRow().distance).toMatch(/km$/);
+  });
+
+  it("falls back to the preset for invalid URL overrides", () => {
+    const { page } = startPage({ search: "?units=imperial&wind=knots&temp=K" });
+    expect(page.state.units).toEqual({ system: "imperial", wind: "mph", rain: "in", temp: "f" });
+    expect($("unitsCustomise").open).toBe(false);
+  });
+
   it("flags an invalid speed instead of showing stale results", async () => {
     const { page } = startPage();
     await loadRoute(page);

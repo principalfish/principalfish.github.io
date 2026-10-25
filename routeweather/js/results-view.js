@@ -6,7 +6,7 @@
 
 import { describeWeather } from "./weather.js";
 import {
-  formatDistance, formatElevation, formatPrecip, formatSpeed, formatTemp, MISSING,
+  formatDistance, formatElevation, formatPrecip, formatTemp, formatWind, MISSING,
 } from "./units.js";
 import {
   compassPoint, formatArrival, formatCell, formatCrossWind, formatDateTime, formatDuration,
@@ -92,7 +92,7 @@ function pointRow(doc, state, i) {
   const elevation = Number.isFinite(sample.ele)
     ? formatElevation(w.eleUsed, units)
     : `${formatElevation(w.eleUsed, units)} (model)`;
-  const wind = `${formatSpeed(w.windKmh, units)} ${compassPoint(w.windFromDeg)}`;
+  const wind = `${formatWind(w.windKmh, units)} ${compassPoint(w.windFromDeg)}`;
   const rainChance = Number.isFinite(w.precipProb) ? `${Math.round(w.precipProb)}%` : MISSING;
 
   const tr = el(doc, "tr");
@@ -110,7 +110,7 @@ function pointRow(doc, state, i) {
     el(doc, "td", describeWeather(w.code)),
     el(doc, "td", formatTemp(w.tempC, units)),
     el(doc, "td", wind),
-    el(doc, "td", formatSpeed(w.gustKmh, units)),
+    el(doc, "td", formatWind(w.gustKmh, units)),
     el(doc, "td", formatHeadWind(w.headKmh, units)),
     el(doc, "td", formatCrossWind(w.crossKmh, units)),
     el(doc, "td", `${formatPrecip(w.precipMm, units)} · ${rainChance}`),

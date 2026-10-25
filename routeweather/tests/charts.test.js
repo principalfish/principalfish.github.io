@@ -6,7 +6,7 @@ import {
 } from "../js/charts.js";
 import { weatherAtDistance } from "../js/along-route.js";
 import { buildRoute } from "../js/route.js";
-import { KM_TO_MI } from "../js/units.js";
+import { KM_TO_MI, resolveUnits } from "../js/units.js";
 
 // --- fixtures ---
 
@@ -19,6 +19,9 @@ const POINTS = [
 
 const KINDS = ["start", "peak", "valley", "end"];
 
+const METRIC = resolveUnits("metric");
+const IMPERIAL = resolveUnits("imperial");
+
 function makeState(route = buildRoute(POINTS), overrides = {}) {
   const samples = route.points.map((p, i) => ({
     index: i, lat: p.lat, lon: p.lon, ele: p.ele, cumDistKm: p.cumDistKm,
@@ -30,7 +33,7 @@ function makeState(route = buildRoute(POINTS), overrides = {}) {
     precipProb: [10, 40, 80, 20][i], code: 61, model10mWindKmh: 15, model10mGustKmh: 30,
     cellElev: 300, eleUsed: s.ele, outsideForecast: i === 3,
   }));
-  return { route, samples, results, units: "metric", ...overrides };
+  return { route, samples, results, units: METRIC, ...overrides };
 }
 
 // Fixed-width container: jsdom has no layout, so clientWidth is stubbed.
@@ -200,6 +203,8 @@ describe("extremeLabels", () => {
   });
 
   it("uses the active units", () => {
+    expect(extremeLabels([extreme(0, 1000)], at, IMPERIAL, 500)[0].text).toBe("3281 ft");
+    // A plain system string still works.
     expect(extremeLabels([extreme(0, 1000)], at, "imperial", 500)[0].text).toBe("3281 ft");
   });
 });
@@ -272,7 +277,7 @@ describe("createChartsUI", () => {
     const labels = () => [...container.querySelectorAll(".extreme-label")]
       .map((t) => [t.getAttribute("class"), t.textContent]);
     expect(labels()).toEqual([["extreme-label peak", "400 m"], ["extreme-label valley", "200 m"]]);
-    charts.update({ ...state, units: "imperial" });
+    charts.update({ ...state, units: IMPERIAL });
     expect(labels().map(([, text]) => text)).toEqual(["1312 ft", "656 ft"]);
   });
 
@@ -386,7 +391,7 @@ describe("createChartsUI", () => {
     for (const change of [
       { results: [...state.results] },
       { samples: [...state.samples] },
-      { units: "imperial" },
+      { units: IMPERIAL },
     ]) {
       charts.update({ ...state, ...change });
       expect(container.querySelector(".strip"), Object.keys(change)[0]).not.toBe(strip);
@@ -428,7 +433,7 @@ describe("createChartsUI", () => {
     const state = makeState();
     charts.update(state);
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (km)");
-    charts.update({ ...state, units: "imperial" });
+    charts.update({ ...state, units: IMPERIAL });
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (mi)");
     expect(titles(container)).toEqual([
       "Elevation (ft)", "Temperature (°F)", "Head/tailwind (mph)", "Rain (in/h)",
@@ -442,6 +447,44 @@ describe("createChartsUI", () => {
       .map((t) => Number(t.textContent));
     expect(Math.max(...rainTicks)).toBeGreaterThan(0);
     expect(Math.max(...rainTicks)).toBeLessThan(0.1);
+  });
+
+  it("labels temperature, wind and rain by their own settings, the rest by the preset", () => {
+    const state = makeState();
+    charts.update({ ...state, units: resolveUnits("metric", { wind: "mph", temp: "f" }) });
+    expect(container.querySelector(".axis-label").textContent).toBe("Distance (km)");
+    expect(titles(container)).toEqual([
+      "Elevation (m)", "Temperature (°F)", "Head/tailwind (mph)", "Rain (mm/h)",
+    ]);
+    charts.update({ ...state, units: resolveUnits("imperial", { rain: "mm", temp: "c" }) });
+    expect(container.querySelector(".axis-label").textContent).toBe("Distance (mi)");
+    expect(titles(container)).toEqual([
+      "Elevation (ft)", "Temperature (°C)", "Head/tailwind (mph)", "Rain (mm/h)",
+    ]);
+  });
+
+  it("converts each strip by its own unit", () => {
+    const state = makeState();
+    // Each strip's y tick labels, top to bottom.
+    const stripTicks = () => [...container.querySelectorAll(".strip")]
+      .map((strip) => [...strip.querySelectorAll(".axis-y .tick text")].map((t) => t.textContent));
+    charts.update(state);
+    const metric = stripTicks();
+    charts.update({ ...state, units: IMPERIAL });
+    const imperial = stripTicks();
+    metric.forEach((ticks, i) => expect(imperial[i]).not.toEqual(ticks));
+    // Strips: elevation, temperature, head/tailwind, rain. Each mixed set's
+    // strips match the preset its own unit comes from.
+    charts.update({ ...state, units: resolveUnits("metric", { wind: "mph", rain: "in" }) });
+    expect(stripTicks()).toEqual([metric[0], metric[1], imperial[2], imperial[3]]);
+    charts.update({ ...state, units: resolveUnits("imperial", { temp: "c" }) });
+    expect(stripTicks()).toEqual([imperial[0], metric[1], imperial[2], imperial[3]]);
+  });
+
+  it("still accepts a plain system string", () => {
+    charts.update(makeState(undefined, { units: "imperial" }));
+    expect(container.querySelector(".axis-label").textContent).toBe("Distance (mi)");
+    expect(titles(container)[1]).toBe("Temperature (°F)");
   });
 
   // --- pointer ---
@@ -516,7 +559,7 @@ describe("createChartsUI", () => {
   });
 
   it("seeks in km whatever the display units", () => {
-    const state = makeState(undefined, { units: "imperial" });
+    const state = makeState(undefined, { units: IMPERIAL });
     charts.update(state);
     const { left, right } = plotRange(container);
     hitOf(container).dispatchEvent(pointer("pointerdown", { clientX: (left + right) / 2 }));
@@ -524,7 +567,7 @@ describe("createChartsUI", () => {
   });
 
   it("treats a missing value as a gap in imperial units too, not as 0", () => {
-    const state = makeState(undefined, { units: "imperial" });
+    const state = makeState(undefined, { units: IMPERIAL });
     const results = state.results.map((r, i) => (i === 1 ? { ...r, tempC: null, headKmh: null } : r));
     charts.update({ ...state, results });
     expect(container.querySelector(".s-temp").getAttribute("d").match(/M/g)).toHaveLength(2);

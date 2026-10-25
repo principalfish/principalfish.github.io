@@ -9,7 +9,7 @@
 
 import { describeWeather } from "./weather.js";
 import {
-  formatDistance, formatElevation, formatPrecip, formatSpeed, formatTemp, MISSING,
+  formatDistance, formatElevation, formatPrecip, formatTemp, formatWind, MISSING,
 } from "./units.js";
 import {
   compassPoint, formatCrossWind, formatDateTime, formatDuration, formatHeadWind,
@@ -73,10 +73,10 @@ export function readoutValues(state, weather, distKm, tMs = timeAtDistance(state
     ...values,
     weather: w.outsideForecast ? `${description} (${OUTSIDE_NOTE})` : description,
     temp: formatTemp(w.tempC, units),
-    wind: `${formatSpeed(w.windKmh, units)}${from} · gusts ${formatSpeed(w.gustKmh, units)}`,
+    wind: `${formatWind(w.windKmh, units)}${from} · gusts ${formatWind(w.gustKmh, units)}`,
     relative: `${formatHeadWind(w.headKmh, units)} · ${formatCrossWind(w.crossKmh, units)}`,
     rain: `${formatPrecip(w.precipMm, units)} · ${chance}`,
-    model: `10 m wind ${formatSpeed(w.model10mWindKmh, units)}`
+    model: `10 m wind ${formatWind(w.model10mWindKmh, units)}`
       + ` · cell elevation ${formatElevation(w.cellElev, units)}`,
   };
 }

@@ -3,11 +3,15 @@ import { describe, it, expect } from "vitest";
 import { readState, writeState, DEFAULT_STATE } from "../js/urlstate.js";
 import { ACTIVITIES } from "../js/config.js";
 
+// Imperial with its own defaults, so no overrides are written.
+const IMPERIAL_UNITS = { units: "imperial", wind: "mph", rain: "in", temp: "f" };
+const METRIC_UNITS = { units: "metric", wind: "kmh", rain: "mm", temp: "c" };
+
 const FULL = {
   activity: "cycle",
   speed: 22.5,
   start: "2026-10-26T08:30:00.000Z",
-  units: "imperial",
+  ...IMPERIAL_UNITS,
 };
 
 const FULL_QUERY = "?activity=cycle&speed=22.5&start=2026-10-26T08%3A30%3A00.000Z&units=imperial";
@@ -18,7 +22,7 @@ describe("DEFAULT_STATE", () => {
       activity: "walk",
       speed: ACTIVITIES.walk.defaultSpeedKmh,
       start: null,
-      units: "metric",
+      ...METRIC_UNITS,
     });
   });
 });
@@ -68,9 +72,9 @@ describe("readState", () => {
         .toEqual({ ...FULL, start: null });
     });
 
-    it("units", () => {
+    it("units -> metric, with metric's wind, rain and temp", () => {
       expect(readState("?activity=cycle&speed=22.5&start=2026-10-26T08%3A30%3A00.000Z"))
-        .toEqual({ ...FULL, units: "metric" });
+        .toEqual({ ...FULL, ...METRIC_UNITS });
     });
   });
 
@@ -113,7 +117,34 @@ describe("readState", () => {
     });
 
     it.each(["furlongs", "Imperial", ""])("units %j -> metric", (value) => {
-      expect(withParam("units", value)).toEqual({ ...FULL, units: "metric" });
+      expect(withParam("units", value)).toEqual({ ...FULL, ...METRIC_UNITS });
+    });
+
+    it.each([
+      ["wind", "knots"], ["wind", "MPH"], ["wind", "km/h"], ["wind", ""],
+      ["rain", "cm"], ["rain", "IN"], ["temp", "k"], ["temp", "F"], ["temp", "°c"],
+      ["temp", "__proto__"],
+    ])("%s %j -> the preset's default", (key, value) => {
+      expect(withParam(key, value)).toEqual(FULL);
+      expect(readState(`?${key}=${encodeURIComponent(value)}`)).toEqual(DEFAULT_STATE);
+    });
+  });
+
+  describe("unit overrides", () => {
+    it("reads each override over the metric preset", () => {
+      expect(readState("?wind=mph")).toEqual({ ...DEFAULT_STATE, wind: "mph" });
+      expect(readState("?rain=in")).toEqual({ ...DEFAULT_STATE, rain: "in" });
+      expect(readState("?temp=f")).toEqual({ ...DEFAULT_STATE, temp: "f" });
+    });
+
+    it("reads overrides over the imperial preset", () => {
+      expect(readState("?units=imperial&wind=kmh&temp=c")).toEqual({
+        ...DEFAULT_STATE, units: "imperial", wind: "kmh", rain: "in", temp: "c",
+      });
+    });
+
+    it("accepts an override equal to the preset's default", () => {
+      expect(readState("?units=metric&wind=kmh&rain=mm&temp=c")).toEqual(DEFAULT_STATE);
     });
   });
 });
@@ -127,6 +158,29 @@ describe("writeState", () => {
     const query = writeState({ ...FULL, start: null });
     expect(query).toBe("?activity=cycle&speed=22.5&units=imperial");
     expect(new URLSearchParams(query).has("start")).toBe(false);
+  });
+
+  it("writes the same query as before for callers without overrides", () => {
+    const { activity, speed, start, units } = FULL;
+    expect(writeState({ activity, speed, start, units })).toBe(FULL_QUERY);
+  });
+
+  it("writes only the overrides that differ from the preset's default", () => {
+    expect(writeState({ ...FULL, wind: "kmh" })).toBe(`${FULL_QUERY}&wind=kmh`);
+    expect(writeState({ units: "metric", wind: "mph", rain: "mm", temp: "f" }))
+      .toBe("?units=metric&wind=mph&temp=f");
+    expect(writeState({ units: "imperial", wind: "kmh", rain: "mm", temp: "c" }))
+      .toBe("?units=imperial&wind=kmh&rain=mm&temp=c");
+  });
+
+  it("compares overrides with metric when units is unset", () => {
+    expect(writeState({ wind: "kmh", rain: "mm", temp: "c" })).toBe("?");
+    expect(writeState({ wind: "mph" })).toBe("?wind=mph");
+  });
+
+  it("omits invalid overrides", () => {
+    expect(writeState({ units: "metric", wind: "knots", rain: "", temp: null }))
+      .toBe("?units=metric");
   });
 
   it("omits undefined and empty values", () => {
@@ -169,6 +223,16 @@ describe("round trip", () => {
 
   it("preserves a start with a non-UTC offset exactly", () => {
     const state = { ...FULL, start: "2026-10-26T08:30:00+01:00" };
+    expect(readState(writeState(state))).toEqual(state);
+  });
+
+  it.each([
+    { ...METRIC_UNITS, wind: "mph" },
+    { ...METRIC_UNITS, rain: "in", temp: "f" },
+    { ...IMPERIAL_UNITS, wind: "kmh", rain: "mm", temp: "c" },
+    { ...IMPERIAL_UNITS, temp: "c" },
+  ])("reproduces unit overrides %j", (units) => {
+    const state = { ...FULL, ...units };
     expect(readState(writeState(state))).toEqual(state);
   });
 

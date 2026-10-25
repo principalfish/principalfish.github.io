@@ -1,6 +1,7 @@
 // The inputs panel: GPX file input + drop zone, activity, speed, start time,
-// units, the load status line, the Retry button and the plan error. Owns that
-// DOM only; every user action is reported through `onChange(event)`:
+// units (the preset and the "Customise units" toggles), the load status line,
+// the Retry button and the plan error. Owns that DOM only; every user action
+// is reported through `onChange(event)`:
 //
 //   { type: "file", file }        a GPX file chosen or dropped
 //   { type: "activity", value }   "walk" | "run" | "cycle" | "custom"
@@ -8,7 +9,13 @@
 //   { type: "start", value }      the start input's raw "YYYY-MM-DDTHH:MM"
 //   { type: "commit" }            the speed or start edit was committed
 //                                 (`change`), so it can go into the URL
-//   { type: "units", value }      "metric" | "imperial"
+//   { type: "units", value }      "metric" | "imperial" picked (also when
+//                                 already checked: re-picking the preset
+//                                 resets the per-quantity toggles)
+//   { type: "unit", quantity, value }
+//                                 a per-quantity toggle: quantity "wind" |
+//                                 "rain" | "temp", value a units.js
+//                                 UNIT_CHOICES token ("mph", "in", "f", ...)
 //   { type: "retry" }
 //
 // `update(state)` refreshes everything derived from state on each render,
@@ -18,10 +25,14 @@
 // from that input — rewriting a field on every render would fight the user's
 // typing ("12." -> "12").
 
-import { kmhToSpeed } from "./units.js";
+import { kmhToSpeed, UNIT_CHOICES } from "./units.js";
 import { toLocalInputValue } from "./schedule.js";
 
 const SPEED_UNIT = { metric: "km/h", imperial: "mph" };
+
+// Radio group name for each per-quantity toggle.
+const UNIT_TOGGLE_NAME = { wind: "windUnit", rain: "rainUnit", temp: "tempUnit" };
+const UNIT_QUANTITIES = Object.keys(UNIT_CHOICES);
 
 // Assign `el[prop] = value` only when it differs.
 function setProp(el, prop, value) {
@@ -72,9 +83,17 @@ export function createFormUI(doc, onChange) {
   radios("activity").forEach((el) => {
     el.addEventListener("change", () => emit({ type: "activity", value: el.value }));
   });
+  // `click`, not `change`: re-picking the already-checked preset must still
+  // reset the toggles, and `change` doesn't fire for a checked radio. A
+  // keyboard selection (arrows, Space) fires `click` too.
   radios("units").forEach((el) => {
-    el.addEventListener("change", () => emit({ type: "units", value: el.value }));
+    el.addEventListener("click", () => emit({ type: "units", value: el.value }));
   });
+  for (const quantity of UNIT_QUANTITIES) {
+    radios(UNIT_TOGGLE_NAME[quantity]).forEach((el) => {
+      el.addEventListener("change", () => emit({ type: "unit", quantity, value: el.value }));
+    });
+  }
   for (const [id, type] of [["speedInput", "speed"], ["startInput", "start"]]) {
     $(id).addEventListener("input", (e) => emit({ type, value: e.target.value }));
     $(id).addEventListener("change", () => emit({ type: "commit" }));
@@ -83,7 +102,8 @@ export function createFormUI(doc, onChange) {
 
   // --- explicit value sync ---
 
-  // Rounded to 1 dp so a shared 10 mph link shows 10, not 9.9979.
+  // Rounded to 1 dp so a shared 10 mph link shows 10, not 9.9979. The speed
+  // follows the preset (units.system), never the wind setting.
   function syncSpeed({ speedKmh, units }) {
     const value = kmhToSpeed(speedKmh, units);
     if (Number.isFinite(value)) $("speedInput").value = String(Math.round(value * 10) / 10);
@@ -91,6 +111,12 @@ export function createFormUI(doc, onChange) {
 
   function syncStart({ startMs }) {
     $("startInput").value = Number.isFinite(startMs) ? toLocalInputValue(startMs) : "";
+  }
+
+  // Expands the "Customise units" disclosure (e.g. when the URL overrides a
+  // unit); after that it's left to the user.
+  function openCustomise() {
+    $("unitsCustomise").open = true;
   }
 
   // The status line has tabindex="-1" so focus can land on it.
@@ -102,8 +128,13 @@ export function createFormUI(doc, onChange) {
 
   function update(state) {
     radios("activity").forEach((el) => setProp(el, "checked", el.value === state.activity));
-    radios("units").forEach((el) => setProp(el, "checked", el.value === state.units));
-    setProp($("speedUnit"), "textContent", SPEED_UNIT[state.units]);
+    const { units } = state;
+    radios("units").forEach((el) => setProp(el, "checked", el.value === units.system));
+    for (const quantity of UNIT_QUANTITIES) {
+      radios(UNIT_TOGGLE_NAME[quantity])
+        .forEach((el) => setProp(el, "checked", el.value === units[quantity]));
+    }
+    setProp($("speedUnit"), "textContent", SPEED_UNIT[units.system]);
 
     const start = $("startInput");
     setProp(start, "min", toLocalInputValue(state.startBounds.minMs));
@@ -126,5 +157,5 @@ export function createFormUI(doc, onChange) {
     setProp($("planError"), "textContent", state.planError ?? "");
   }
 
-  return { update, syncSpeed, syncStart, focusStatus };
+  return { update, syncSpeed, syncStart, openCustomise, focusStatus };
 }

@@ -43,7 +43,9 @@
 // the SVG that wraps on a phone.
 
 import * as d3 from "../../site/vendor/d3.v7.esm.js";
-import { formatElevation, KM_TO_MI, M_TO_FT, MM_TO_IN } from "./units.js";
+import {
+  asUnits, formatElevation, KM_TO_MI, M_TO_FT, MM_TO_IN, UNIT_LABELS,
+} from "./units.js";
 import { isFiniteNumber as isNum } from "./display.js";
 import { timeAtDistance } from "./along-route.js";
 
@@ -70,10 +72,10 @@ const LABEL_GAP_PX = 4;
 // keeps its lowest and highest point, so peaks survive the thinning.
 const PROFILE_BINS = 400;
 
-// Rain axis floor so a dry forecast doesn't blow drizzle up to full height
-// (and the axis still has clean ticks when it is dry throughout), and the
-// tick count the strip's height has room for.
-const MIN_RAIN_TOP = { metric: 0.5, imperial: 0.02 };
+// Rain axis floor (per rain unit) so a dry forecast doesn't blow drizzle up
+// to full height (and the axis still has clean ticks when it is dry
+// throughout), and the tick count the strip's height has room for.
+const MIN_RAIN_TOP = { mm: 0.5, in: 0.02 };
 const RAIN_TICKS = 2;
 
 // Per-instance ids for the outside-forecast hatch pattern.
@@ -82,26 +84,34 @@ let instanceCount = 0;
 // A touch must travel this far (px) before it counts as a scrub or a scroll.
 const TOUCH_SLOP_PX = 8;
 
-const UNIT = {
-  metric: { dist: "km", ele: "m", temp: "°C", wind: "km/h", rain: "mm/h" },
-  imperial: { dist: "mi", ele: "ft", temp: "°F", wind: "mph", rain: "in/h" },
-};
+// Axis and title unit labels for a units set: distance and elevation follow
+// the preset, temperature, wind and rain their own settings.
+function unitLabels(units) {
+  const imperial = units.system === "imperial";
+  return {
+    dist: imperial ? "mi" : "km",
+    ele: imperial ? "ft" : "m",
+    temp: UNIT_LABELS.temp[units.temp],
+    wind: UNIT_LABELS.wind[units.wind],
+    rain: `${UNIT_LABELS.rain[units.rain]}/h`,
+  };
+}
 
-// Metric value -> display value, per quantity. Anything but a finite number
-// (a gap: null, NaN) comes back NaN in either system, so lines and bars skip
-// it rather than plotting null as 0.
-function converters(system) {
-  const imperial = system === "imperial";
-  const conv = (toImperial) => (v) => {
+// Metric value -> display value, per quantity, for a units set. Anything but
+// a finite number (a gap: null, NaN) comes back NaN in either unit, so lines
+// and bars skip it rather than plotting null as 0.
+function converters(units) {
+  const conv = (imperial, toImperial) => (v) => {
     if (!isNum(v)) return NaN;
     return imperial ? toImperial(v) : v;
   };
+  const imperial = units.system === "imperial";
   return {
-    dist: conv((km) => km * KM_TO_MI),
-    ele: conv((m) => m * M_TO_FT),
-    temp: conv((c) => c * 9 / 5 + 32),
-    wind: conv((kmh) => kmh * KM_TO_MI),
-    rain: conv((mm) => mm * MM_TO_IN),
+    dist: conv(imperial, (km) => km * KM_TO_MI),
+    ele: conv(imperial, (m) => m * M_TO_FT),
+    temp: conv(units.temp === "f", (c) => c * 9 / 5 + 32),
+    wind: conv(units.wind === "mph", (kmh) => kmh * KM_TO_MI),
+    rain: conv(units.rain === "in", (mm) => mm * MM_TO_IN),
   };
 }
 
@@ -216,8 +226,8 @@ function yDomain(values, include = [], minSpan = 1) {
 // null when one series is named by the title. Adding a strip is one more
 // function and entry.
 //
-// ctx: { route, samples, rows ([{ km, s, r }] per sample), units, unit
-// (labels), cv (converters), xk (km -> x px), left, right, totalKm,
+// ctx: { route, samples, rows ([{ km, s, r }] per sample), units (a units
+// set), unit (labels), cv (converters), xk (km -> x px), left, right, totalKm,
 // line(y, get) (a d3 line skipping gaps), stepArea(y) (a d3 area over
 // stepPoints, down to the strip's bottom), timeAt(km) (arrival epoch ms) }.
 
@@ -310,7 +320,7 @@ function drawWind(ctx, h) {
 function drawRain(ctx, h) {
   const { rows, samples, units, unit, cv, xk, totalKm, right } = ctx;
   const rain = (d) => cv.rain(d.r.precipMm);
-  const minTop = MIN_RAIN_TOP[units] ?? MIN_RAIN_TOP.metric;
+  const minTop = MIN_RAIN_TOP[units.rain];
   const y = d3.scaleLinear().domain([0, Math.max(minTop, d3.max(rows, rain) ?? 0)]).nice()
     .range([h, 0]);
   const axis = d3.axisLeft(y).ticks(RAIN_TICKS).tickSizeOuter(0);
@@ -499,8 +509,10 @@ export function createChartsUI(container, {
 
   function build(state) {
     clear();
-    const { route, samples, results, units } = state;
-    const unit = UNIT[units] ?? UNIT.metric;
+    const { route, samples, results } = state;
+    // A units set or, from older callers, a system string.
+    const units = asUnits(state.units);
+    const unit = unitLabels(units);
     const cv = converters(units);
     width = measure();
     totalKm = route.totalDistKm;

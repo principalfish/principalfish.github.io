@@ -2,7 +2,7 @@
 // points, wind relative to travel and forecast-cell offsets. Pure functions
 // returning plain text (always rendered with textContent).
 
-import { formatDistance, formatSpeed, MISSING } from "./units.js";
+import { formatDistance, formatWind, MISSING } from "./units.js";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -67,17 +67,19 @@ export function compassPoint(deg, points = 16) {
 // --- relative wind ---
 
 // weather.js signs: headKmh > 0 is into your face, < 0 behind you.
-export function formatHeadWind(headKmh, system) {
+// `units` is a units set or system string (units.js); both relative winds
+// follow its wind setting.
+export function formatHeadWind(headKmh, units) {
   if (!isFiniteNumber(headKmh)) return MISSING;
   const label = headKmh >= 0 ? "headwind" : "tailwind";
-  return `${formatSpeed(Math.abs(headKmh), system)} ${label}`;
+  return `${formatWind(Math.abs(headKmh), units)} ${label}`;
 }
 
 // crossKmh > 0 is from your right, < 0 from your left.
-export function formatCrossWind(crossKmh, system) {
+export function formatCrossWind(crossKmh, units) {
   if (!isFiniteNumber(crossKmh)) return MISSING;
   const side = crossKmh >= 0 ? "from right" : "from left";
-  return `${formatSpeed(Math.abs(crossKmh), system)} ${side}`;
+  return `${formatWind(Math.abs(crossKmh), units)} ${side}`;
 }
 
 // --- forecast cell ---
@@ -87,14 +89,14 @@ const formatCoord = (deg) => (isFiniteNumber(deg) ? deg.toFixed(3).replace("-", 
 
 // "54.448, −3.211 · 0.7 km SW": the model cell centre and where it lies from
 // the route point. `cell` is { lat, lon, offsetKm, offsetBearingDeg }.
-export function formatCell(cell, system) {
+export function formatCell(cell, units) {
   if (!cell || !isFiniteNumber(cell.lat) || !isFiniteNumber(cell.lon)) return MISSING;
   const where = `${formatCoord(cell.lat)}, ${formatCoord(cell.lon)}`;
   if (!isFiniteNumber(cell.offsetKm)) return where;
   // Under ~50 m the bearing is noise (identical points give 0° = "N").
-  if (cell.offsetKm < 0.05) return `${where} · ${formatDistance(cell.offsetKm, system)}`;
+  if (cell.offsetKm < 0.05) return `${where} · ${formatDistance(cell.offsetKm, units)}`;
   const direction = compassPoint(cell.offsetBearingDeg, 8);
-  return `${where} · ${formatDistance(cell.offsetKm, system)} ${direction}`;
+  return `${where} · ${formatDistance(cell.offsetKm, units)} ${direction}`;
 }
 
 // Labels for sample kinds that get a badge or marker; fillers have none.

@@ -325,6 +325,19 @@ describe("createPlaybackUI", () => {
     expect(calls).toEqual([["start"], ["seek", 0.4], ["end"]]);
   });
 
+  it("captures the pointer and ends the scrub when the capture is lost", () => {
+    const { slider } = ui.elements;
+    const captured = [];
+    slider.setPointerCapture = (id) => captured.push(id);
+    const down = new MouseEvent("pointerdown", { button: 0 });
+    Object.defineProperty(down, "pointerId", { value: 7 });
+    slider.dispatchEvent(down);
+    expect(captured).toEqual([7]);
+    // Released off the slider with no value change: no pointerup or change.
+    slider.dispatchEvent(new Event("lostpointercapture"));
+    expect(calls).toEqual([["start"], ["end"]]);
+  });
+
   it("ignores a non-primary button on the slider", () => {
     ui.elements.slider.dispatchEvent(new MouseEvent("pointerdown", { button: 2 }));
     expect(calls).toEqual([]);

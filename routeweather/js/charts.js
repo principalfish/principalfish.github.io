@@ -1,4 +1,4 @@
-// Charts along the route: one SVG of five stacked strips sharing a distance x
+// Charts along the route: one SVG of four stacked strips sharing a distance x
 // axis, with a cursor line at the playback position.
 //
 //   1. Elevation       the route's profile (area), summits ▲ and valleys ▼ at
@@ -10,13 +10,13 @@
 //   3. Head/tailwind   the wind along your direction of travel (+ in your
 //                      face, − behind you) with a zero line, and the gust as
 //                      a dashed line (crosswind is in the readout and table)
-//   4. Rain            precipitation per hour as one bar per sample
-//   5. Chance of rain  0–100 %, as a step area
+//   4. Rain            precipitation per hour as one bar per sample, over a
+//                      faint step area of the chance of rain (0–100 % of the
+//                      strip's height, marked "100%" at the right edge)
 //
 // Rain and its chance are per-hour buckets taken from the NEARER sample (see
 // along-route.js), so both draw as steps that change halfway between samples:
-// the bar or step under the cursor is the value in the readout. Chance of rain
-// has its own thin strip rather than a second y axis on the rain strip.
+// the bar or step under the cursor is the value in the readout.
 //
 // Stretches outside the forecast window (values clamped to its nearest hour)
 // are greyed across every strip. The rule matches along-route.js: the whole
@@ -45,11 +45,13 @@
 import * as d3 from "../../site/vendor/d3.v7.esm.js";
 import { formatElevation, KM_TO_MI, M_TO_FT, MM_TO_IN } from "./units.js";
 import { isFiniteNumber as isNum } from "./display.js";
+import { timeAtDistance } from "./along-route.js";
 
 const DEFAULT_WIDTH = 640;
 const MIN_WIDTH = 260;
 
-const MARGIN = { top: 4, right: 16, bottom: 28, left: 46 };
+// The right margin fits the rain strip's "100%" chance-of-rain mark.
+const MARGIN = { top: 4, right: 30, bottom: 28, left: 46 };
 // Each strip has a title line above its plot, then a gap below.
 const TITLE_H = 16;
 const STRIP_GAP = 10;
@@ -68,8 +70,11 @@ const LABEL_GAP_PX = 4;
 // keeps its lowest and highest point, so peaks survive the thinning.
 const PROFILE_BINS = 400;
 
-// Rain axis floor so a dry forecast doesn't blow drizzle up to full height.
-const MIN_RAIN_TOP = { metric: 1, imperial: 0.04 };
+// Rain axis floor so a dry forecast doesn't blow drizzle up to full height
+// (and the axis still has clean ticks when it is dry throughout), and the
+// tick count the strip's height has room for.
+const MIN_RAIN_TOP = { metric: 0.5, imperial: 0.02 };
+const RAIN_TICKS = 2;
 
 // Per-instance ids for the outside-forecast hatch pattern.
 let instanceCount = 0;
@@ -82,15 +87,21 @@ const UNIT = {
   imperial: { dist: "mi", ele: "ft", temp: "°F", wind: "mph", rain: "in/h" },
 };
 
-// Metric value -> display value, per quantity.
+// Metric value -> display value, per quantity. Anything but a finite number
+// (a gap: null, NaN) comes back NaN in either system, so lines and bars skip
+// it rather than plotting null as 0.
 function converters(system) {
   const imperial = system === "imperial";
+  const conv = (toImperial) => (v) => {
+    if (!isNum(v)) return NaN;
+    return imperial ? toImperial(v) : v;
+  };
   return {
-    dist: (km) => (imperial ? km * KM_TO_MI : km),
-    ele: (m) => (imperial ? m * M_TO_FT : m),
-    temp: (c) => (imperial ? c * 9 / 5 + 32 : c),
-    wind: (kmh) => (imperial ? kmh * KM_TO_MI : kmh),
-    rain: (mm) => (imperial ? mm * MM_TO_IN : mm),
+    dist: conv((km) => km * KM_TO_MI),
+    ele: conv((m) => m * M_TO_FT),
+    temp: conv((c) => c * 9 / 5 + 32),
+    wind: conv((kmh) => kmh * KM_TO_MI),
+    rain: conv((mm) => mm * MM_TO_IN),
   };
 }
 
@@ -165,6 +176,23 @@ function nearestSpan(samples, i, totalKm) {
   return [i === 0 ? 0 : mid(i - 1), i === samples.length - 1 ? totalKm : mid(i + 1)];
 }
 
+// A per-sample value as steps, for d3.area/line with a linear curve and
+// `defined: isNum(v)`: each sample holds its value over its nearestSpan, so
+// the step changes halfway between samples, the nearer-sample rule the
+// readout uses. A missing value leaves a gap over exactly its own span
+// (curveStep over the raw samples would end the step AT the sample before a
+// gap instead). Returns [{ km, v }].
+export function stepPoints(samples, values, totalKm) {
+  const points = [];
+  samples.forEach((_, i) => {
+    const [from, to] = nearestSpan(samples, i, totalKm);
+    const v = isNum(values[i]) ? values[i] : NaN;
+    // A NaN point between two runs breaks the path there.
+    points.push({ km: from, v }, { km: to, v });
+  });
+  return points;
+}
+
 // A y domain over `values`, always including `include`, at least `minSpan`
 // tall (centred on the data when it is flatter).
 function yDomain(values, include = [], minSpan = 1) {
@@ -181,7 +209,7 @@ function yDomain(values, include = [], minSpan = 1) {
 
 // --- strips ---
 //
-// Each strip is { key, height, legend, draw(ctx, h) }, drawn top to bottom in
+// Each strip is { key, name, height, legend, draw(ctx, h) }, drawn top to bottom in
 // STRIPS order. draw() gets the shared context below and the strip's plot
 // height, and calls ctx.frame(title, y[, axis]) for its group (title, y axis,
 // translated to the strip's top). `legend` is the strip's legend group, or
@@ -190,7 +218,8 @@ function yDomain(values, include = [], minSpan = 1) {
 //
 // ctx: { route, samples, rows ([{ km, s, r }] per sample), units, unit
 // (labels), cv (converters), xk (km -> x px), left, right, totalKm,
-// line(y, get) (a d3 line skipping gaps) }.
+// line(y, get) (a d3 line skipping gaps), stepArea(y) (a d3 area over
+// stepPoints, down to the strip's bottom), timeAt(km) (arrival epoch ms) }.
 
 function drawElevation(ctx, h) {
   const { route, samples, units, unit, cv, xk, left, right } = ctx;
@@ -257,7 +286,7 @@ function drawTemperature(ctx, h) {
 
 function drawWind(ctx, h) {
   const { rows, unit, cv, line, left, right } = ctx;
-  const head = (d) => (isNum(d.r.headKmh) ? cv.wind(d.r.headKmh) : NaN);
+  const head = (d) => cv.wind(d.r.headKmh);
   const gust = (d) => cv.wind(d.r.gustKmh);
   const y = d3.scaleLinear()
     .domain(yDomain([...rows.map(head), ...rows.map(gust)], [0], 10))
@@ -269,15 +298,30 @@ function drawWind(ctx, h) {
   g.append("path").attr("class", "series s-head").attr("d", line(y, head)(rows));
 }
 
-// One bar per sample over the stretch it is the nearer sample for, with a
-// 2 px gap between neighbours.
+// Rain: the amount per hour as one bar per sample (left axis), over the
+// stretch that sample is the nearer one for, with a 2 px gap between
+// neighbours; nothing where it is 0 or missing. Behind the bars, the chance
+// of rain as a faint step area (stepPoints: it changes halfway between
+// samples, the nearer-sample rule again) scaled 0–100 % to the strip's full
+// height, with a single "100%" mark at the right edge rather than a second
+// axis. The user asked for both in one strip; the shaded area and the solid
+// bars are deliberately different encodings so the two don't read as one
+// scale.
 function drawRain(ctx, h) {
-  const { rows, samples, units, unit, cv, xk, totalKm } = ctx;
+  const { rows, samples, units, unit, cv, xk, totalKm, right } = ctx;
   const rain = (d) => cv.rain(d.r.precipMm);
   const minTop = MIN_RAIN_TOP[units] ?? MIN_RAIN_TOP.metric;
   const y = d3.scaleLinear().domain([0, Math.max(minTop, d3.max(rows, rain) ?? 0)]).nice()
     .range([h, 0]);
-  const g = ctx.frame(`Rain (${unit.rain})`, y);
+  const axis = d3.axisLeft(y).ticks(RAIN_TICKS).tickSizeOuter(0);
+  const g = ctx.frame(`Rain (${unit.rain})`, y, axis);
+
+  const yProb = d3.scaleLinear().domain([0, 100]).range([h, 0]);
+  const steps = stepPoints(samples, rows.map((d) => d.r.precipProb), totalKm);
+  g.append("path").attr("class", "prob-area").attr("d", ctx.stepArea(yProb)(steps));
+  g.append("text").attr("class", "prob-max").attr("x", right + 3).attr("y", 4)
+    .attr("dominant-baseline", "middle").text("100%");
+
   const bars = rows.map((d, i) => {
     const [from, to] = nearestSpan(samples, i, totalKm);
     return { d, x0: xk(from), x1: xk(to) };
@@ -288,28 +332,12 @@ function drawRain(ctx, h) {
     .attr("y", (b) => y(rain(b.d))).attr("height", (b) => h - y(rain(b.d)));
 }
 
-// Steps changing halfway between samples (curveStep), the nearer-sample rule
-// again, on a fixed 0–100 % axis.
-function drawChance(ctx, h) {
-  const { rows, xk, totalKm, line } = ctx;
-  const y = d3.scaleLinear().domain([0, 100]).range([h, 0]);
-  const axis = d3.axisLeft(y).tickValues([0, 100]).tickFormat((v) => `${v}%`).tickSizeOuter(0);
-  const g = ctx.frame("Chance of rain (%)", y, axis);
-  const prob = (d) => d.r.precipProb;
-  // Steps reach the route's ends, not just the first and last sample.
-  const ends = [{ km: 0, r: rows[0].r }, ...rows, { km: totalKm, r: rows[rows.length - 1].r }];
-  const area = d3.area().curve(d3.curveStep).defined((d) => isNum(prob(d)))
-    .x((d) => xk(d.km)).y0(h).y1((d) => y(prob(d)));
-  g.append("path").attr("class", "prob-area").attr("d", area(ends));
-  g.append("path").attr("class", "series s-prob")
-    .attr("d", line(y, prob).curve(d3.curveStep)(ends));
-}
-
 // Legend groups are named by their strip, so a colour never means two things
 // in one group.
 const STRIPS = [
   {
     key: "elev",
+    name: "elevation",
     height: 84,
     draw: drawElevation,
     legend: {
@@ -322,6 +350,7 @@ const STRIPS = [
   },
   {
     key: "temp",
+    name: "temperature",
     height: 70,
     draw: drawTemperature,
     legend: {
@@ -334,6 +363,7 @@ const STRIPS = [
   },
   {
     key: "wind",
+    name: "head/tailwind",
     height: 80,
     draw: drawWind,
     legend: {
@@ -344,9 +374,30 @@ const STRIPS = [
       ],
     },
   },
-  { key: "rain", height: 56, draw: drawRain, legend: null },
-  { key: "prob", height: 34, draw: drawChance, legend: null },
+  {
+    key: "rain",
+    name: "rain (amount and chance)",
+    height: 76,
+    draw: drawRain,
+    legend: {
+      name: "Rain",
+      items: [
+        { cls: "rain", label: "rain per hour", swatch: "bar" },
+        { cls: "prob", label: "chance of rain", swatch: "area" },
+      ],
+    },
+  },
 ];
+
+// "Elevation, temperature, head/tailwind and rain (amount and chance)": the
+// start of the SVG's accessible name, from STRIPS.
+const CHART_LABEL = (() => {
+  const names = STRIPS.map((strip) => strip.name);
+  const text = names.length > 1
+    ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`
+    : names[0];
+  return text.charAt(0).toUpperCase() + text.slice(1);
+})();
 
 // --- factory ---
 
@@ -371,8 +422,7 @@ export function createChartsUI(container, {
   svgNode.setAttribute("role", "img");
   svgNode.setAttribute(
     "aria-label",
-    "Elevation, temperature, wind, rain and chance of rain along the route. "
-      + "The weather points table has the values.",
+    `${CHART_LABEL} along the route. The weather points table has the values.`,
   );
   const legend = doc.createElement("ul");
   legend.className = "chart-legend";
@@ -381,6 +431,7 @@ export function createChartsUI(container, {
 
   // Last drawn inputs (identity), the width, and the scale for seeking.
   let drawn = { route: null, samples: null, results: null, units: null };
+  let drawnState = null;
   let width = 0;
   let built = false;
   let x = null; // display-distance scale
@@ -388,6 +439,7 @@ export function createChartsUI(container, {
   let totalKm = 0;
   let cursorKm = 0;
   let cursorNode = null;
+  let hitNode = null;
   let cursorX = null;
   let destroyed = false;
   let resizeFrame = null;
@@ -408,6 +460,7 @@ export function createChartsUI(container, {
     legend.replaceChildren();
     built = false;
     cursorNode = null;
+    hitNode = null;
     cursorX = null;
   }
 
@@ -486,8 +539,11 @@ export function createChartsUI(container, {
     const rows = samples.map((s, i) => ({ km: s.cumDistKm, s, r: results[i] }));
     const line = (y, get) => d3.line().defined((d) => isNum(get(d)))
       .x((d) => xk(d.km)).y((d) => y(get(d)));
+    const stepArea = (y) => d3.area().defined((d) => isNum(d.v))
+      .x((d) => xk(d.km)).y0((d) => y.range()[0]).y1((d) => y(d.v));
     const ctx = {
       route, samples, rows, units, unit, cv, xk, left: MARGIN.left, right, totalKm, line,
+      stepArea, timeAt: (km) => timeAtDistance(state, km),
     };
     STRIPS.forEach((strip, i) => {
       strip.draw({ ...ctx, frame: (...args) => frame(strip.key, tops[i], ...args) }, strip.height);
@@ -503,8 +559,9 @@ export function createChartsUI(container, {
     // Cursor on top, then the hit area for pointer seeking.
     cursorNode = svg.append("line").attr("class", "chart-cursor")
       .attr("y1", plotTop).attr("y2", plotBottom).node();
-    svg.append("rect").attr("class", "chart-hit").attr("x", MARGIN.left).attr("y", plotTop)
-      .attr("width", right - MARGIN.left).attr("height", plotBottom - plotTop);
+    hitNode = svg.append("rect").attr("class", "chart-hit").attr("x", MARGIN.left)
+      .attr("y", plotTop).attr("width", right - MARGIN.left).attr("height", plotBottom - plotTop)
+      .node();
 
     buildLegend(spans.length > 0);
     built = true;
@@ -556,7 +613,8 @@ export function createChartsUI(container, {
   }
 
   svgNode.addEventListener("pointerdown", (event) => {
-    if (!built || gesture) return;
+    // Only from the plot area (the hit rect over it), not titles or axes.
+    if (!built || gesture || event.target !== hitNode) return;
     const touch = event.pointerType === "touch";
     // Primary mouse button / pen contact only.
     if (!touch && event.button > 0) return;
@@ -589,6 +647,8 @@ export function createChartsUI(container, {
     if (state.route !== drawn.route) cursorKm = 0;
     const { route, samples, results, units } = state;
     drawn = { route, samples, results, units };
+    // The whole state, for rebuilding on resize (timeAt needs start/speed).
+    drawnState = state;
     if (!route || !samples || !results) {
       clear();
       return;
@@ -601,7 +661,7 @@ export function createChartsUI(container, {
     resizeFrame = requestFrame(() => {
       resizeFrame = null;
       if (destroyed || !built || measure() === width) return;
-      build(drawn);
+      build(drawnState);
     });
   }
 

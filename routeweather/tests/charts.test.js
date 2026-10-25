@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
-import { createChartsUI, extremeLabels, outsideSpans, profilePoints } from "../js/charts.js";
+import {
+  createChartsUI, extremeLabels, outsideSpans, profilePoints, stepPoints,
+} from "../js/charts.js";
 import { weatherAtDistance } from "../js/along-route.js";
 import { buildRoute } from "../js/route.js";
 import { KM_TO_MI } from "../js/units.js";
@@ -53,6 +55,7 @@ function pointer(type, { clientX = 0, clientY = 0, button = 0, pointerType = "mo
 }
 
 const svgOf = (container) => container.querySelector("svg");
+const hitOf = (container) => container.querySelector(".chart-hit");
 const cursorX = (container) => Number(container.querySelector(".chart-cursor").getAttribute("x1"));
 const titles = (container) => [...container.querySelectorAll(".strip-title")]
   .map((t) => t.textContent);
@@ -130,6 +133,46 @@ describe("outsideSpans", () => {
   });
 });
 
+describe("stepPoints", () => {
+  const samples = [0, 2, 4, 6].map((cumDistKm) => ({ cumDistKm }));
+
+  it("holds each value from halfway before its sample to halfway after", () => {
+    expect(stepPoints(samples, [10, 20, 30, 40], 7)).toEqual([
+      { km: 0, v: 10 }, { km: 1, v: 10 },
+      { km: 1, v: 20 }, { km: 3, v: 20 },
+      { km: 3, v: 30 }, { km: 5, v: 30 },
+      { km: 5, v: 40 }, { km: 7, v: 40 },
+    ]);
+  });
+
+  it("leaves a gap over exactly a missing value's own span", () => {
+    const points = stepPoints(samples, [10, NaN, 30, null], 6);
+    expect(points.slice(0, 2)).toEqual([{ km: 0, v: 10 }, { km: 1, v: 10 }]);
+    expect(points.slice(2, 4).every((p) => Number.isNaN(p.v))).toBe(true);
+    expect(points.slice(4, 6)).toEqual([{ km: 3, v: 30 }, { km: 5, v: 30 }]);
+    expect(Number.isNaN(points[6].v)).toBe(true);
+  });
+
+  it("draws the value before a gap right up to halfway, as the readout reads it", () => {
+    const state = makeState();
+    const probs = [10, NaN, 80, 20];
+    const container = mount();
+    const charts = createChartsUI(container, { raf: () => {} });
+    charts.update({
+      ...state, results: state.results.map((r, i) => ({ ...r, precipProb: probs[i] })),
+    });
+    const d = container.querySelector(".prob-area").getAttribute("d");
+    // Two separate runs (the gap splits the path).
+    expect(d.match(/M/g)).toHaveLength(2);
+    const { left, right } = plotRange(container);
+    const midKm = state.samples[1].cumDistKm / 2;
+    const midX = left + ((right - left) * midKm) / state.route.totalDistKm;
+    const firstRunXs = d.split("M")[1].split("L").map((p) => Number(p.split(",")[0]));
+    expect(Math.max(...firstRunXs)).toBeCloseTo(midX, 2);
+    charts.destroy();
+  });
+});
+
 describe("extremeLabels", () => {
   const extreme = (km, ele, kind = "peak") => ({ cumDistKm: km, ele, kind });
   // 1 km = 10 px, every point at y 50.
@@ -192,17 +235,14 @@ describe("createChartsUI", () => {
     expect(svgOf(container).children).toHaveLength(0);
   });
 
-  it("builds one SVG with five strips, the series and one cursor", () => {
+  it("builds one SVG with four strips, the series and one cursor", () => {
     charts.update(makeState());
     expect(container.querySelectorAll("svg")).toHaveLength(1);
     expect(titles(container)).toEqual([
       "Elevation (m)", "Temperature (°C)", "Head/tailwind (km/h)", "Rain (mm/h)",
-      "Chance of rain (%)",
     ]);
-    expect(container.querySelectorAll(".strip")).toHaveLength(5);
-    const classes = [
-      "elev-area", "s-temp", "s-temp-model", "s-head", "s-gust", "s-prob", "prob-area",
-    ];
+    expect(container.querySelectorAll(".strip")).toHaveLength(4);
+    const classes = ["elev-area", "s-temp", "s-temp-model", "s-head", "s-gust", "prob-area"];
     for (const cls of classes) {
       expect(container.querySelector(`.${cls}`), cls).not.toBeNull();
     }
@@ -212,6 +252,12 @@ describe("createChartsUI", () => {
     expect(container.querySelectorAll(".extreme.valley")).toHaveLength(1);
     expect(container.querySelectorAll(".chart-cursor")).toHaveLength(1);
     expect(svgOf(container).getAttribute("width")).toBe("600");
+  });
+
+  it("names the strips in the SVG's accessible name", () => {
+    expect(svgOf(container).getAttribute("aria-label")).toMatch(
+      /^Elevation, temperature, head\/tailwind and rain \(amount and chance\) along the route\./,
+    );
   });
 
   it("leaves crosswind out of the wind strip", () => {
@@ -230,21 +276,27 @@ describe("createChartsUI", () => {
     expect(labels().map(([, text]) => text)).toEqual(["1312 ft", "656 ft"]);
   });
 
-  it("has no second y axis: chance of rain has its own 0–100 % strip", () => {
+  it("shades chance of rain behind the bars, marked 100% at the right edge only", () => {
     charts.update(makeState());
+    const rainStrip = container.querySelectorAll(".strip")[3];
+    const area = rainStrip.querySelector(".prob-area");
+    const bars = rainStrip.querySelector(".rain-bars");
+    // Behind: earlier in document order.
+    expect(area.compareDocumentPosition(bars) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(container.querySelector(".axis-right")).toBeNull();
-    const strips = container.querySelectorAll(".strip");
-    const probTicks = [...strips[4].querySelectorAll(".axis-y .tick text")].map((t) => t.textContent);
-    expect(probTicks).toEqual(["0%", "100%"]);
+    expect(svgOf(container).querySelector(".s-prob")).toBeNull();
+    expect(rainStrip.querySelector(".prob-max").textContent).toBe("100%");
+    const { right } = plotRange(container);
+    expect(Number(rainStrip.querySelector(".prob-max").getAttribute("x"))).toBeGreaterThan(right);
   });
 
   it("draws chance of rain as steps that change halfway between samples", () => {
     const state = makeState();
     charts.update(state);
-    const d = container.querySelector(".s-prob").getAttribute("d");
-    // curveStep: horizontal then vertical segments only (H/V after the move,
-    // as d3 writes them via L with a repeated coordinate).
-    const coords = d.replace(/^M/, "").split("L").map((p) => p.split(",").map(Number));
+    const d = container.querySelector(".prob-area").getAttribute("d");
+    const coords = d.replace(/^M/, "").replace(/Z$/, "").split("L")
+      .map((p) => p.split(",").map(Number));
+    // Horizontal and vertical segments only.
     for (let i = 1; i < coords.length; i++) {
       const [x0, y0] = coords[i - 1];
       const [x1, y1] = coords[i];
@@ -255,6 +307,20 @@ describe("createChartsUI", () => {
     const midKm = state.samples[1].cumDistKm / 2;
     const midX = left + ((right - left) * midKm) / state.route.totalDistKm;
     expect(coords.some(([cx]) => Math.abs(cx - midX) < 0.01)).toBe(true);
+  });
+
+  it("draws no bar where the rain is 0 or missing", () => {
+    const state = makeState();
+    const precip = [0, NaN, null, 0];
+    charts.update({ ...state, results: state.results.map((r, i) => ({ ...r, precipMm: precip[i] })) });
+    expect(container.querySelectorAll(".rain-bars rect")).toHaveLength(0);
+    // A dry forecast still gets clean axis ticks: a few, all distinct.
+    const ticks = [...container.querySelectorAll(".strip")[3].querySelectorAll(".axis-y .tick text")]
+      .map((t) => t.textContent);
+    expect(ticks.length).toBeGreaterThanOrEqual(2);
+    expect(ticks.length).toBeLessThanOrEqual(4);
+    expect(new Set(ticks).size).toBe(ticks.length);
+    expect(Number(ticks.at(-1))).toBeCloseTo(0.4, 9);
   });
 
   it("puts each rain bar over the stretch its sample is the nearer one for", () => {
@@ -288,10 +354,11 @@ describe("createChartsUI", () => {
     charts.update(makeState());
     const groups = [...container.querySelectorAll(".chart-legend > li")];
     const names = groups.map((li) => li.querySelector(".legend-strip").textContent);
-    expect(names).toEqual(["Elevation", "Temperature", "Head/tailwind", "Grey"]);
+    expect(names).toEqual(["Elevation", "Temperature", "Head/tailwind", "Rain", "Grey"]);
     const items = (li) => [...li.querySelectorAll(".legend-item")].map((item) => item.textContent);
     expect(items(groups[0])).toEqual(["summit", "valley"]);
     expect(items(groups[2])).toEqual(["headwind + / tailwind −", "gust"]);
+    expect(items(groups[3])).toEqual(["rain per hour", "chance of rain"]);
   });
 
   it("leaves headroom above the profile for a peak marker", () => {
@@ -365,7 +432,6 @@ describe("createChartsUI", () => {
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (mi)");
     expect(titles(container)).toEqual([
       "Elevation (ft)", "Temperature (°F)", "Head/tailwind (mph)", "Rain (in/h)",
-      "Chance of rain (%)",
     ]);
     // Ticks are in miles: the last tick can't exceed the route length in miles.
     const ticks = [...container.querySelectorAll(".axis-x .tick text")]
@@ -386,7 +452,7 @@ describe("createChartsUI", () => {
     const { left, right } = plotRange(container);
     const svg = svgOf(container);
     const at = (fraction) => left + (right - left) * fraction;
-    svg.dispatchEvent(pointer("pointerdown", { clientX: at(0.25) }));
+    hitOf(container).dispatchEvent(pointer("pointerdown", { clientX: at(0.25) }));
     expect(calls[0]).toEqual(["start"]);
     expect(seeks()[0]).toBeCloseTo(state.route.totalDistKm * 0.25, 6);
     svg.dispatchEvent(pointer("pointermove", { clientX: at(0.5) }));
@@ -396,13 +462,13 @@ describe("createChartsUI", () => {
     svg.dispatchEvent(pointer("pointermove", { clientX: at(0.75) }));
     expect(seeks()).toHaveLength(2);
     // Outside the plot clamps to the route's ends.
-    svg.dispatchEvent(pointer("pointerdown", { clientX: 0 }));
+    hitOf(container).dispatchEvent(pointer("pointerdown", { clientX: 0 }));
     expect(seeks()[2]).toBe(0);
   });
 
   it("ignores non-primary mouse buttons", () => {
     charts.update(makeState());
-    svgOf(container).dispatchEvent(pointer("pointerdown", { clientX: 200, button: 2 }));
+    hitOf(container).dispatchEvent(pointer("pointerdown", { clientX: 200, button: 2 }));
     expect(calls).toEqual([]);
   });
 
@@ -411,7 +477,7 @@ describe("createChartsUI", () => {
     charts.update(state);
     const svg = svgOf(container);
     const touch = { pointerType: "touch" };
-    svg.dispatchEvent(pointer("pointerdown", { ...touch, clientX: 200, clientY: 100 }));
+    hitOf(container).dispatchEvent(pointer("pointerdown", { ...touch, clientX: 200, clientY: 100 }));
     expect(calls).toEqual([]);
     // Under the slop: still undecided.
     svg.dispatchEvent(pointer("pointermove", { ...touch, clientX: 204, clientY: 101 }));
@@ -427,7 +493,7 @@ describe("createChartsUI", () => {
     charts.update(makeState());
     const svg = svgOf(container);
     const touch = { pointerType: "touch" };
-    svg.dispatchEvent(pointer("pointerdown", { ...touch, clientX: 200, clientY: 100 }));
+    hitOf(container).dispatchEvent(pointer("pointerdown", { ...touch, clientX: 200, clientY: 100 }));
     svg.dispatchEvent(pointer("pointermove", { ...touch, clientX: 203, clientY: 140 }));
     svg.dispatchEvent(pointer("pointermove", { ...touch, clientX: 260, clientY: 150 }));
     svg.dispatchEvent(pointer("pointerup", { ...touch, clientX: 260, clientY: 150 }));
@@ -440,11 +506,11 @@ describe("createChartsUI", () => {
     const { left, right } = plotRange(container);
     const svg = svgOf(container);
     const touch = { pointerType: "touch", clientX: (left + right) / 2, clientY: 50 };
-    svg.dispatchEvent(pointer("pointerdown", touch));
+    hitOf(container).dispatchEvent(pointer("pointerdown", touch));
     svg.dispatchEvent(pointer("pointerup", touch));
     expect(calls).toHaveLength(1);
     expect(seeks()[0]).toBeCloseTo(state.route.totalDistKm / 2, 6);
-    svg.dispatchEvent(pointer("pointerdown", touch));
+    hitOf(container).dispatchEvent(pointer("pointerdown", touch));
     svg.dispatchEvent(pointer("pointercancel", touch));
     expect(calls).toHaveLength(1);
   });
@@ -453,8 +519,25 @@ describe("createChartsUI", () => {
     const state = makeState(undefined, { units: "imperial" });
     charts.update(state);
     const { left, right } = plotRange(container);
-    svgOf(container).dispatchEvent(pointer("pointerdown", { clientX: (left + right) / 2 }));
+    hitOf(container).dispatchEvent(pointer("pointerdown", { clientX: (left + right) / 2 }));
     expect(seeks()[0]).toBeCloseTo(state.route.totalDistKm / 2, 6);
+  });
+
+  it("treats a missing value as a gap in imperial units too, not as 0", () => {
+    const state = makeState(undefined, { units: "imperial" });
+    const results = state.results.map((r, i) => (i === 1 ? { ...r, tempC: null, headKmh: null } : r));
+    charts.update({ ...state, results });
+    expect(container.querySelector(".s-temp").getAttribute("d").match(/M/g)).toHaveLength(2);
+    expect(container.querySelector(".s-head").getAttribute("d").match(/M/g)).toHaveLength(2);
+  });
+
+  it("starts a seek only from the plot area, not titles or axes", () => {
+    charts.update(makeState());
+    container.querySelector(".strip-title")
+      .dispatchEvent(pointer("pointerdown", { clientX: 200 }));
+    container.querySelector(".axis-x").dispatchEvent(pointer("pointerdown", { clientX: 200 }));
+    svgOf(container).dispatchEvent(pointer("pointerdown", { clientX: 200 }));
+    expect(calls).toEqual([]);
   });
 
   it("ignores pointer input before anything is drawn", () => {

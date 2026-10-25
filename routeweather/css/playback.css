@@ -29,7 +29,7 @@
   display: block; width: 100%; max-width: 100%;
   font-size: 11px; color: var(--chart-ink);
   /* A horizontal drag seeks; vertical swipes still scroll the page. */
-  touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none;
 }
 
 .route-charts .axis path,
@@ -38,7 +38,6 @@
 .route-charts .strip-title { fill: var(--fg); font-size: 11px; font-weight: 600; }
 .route-charts .axis-label { fill: var(--chart-ink); font-size: 10px; }
 .route-charts .chart-note { fill: var(--chart-ink); font-style: italic; }
-.route-charts .strip-frame { fill: none; stroke: none; }
 .route-charts .grid line { stroke: var(--chart-grid); stroke-width: 1; }
 .route-charts .zero-line { stroke: var(--muted); stroke-width: 1; opacity: 0.6; }
 /* The band's fill is a hatch pattern (charts.js): a light wash plus lines. */
@@ -61,8 +60,9 @@
 .route-charts .s-head { stroke: var(--series-1); }
 .route-charts .s-gust { stroke: var(--series-3); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .route-charts .s-rain { fill: var(--series-1); }
-.route-charts .s-prob { stroke: var(--series-2); stroke-width: 1.5; }
-.route-charts .prob-area { fill: var(--series-2); opacity: 0.25; }
+/* Chance of rain: a faint wash behind the solid rain bars. */
+.route-charts .prob-area { fill: var(--series-2); opacity: 0.22; }
+.route-charts .prob-max { fill: var(--chart-ink); font-size: 10px; }
 
 .route-charts .chart-cursor { stroke: var(--chart-cursor); stroke-width: 1.5; pointer-events: none; }
 .route-charts .chart-hit { fill: transparent; cursor: ew-resize; }
@@ -77,6 +77,9 @@
 .swatch { display: inline-block; flex: none; }
 .swatch-line { width: 16px; height: 0; border-top: 2px solid; }
 .swatch-bar { width: 10px; height: 10px; border-radius: 2px; }
+.swatch-area { width: 12px; height: 10px; border-radius: 2px; }
+.swatch.s-rain { background: var(--series-1); }
+.swatch.s-prob { background: var(--series-2); opacity: 0.45; }
 .swatch-band {
   width: 14px; height: 10px; border: 1px solid var(--line);
   background: repeating-linear-gradient(

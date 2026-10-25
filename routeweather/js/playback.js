@@ -153,7 +153,8 @@ const PAUSE_ICON = "❚❚";
 //
 // Callbacks: onToggle(), onSeek(fraction) while the slider moves (input),
 // onSpeed(multiplier), and onScrubStart() / onScrubEnd() around a pointer drag
-// of the slider (pointerdown, then pointerup / pointercancel / change, once),
+// of the slider (pointerdown, then pointerup / pointercancel /
+// lostpointercapture / change, once),
 // so the controller can pause playback while you scrub. The controller pushes
 // state back through setPlaying / setPosition, which only write the DOM when
 // a value changed.
@@ -223,11 +224,15 @@ export function createPlaybackUI(container, {
   slider.addEventListener("pointerdown", (event) => {
     if (event.button > 0 || scrubbing) return;
     scrubbing = true;
+    // Captured, so a release off the slider still ends the scrub (and
+    // lostpointercapture covers the release being swallowed altogether).
+    if (event.pointerId !== undefined) slider.setPointerCapture?.(event.pointerId);
     onScrubStart();
   });
   slider.addEventListener("input", () => onSeek(Number(slider.value) / SLIDER_MAX));
   slider.addEventListener("pointerup", endScrub);
   slider.addEventListener("pointercancel", endScrub);
+  slider.addEventListener("lostpointercapture", endScrub);
   slider.addEventListener("change", endScrub);
   select.addEventListener("change", () => onSpeed(Number(select.value)));
 

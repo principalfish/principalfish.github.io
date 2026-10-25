@@ -117,8 +117,7 @@ describe("createPlaybackController", () => {
     expect(positions.at(-1).km).toBeCloseTo(state.route.totalDistKm / 4, 9);
     const hit = document.querySelector(".chart-hit");
     const x = Number(hit.getAttribute("x")) + Number(hit.getAttribute("width")) * 0.75;
-    document.querySelector("#chartsPanel svg")
-      .dispatchEvent(new MouseEvent("pointerdown", { clientX: x }));
+    hit.dispatchEvent(new MouseEvent("pointerdown", { clientX: x, bubbles: true }));
     expect(positions.at(-1).km).toBeCloseTo(state.route.totalDistKm * 0.75, 6);
     expect(slider().value).toBe("750");
   });
@@ -212,7 +211,7 @@ describe("createPlaybackController", () => {
     const svg = document.querySelector("#chartsPanel svg");
     const hit = document.querySelector(".chart-hit");
     const x = Number(hit.getAttribute("x")) + Number(hit.getAttribute("width")) * 0.3;
-    svg.dispatchEvent(new MouseEvent("pointerdown", { clientX: x }));
+    hit.dispatchEvent(new MouseEvent("pointerdown", { clientX: x, bubbles: true }));
     expect(controller.clock.isPlaying()).toBe(false);
     expect(controller.clock.fraction()).toBeCloseTo(0.3, 6);
     svg.dispatchEvent(new MouseEvent("pointerup", { clientX: x }));

@@ -3,6 +3,69 @@
 {% macro link(view_name, label, run_id=none, seat_id=none, index=none, page=none) -%}
 <a href="{{ url_for('us_explorer.explore', model=descriptor.slug, view=view_name, election_id=run_id, seat_id=seat_id, index=index, page=page) }}">{{ label }}</a>
 {%- endmacro %}
+{% macro senate_fallback_table(info) -%}
+  <h4>Frozen deterministic Senate fallback</h4>
+  {% if info.legacy %}
+    <p>Legacy Senate estimator: matching House anchor provenance is unavailable in
+      this saved run. Baseline years, House references and House deltas cannot be
+      reconstructed from current settings.</p>
+  {% else %}
+    <p>Senate baseline years and matching published-general House shares come from
+      the saved race references. Current generic polling levels are frozen as of
+      {{ run.as_of }}: each party uses only admitted national polls reporting it,
+      with their saved weights, without renormalizing the shares.</p>
+    <p>House delta = current generic share − matching House reference, in percentage
+      points. No national evidence gives zero national fallback; regional own polls
+      take precedence. Structural zeros block broad fallback for named parties
+      with no baseline votes; aggregate Others keeps its saved eligibility. A race's
+      own polls can still introduce a newly polled candidate. Eligible fallback is
+      the retained swing after that mask; weighted fallback is its actual
+      contribution after the local blend.</p>
+    <table>
+      <thead><tr>
+        <th scope="col">Race</th><th scope="col">Senate baseline year</th>
+        <th scope="col">Party</th><th scope="col">Matching House reference (%)</th>
+        <th scope="col">Current generic (%)</th><th scope="col">House delta (pp)</th>
+        <th scope="col">Fallback route</th><th scope="col">Eligible fallback (pp)</th>
+        <th scope="col">Weighted fallback (pp)</th>
+      </tr></thead>
+      <tbody>{% for row in info.rows %}<tr>
+        <td>{{ row.seat }}</td>
+        <td>
+          {% if row.baseline_year %}
+            <span title="{{ row.baseline_id }}">{{ row.baseline_year }}</span>
+          {% else %}Unavailable{% endif %}
+        </td>
+        <td>{{ row.party }}</td>
+        <td>
+          {% if row.house is not none %}{{ row.house_year }}: {{ number(row.house) }}
+          {% else %}Unavailable{% endif %}
+        </td>
+        <td>
+          {% if row.current is not none %}{{ number(row.current) }}
+          {% else %}No national evidence{% endif %}
+        </td>
+        <td>
+          {% if row.delta is not none %}{{ number(row.delta) }}
+          {% else %}Unavailable{% endif %}
+        </td>
+        <td>
+          {{ row.route }}{% if not row.broad_allowed %}; structural zero{% endif %}
+        </td>
+        <td>
+          {% if row.fallback is not none %}{{ number(row.fallback) }}
+          {% else %}Unavailable: not retained{% endif %}
+        </td>
+        <td>
+          {% if row.weighted_fallback is not none %}{{ number(row.weighted_fallback) }}
+          {% else %}Unavailable: not retained{% endif %}
+        </td>
+      </tr>{% endfor %}</tbody>
+    </table>
+  {% endif %}
+  <p>Deterministic fallbacks and local blends form the central input. Stochastic source
+    errors and their standard deviations are shown separately below.</p>
+{%- endmacro %}
 {% block content %}
 <section class="card">
   <h2>{{ title }}</h2>
@@ -130,6 +193,7 @@
       <p>Winner: {{ winner }}. Local blend weight α = {{ number(seat.alpha) }}.
         {% if seat.single_party_baseline and seat.eligible|sum == 1 %}Fixed: uncontested baseline.{% endif %}
         {% if baseline_fallback %}All clamped shares were zero; baseline fallback was used.{% endif %}</p>
+      {% if descriptor.slug == 'senate' %}{{ senate_fallback_table(senate_fallback) }}{% endif %}
       {% if not central_retained %}<p>Detailed central fallback and local blend inputs were not retained in this older snapshot. Baseline and final central input are retained.</p>{% endif %}
       <table><thead><tr><th>Party</th><th>Baseline</th><th>Central change</th><th>Central raw</th><th>Eligible</th><th>Total applied error</th><th>Clamped</th><th>Normalized share</th><th>Recorded votes</th></tr></thead>
         <tbody>{% for party in decomposition %}<tr>
@@ -156,6 +220,7 @@
     {% elif view == 'budget' %}
       <h3>Frozen error budget and polling evidence</h3>
       <p>Pre-clamp standard deviations are diagnostics, not outcome probabilities.</p>
+      {% if descriptor.slug == 'senate' %}{{ senate_fallback_table(senate_fallback) }}{% endif %}
       <dl>
         {% for key, value in options.items() %}
           <dt>{{ key }}</dt>

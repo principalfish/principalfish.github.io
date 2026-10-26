@@ -12,6 +12,7 @@ from console.db import get_db
 from console.services.us_uncertainty_explorer import (
     PAGE_SIZE, US_EXPLORER_MODELS, UsRunNotFound, party_rows, race_index,
     race_summary, saved_run, saved_runs, simulation_detail, simulations_page,
+    senate_fallback_provenance,
 )
 from model_support.persistence import UncertaintyStoreError
 
@@ -104,6 +105,10 @@ def explore(
             if run is not None:
                 context["parties"] = party_rows(run, descriptor)
                 context["simulation_count"] = run.document["summary"]["simulations"]
+                if model == "senate" and view in {"budget", "decomposition"}:
+                    context["senate_fallback"] = senate_fallback_provenance(
+                        run, seat_id,
+                    )
                 if view == "results":
                     context["races"] = run.inputs.seats
                 elif view == "simulations":

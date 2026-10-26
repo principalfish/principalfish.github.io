@@ -253,6 +253,84 @@ def race_index(run: SavedUsRun, seat_id: int) -> int:
     raise UsRunNotFound("Race does not belong to the frozen run")
 
 
+def senate_fallback_provenance(
+    run: SavedUsRun, seat_id: int | None = None,
+) -> dict[str, Any]:
+    """Explain deterministic Senate inputs using only this saved run's evidence."""
+    private = run.document["private"]
+    anchor = private["options"].get("senate_house_anchor")
+    if anchor is None:
+        return {"legacy": True, "rows": []}
+    national_sums: dict[int, float] = {}
+    national_weights: dict[int, float] = {}
+    national_ids = set()
+    for poll in run.inputs.polls:
+        if poll.seat_id is not None or poll.matchup is not None:
+            continue
+        national_ids.add(poll.poll_id)
+        for party, share in poll.shares:
+            national_sums[party] = national_sums.get(party, 0.0) + share * poll.weight
+            national_weights[party] = national_weights.get(party, 0.0) + poll.weight
+    provenance = private["provenance"]
+    selected = provenance.get("selected_polls")
+    regional_evidence = {
+        poll["poll_id"]: poll["region_shares"] for poll in selected or []
+        if poll["poll_id"] in national_ids and "region_shares" in poll
+    }
+    regions_retained = selected is not None and national_ids == set(regional_evidence)
+    diagnostics = provenance.get("central_diagnostics")
+    if diagnostics is not None and diagnostics.get("schema") != (
+        "pf-us-central-diagnostics-v1"
+    ):
+        raise ValueError("Unsupported central diagnostic schema")
+    rows = []
+    for seat in run.inputs.seats:
+        if seat_id is not None and seat.seat_id != seat_id:
+            continue
+        reference = anchor["races"].get(str(seat.seat_id))
+        retained = (
+            diagnostics["seats"].get(str(seat.seat_id)) if diagnostics else None
+        )
+        for j, (party, name) in enumerate(zip(
+            run.inputs.party_ids, run.inputs.party_names,
+        )):
+            component = "Others" if name.strip().casefold() in {
+                "other", "others",
+            } else name
+            house = reference["shares"].get(component) if reference else None
+            current = (
+                national_sums[party] / national_weights[party]
+                if party in national_weights else None
+            )
+            trace = retained["parties"].get(str(party)) if retained else None
+            if trace is not None and trace["inherited_swing"] is not None:
+                route = "Inherited parent swing"
+            elif seat.region_id is not None and not regions_retained:
+                route = "Regional precedence unavailable"
+            elif seat.region_id is not None and any(
+                str(party) in regions.get(str(seat.region_id), {})
+                for regions in regional_evidence.values()
+            ):
+                route = "Regional own poll (overrides House delta)"
+            elif current is None:
+                route = "No national evidence: zero swing"
+            else:
+                route = "National House delta"
+            rows.append({
+                "seat": seat.name, "party": name,
+                "baseline_id": reference["baseline_id"] if reference else None,
+                "baseline_year": reference["baseline_id"][:4] if reference else None,
+                "house_year": reference["evidence"]["year"] if reference else None,
+                "house": house, "current": current,
+                "delta": current - house if current is not None and house is not None
+                else None,
+                "route": route, "broad_allowed": seat.broad_mask[j],
+                "fallback": trace["fallback"] if trace else None,
+                "weighted_fallback": trace["fallback_contribution"] if trace else None,
+            })
+    return {"legacy": False, "rows": rows}
+
+
 def simulation_detail(
     run: SavedUsRun, model: UsExplorerModel, index: int, seat_id: int | None,
 ) -> dict[str, Any]:

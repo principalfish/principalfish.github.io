@@ -10,8 +10,12 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from model_support.us_simulation import US_KERNEL_VERSION, UsErrorConfig
 from model_support.us_president import PRESIDENT_NATIONAL_POLICY
+from model_support.us_senate_anchors import (
+    SENATE_ANCHOR_POLICY_SHA256,
+    SENATE_CENTRAL_ESTIMATOR,
+)
+from model_support.us_simulation import US_KERNEL_VERSION, UsErrorConfig
 
 HOUSE_RELEASE = Path(__file__).resolve().parents[1] / "models/us/house-release.json"
 SENATE_RELEASE = HOUSE_RELEASE.with_name("senate-release.json")
@@ -117,6 +121,16 @@ def _release(path: Path, model: str) -> UsRelease:
             blockers.append("calibration kernel version differs from the runner")
         if not isinstance(config.get("assumption_label"), str):
             blockers.append("accepted calibration needs its explicit assumption label")
+        if model == "senate" and any(
+            document.get("central_estimator") != SENATE_CENTRAL_ESTIMATOR
+            or document.get("house_anchor_policy_sha256")
+            != SENATE_ANCHOR_POLICY_SHA256
+            for document in (state, config)
+        ):
+            blockers.append(
+                "Senate release/calibration central estimator or House anchor "
+                "policy differs from the runner",
+            )
         if model == "president" and (
             config.get("national_error_policy") != PRESIDENT_NATIONAL_POLICY
             or config.get("national_sampling") is not False
@@ -210,6 +224,16 @@ def senate_publication_allowed(
             and all(saved.get(key) == current.state[key] for key in (
                 "target_cycle", "map_name", "baseline_name", "comparability_id",
             ))
+            and all(
+                item.get("central_estimator") == SENATE_CENTRAL_ESTIMATOR
+                and item.get("house_anchor_policy_sha256")
+                == SENATE_ANCHOR_POLICY_SHA256
+                for item in (saved, calibration)
+            )
+            and document["private"]["options"]["senate_house_anchor"]["estimator"]
+            == SENATE_CENTRAL_ESTIMATOR
+            and document["private"]["options"]["senate_house_anchor"]["policy_sha256"]
+            == SENATE_ANCHOR_POLICY_SHA256
             and document["context"]["target_cycle"] == saved["target_cycle"]
             and document["private"]["options"]["baseline_name"]
             == saved["baseline_name"]

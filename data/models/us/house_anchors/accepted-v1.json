@@ -1,0 +1,18 @@
+{
+  "schema": "pf-us-senate-house-anchor-policy-v1",
+  "id": "senate-house-anchor-policy-v1",
+  "estimator": "senate-house-anchor-v1",
+  "candidate_sha256": "e20765425615bdc43a2e063f0ab260ca6f00e2ebd27bff6e1be9101dabe50757",
+  "accepted_years": [2016, 2020, 2022],
+  "unavailable_years": [2018, 2024],
+  "selected_view": "published-general",
+  "policies": {
+    "denominator": "Measured valid candidate votes, including Other; no D/R renormalization or unmeasured-vote imputation",
+    "fusion": "Combine same-candidate fusion lines using the audited district/name/stage references",
+    "2016": "Classify Peter Welch as Democratic using the official party table",
+    "2018": "Unavailable: uncertified NC-09 is not an accepted historical proxy",
+    "2020": "Preserve certified NY-14 +30 Republican votes and denominator correction; exclude uncounted write-ins",
+    "sensitivity": "Final-RCV candidate totals are comparison evidence only",
+    "activation": "Newly computed runs only; existing saved runs and replay remain unchanged; no automatic reruns, backfills or exports"
+  }
+}

@@ -4617,7 +4617,11 @@ class TestCandidateUsPollCaps:
             map_id=world.map_id if latest_seat else world.national_map_id,
             pollster=pollster,
             end=date(2026, 6, 20),
-            rows=world.complete,
+            rows=(
+                world.complete if latest_seat or contest != "senate"
+                else [row for row in world.complete
+                      if row[0] in (world.dem.id, world.rep.id)]
+            ),
             seat_id=world.seat.id if latest_seat else None,
             matchup=matchup,
         )

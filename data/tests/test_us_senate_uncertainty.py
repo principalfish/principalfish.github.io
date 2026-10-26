@@ -22,6 +22,9 @@ from model_support.us_release import SENATE_RELEASE, UsReleaseError, senate_rele
 from model_support.us_replay import replay_us_selected, us_raw_path
 from model_support.us_run import restore_run_inputs
 from model_support.us_senate import senate_counts, senate_outcomes
+from model_support.us_senate_anchors import (
+    SENATE_CENTRAL_ESTIMATOR, SENATE_ANCHOR_POLICY_SHA256,
+)
 from model_support.us_simulation import US_KERNEL_VERSION
 from model_support.us_uncertainty import US_STORED_SCHEMA, validate_document
 from models import Election, ElectionType, Seat, Vote
@@ -63,6 +66,8 @@ def _world(db: Database, tmp_path: Path) -> UsSimulationConfig:
     calibration = {
         "schema": "pf-us-senate-calibration-candidate-v1", "model": "us-senate",
         "accepted": True, "kernel_version": US_KERNEL_VERSION,
+        "central_estimator": SENATE_CENTRAL_ESTIMATOR,
+        "house_anchor_policy_sha256": SENATE_ANCHOR_POLICY_SHA256,
         "assumption_label": "Synthetic test assumptions, never a forecast",
         "national_margin_sigma": 2.0, "state_scale": 1.0,
         "race_scale": 3.0, "local_scale": 2.0, "design_effect": 2.0,
@@ -73,6 +78,8 @@ def _world(db: Database, tmp_path: Path) -> UsSimulationConfig:
     release_path = tmp_path / "release.json"
     release_path.write_text(json.dumps({
         "schema": "pf-us-senate-release-v1", "enabled": True,
+        "central_estimator": SENATE_CENTRAL_ESTIMATOR,
+        "house_anchor_policy_sha256": SENATE_ANCHOR_POLICY_SHA256,
         "roster_validated": True, "target_cycle": 2026,
         "map_name": election_map.name, "baseline_name": baselines[2020].name,
         "comparability_id": "synthetic-senate-v1", "blockers": [],
@@ -269,6 +276,13 @@ def test_console_senate_views_show_frozen_full_and_contested_arithmetic(
         assert response.status_code == 200
         assert b"Saved detail unavailable" not in response.data, response.data.decode()
         assert b"US Senate" in response.data
+        if view == "saved-budget":
+            assert SENATE_CENTRAL_ESTIMATOR.encode() in response.data
+            assert SENATE_ANCHOR_POLICY_SHA256.encode() in response.data
+            assert b"35 race references" in response.data
+            assert b"extraction_json" not in response.data
+            assert b"selected_records_sha256" not in response.data
+            assert b"record_numbers" not in response.data
     results = client.get("/us/senate/uncertainty/results").data
     assert b"65 fixed holdovers" in results
     assert b"Fixed holdovers (not simulated)" in results

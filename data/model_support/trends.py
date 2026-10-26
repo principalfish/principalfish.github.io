@@ -57,7 +57,9 @@ from model_support.public_uncertainty import (
     trend_uncertainty,
     public_us_document,
 )
-from model_support.senate_cycles import senate_cycle_from_snapshot
+from model_support.senate_cycles import (
+    senate_cycle_from_snapshot, senate_central_anchor_from_snapshot,
+)
 from model_support.us_senate import senate_party
 from model_support.us_release import (
     house_publication_allowed, senate_publication_allowed,
@@ -460,6 +462,12 @@ def _senate_roster_metadata(
                     "target_cycle": cycle.target_year,
                     "roster_id": fingerprint(snapshot),
                     "field_id": fingerprint(sorted(slots)),
+                    **({
+                        "central_estimator": anchor["estimator"],
+                        "house_anchor_policy_sha256": anchor["policy_sha256"],
+                        "house_anchor_id": fingerprint(anchor),
+                    } if (anchor := senate_central_anchor_from_snapshot(snapshot))
+                       is not None else {}),
                 },
                 "metrics": {"senate_full_seats": {
                     "unit": "seats", "domain": "party", "total": 100,

@@ -156,7 +156,21 @@
     {% elif view == 'budget' %}
       <h3>Frozen error budget and polling evidence</h3>
       <p>Pre-clamp standard deviations are diagnostics, not outcome probabilities.</p>
-      <dl>{% for key, value in options.items() %}<dt>{{ key }}</dt><dd>{% if value is number %}{{ number(value) }}{% else %}{{ value }}{% endif %}</dd>{% endfor %}</dl>
+      <dl>
+        {% for key, value in options.items() %}
+          <dt>{{ key }}</dt>
+          <dd>
+            {% if key == 'senate_house_anchor' and value is mapping %}
+              {{ value.estimator }} · policy {{ value.policy_sha256 }} ·
+              {{ value.races|length }} race references
+            {% elif value is number %}
+              {{ number(value) }}
+            {% else %}
+              {{ value }}
+            {% endif %}
+          </dd>
+        {% endfor %}
+      </dl>
       <table><thead><tr><th>Race</th><th>Party</th><th>National</th><th>State</th><th>Race</th><th>Local floor</th><th>Sampling</th><th>Combined SD</th></tr></thead>
         <tbody>{% for row in budget %}<tr><td>{{ row.seat }}</td><td>{{ row.party }}</td>{% for kind in ['national', 'state', 'race', 'local_floor', 'sampling'] %}<td>{{ number(row.sd[kind]) }}</td>{% endfor %}<td>{{ number(row.combined_sd) }}</td></tr>{% endfor %}</tbody>
       </table>

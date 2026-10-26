@@ -4,7 +4,8 @@
 This module is the US analogue of ``models/westminster/run_uns_model.py``, factored
 so the House / President / Senate runners differ only by a small
 :class:`UsModelSpec` (map, baseline election, persisted election type, output
-paths). The projection maths itself is identical across the three.
+paths). Senate generic-ballot changes use a pinned House national reference
+for each race's baseline year; the final seat projection maths is shared.
 
 Design — "national uniform swing, state-ready":
     US polling here is a single **national** series per election type (a
@@ -64,8 +65,9 @@ from model_support.history import HistoryRecomputationError
 from model_support.senate_cycles import (
     SenateCycle,
     resolve_senate_cycle,
-    senate_cycle_snapshot,
+    senate_central_snapshot,
 )
+from model_support.us_house_anchors import HouseAnchorError
 from model_support.us_simulation import (
     UsErrorConfig,
     UsLocalAverage,
@@ -89,6 +91,11 @@ from model_support.us_release import (
 from model_support.us_run import (
     house_context, house_payload, json_data, senate_context, senate_payload,
     president_context, president_payload,
+)
+from model_support.us_senate_anchors import (
+    SENATE_ANCHOR_POLICY_SHA256,
+    SENATE_CENTRAL_ESTIMATOR,
+    resolve_senate_house_anchors,
 )
 from model_support.us_replay import stage_us_draws, us_raw_path
 from model_support.io import publish_json, validate_output_target
@@ -1373,6 +1380,7 @@ def blend_seat_swings(
     party_name_by_id: Mapping[int, str],
     parent_seat_by_id: Mapping[int, int],
     prior_weight: float,
+    seat_fallback_swings: Mapping[int, Mapping[int, float]] | None = None,
 ) -> dict[int, dict[int, float]]:
     """Blend each polled seat's own swing with its uniform-swing fallback.
 
@@ -1412,6 +1420,8 @@ def blend_seat_swings(
         party_name_by_id: Party id → name, for the "Others" test.
         parent_seat_by_id: Child seat id → parent seat id (:func:`seat_parent_ids`).
         prior_weight: ``k``.
+        seat_fallback_swings: Explicit per-race broad swings. Senate references
+            use each race's House baseline year; absent maps retain region swings.
 
     Returns:
         Seat id → party id → swing, holding **only** the seats whose swing
@@ -1436,7 +1446,11 @@ def blend_seat_swings(
         fallbacks = (
             inherited
             if inherited is not None
-            else (region_swings.get(region_id, {}) if region_id is not None else {})
+            else (
+                seat_fallback_swings[seat_id]
+                if seat_fallback_swings is not None and seat_id in seat_fallback_swings
+                else (region_swings.get(region_id, {}) if region_id is not None else {})
+            )
         )
 
         alpha = poll_blend_alpha(average.total_weight if average is not None else 0.0, prior_weight)
@@ -1519,6 +1533,7 @@ def project_seat_votes(
     seat_swings: Mapping[int, Mapping[int, float]] | None = None,
     *,
     seat_poll_averages: Mapping[int, SeatPollAverage] | None = None,
+    seat_fallback_swings: Mapping[int, Mapping[int, float]] | None = None,
 ) -> tuple[list[dict[str, Any]], Counter[str]]:
     """Apply swings to baseline seat shares and project a winner per seat.
 
@@ -1528,7 +1543,8 @@ def project_seat_votes(
     Seats with no positive baseline total are skipped.
 
     A seat present in ``seat_swings`` uses its own blended swing
-    (:func:`blend_seat_swings`); every other seat uses its region's uniform swing,
+    (:func:`blend_seat_swings`); otherwise an explicit race fallback takes
+    precedence over the region's uniform swing,
     which is what the whole map did before seat polls existed. Clamping,
     renormalisation and the winner rule are identical either way — blending only
     changes which swing goes in. A party without positive baseline votes receives
@@ -1551,6 +1567,8 @@ def project_seat_votes(
         base_share_by_party = baseline_shares_for_seat(base_vote_totals)
 
         swing_for_seat = seat_swings.get(seat_id) if seat_swings is not None else None
+        if swing_for_seat is None and seat_fallback_swings is not None:
+            swing_for_seat = seat_fallback_swings.get(seat_id)
         if swing_for_seat is None:
             region_id = region_by_seat_id.get(seat_id)
             swing_for_seat = region_swings.get(region_id, {}) if region_id is not None else {}
@@ -2179,6 +2197,7 @@ def persist_projection(
     *,
     target_election_year: int | None = None,
     uncertainty: UncertaintyPayload | None = None,
+    senate_anchor_context: Mapping[str, object] | None = None,
 ) -> tuple[str, int]:
     """Replace this model/map/date and all its vote rows in one transaction.
 
@@ -2214,9 +2233,8 @@ def persist_projection(
         ),
         target_election_year=target_election_year,
         uncertainty=uncertainty,
-        model_context=(
-            senate_cycle_snapshot(spec.senate_cycle)
-            if spec.senate_cycle is not None else None
+        model_context=senate_central_snapshot(
+            spec.senate_cycle, senate_anchor_context,
         ),
     )
 
@@ -2373,6 +2391,58 @@ class PreparedUsProjection:
     popular_vote_seat_ids: set[int] | None
     seat_poll_diagnostics: list[str]
     poll_window: SelectedPollWindow
+    seat_fallback_swings: dict[int, dict[int, float]] = field(default_factory=dict)
+    senate_anchor_context: dict[str, object] | None = None
+
+
+def senate_fallback_swings(
+    *,
+    anchor_shares_by_seat: Mapping[int, Mapping[str, float]],
+    region_by_seat_id: Mapping[int, int | None],
+    region_swings: Mapping[int, Mapping[int, float]],
+    weighted_sums: Mapping[tuple[int | None, int], float],
+    total_weights: Mapping[tuple[int | None, int], float],
+    party_name_by_id: Mapping[int, str],
+    party_universe: Iterable[int],
+) -> dict[int, dict[int, float]]:
+    """Use matching-year House levels, preserving a region's own poll swing.
+
+    The reference never depends on which Senate races or turnouts are selected.
+    National observations absent for a party imply zero broad swing. A named
+    minor party cannot borrow the aggregate Other component of the reference.
+    """
+    result: dict[int, dict[int, float]] = {}
+    parties = tuple(party_universe)
+    for seat_id, anchor in anchor_shares_by_seat.items():
+        region_id = region_by_seat_id.get(seat_id)
+        swings: dict[int, float] = {}
+        for party in parties:
+            name = party_name_by_id.get(party, "")
+            component = "Others" if is_others_party(name) else name
+            national = weighted_average(
+                weighted_sums.get((None, party), 0.0),
+                total_weights.get((None, party), 0.0),
+            )
+            if national is not None and component not in anchor:
+                raise HouseAnchorError(
+                    f"No approved House reference component for national party "
+                    f"{name or party!r}; repair or exclude that national evidence",
+                )
+            regional = weighted_average(
+                weighted_sums.get((region_id, party), 0.0),
+                total_weights.get((region_id, party), 0.0),
+            ) if region_id is not None else None
+            if regional is not None:
+                swings[party] = (
+                    region_swings.get(region_id, {}).get(party, 0.0)
+                    if region_id is not None else 0.0
+                )
+            else:
+                swings[party] = (
+                    national - anchor[component] if national is not None else 0.0
+                )
+        result[seat_id] = swings
+    return result
 
 
 def prepare_us_projection(
@@ -2450,6 +2520,54 @@ def prepare_us_projection(
         baseline_region_shares,
     )
 
+    seat_fallbacks: dict[int, dict[int, float]] = {}
+    anchor_context: dict[str, object] | None = None
+    if spec.election_type == "us_senate_model":
+        baseline_id = manifest_id_for_election(baseline)
+        baseline_by_seat = {
+            seat.id: spec.seat_baseline_overrides.get(seat.seat_name, baseline_id)
+            for seat in seats if seat.id in seat_party_vote_totals
+        }
+        anchors = resolve_senate_house_anchors(baseline_by_seat)
+        seat_fallbacks = senate_fallback_swings(
+            anchor_shares_by_seat={
+                seat: anchor.shares for seat, anchor in anchors.items()
+            },
+            region_by_seat_id=region_by_seat_id, region_swings=region_swings,
+            weighted_sums=weighted_sums, total_weights=total_weights,
+            party_name_by_id=party_name_by_id, party_universe=party_universe,
+        )
+        region_diff_rows = [
+            {
+                "region_id": region_by_seat_id.get(seat.id),
+                "region_name": seat.seat_name,
+                "seat_id": seat.id,
+                "seat_name": seat.seat_name,
+                "scope": "senate-race-fallback",
+                "baseline_election_id": anchors[seat.id].baseline_id,
+                "house_anchor_share": anchors[seat.id].shares.get(
+                    "Others" if is_others_party(party_name_by_id.get(party, ""))
+                    else party_name_by_id.get(party, ""),
+                ),
+                "party_id": party,
+                "party_name": party_name_by_id.get(party, str(party)),
+                "baseline_share": baseline_shares_for_seat(
+                    seat_party_vote_totals[seat.id],
+                ).get(party, 0.0),
+                "weighted_share": baseline_shares_for_seat(
+                    seat_party_vote_totals[seat.id],
+                ).get(party, 0.0) + seat_fallbacks[seat.id].get(party, 0.0),
+                "swing": seat_fallbacks[seat.id].get(party, 0.0),
+            }
+            for seat in seats if seat.id in anchors
+            for party in sorted(party_universe)
+        ]
+        anchor_context = {
+            "estimator": SENATE_CENTRAL_ESTIMATOR,
+            "policy_sha256": SENATE_ANCHOR_POLICY_SHA256,
+            "races": {str(seat): anchor.snapshot() for seat, anchor in anchors.items()},
+        }
+
     # Seat-level polls, blended over the uniform swing they just fell out of.
     seat_name_by_id = {seat.id: seat.seat_name for seat in seats}
     seat_swings: dict[int, dict[int, float]] = {}
@@ -2475,6 +2593,7 @@ def prepare_us_projection(
             party_name_by_id=party_name_by_id,
             parent_seat_by_id=seat_parent_ids(seats),
             prior_weight=cfg.seat_prior_weight,
+            seat_fallback_swings=seat_fallbacks,
         )
         seat_poll_diagnostics = format_seat_poll_diagnostics(
             seat_averages, seat_name_by_id, cfg.seat_prior_weight
@@ -2488,6 +2607,7 @@ def prepare_us_projection(
         party_name_by_id,
         seat_swings=seat_swings,
         seat_poll_averages=seat_averages,
+        seat_fallback_swings=seat_fallbacks,
     )
 
     return PreparedUsProjection(
@@ -2495,6 +2615,7 @@ def prepare_us_projection(
         seat_party_vote_totals, region_by_seat_id, region_swings, seat_swings,
         seat_averages, projected_votes, region_diff_rows, winners_by_party,
         latest_poll_usage, popular_vote_seat_ids, seat_poll_diagnostics, poll_window,
+        seat_fallbacks, anchor_context,
     )
 
 
@@ -2545,6 +2666,8 @@ def freeze_house_central_inputs(
             raise ValueError(f"cannot resolve US state for {ref.seat_name!r}")
         baseline = baseline_shares_for_seat(votes)
         swing = prepared.seat_swings.get(seat_id)
+        if swing is None:
+            swing = prepared.seat_fallback_swings.get(seat_id)
         if swing is None:
             swing = (
                 prepared.region_swings.get(ref.region_id, {})
@@ -2641,7 +2764,10 @@ def house_central_diagnostics(
         region_id = prepared.region_by_seat_id.get(seat.seat_id)
         region = prepared.region_swings.get(region_id, {}) if region_id else {}
         inherited = prepared.seat_swings.get(parents.get(seat.seat_id, -1))
-        fallback = inherited if inherited is not None else region
+        fallback = (
+            inherited if inherited is not None
+            else prepared.seat_fallback_swings.get(seat.seat_id, region)
+        )
         average = prepared.seat_averages.get(seat.seat_id)
         active = (
             average is not None and average.n_polls > 0 and average.total_weight > 0
@@ -2667,7 +2793,13 @@ def house_central_diagnostics(
             ):
                 raise ValueError("House central diagnostics differ from actual swing")
             parties[str(party)] = {
-                "region_swing": region.get(party, 0.0),
+                "region_swing": (
+                    region.get(party, 0.0)
+                    if prepared.senate_anchor_context is None
+                    or prepared.poll_window.total_weights.get(
+                        (region_id, party), 0.0,
+                    ) > 0 else 0.0
+                ),
                 "inherited_swing": (
                     inherited.get(party, 0.0) if inherited is not None else None
                 ),
@@ -2676,7 +2808,11 @@ def house_central_diagnostics(
                 "local_contribution": local,
                 "central_change": seat.central_raw[j] - seat.baseline[j],
             }
-        rows[str(seat.seat_id)] = {"parties": parties, "alpha": seat.alpha}
+        rows[str(seat.seat_id)] = {
+            "parties": parties, "alpha": seat.alpha,
+            **({"fallback_kind": SENATE_CENTRAL_ESTIMATOR}
+               if prepared.senate_anchor_context is not None else {}),
+        }
     return {"schema": "pf-us-central-diagnostics-v1", "seats": rows}
 
 
@@ -2738,6 +2874,8 @@ def _house_uncertainty(
         "seat_matchup_policy": cfg.spec.seat_matchup_policy,
         "baseline_name": cfg.spec.baseline_election_name,
     }
+    if is_senate:
+        options["senate_house_anchor"] = prepared.senate_anchor_context
     if is_president:
         if allocation is None or cfg.target_election_year is None:
             raise ValueError("President requires its resolved electoral allocation")
@@ -2899,6 +3037,7 @@ def run_simulation(
             party_name_by_id, sqlite_path,
             target_election_year=cfg.target_election_year,
             uncertainty=uncertainty[0] if uncertainty is not None else None,
+            senate_anchor_context=prepared.senate_anchor_context,
         )
         if staged is not None and latest_saved_run(sqlite_path, output_scope) == (
             persisted_election_id, cfg.as_of_date,
@@ -3004,6 +3143,12 @@ def _validate_history_inputs(db: Database, spec: UsModelSpec) -> None:
         resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
     )
     _validate_senate_field(spec, seats, vote_totals)
+    if spec.election_type == "us_senate_model":
+        baseline_id = manifest_id_for_election(baseline)
+        resolve_senate_house_anchors({
+            seat.id: spec.seat_baseline_overrides.get(seat.seat_name, baseline_id)
+            for seat in seats if seat.id in vote_totals
+        })
 
 
 def _validate_senate_field(

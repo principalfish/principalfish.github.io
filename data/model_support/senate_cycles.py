@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -304,9 +306,104 @@ def senate_cycle_snapshot(cycle: SenateCycle) -> dict[str, object]:
     return payload
 
 
+def senate_central_snapshot(
+    cycle: SenateCycle | None,
+    anchor_context: Mapping[str, object] | None,
+) -> dict[str, object] | None:
+    """Freeze a new central estimator without changing old cycle documents."""
+    if anchor_context is None:
+        return senate_cycle_snapshot(cycle) if cycle is not None else None
+    payload: dict[str, object] = {
+        "schema": "pf-senate-central-context-v1",
+        "senate_cycle": senate_cycle_snapshot(cycle) if cycle is not None else None,
+        "house_anchor": dict(anchor_context),
+    }
+    payload["sha256"] = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode(),
+    ).hexdigest()
+    return payload
+
+
+def senate_central_anchor_from_snapshot(value: object) -> dict[str, Any] | None:
+    """Verify frozen provenance, never the current anchor/catalogue files."""
+    snapshot = _object(value, "saved context")
+    if snapshot.get("schema") == "pf-senate-cycle-v1":
+        return None
+    if (
+        set(snapshot) != {"schema", "senate_cycle", "house_anchor", "sha256"}
+        or snapshot.get("schema") != "pf-senate-central-context-v1"
+    ):
+        raise ValueError("Unsupported saved Senate central context")
+    payload = {key: item for key, item in snapshot.items() if key != "sha256"}
+    digest = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode(),
+    ).hexdigest()
+    if snapshot["sha256"] != digest:
+        raise ValueError("Saved Senate central context checksum mismatch")
+    anchor = _object(snapshot["house_anchor"], "saved House anchor")
+    if (
+        set(anchor) != {"estimator", "policy_sha256", "races"}
+        or anchor["estimator"] != "senate-house-anchor-v1"
+        or not isinstance(anchor["policy_sha256"], str)
+        or re.fullmatch(r"[a-f0-9]{64}", anchor["policy_sha256"]) is None
+        or not _object(anchor["races"], "saved race anchors")
+    ):
+        raise ValueError("Invalid saved Senate House anchor provenance")
+    for seat_id, raw in anchor["races"].items():
+        race = _object(raw, "saved race anchor")
+        baseline = race.get("baseline_id")
+        if (
+            not seat_id.isdecimal() or int(seat_id) <= 0
+            or not isinstance(baseline, str)
+            or re.fullmatch(r"[0-9]{4}-us-senate", baseline) is None
+            or race.get("estimator") != anchor["estimator"]
+            or race.get("policy_sha256") != anchor["policy_sha256"]
+            or race.get("selected_view") != "published-general"
+            or not isinstance(race.get("catalogue_sha256"), str)
+            or re.fullmatch(r"[a-f0-9]{64}", race["catalogue_sha256"]) is None
+        ):
+            raise ValueError("Invalid frozen Senate race anchor identity")
+        evidence = _object(race.get("evidence"), "saved anchor evidence")
+        if evidence.get("year") != int(baseline[:4]):
+            raise ValueError("Saved Senate race anchor year differs from baseline")
+        views = evidence.get("views")
+        if not isinstance(views, (list, tuple)):
+            raise ValueError("Saved House anchor views are missing")
+        selected = [
+            _object(item, "saved anchor view") for item in views
+            if isinstance(item, dict) and item.get("identity") == "published-general"
+        ]
+        if len(selected) != 1:
+            raise ValueError("Saved House anchor selected view is ambiguous")
+        counts = _object(selected[0].get("counts"), "saved anchor counts")
+        if (
+            set(counts) != {"democratic", "republican", "other", "denominator"}
+            or any(type(count) is not int or count < 0 for count in counts.values())
+            or counts["denominator"] <= 0
+            or sum(counts[party] for party in ("democratic", "republican", "other"))
+            != counts["denominator"]
+        ):
+            raise ValueError("Invalid saved House anchor count denominator")
+        shares = _object(race.get("shares"), "saved anchor shares")
+        expected = {
+            name: counts[key] / counts["denominator"] * 100.0
+            for name, key in (
+                ("Democratic", "democratic"),
+                ("Republican", "republican"),
+                ("Others", "other"),
+            )
+        }
+        if shares != expected:
+            raise ValueError("Saved House anchor shares differ from frozen counts")
+    return anchor
+
+
 def senate_cycle_from_snapshot(value: object, as_of: date) -> SenateCycle:
     """Read saved counting inputs without touching current configuration files."""
     snapshot = _object(value, "saved context")
+    if snapshot.get("schema") == "pf-senate-central-context-v1":
+        senate_central_anchor_from_snapshot(snapshot)
+        snapshot = _object(snapshot["senate_cycle"], "saved cycle context")
     if (
         set(snapshot) != {"schema", "cycle", "roster_json", "sha256"}
         or snapshot["schema"] != "pf-senate-cycle-v1"

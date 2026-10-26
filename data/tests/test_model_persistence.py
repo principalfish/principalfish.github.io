@@ -339,7 +339,7 @@ def test_runner_failure_rolls_back_then_successful_rerun_replaces_once(
         rep = db.add_party("Republican")
         baseline = db.add_election(
             seat_map.id,
-            2024,
+            2020 if kind == "us_senate" else 2024,
             "Baseline",
             ElectionType(kind),
         )

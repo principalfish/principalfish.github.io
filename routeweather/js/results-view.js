@@ -10,7 +10,8 @@ import {
 } from "./units.js";
 import {
   compassPoint, formatArrival, formatCell, formatClock, formatCloud, formatCrossWind,
-  formatDateTime, formatDuration, formatHeadWind, formatHours, formatSun, KIND_LABELS,
+  formatDateTime, formatDuration, formatHeadWind, formatHours, formatRainRate, formatSun,
+  isFiniteNumber as isNum, KIND_LABELS,
 } from "./display.js";
 import { startDaySun } from "./daylight.js";
 import { HOUR_MS } from "./schedule.js";
@@ -89,6 +90,19 @@ export const coldestTempText = (state) => extremeText(state, "tempC", formatTemp
 export const coldestFeelsText = (state) => extremeText(state, "feelsLikeC", formatTemp, true);
 export const strongestWindText = (state) => extremeText(state, "windKmh", formatWind, false);
 
+// "~2.1 mm · wettest 0.7 mm/h at 43.7 km (15:44)": the rain you would walk
+// through (along-route.js routeRain, state.rain) and where it falls hardest;
+// "None forecast" when that is 0. The wettest rate is shown as a plain rate
+// (no 3-h average mark) since it is only there to say where.
+export function rainOnRouteText(state) {
+  const { rain } = state;
+  if (!isNum(rain)) return MISSING;
+  if (rain === 0) return "None forecast";
+  const rate = (mm, units) => formatRainRate(mm, 1, units);
+  const wettest = extremeText(state, "precipMm", rate, false);
+  return `~${formatPrecip(rain, state.units)} · wettest ${wettest}`;
+}
+
 // "↑ 06:43 · ↓ 16:44" at the start point on the start day, or "Up all day" /
 // "Down all day".
 function startDaySunText(state) {
@@ -136,6 +150,7 @@ export function createSummaryUI(doc) {
       ["Coldest", coldestTempText(state)],
       ["Coldest feels-like", coldestFeelsText(state)],
       ["Strongest wind", strongestWindText(state)],
+      ["Rain on the route", rainOnRouteText(state)],
       ["Sun at the start", startDaySunText(state)],
       ["Sunshine on the route", sunshineText(state)],
     ];
@@ -201,7 +216,7 @@ function pointRow(doc, state, i) {
     el(doc, "td", formatWind(w.gustKmh, units)),
     el(doc, "td", formatHeadWind(w.headKmh, units)),
     el(doc, "td", formatCrossWind(w.crossKmh, units)),
-    el(doc, "td", `${formatPrecip(w.precipMm, units)} · ${rainChance}`),
+    el(doc, "td", `${formatRainRate(w.precipMm, w.precipStepH, units)} · ${rainChance}`),
     el(doc, "td", formatCloud(w.cloudPct)),
     el(doc, "td", formatSun(w.sunMin, w.sunEstimated)),
     el(doc, "td", formatCell(cells[i], units)),

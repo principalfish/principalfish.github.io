@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 
 import { init, MAX_GPX_BYTES } from "../js/main.js";
 import { ELEVATION_URL, FORECAST_URL } from "../js/openmeteo.js";
-import { HOURLY_VARS } from "../js/config.js";
+import { HOURLY_VARS, PROBABILITY } from "../js/config.js";
 import {
   forecastWindow, latestStartMs, MINUTE_MS, nextWholeHour, toLocalInputValue,
 } from "../js/schedule.js";
@@ -42,13 +42,15 @@ const listParam = (url, name) => url.searchParams.get(name).split(",").map(Numbe
 const parseHour = (text) => Date.parse(`${text}Z`);
 const isoHour = (ms) => new Date(ms).toISOString().slice(0, 16);
 
-function syntheticLocation(lat, lon, i, times, { leadingNulls, trailingNulls }) {
+// One location's answer with each of the requested `names` (the request's
+// `hourly` list) from the fixture.
+function syntheticLocation(lat, lon, i, times, names, { leadingNulls, trailingNulls }) {
   const base = FIXTURE[i % FIXTURE.length];
   const n = base.hourly.time.length;
   const hourly = { time: times.map(isoHour) };
-  for (const name of HOURLY_VARS) hourly[name] = times.map((_, t) => base.hourly[name][t % n]);
+  for (const name of names) hourly[name] = times.map((_, t) => base.hourly[name][t % n]);
   // Open-Meteo pads hours a model run hasn't reached with nulls.
-  hourly.temperature_2m = hourly.temperature_2m.map(
+  hourly.temperature_2m &&= hourly.temperature_2m.map(
     (v, t) => (t < leadingNulls || t >= times.length - trailingNulls ? null : v),
   );
   // Cell centre a little off the requested point, like a real model grid.
@@ -59,9 +61,10 @@ function syntheticLocation(lat, lon, i, times, { leadingNulls, trailingNulls }) 
   return i === 0 ? loc : { ...loc, location_id: i };
 }
 
-// Mock fetch serving forecast and elevation requests. Counts each kind and
-// keeps every request's signal. Options:
+// Mock fetch serving forecast, chance-of-rain and elevation requests. Counts
+// each kind and keeps every request's signal. Options:
 //   failForecast   answer the first N forecast requests with HTTP 429
+//   failProbability  answer every chance-of-rain request with HTTP 500
 //   holdFirst      "forecast" | "elevation": hold the first such response
 //                  until release()
 //   maxHours       serve at most this many hours from the requested start
@@ -69,13 +72,15 @@ function syntheticLocation(lat, lon, i, times, { leadingNulls, trailingNulls }) 
 //   nullElevation  the elevation API has no value for the first point
 //   timeZone       the zone the time zone lookup answers with (default: the
 //                  test's own TZ, so times read as before); null fails it
-// Time zone lookups are counted in `zoneCalls`, not `calls`.
+// Time zone lookups are counted in `zoneCalls`, not `calls`; chance-of-rain
+// URLs are kept in `probabilityUrls`.
 function mockFetch({
-  failForecast = 0, holdFirst = null, maxHours = Infinity, leadingNulls = 0, trailingNulls = 0,
-  nullElevation = false, timeZone = process.env.TZ,
+  failForecast = 0, failProbability = false, holdFirst = null, maxHours = Infinity,
+  leadingNulls = 0, trailingNulls = 0, nullElevation = false, timeZone = process.env.TZ,
 } = {}) {
-  const calls = { forecast: 0, elevation: 0 };
+  const calls = { forecast: 0, probability: 0, elevation: 0 };
   const zoneCalls = [];
+  const probabilityUrls = [];
   const signals = [];
   let failuresLeft = failForecast;
   let release;
@@ -98,25 +103,32 @@ function mockFetch({
       const body = { latitude: lats[0], longitude: lons[0], timezone: timeZone };
       return new Response(JSON.stringify(body));
     }
-    calls.forecast++;
-    // Deliberately ignores the abort signal: proves the controller drops a
-    // superseded response even when it still arrives.
-    if (holdFirst === "forecast" && calls.forecast === 1) await held;
-    if (failuresLeft > 0) {
-      failuresLeft--;
-      return new Response("{}", { status: 429 });
+    if (url.searchParams.get("models") === PROBABILITY.model) {
+      calls.probability++;
+      probabilityUrls.push(url);
+      if (failProbability) return new Response("{}", { status: 500 });
+    } else {
+      calls.forecast++;
+      // Deliberately ignores the abort signal: proves the controller drops a
+      // superseded response even when it still arrives.
+      if (holdFirst === "forecast" && calls.forecast === 1) await held;
+      if (failuresLeft > 0) {
+        failuresLeft--;
+        return new Response("{}", { status: 429 });
+      }
     }
     const start = parseHour(url.searchParams.get("start_hour"));
     const requestedEnd = parseHour(url.searchParams.get("end_hour"));
     const end = Math.min(requestedEnd, start + (maxHours - 1) * HOUR_MS);
     const times = [];
     for (let t = start; t <= end; t += HOUR_MS) times.push(t);
-    const locations = lats.map(
-      (lat, i) => syntheticLocation(lat, lons[i], i, times, { leadingNulls, trailingNulls }),
-    );
+    const names = url.searchParams.get("hourly").split(",");
+    const locations = lats.map((lat, i) => syntheticLocation(
+      lat, lons[i], i, times, names, { leadingNulls, trailingNulls },
+    ));
     return new Response(JSON.stringify(locations.length === 1 ? locations[0] : locations));
   };
-  return { impl, calls, zoneCalls, signals, release: () => release() };
+  return { impl, calls, zoneCalls, probabilityUrls, signals, release: () => release() };
 }
 
 // ~4.5 km east-west at 54.45°N; the default name proves textContent rendering.
@@ -290,7 +302,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     const { page, calls } = startPage();
     await loadRoute(page);
 
-    expect(calls).toEqual({ forecast: 1, elevation: 0 });
+    expect(calls).toEqual({ forecast: 1, probability: 1, elevation: 0 });
     expect(page.state.status.kind).toBe("info");
     expect($("routeName").textContent).toBe("Fell <b>loop</b>");
     expect($("routeName").querySelector("b")).toBeNull();
@@ -419,7 +431,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
   it("fetches elevation exactly once for a GPX without it", async () => {
     const { page, calls } = startPage();
     await loadRoute(page, { withElevation: false });
-    expect(calls).toEqual({ forecast: 1, elevation: 1 });
+    expect(calls).toEqual({ forecast: 1, probability: 1, elevation: 1 });
     expect(page.state.samples.every((s) => s.ele === 321)).toBe(true);
     expect($("summaryList").textContent).toContain("No elevation data");
     expect(page.state.results).not.toBeNull();
@@ -628,7 +640,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     const row = firstRow();
     expect(row.temp).toMatch(/°C$/);
     expect(row.feels).toMatch(/°C$/);
-    expect(row.rain).toMatch(/ mm · /);
+    expect(row.rain).toMatch(/ mm\/h · /);
     expect(row.wind).toMatch(/mph/);
     expect(row.distance).toMatch(/mi$/);
     expect(urlParams().get("rain")).toBe("mm");
@@ -775,11 +787,12 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
   it("does not refetch elevation on Retry", async () => {
     const { page, calls } = startPage({ fetchOptions: { failForecast: 1 } });
     await loadRoute(page, { withElevation: false });
-    expect(calls).toEqual({ forecast: 1, elevation: 1 });
+    // The failed forecast never gets as far as the chance of rain.
+    expect(calls).toEqual({ forecast: 1, probability: 0, elevation: 1 });
 
     $("retryButton").click();
     await vi.waitFor(() => expect(page.state.status.kind).toBe("info"));
-    expect(calls).toEqual({ forecast: 2, elevation: 1 });
+    expect(calls).toEqual({ forecast: 2, probability: 1, elevation: 1 });
   });
 
   it("does not refetch elevation on Retry even when some points had none", async () => {
@@ -789,7 +802,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
 
     $("retryButton").click();
     await vi.waitFor(() => expect(page.state.status.kind).toBe("info"));
-    expect(calls).toEqual({ forecast: 2, elevation: 1 });
+    expect(calls).toEqual({ forecast: 2, probability: 1, elevation: 1 });
     expect(page.state.results).not.toBeNull();
   });
 
@@ -848,6 +861,44 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     expect(page.state.startMs).toBe(Date.UTC(2026, 9, 26, 23, 0));
     commit("startInput");
     expect(window.location.search).toContain("start=2026-10-26T23%3A00Z");
+  });
+
+  // --- chance of rain ---
+
+  it("fetches the chance of rain once, at a few points, from the global model", async () => {
+    const { page, fetch } = startPage();
+    await loadRoute(page);
+    expect(fetch.probabilityUrls).toHaveLength(1);
+    const url = fetch.probabilityUrls[0];
+    expect(url.searchParams.get("models")).toBe(PROBABILITY.model);
+    expect(url.searchParams.get("hourly")).toBe(PROBABILITY.variable);
+    // A ~4.5 km route: just its two ends, though it has more samples.
+    expect(listParam(url, "latitude")).toHaveLength(2);
+    expect(page.state.samples.length).toBeGreaterThan(2);
+    expect(page.state.results.every((r) => Number.isFinite(r.precipProb))).toBe(true);
+    // Its one variable for two locations: 2 weighted calls.
+    const n = page.state.samples.length;
+    const spent = Number(/used ~([\d.]+) calls/.exec(usageReports()[0])[1]);
+    expect(spent).toBeCloseTo(1 + n * (HOURLY_VARS.length / 10) + 2, 1);
+  });
+
+  it("still loads when the chance of rain fails, leaving it out", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { page } = startPage({ fetchOptions: { failProbability: true } });
+    await loadRoute(page);
+    expect(page.state.status.kind).toBe("info");
+    expect($("retryButton").hidden).toBe(true);
+    expect(page.state.results.every((r) => Number.isNaN(r.precipProb))).toBe(true);
+    expect(page.state.results.some((r) => r.precipMm > 0)).toBe(true);
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/chance of rain is left out/));
+  });
+
+  it("totals the rain on the route in the summary", async () => {
+    const { page } = startPage();
+    await loadRoute(page);
+    expect(page.state.rain).toBeGreaterThan(0);
+    expect($("summaryList").textContent)
+      .toMatch(/Rain on the route~[\d.]+ mm · wettest [\d.]+ mm\/h at /);
   });
 
   it("stays in the browser's zone when the zone lookup fails", async () => {

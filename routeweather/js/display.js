@@ -1,11 +1,11 @@
-// Display helpers for the results views: local times, durations, compass
-// points, wind relative to travel and forecast-cell offsets. Pure functions
-// returning plain text (always rendered with textContent).
+// Display helpers for the results views: local times, durations, rain rates,
+// compass points, wind relative to travel and forecast-cell offsets. Pure
+// functions returning plain text (always rendered with textContent).
 //
 // Times are wall-clock times in `timeZone`: the route's IANA zone once it is
 // known, or the browser's own zone for null/undefined (zone.js).
 
-import { formatDistance, formatWind, MISSING } from "./units.js";
+import { formatDistance, formatPrecip, formatWind, MISSING } from "./units.js";
 import { sameZonedDay, zonedParts } from "./zone.js";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -61,6 +61,17 @@ export function formatDuration(ms) {
 export function formatHours(ms) {
   if (!isFiniteNumber(ms) || ms < 0) return MISSING;
   return `${(Math.round(ms / 360000) / 10).toFixed(1)} h`;
+}
+
+// --- rain ---
+
+// Precipitation per hour -> "0.7 mm/h", marked "(3-h avg)" when it is a
+// 3-hour forecast step's average (weather.js precipStepAt) rather than the
+// hour's own amount; not on 0, where averaging changes nothing.
+export function formatRainRate(mm, stepH, units) {
+  if (!isFiniteNumber(mm)) return MISSING;
+  const rate = `${formatPrecip(mm, units)}/h`;
+  return stepH === 3 && mm > 0 ? `${rate} (3-h avg)` : rate;
 }
 
 // --- sky ---

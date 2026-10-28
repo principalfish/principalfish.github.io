@@ -2,12 +2,13 @@
 // views to it and is the only module that starts Open-Meteo requests.
 //
 // Flow: a GPX file is parsed, built into a route and sampled, then the route's
-// time zone, the forecast (and, without GPX elevation, the terrain elevation)
-// are fetched ONCE for the whole available forecast window. A full route
-// costs ~390 weighted calls against a 600/minute limit, so changing activity,
-// speed or start only recomputes arrival times and per-sample weather from the
-// stored locations, and changing units only re-renders. A new file (or Retry)
-// aborts whatever the previous load still had in flight.
+// time zone, the forecast and its chance of rain (and, without GPX elevation,
+// the terrain elevation) are fetched ONCE for the whole available forecast
+// window. A full route costs ~400 weighted calls (~550 without GPX elevation)
+// against a 600/minute limit, so changing activity, speed or start only
+// recomputes arrival times and per-sample weather from the stored locations,
+// and changing units only re-renders. A new file (or Retry) aborts whatever
+// the previous load still had in flight.
 //
 // Views: `addView(update)` registers `update(state, reason)`, called on EVERY
 // render() in registration order. `reason` says what prompted the render:
@@ -31,11 +32,16 @@
 // page and tests call it with a jsdom document and a mocked fetch.
 
 import {
-  ACTIVITIES, HOURLY_VARS, OPEN_METEO_ATTRIBUTION, SAMPLING, SPEED_RANGE_KMH,
+  ACTIVITIES, HOURLY_VARS, OPEN_METEO_ATTRIBUTION, PROBABILITY, SAMPLING, SPEED_RANGE_KMH,
 } from "./config.js";
 import { parseGpx } from "./gpx.js";
-import { arrivalTimes, bearingDeg, buildRoute, haversineKm, sampleRoute } from "./route.js";
-import { fetchElevations, fetchForecast, fetchTimeZone } from "./openmeteo.js";
+import {
+  arrivalTimes, bearingDeg, buildRoute, haversineKm, nearestPointIndices, sampleRoute,
+  spacedSampleIndices,
+} from "./route.js";
+import {
+  fetchElevations, fetchForecast, fetchProbability, fetchTimeZone, withProbability,
+} from "./openmeteo.js";
 import { weatherForSample } from "./weather.js";
 import { isCustomised, kmhToSpeed, resolveUnits, speedToKmh } from "./units.js";
 import { readState, writeState } from "./urlstate.js";
@@ -49,6 +55,7 @@ import {
 import { formatDateTime, formatDuration } from "./display.js";
 import { isValidTimeZone } from "./zone.js";
 import { routeDaylight, routeSunshine } from "./daylight.js";
+import { routeRain } from "./along-route.js";
 import { createFormUI } from "./form-view.js";
 import { createPointsTableUI, createSummaryUI } from "./results-view.js";
 import { createMapUI } from "./map-view.js";
@@ -151,6 +158,7 @@ export function init({
     results: null, // weatherForSample(), parallel to samples; null = nothing to show
     daylight: null, // daylight.js routeDaylight(), with results
     sunshine: null, // daylight.js routeSunshine(), with results
+    rain: null, // along-route.js routeRain() (mm), with results
     startBounds: { minMs: now(), maxMs: now() },
     // messages
     status: { kind: "info", message: "Choose a GPX file to get started." },
@@ -214,6 +222,7 @@ export function init({
     state.results = null;
     state.daylight = null;
     state.sunshine = null;
+    state.rain = null;
     state.planError = null;
     updateStartBounds();
 
@@ -243,6 +252,7 @@ export function init({
     );
     state.daylight = routeDaylight(state);
     state.sunshine = routeSunshine(state);
+    state.rain = routeRain(state);
   }
 
   // --- fetching (once per GPX load) ---
@@ -309,10 +319,12 @@ export function init({
         variables: HOURLY_VARS.length,
         hours: windowHours(range),
       });
-      const locations = await fetchForecast(state.samples, range, fetchImpl, {
+      const forecast = await fetchForecast(state.samples, range, fetchImpl, {
         ...options,
         onRequest: (sent) => spend(weigh(sent)),
       });
+      if (signal.aborted) return;
+      const locations = await withChanceOfRain(forecast, range, options, spend);
       if (signal.aborted) return;
 
       const span = forecastSpan(locations);
@@ -336,6 +348,32 @@ export function init({
         console.info(formatUsageReport({ label, calls: spent, totals: usage.totals() }));
       }
     }
+  }
+
+  // The forecast `locations` with their chance of rain (openmeteo.js
+  // withProbability), fetched at a few points along the route (config.js
+  // PROBABILITY). A failed request isn't worth failing the load for: the
+  // chance then shows as a gap, and the rain amounts are unaffected. An abort
+  // is rethrown for fetchWeather to drop.
+  async function withChanceOfRain(locations, range, options, spend) {
+    const { samples } = state;
+    const picks = spacedSampleIndices(samples, PROBABILITY.spacingKm, PROBABILITY.maxPoints);
+    const points = picks.map((i) => samples[i]);
+    let series = null;
+    setStatus("loading", "Fetching the chance of rain…");
+    render("status");
+    try {
+      series = await fetchProbability(points, range, fetchImpl, {
+        ...options,
+        onRequest: ({ locations: sent }) => spend(forecastCallWeight({
+          locations: sent, variables: 1, hours: windowHours(range),
+        })),
+      });
+    } catch (err) {
+      if (options.signal.aborted) throw err;
+      console.warn(`Route weather: ${err.message}; the chance of rain is left out.`);
+    }
+    return withProbability(locations, nearestPointIndices(samples, points), series);
   }
 
   // Switches every displayed time (and the start input) to `zone`, or back to

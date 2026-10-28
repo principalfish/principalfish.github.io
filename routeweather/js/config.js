@@ -34,8 +34,8 @@ export const PRESSURE_LEVELS = [1000, 925, 850, 700];
 
 const SURFACE_VARS = [
   "temperature_2m",
+  // precipitation_probability is fetched separately (PROBABILITY below).
   "precipitation",
-  "precipitation_probability",
   "weather_code",
   "wind_speed_10m",
   "wind_direction_10m",
@@ -65,6 +65,20 @@ export const HOURLY_VARS = [
     PRESSURE_LEVEL_VARS.map((name) => `${name}_${level}hPa`),
   ),
 ];
+
+// The chance of rain comes from its own small request. ukmo_seamless's
+// precipitation_probability is a 3-member ensemble (0/33/67/100 %) that
+// often disagrees with the rain amounts beside it (0 % chance with 0.7 mm/h);
+// the Met Office global model's comes from its ~18-member ensemble. That
+// ensemble is ~20 km, so it is fetched at points `spacingKm` apart along the
+// route (at most `maxPoints`, both ends included) rather than at every sample,
+// costing a few weighted calls instead of one per sample (usage.js).
+export const PROBABILITY = Object.freeze({
+  model: "ukmo_global_deterministic_10km",
+  variable: "precipitation_probability",
+  spacingKm: 10,
+  maxPoints: 20,
+});
 
 // How far ahead of now the forecast is requested, in hours (7 days). Open-Meteo
 // accepts this whatever the model, but pads hours past the model's last run

@@ -5,10 +5,10 @@ import { describe, it, expect } from "vitest";
 import {
   toUV, fromUV, interpHourly, bucketHourly, profileAt, temperatureAt, windAt, headCross,
   weatherForSample, describeWeather, WMO_DESCRIPTIONS, LAPSE_RATE_K_PER_M, isAboveProfile,
-  sunshineAt, apparentTemperatureC,
+  sunshineAt, apparentTemperatureC, precipStepAt,
 } from "../js/weather.js";
 import { daylightMinutes } from "../js/sun.js";
-import { normaliseLocation } from "../js/openmeteo.js";
+import { normaliseLocation, normaliseSeries, withProbability } from "../js/openmeteo.js";
 import { HOURLY_VARS, PRESSURE_LEVELS } from "../js/config.js";
 import { MISSING } from "../js/units.js";
 
@@ -32,10 +32,11 @@ const angleDiff = (a, b) => {
   return Math.min(d, 360 - d);
 };
 
-// A normalised location (as openmeteo.js returns) with `hours` hourly steps
-// from T0. Each `series` entry is a constant or a per-hour array. Calm, dry
-// 10 °C by default, with every pressure level underground (so unused) unless a
-// test gives it a height.
+// A normalised location (as openmeteo.js returns, with its chance of rain
+// added as withProbability does) with `hours` hourly steps from T0. Each
+// `series` entry is a constant or a per-hour array. Calm, dry 10 °C by
+// default, with every pressure level underground (so unused) unless a test
+// gives it a height.
 function makeLoc({ cellElev = 0, hours = 3, ...series } = {}) {
   const defaults = {
     temperature_2m: 10,
@@ -56,7 +57,7 @@ function makeLoc({ cellElev = 0, hours = 3, ...series } = {}) {
     defaults[`geopotential_height_${level}hPa`] = -1000;
   }
   const vars = {};
-  for (const name of HOURLY_VARS) {
+  for (const name of [...HOURLY_VARS, "precipitation_probability"]) {
     const value = name in series ? series[name] : defaults[name];
     const at = (i) => (Array.isArray(value) ? value[i] : value);
     vars[name] = Float64Array.from({ length: hours }, (_, i) => at(i));
@@ -432,8 +433,20 @@ describe("weatherForSample", () => {
     expect([atTenTwenty.precipMm, atTenTwenty.precipProb, atTenTwenty.code]).toEqual([2.5, 90, 63]);
   });
 
+  it("leaves the chance of rain NaN on a location without one", () => {
+    const loc = makeLoc({ precipitation: 0.4 });
+    delete loc.vars.precipitation_probability;
+    const w = weatherForSample(loc, { ele: 0 }, T0 + HOUR, 0);
+    expect(w.precipProb).toBeNaN();
+    expect(w.precipMm).toBe(0.4);
+  });
+
   describe("on the real fixture", () => {
-    const [upland, lowland] = FIXTURE.map(normaliseLocation);
+    const [upland, lowland] = withProbability(
+      FIXTURE.map(normaliseLocation),
+      [0, 1],
+      FIXTURE.map((json) => normaliseSeries(json, "precipitation_probability")),
+    );
     const t = Date.UTC(2026, 9, 26, 11, 30);
 
     it("returns finite numbers for every field", () => {
@@ -581,6 +594,60 @@ describe("sunshineAt", () => {
     expect(w.cloudPct).toBe(30);
     expect(w.sunMin).toBe(10);
     expect(w.sunEstimated).toBe(false);
+  });
+});
+
+describe("precipStepAt", () => {
+  // T0 is 09:00 UTC, so the hourly stamps run 09:00, 10:00, … and the 3-hour
+  // steps end 12:00, 15:00, 18:00 (stamps 10–12, 13–15, 16–18).
+  const at = (h) => T0 + h * HOUR;
+  const steps = makeLoc({
+    hours: 9,
+    sunshine_duration: NaN,
+    precipitation: [0.1, 0.2, 0.2, 0.2, 0.3, 0.3, 0.4, 0.5, 0.5],
+  });
+
+  it("is a 3-hour step past the sunshine data when the step's amounts match", () => {
+    // 10:30 reads the 11:00 bucket, in the 09–12 step.
+    expect(precipStepAt(steps, at(1.5))).toEqual({ stepH: 3, endMs: at(3) });
+    expect(precipStepAt(steps, at(3))).toEqual({ stepH: 3, endMs: at(3) });
+  });
+
+  it("is the hour itself when the step's amounts differ", () => {
+    // 13:30 -> the 14:00 bucket, in the 12–15 step: 0.3, 0.3, 0.4.
+    expect(precipStepAt(steps, at(4.5))).toEqual({ stepH: 1, endMs: at(5) });
+  });
+
+  it("judges a step cut off by the series' end on the hours it has", () => {
+    // 16:30 -> the 17:00 bucket; the 15–18 step's 18:00 is past the end.
+    expect(precipStepAt(steps, at(7.5))).toEqual({ stepH: 3, endMs: at(9) });
+  });
+
+  it("is hourly wherever there is sunshine data, however steady the rain", () => {
+    const steady = makeLoc({ hours: 6, precipitation: 0.2 });
+    expect(precipStepAt(steady, at(1.5))).toEqual({ stepH: 1, endMs: at(2) });
+  });
+
+  it("switches where the sunshine data runs out", () => {
+    const loc = makeLoc({
+      hours: 9,
+      precipitation: 0.2,
+      sunshine_duration: [600, 600, 600, NaN, NaN, NaN, NaN, NaN, NaN],
+    });
+    expect(precipStepAt(loc, at(1.5)).stepH).toBe(1);
+    expect(precipStepAt(loc, at(3.5)).stepH).toBe(3);
+  });
+
+  it("is hourly for missing rain, and NaN without data", () => {
+    const gap = makeLoc({ hours: 6, sunshine_duration: NaN, precipitation: NaN });
+    expect(precipStepAt(gap, at(1.5)).stepH).toBe(1);
+    const empty = { timesMs: new Float64Array(0), vars: {} };
+    expect(precipStepAt(empty, T0)).toEqual({ stepH: NaN, endMs: NaN });
+  });
+
+  it("is exposed per sample by weatherForSample", () => {
+    const w = weatherForSample(steps, { ele: 0 }, at(1.5), 0);
+    expect([w.precipMm, w.precipStepH, w.precipStepEndMs]).toEqual([0.2, 3, at(3)]);
   });
 });
 

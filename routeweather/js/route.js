@@ -412,6 +412,44 @@ function thinEvenly(items, count) {
   );
 }
 
+// --- coarse points ---
+
+// Indices of the samples to fetch a coarse forecast field at (config.js
+// PROBABILITY): the first sample, each next one at least `spacingKm` along the
+// route from the last pick, and the last, with the spacing widened as needed
+// to stay within `maxPoints`. [] without samples.
+export function spacedSampleIndices(samples, spacingKm, maxPoints) {
+  const n = samples.length;
+  if (n === 0) return [];
+  const totalKm = samples[n - 1].cumDistKm - samples[0].cumDistKm;
+  const spacing = Math.max(spacingKm, totalKm / Math.max(1, maxPoints - 1));
+  const picks = [0];
+  for (let i = 1; i < n - 1; i++) {
+    const sinceLast = samples[i].cumDistKm - samples[picks[picks.length - 1]].cumDistKm;
+    // Leaves room for the last sample, which is always picked.
+    if (sinceLast >= spacing && picks.length < maxPoints - 1) picks.push(i);
+  }
+  if (n > 1) picks.push(n - 1);
+  return picks;
+}
+
+// For each of `samples`, the index into `points` of the nearest one on the
+// ground (haversine), so an out-and-back leg shares its points both ways.
+export function nearestPointIndices(samples, points) {
+  return samples.map((s) => {
+    let best = 0;
+    let bestKm = Infinity;
+    points.forEach((p, j) => {
+      const km = haversineKm(s, p);
+      if (km < bestKm) {
+        best = j;
+        bestKm = km;
+      }
+    });
+    return best;
+  });
+}
+
 // --- timing ---
 
 // Arrival time (epoch ms) at each cumulative distance, at a constant speed.

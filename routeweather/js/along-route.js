@@ -16,13 +16,13 @@
 //                                      u/v (as weather.js blends in time and
 //                                      height), so 350° and 10° meet at north.
 //   precipMm, precipProb, code,        from the NEARER sample (a tie at
-//   cellElev, eleFromModel,            exactly halfway: the earlier). These are
-//   aboveProfile, sunMin, sunEstimated per-hour buckets / per-cell facts, not
-//                                      quantities that vary smoothly along a
-//                                      path; the precipitation chart draws one
-//                                      bar per sample reaching halfway to its
-//                                      neighbours, so "nearer" is the bar the
-//                                      cursor is over.
+//   precipStepH, precipStepEndMs,      exactly halfway: the earlier). These are
+//   cellElev, eleFromModel,            per-hour buckets / per-cell facts, not
+//   aboveProfile, sunMin, sunEstimated quantities that vary smoothly along a
+//                                      path; the charts draw each sample's
+//                                      value over its nearestSpan, halfway to
+//                                      its neighbours, so "nearer" is the bar
+//                                      the cursor is over.
 //   outsideForecast                    true if either neighbour is (the clamped
 //                                      value is in play for the whole span);
 //                                      exactly on a sample, that sample's own.
@@ -40,7 +40,8 @@ const LINEAR_KEYS = [
   "headKmh", "crossKmh", "eleUsed", "cloudPct", "feelsLikeC", "rhPct",
 ];
 const NEAREST_KEYS = [
-  "precipMm", "precipProb", "code", "cellElev", "aboveProfile", "sunMin", "sunEstimated",
+  "precipMm", "precipProb", "precipStepH", "precipStepEndMs", "code", "cellElev",
+  "aboveProfile", "sunMin", "sunEstimated",
 ];
 
 // --- position ---
@@ -131,4 +132,39 @@ export function timeAtDistance(state, distKm) {
   const { startMs, speedKmh } = state;
   if (!isNum(startMs) || !isNum(speedKmh) || speedKmh <= 0) return NaN;
   return startMs + (clampDistance(state, distKm) / speedKmh) * HOUR_MS;
+}
+
+// --- per-sample spans ---
+
+// The stretch [fromKm, toKm] sample `i`'s nearest-sample values stand for:
+// halfway to the previous sample to halfway to the next (the route's ends,
+// 0 and `totalKm`, at either end).
+export function nearestSpan(samples, i, totalKm) {
+  const mid = (j) => (samples[i].cumDistKm + samples[j].cumDistKm) / 2;
+  return [i === 0 ? 0 : mid(i - 1), i === samples.length - 1 ? totalKm : mid(i + 1)];
+}
+
+// Time on the move (ms) over each sample's nearestSpan at the plan's constant
+// speed, parallel to the samples; null without samples, results, a route or a
+// valid speed.
+export function nearestSpanTimes(state) {
+  const { samples, results, route, speedKmh } = state;
+  if (!samples || !results || !route || !isNum(speedKmh) || speedKmh <= 0) return null;
+  return samples.map((_, i) => {
+    const [from, to] = nearestSpan(samples, i, route.totalDistKm);
+    return ((to - from) / speedKmh) * HOUR_MS;
+  });
+}
+
+// The rain you would walk through (mm): each sample's precipitation per hour
+// over the time spent nearer to it than to its neighbours. Time-weighted, so
+// however many samples fall in one forecast hour (or 3-hour step), that hour
+// counts once. Samples with no amount add nothing. null as nearestSpanTimes.
+export function routeRain(state) {
+  const spans = nearestSpanTimes(state);
+  if (!spans) return null;
+  return spans.reduce((mm, spanMs, i) => {
+    const rate = state.results[i].precipMm;
+    return isNum(rate) ? mm + rate * (spanMs / HOUR_MS) : mm;
+  }, 0);
 }

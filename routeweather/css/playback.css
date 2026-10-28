@@ -64,6 +64,8 @@
 .route-charts .s-wind { stroke: var(--series-1); }
 .route-charts .s-gust { stroke: var(--series-3); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .route-charts .s-rain { fill: var(--series-1); }
+/* A 3-hour forecast step's average rather than the hour's own amount. */
+.route-charts .s-rain.avg { opacity: 0.55; }
 /* Chance of rain: a step line in front of the solid rain bars, edged in the
    panel colour so it stays readable where it crosses them. */
 .route-charts .prob-line {
@@ -96,6 +98,7 @@
 .swatch-bar { width: 10px; height: 10px; border-radius: 2px; }
 .swatch-area { width: 12px; height: 10px; border-radius: 2px; }
 .swatch.s-rain { background: var(--series-1); }
+.swatch.s-rain-avg { background: var(--series-1); opacity: 0.55; }
 .swatch.s-prob { border-color: var(--series-2); }
 .swatch.s-cloud { background: var(--cloud); }
 .swatch.s-sun { background: var(--sun); }

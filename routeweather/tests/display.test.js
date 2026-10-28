@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 
 import {
   compassPoint, formatArrival, formatCell, formatClock, formatCloud, formatCrossWind,
-  formatDateTime, formatDaylight, formatDuration, formatHeadWind, formatHours, formatSun,
+  formatDateTime, formatDaylight, formatDuration, formatHeadWind, formatHours, formatRainRate,
+  formatSun,
 } from "../js/display.js";
 import { MISSING, resolveUnits } from "../js/units.js";
 
@@ -30,6 +31,21 @@ describe("times", () => {
     expect(formatDuration((3 * 60 + 5) * 60000 + 20000)).toBe("3 h 05 min");
     expect(formatDuration(NaN)).toBe(MISSING);
     expect(formatDuration(-1)).toBe(MISSING);
+  });
+});
+
+describe("formatRainRate", () => {
+  const metric = resolveUnits("metric");
+
+  it("is a rate per hour, marked when it is a 3-hour step's average", () => {
+    expect(formatRainRate(0.7, 1, metric)).toBe("0.7 mm/h");
+    expect(formatRainRate(0.7, 3, metric)).toBe("0.7 mm/h (3-h avg)");
+    expect(formatRainRate(0.7, 3, resolveUnits("imperial"))).toBe("0.03 in/h (3-h avg)");
+  });
+
+  it("leaves 0 unmarked and dashes a gap", () => {
+    expect(formatRainRate(0, 3, metric)).toBe("0.0 mm/h");
+    expect(formatRainRate(NaN, 3, metric)).toBe(MISSING);
   });
 });
 

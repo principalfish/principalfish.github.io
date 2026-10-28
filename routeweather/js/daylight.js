@@ -8,10 +8,9 @@
 // point does. Flat horizon throughout (see sun.js).
 
 import { positionAtDistance } from "./route.js";
-import { timeAtDistance } from "./along-route.js";
+import { nearestSpanTimes, timeAtDistance } from "./along-route.js";
 import { isDaylight, nextSunEvent, sunTimes } from "./sun.js";
 import { zonedParts, zonedTimeToMs } from "./zone.js";
-import { HOUR_MS } from "./schedule.js";
 import { isFiniteNumber as isNum } from "./display.js";
 
 // The route is scanned in at least this many steps, and finer when it takes
@@ -82,21 +81,17 @@ export function routeDaylight(state) {
 
 // Sunshine you would get on the move: each sample's minutes of sunshine per
 // hour (weather.js sunMin) over the time spent nearer to it than to its
-// neighbours (the nearer-sample rule of along-route.js). Returns
+// neighbours (along-route.js nearestSpanTimes). Returns
 // { sunMs, estimated } (estimated: some of it comes from an estimate), or
 // null without results. Samples with no sunshine value add nothing.
 export function routeSunshine(state) {
-  const { samples, results, route, speedKmh } = state;
-  if (!samples || !results || !route || !isNum(speedKmh) || speedKmh <= 0) return null;
-  const n = samples.length;
+  const spans = nearestSpanTimes(state);
+  if (!spans) return null;
   let sunMs = 0;
   let estimated = false;
-  samples.forEach((s, i) => {
-    const r = results[i];
+  spans.forEach((spanMs, i) => {
+    const r = state.results[i];
     if (!isNum(r.sunMin)) return;
-    const from = i === 0 ? 0 : (samples[i - 1].cumDistKm + s.cumDistKm) / 2;
-    const to = i === n - 1 ? route.totalDistKm : (s.cumDistKm + samples[i + 1].cumDistKm) / 2;
-    const spanMs = ((to - from) / speedKmh) * HOUR_MS;
     sunMs += spanMs * (r.sunMin / 60);
     if (r.sunEstimated && spanMs > 0) estimated = true;
   });

@@ -181,6 +181,39 @@ export function sunshineAt(loc, tMs, lat, lon) {
   return { sunMin, sunEstimated: Number.isFinite(sunMin) };
 }
 
+// --- rain steps ---
+
+// Past ukmo_seamless's hourly UK range (about 2¼ days, where its
+// sunshine_duration runs out) rain comes from the Met Office global model in
+// 3-hour steps ending on UTC hours divisible by 3. Open-Meteo spreads each
+// step's total evenly over its three hours, so an hour's precipitation is a
+// third of the step's total, never a repeat of it.
+const RAIN_STEP_MS = 3 * HOUR_MS;
+
+// The forecast step behind the precipitation in the hour bucket containing
+// `tMs`, as { stepH, endMs }: a 3-hour step (endMs on a UTC 3-hour boundary)
+// where the bucket has no sunshine data AND every hour of its 3-hour window
+// in the series has the same amount; otherwise the hour itself (stepH 1,
+// endMs the bucket's end). Both tests are needed: a constant amount alone
+// can't tell a dry or steady hourly stretch from a 3-hour step, and missing
+// sunshine alone would relabel a model that is hourly all the way. A dry
+// hourly stretch past the sunshine data still reads as 3-hourly, which only
+// matters for a non-zero amount. { stepH: NaN, endMs: NaN } for no data.
+export function precipStepAt(loc, tMs) {
+  const i = bucketIndex(loc.timesMs, tMs);
+  if (i < 0) return { stepH: NaN, endMs: NaN };
+  const hourly = { stepH: 1, endMs: loc.timesMs[i] };
+  if (Number.isFinite(loc.vars.sunshine_duration[i])) return hourly;
+  const endMs = Math.ceil(loc.timesMs[i] / RAIN_STEP_MS) * RAIN_STEP_MS;
+  // The series is hourly, so the window's last hour is a whole number of
+  // steps on from i.
+  const last = i + Math.round((endMs - loc.timesMs[i]) / HOUR_MS);
+  const precip = loc.vars.precipitation;
+  const window = precip.slice(Math.max(0, last - 2), Math.min(precip.length, last + 1));
+  const steady = Number.isFinite(window[0]) && window.every((v) => v === window[0]);
+  return steady ? { stepH: 3, endMs } : hourly;
+}
+
 // --- vertical profile ---
 
 // The location's vertical profile at `tMs`:
@@ -308,7 +341,13 @@ export function isAboveProfile(profile, eleM) {
 //
 // precipProb and code come from the same hour bucket as precipMm. Open-Meteo's
 // weather_code is an instantaneous value, but reading it from the bucket keeps
-// the label consistent with the rain amount shown beside it.
+// the label consistent with the rain amount shown beside it. precipProb is NaN
+// when the location has no chance of rain (openmeteo.js withProbability adds
+// it from its own request).
+//
+// precipStepH (1 or 3) and precipStepEndMs are the forecast step precipMm
+// comes from (precipStepAt): with a 3-hour step, precipMm is that step's
+// average per hour.
 //
 // outsideForecast is true when `tMs` is before the first or after the last
 // hourly time (values are then clamped to the nearest end), so the page can
@@ -337,6 +376,7 @@ export function weatherForSample(loc, sample, tMs, bearingDeg) {
   const { sunMin, sunEstimated } = sunshineAt(loc, tMs, lat, lon);
   const tempC = temperatureAt(profile, eleUsed);
   const rhPct = interpHourly(timesMs, loc.vars.relative_humidity_2m, tMs);
+  const step = precipStepAt(loc, tMs);
   return {
     tempC,
     feelsLikeC: apparentTemperatureC(tempC, rhPct, wind.speed),
@@ -347,7 +387,9 @@ export function weatherForSample(loc, sample, tMs, bearingDeg) {
     headKmh,
     crossKmh,
     precipMm: bucket("precipitation"),
-    precipProb: bucket("precipitation_probability"),
+    precipProb: loc.vars.precipitation_probability ? bucket("precipitation_probability") : NaN,
+    precipStepH: step.stepH,
+    precipStepEndMs: step.endMs,
     code: bucket("weather_code"),
     cloudPct: interpHourly(timesMs, loc.vars.cloud_cover, tMs),
     sunMin,

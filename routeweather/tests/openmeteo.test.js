@@ -4,10 +4,11 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 
 import {
   buildForecastUrl, buildElevationUrl, fetchForecast, fetchElevations, normaliseLocation,
-  buildTimeZoneUrl, fetchTimeZone,
+  buildTimeZoneUrl, fetchTimeZone, buildProbabilityUrl, fetchProbability, normaliseSeries,
+  withProbability,
   CHUNK_SIZE, ELEVATION_CHUNK_SIZE, FORECAST_URL, ELEVATION_URL, REQUEST_TIMEOUT_MS,
 } from "../js/openmeteo.js";
-import { HOURLY_VARS } from "../js/config.js";
+import { HOURLY_VARS, PROBABILITY } from "../js/config.js";
 
 // Real Open-Meteo response for an upland (Lake District) and a lowland
 // (London) point, 2026-10-26 09:00–14:00 UTC, every HOURLY_VARS variable
@@ -36,12 +37,12 @@ afterAll(() => {
 
 const listParam = (url, name) => new URL(url).searchParams.get(name).split(",");
 
-// A minimal valid location object for (lat, lon): one hourly step, every
-// variable present. `id` is its index in the request; like the real API, the
+// A minimal valid location object for (lat, lon): one hourly step, each of
+// `names` present. `id` is its index in the request; like the real API, the
 // first location has no `location_id`.
-function fakeLocation(lat, lon, id = 0) {
+function fakeLocation(lat, lon, id = 0, names = HOURLY_VARS) {
   const hourly = { time: ["2026-10-26T09:00"] };
-  for (const name of HOURLY_VARS) hourly[name] = [1];
+  for (const name of names) hourly[name] = [1];
   const loc = { latitude: lat, longitude: lon, elevation: 100, hourly };
   return id === 0 ? loc : { ...loc, location_id: id };
 }
@@ -63,7 +64,8 @@ function forecastFetch() {
     inFlight--;
     const lats = listParam(url, "latitude").map(Number);
     const lons = listParam(url, "longitude").map(Number);
-    const locations = lats.map((lat, i) => fakeLocation(lat, lons[i], i));
+    const names = listParam(url, "hourly");
+    const locations = lats.map((lat, i) => fakeLocation(lat, lons[i], i, names));
     return jsonResponse(locations.length === 1 ? locations[0] : locations);
   };
   return { impl, calls, maxInFlight: () => maxInFlight };
@@ -429,6 +431,114 @@ describe("normaliseLocation", () => {
     const bad = structuredClone(FIXTURE[0]);
     bad.hourly.time[1] = "not a time";
     expect(() => normaliseLocation(bad)).toThrow(/unparseable/);
+  });
+});
+
+describe("buildProbabilityUrl", () => {
+  const url = buildProbabilityUrl([{ lat: 54.45, lon: -3.2 }, { lat: 54.5, lon: -3.1 }], RANGE);
+  const params = new URL(url).searchParams;
+
+  it("asks the global model for the chance of rain alone, over the same window", () => {
+    expect(url.startsWith(`${FORECAST_URL}?`)).toBe(true);
+    expect(params.get("models")).toBe(PROBABILITY.model);
+    expect(params.get("hourly")).toBe(PROBABILITY.variable);
+    expect(params.get("timezone")).toBe("GMT");
+    const forecast = new URL(buildForecastUrl([{ lat: 54.45, lon: -3.2 }], RANGE)).searchParams;
+    expect(params.get("start_hour")).toBe(forecast.get("start_hour"));
+    expect(params.get("end_hour")).toBe(forecast.get("end_hour"));
+  });
+
+  it("lists the points, with no elevation or cell options", () => {
+    expect(listParam(url, "latitude")).toEqual(["54.45", "54.5"]);
+    expect(params.has("elevation")).toBe(false);
+    expect(params.has("cell_selection")).toBe(false);
+  });
+
+  it("throws on an invalid window", () => {
+    expect(() => buildProbabilityUrl([{ lat: 1, lon: 1 }], { startHour: 2, endHour: 1 }))
+      .toThrow(/startHour/);
+  });
+});
+
+describe("fetchProbability", () => {
+  it(`splits ${CHUNK_SIZE + 1} points into 2 requests and returns a series per point`, async () => {
+    const mock = forecastFetch();
+    const onRequest = vi.fn();
+    const points = samplesN(CHUNK_SIZE + 1);
+    const series = await fetchProbability(points, RANGE, mock.impl, { onRequest });
+    expect(mock.calls).toHaveLength(2);
+    expect(onRequest.mock.calls).toEqual([[{ locations: CHUNK_SIZE }], [{ locations: 1 }]]);
+    expect(series).toHaveLength(CHUNK_SIZE + 1);
+    expect(Array.from(series[0].timesMs)).toEqual([Date.UTC(2026, 9, 26, 9)]);
+    expect(Array.from(series[0].values)).toEqual([1]);
+  });
+
+  it("throws when a point's chance of rain is missing", async () => {
+    const impl = async () => jsonResponse(fakeLocation(1, 1, 0, ["temperature_2m"]));
+    await expect(fetchProbability([{ lat: 1, lon: 1 }], RANGE, impl))
+      .rejects.toThrow(/hourly precipitation_probability/);
+  });
+
+  it("names the request in errors", async () => {
+    const impl = async () => jsonResponse([fakeLocation(1, 1, 1)]);
+    await expect(fetchProbability([{ lat: 1, lon: 1 }], RANGE, impl))
+      .rejects.toThrow(/chance of rain locations out of order/);
+  });
+});
+
+describe("normaliseSeries", () => {
+  it("returns one variable's values and UTC times, nulls as NaN", () => {
+    const json = structuredClone(FIXTURE[0]);
+    json.hourly.precipitation_probability[1] = null;
+    const { timesMs, values } = normaliseSeries(json, "precipitation_probability");
+    expect(timesMs[0]).toBe(Date.UTC(2026, 9, 26, 9));
+    expect(values).toBeInstanceOf(Float64Array);
+    expect(values).toHaveLength(timesMs.length);
+    expect(values[1]).toBeNaN();
+  });
+
+  it("throws on a missing variable", () => {
+    expect(() => normaliseSeries(FIXTURE[0], "nope")).toThrow(/hourly nope/);
+  });
+});
+
+describe("withProbability", () => {
+  const HOUR = 3600 * 1000;
+  const T = Date.UTC(2026, 9, 26, 9);
+  const loc = (cellLat) => ({
+    cellLat,
+    timesMs: Float64Array.of(T, T + HOUR, T + 2 * HOUR),
+    vars: { precipitation: [1, 2, 3] },
+  });
+  const series = (start, values) => ({
+    timesMs: Float64Array.from(values, (_, k) => start + k * HOUR),
+    values: Float64Array.from(values),
+  });
+
+  it("gives each location its owner's series, matched by time", () => {
+    const locations = [loc(1), loc(2), loc(3)];
+    const out = withProbability(locations, [0, 1, 1], [
+      series(T, [10, 20, 30]),
+      // Starts an hour later: the first hour has no value.
+      series(T + HOUR, [50, 60, 70]),
+    ]);
+    expect(Array.from(out[0].vars.precipitation_probability)).toEqual([10, 20, 30]);
+    expect(Array.from(out[1].vars.precipitation_probability)).toEqual([NaN, 50, 60]);
+    expect(Array.from(out[2].vars.precipitation_probability)).toEqual([NaN, 50, 60]);
+    expect(out[0].vars.precipitation).toBe(locations[0].vars.precipitation);
+    expect(out[1].cellLat).toBe(2);
+  });
+
+  it("leaves the originals untouched", () => {
+    const locations = [loc(1)];
+    const out = withProbability(locations, [0], [series(T, [10, 20, 30])]);
+    expect(out[0]).not.toBe(locations[0]);
+    expect(locations[0].vars).not.toHaveProperty("precipitation_probability");
+  });
+
+  it("fills NaN without a series (the request failed)", () => {
+    const out = withProbability([loc(1)], [0], null);
+    expect(Array.from(out[0].vars.precipitation_probability)).toEqual([NaN, NaN, NaN]);
   });
 });
 

@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import {
-  createChartsUI, extremeLabels, outsideSpans, profilePoints, stepPoints,
+  createChartsUI, extremeLabels, outsideSpans, profilePoints, rainBars, stepPoints,
 } from "../js/charts.js";
 import { weatherAtDistance } from "../js/along-route.js";
 import { buildRoute } from "../js/route.js";
@@ -175,6 +175,34 @@ describe("stepPoints", () => {
     const firstRunXs = d.split("M")[1].split("L").map((p) => Number(p.split(",")[0]));
     expect(Math.max(...firstRunXs)).toBeCloseTo(midX, 2);
     charts.destroy();
+  });
+});
+
+describe("rainBars", () => {
+  const samples = [0, 2, 4, 6, 8].map((cumDistKm) => ({ cumDistKm }));
+  const rain = (mm, stepH, endMs) => ({ precipMm: mm, precipStepH: stepH, precipStepEndMs: endMs });
+
+  it("merges neighbours reading the same step and amount into one bar", () => {
+    const results = [rain(0.3, 3, 12), rain(0.3, 3, 12), rain(0.3, 3, 12), rain(0.2, 1, 13),
+      rain(0.2, 1, 13)];
+    expect(rainBars(samples, results, 9)).toEqual([
+      { fromKm: 0, toKm: 5, mm: 0.3, stepH: 3 },
+      { fromKm: 5, toKm: 9, mm: 0.2, stepH: 1 },
+    ]);
+  });
+
+  it("splits the same amount in a different step, and a different amount in the same step", () => {
+    const results = [rain(0.3, 3, 12), rain(0.3, 3, 15), rain(0.4, 3, 15), rain(0, 3, 15),
+      rain(0.4, 3, 15)];
+    expect(rainBars(samples, results, 9).map((b) => [b.fromKm, b.toKm, b.mm])).toEqual([
+      [0, 1, 0.3], [1, 3, 0.3], [3, 5, 0.4], [7, 9, 0.4],
+    ]);
+  });
+
+  it("does not merge across a dry or missing sample", () => {
+    const results = [rain(0.3, 3, 12), rain(NaN, 3, 12), rain(0.3, 3, 12), rain(0, 1, 13),
+      rain(0, 1, 13)];
+    expect(rainBars(samples, results, 9)).toHaveLength(2);
   });
 });
 
@@ -378,6 +406,24 @@ describe("createChartsUI", () => {
     expect(end).toBeCloseTo(xAt((kms[1] + kms[2]) / 2) - 1, 6);
   });
 
+  it("draws a 3-hour step as one fainter bar across its samples", () => {
+    const state = makeState();
+    const step = { precipMm: 0.5, precipStepH: 3, precipStepEndMs: 1 };
+    charts.update({
+      ...state,
+      results: state.results.map((r, i) => (i === 1 || i === 2 ? { ...r, ...step } : r)),
+    });
+    const bars = container.querySelectorAll(".rain-bars rect");
+    expect(bars).toHaveLength(1);
+    expect(bars[0].getAttribute("class")).toBe("s-rain avg");
+    const { left, right } = plotRange(container);
+    const xAt = (km) => left + ((right - left) * km) / state.route.totalDistKm;
+    const kms = state.samples.map((s) => s.cumDistKm);
+    expect(Number(bars[0].getAttribute("x"))).toBeCloseTo(xAt((kms[0] + kms[1]) / 2) + 1, 6);
+    const end = Number(bars[0].getAttribute("x")) + Number(bars[0].getAttribute("width"));
+    expect(end).toBeCloseTo(xAt((kms[2] + kms[3]) / 2) - 1, 6);
+  });
+
   it("greys the stretch outside the forecast with a hatch and adds it to the legend", () => {
     charts.update(makeState());
     const bands = container.querySelectorAll(".outside-bands rect");
@@ -401,7 +447,9 @@ describe("createChartsUI", () => {
     const items = (li) => [...li.querySelectorAll(".legend-item")].map((item) => item.textContent);
     expect(items(groups[0])).toEqual(["summit", "valley"]);
     expect(items(groups[2])).toEqual(["wind speed", "gust"]);
-    expect(items(groups[3])).toEqual(["rain per hour", "chance of rain (full height = 100%)"]);
+    expect(items(groups[3])).toEqual([
+      "rain per hour", "3-hour average", "chance of rain (full height = 100%)",
+    ]);
   });
 
   it("leaves headroom above the profile for a peak marker", () => {

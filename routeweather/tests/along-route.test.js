@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  clampDistance, sampleBracket, timeAtDistance, weatherAtDistance,
+  clampDistance, nearestSpan, nearestSpanTimes, routeRain, sampleBracket, timeAtDistance,
+  weatherAtDistance,
 } from "../js/along-route.js";
 
 // --- fixtures ---
@@ -138,6 +139,14 @@ describe("weatherAtDistance", () => {
     expect(after.nearestIndex).toBe(1);
   });
 
+  it("takes the rain's forecast step from the nearer sample, with its amount", () => {
+    const state = makeState();
+    state.results[0] = { ...state.results[0], precipStepH: 1, precipStepEndMs: 1 };
+    state.results[1] = { ...state.results[1], precipStepH: 3, precipStepEndMs: 2 };
+    const after = weatherAtDistance(state, 6);
+    expect([after.precipMm, after.precipStepH, after.precipStepEndMs]).toEqual([2, 3, 2]);
+  });
+
   it("breaks an exact halfway tie towards the earlier sample", () => {
     const w = weatherAtDistance(makeState(), 5);
     expect(w.nearestIndex).toBe(0);
@@ -220,5 +229,54 @@ describe("timeAtDistance", () => {
     expect(timeAtDistance(makeState({ speedKmh: NaN }), 5)).toBeNaN();
     expect(timeAtDistance(makeState({ speedKmh: 0 }), 5)).toBeNaN();
     expect(timeAtDistance(makeState({ startMs: NaN }), 5)).toBeNaN();
+  });
+});
+
+// --- per-sample spans ---
+
+describe("nearestSpan", () => {
+  const samples = [0, 4, 10].map((cumDistKm) => ({ cumDistKm }));
+
+  it("reaches halfway to each neighbour, and to the route's ends", () => {
+    expect(nearestSpan(samples, 0, 12)).toEqual([0, 2]);
+    expect(nearestSpan(samples, 1, 12)).toEqual([2, 7]);
+    expect(nearestSpan(samples, 2, 12)).toEqual([7, 12]);
+  });
+});
+
+describe("nearestSpanTimes", () => {
+  it("is each span's time at the plan's speed", () => {
+    // Spans 0–5, 5–15, 15–20 km at 5 km/h.
+    expect(nearestSpanTimes(makeState())).toEqual([1, 2, 1].map((h) => h * 3600000));
+  });
+
+  it("is null without results, a route or a valid speed", () => {
+    expect(nearestSpanTimes(makeState({ results: null }))).toBeNull();
+    expect(nearestSpanTimes(makeState({ route: null }))).toBeNull();
+    expect(nearestSpanTimes(makeState({ speedKmh: 0 }))).toBeNull();
+  });
+});
+
+describe("routeRain", () => {
+  it("adds each sample's rate over the time spent in its span", () => {
+    // 0 mm/h for 1 h, 2 mm/h for 2 h, the end sample (0 mm/h) for 1 h.
+    expect(routeRain(makeState())).toBeCloseTo(4, 9);
+  });
+
+  it("counts an hour once however many samples it is split between", () => {
+    // The same 20 km at 1 mm/h: 4 h, so 4 mm, with 3 samples or 21.
+    const flat = (n) => makeState({
+      samples: Array.from({ length: n }, (_, i) => ({ cumDistKm: (20 * i) / (n - 1) })),
+      results: Array.from({ length: n }, () => result({ precipMm: 1 })),
+    });
+    expect(routeRain(flat(3))).toBeCloseTo(4, 9);
+    expect(routeRain(flat(21))).toBeCloseTo(4, 9);
+  });
+
+  it("skips missing amounts, and is null without a plan", () => {
+    const state = makeState();
+    state.results[1] = { ...state.results[1], precipMm: NaN };
+    expect(routeRain(state)).toBe(0);
+    expect(routeRain(makeState({ speedKmh: NaN }))).toBeNull();
   });
 });

@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  coldestFeelsText, coldestTempText, strongestWindText, summaryNotes,
+  coldestFeelsText, coldestTempText, rainOnRouteText, strongestWindText, summaryNotes,
 } from "../js/results-view.js";
 import { resolveUnits } from "../js/units.js";
 
@@ -41,6 +41,29 @@ describe("coldestFeelsText", () => {
     expect(strongestWindText(state)).toBe("48 km/h at 6.2 km (13:20)");
     expect(strongestWindText({ ...state, units: resolveUnits("metric", { wind: "mph" }) }))
       .toBe("30 mph at 6.2 km (13:20)");
+  });
+});
+
+describe("rainOnRouteText", () => {
+  const state = {
+    rain: 2.14,
+    results: [{ precipMm: 0.2, precipStepH: 3 }, { precipMm: 0.7, precipStepH: 3 }],
+    samples: [{ cumDistKm: 0 }, { cumDistKm: 43.7 }],
+    times: [Date.UTC(2026, 9, 31, 7), Date.UTC(2026, 9, 31, 15, 44)],
+    units: metric,
+    nowMs: Date.UTC(2026, 9, 31, 6),
+    timeZone: "UTC",
+  };
+
+  it("gives the total and where the rain is heaviest", () => {
+    expect(rainOnRouteText(state)).toBe("~2.1 mm · wettest 0.7 mm/h at 43.7 km (15:44)");
+    expect(rainOnRouteText({ ...state, units: resolveUnits("imperial") }))
+      .toBe("~0.08 in · wettest 0.03 in/h at 27.2 mi (15:44)");
+  });
+
+  it("says when there is none, and dashes without a total", () => {
+    expect(rainOnRouteText({ ...state, rain: 0 })).toBe("None forecast");
+    expect(rainOnRouteText({ ...state, rain: null })).toBe("–");
   });
 });
 

@@ -1,12 +1,13 @@
-// Open-Meteo client: builds forecast/elevation URLs, fetches them in chunks and
-// normalises the JSON into flat typed arrays. The only module that talks to
-// Open-Meteo; everything downstream (weather.js) works on normalised locations.
+// Open-Meteo client: builds forecast, chance-of-rain and elevation URLs,
+// fetches them in chunks and normalises the JSON into flat typed arrays. The
+// only module that talks to Open-Meteo; everything downstream (weather.js)
+// works on normalised locations.
 //
 // `fetchImpl` is injectable so tests (and Node) can supply their own fetch.
 // Requests are sent one after another, never in parallel, to stay well inside
 // Open-Meteo's free-tier rate limit.
 
-import { HOURLY_VARS } from "./config.js";
+import { HOURLY_VARS, PROBABILITY } from "./config.js";
 
 export const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 export const ELEVATION_URL = "https://api.open-meteo.com/v1/elevation";
@@ -57,10 +58,7 @@ function coordParams(points) {
 //
 // Every value is a number or a fixed identifier, so the query is built by hand
 // to keep the commas readable instead of URLSearchParams' %2C.
-export function buildForecastUrl(samples, { startHour, endHour }) {
-  if (!Number.isFinite(startHour) || !Number.isFinite(endHour) || startHour > endHour) {
-    throw new Error("Forecast window needs a finite startHour no later than endHour");
-  }
+export function buildForecastUrl(samples, range) {
   const params = [
     ...coordParams(samples),
     `elevation=${samples.map(() => "nan").join(",")}`,
@@ -68,10 +66,36 @@ export function buildForecastUrl(samples, { startHour, endHour }) {
     "models=ukmo_seamless",
     "timezone=GMT",
     `hourly=${HOURLY_VARS.join(",")}`,
+    ...windowParams(range),
+  ];
+  return `${FORECAST_URL}?${params.join("&")}`;
+}
+
+// Chance-of-rain URL for `points` (`{ lat, lon }`) over the same window as
+// buildForecastUrl: the one PROBABILITY variable from the PROBABILITY model
+// (config.js). No elevation or land-cell options: a probability needs no
+// altitude correction, and its ensemble is far coarser than a cell.
+export function buildProbabilityUrl(points, range) {
+  const params = [
+    ...coordParams(points),
+    `models=${PROBABILITY.model}`,
+    "timezone=GMT",
+    `hourly=${PROBABILITY.variable}`,
+    ...windowParams(range),
+  ];
+  return `${FORECAST_URL}?${params.join("&")}`;
+}
+
+// start_hour / end_hour for `range` ({ startHour, endHour }, epoch ms): start
+// floored and end ceiled to whole UTC hours, both inclusive.
+function windowParams({ startHour, endHour }) {
+  if (!Number.isFinite(startHour) || !Number.isFinite(endHour) || startHour > endHour) {
+    throw new Error("Forecast window needs a finite startHour no later than endHour");
+  }
+  return [
     `start_hour=${formatHour(Math.floor(startHour / HOUR_MS) * HOUR_MS)}`,
     `end_hour=${formatHour(Math.ceil(endHour / HOUR_MS) * HOUR_MS)}`,
   ];
-  return `${FORECAST_URL}?${params.join("&")}`;
 }
 
 export function buildElevationUrl(points) {
@@ -244,24 +268,45 @@ export async function fetchForecast(samples, range, fetchImpl = fetch, options =
       signal,
       onSent: () => onRequest?.({ locations: part.length }),
     });
-    // A single-location request returns a bare object rather than an array.
-    const list = Array.isArray(json) ? json : [json];
-    if (list.length !== part.length) {
-      throw new Error(
-        `Open-Meteo returned ${list.length} forecast locations, expected ${part.length}`,
-      );
-    }
-    // Each location carries its 0-based index in the request as `location_id`
-    // (omitted on the first, and on a single-location response). Results are
-    // matched to samples by position, so check the API kept the order.
-    list.forEach((loc, i) => {
-      if ((loc?.location_id ?? 0) !== i) {
-        throw new Error(`Open-Meteo returned forecast locations out of order (at position ${i})`);
-      }
-    });
-    locations.push(...list.map(normaliseLocation));
+    locations.push(...locationList(json, part.length, "forecast").map(normaliseLocation));
   }
   return locations;
+}
+
+// Hourly chance of rain at each of `points` over `range` (buildProbabilityUrl).
+// Returns one `{ timesMs, values }` (see normaliseSeries) per point, in order.
+// Options as for fetchForecast.
+export async function fetchProbability(points, range, fetchImpl = fetch, options = {}) {
+  const { signal, onRequest } = options;
+  const series = [];
+  for (const part of chunk(points, CHUNK_SIZE)) {
+    const json = await getJson(buildProbabilityUrl(part, range), fetchImpl, "chance of rain", {
+      signal,
+      onSent: () => onRequest?.({ locations: part.length }),
+    });
+    const list = locationList(json, part.length, "chance of rain");
+    series.push(...list.map((loc) => normaliseSeries(loc, PROBABILITY.variable)));
+  }
+  return series;
+}
+
+// A multi-location response as a list of `expected` locations in request
+// order; throws if the count or order is off.
+function locationList(json, expected, what) {
+  // A single-location request returns a bare object rather than an array.
+  const list = Array.isArray(json) ? json : [json];
+  if (list.length !== expected) {
+    throw new Error(`Open-Meteo returned ${list.length} ${what} locations, expected ${expected}`);
+  }
+  // Each location carries its 0-based index in the request as `location_id`
+  // (omitted on the first, and on a single-location response). Results are
+  // matched to points by position, so check the API kept the order.
+  list.forEach((loc, i) => {
+    if ((loc?.location_id ?? 0) !== i) {
+      throw new Error(`Open-Meteo returned ${what} locations out of order (at position ${i})`);
+    }
+  });
+  return list;
 }
 
 // Terrain elevation (m) for each `{ lat, lon }` point, in order. NaN where the
@@ -311,7 +356,29 @@ export async function fetchTimeZone(point, fetchImpl = fetch, options = {}) {
 //
 // Throws if the times are unparseable, or any requested variable is missing or
 // not parallel to the times, rather than letting weather.js read past the end.
+//
+// The chance of rain is not among HOURLY_VARS: withProbability adds it.
 export function normaliseLocation(json) {
+  const { hourly, timesMs } = hourlyTimes(json);
+  const vars = {};
+  for (const name of HOURLY_VARS) vars[name] = hourlyValues(hourly, name, timesMs);
+  return {
+    cellLat: toNumber(json.latitude),
+    cellLon: toNumber(json.longitude),
+    cellElev: toNumber(json.elevation),
+    timesMs,
+    vars,
+  };
+}
+
+// One location's hourly `name` -> { timesMs, values } (Float64Arrays, as in
+// normaliseLocation), with the same checks.
+export function normaliseSeries(json, name) {
+  const { hourly, timesMs } = hourlyTimes(json);
+  return { timesMs, values: hourlyValues(hourly, name, timesMs) };
+}
+
+function hourlyTimes(json) {
   const hourly = json && json.hourly;
   if (!hourly || !Array.isArray(hourly.time)) {
     throw new Error("Open-Meteo location has no hourly times");
@@ -321,20 +388,30 @@ export function normaliseLocation(json) {
   if (timesMs.some(Number.isNaN)) {
     throw new Error("Open-Meteo location has unparseable hourly times");
   }
+  return { hourly, timesMs };
+}
 
-  const vars = {};
-  for (const name of HOURLY_VARS) {
-    const values = hourly[name];
-    if (!Array.isArray(values) || values.length !== timesMs.length) {
-      throw new Error(`Open-Meteo location has a missing or mis-sized hourly ${name}`);
-    }
-    vars[name] = Float64Array.from(values, toNumber);
+function hourlyValues(hourly, name, timesMs) {
+  const values = hourly[name];
+  if (!Array.isArray(values) || values.length !== timesMs.length) {
+    throw new Error(`Open-Meteo location has a missing or mis-sized hourly ${name}`);
   }
-  return {
-    cellLat: toNumber(json.latitude),
-    cellLon: toNumber(json.longitude),
-    cellElev: toNumber(json.elevation),
-    timesMs,
-    vars,
-  };
+  return Float64Array.from(values, toNumber);
+}
+
+// `locations` (normaliseLocation) with vars.precipitation_probability added:
+// location i takes `series[owners[i]]` (fetchProbability; owners from
+// route.js nearestPointIndices), matched by time onto its own timesMs. Hours
+// that series lacks, and every hour when `series` is null (the request
+// failed), are NaN, which the page shows as a gap. New location objects; the
+// originals are not touched.
+export function withProbability(locations, owners, series) {
+  const byTime = (series ?? []).map(({ timesMs, values }) => (
+    new Map(Array.from(timesMs, (t, k) => [t, values[k]]))
+  ));
+  return locations.map((loc, i) => {
+    const lookup = byTime[owners[i]];
+    const values = Float64Array.from(loc.timesMs, (t) => lookup?.get(t) ?? NaN);
+    return { ...loc, vars: { ...loc.vars, [PROBABILITY.variable]: values } };
+  });
 }

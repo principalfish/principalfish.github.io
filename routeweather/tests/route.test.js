@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 
 import {
   haversineKm, bearingDeg, hasFullElevation, buildRoute, smoothElevation,
-  sampleRoute, arrivalTimes, positionAtDistance, EARTH_RADIUS_KM, MERGE_DISTANCE_KM,
+  sampleRoute, arrivalTimes, positionAtDistance, spacedSampleIndices, nearestPointIndices,
+  EARTH_RADIUS_KM, MERGE_DISTANCE_KM,
 } from "../js/route.js";
 
 // One degree of arc on a sphere of EARTH_RADIUS_KM — the exact great-circle
@@ -626,6 +627,49 @@ describe("sampleRoute", () => {
     expect(samples).toEqual([
       { index: 0, lat: 1, lon: 2, ele: 3, cumDistKm: 0, bearingDeg: null, kind: "start" },
     ]);
+  });
+});
+
+describe("spacedSampleIndices", () => {
+  // Samples every `stepKm` along a line, `n` of them.
+  const along = (n, stepKm) => Array.from({ length: n }, (_, i) => ({ cumDistKm: i * stepKm }));
+
+  it("picks both ends and every sample at least the spacing on from the last pick", () => {
+    expect(spacedSampleIndices(along(31, 1), 10, 20)).toEqual([0, 10, 20, 30]);
+    // Gaps don't line up with the spacing: each pick waits until it is reached.
+    expect(spacedSampleIndices(along(10, 3), 10, 20)).toEqual([0, 4, 8, 9]);
+  });
+
+  it("is just the two ends on a route shorter than the spacing", () => {
+    expect(spacedSampleIndices(along(6, 1), 10, 20)).toEqual([0, 5]);
+  });
+
+  it("widens the spacing to stay within the cap, ends included", () => {
+    const picks = spacedSampleIndices(along(151, 2), 10, 20); // 300 km
+    expect(picks.length).toBeLessThanOrEqual(20);
+    expect(picks[0]).toBe(0);
+    expect(picks[picks.length - 1]).toBe(150);
+  });
+
+  it("handles one sample and none", () => {
+    expect(spacedSampleIndices(along(1, 1), 10, 20)).toEqual([0]);
+    expect(spacedSampleIndices([], 10, 20)).toEqual([]);
+  });
+});
+
+describe("nearestPointIndices", () => {
+  it("gives each sample the nearest point on the ground", () => {
+    const points = [{ lat: 50, lon: 0 }, { lat: 50.2, lon: 0 }];
+    const samples = [
+      { lat: 50, lon: 0 }, { lat: 50.09, lon: 0 }, { lat: 50.11, lon: 0 }, { lat: 50.3, lon: 0 },
+    ];
+    expect(nearestPointIndices(samples, points)).toEqual([0, 0, 1, 1]);
+  });
+
+  it("shares points between an out-and-back's two legs", () => {
+    const points = [{ lat: 50, lon: 0 }, { lat: 50.1, lon: 0 }];
+    const back = [{ lat: 50.1, lon: 0 }, { lat: 50.01, lon: 0 }];
+    expect(nearestPointIndices(back, points)).toEqual([1, 0]);
   });
 });
 

@@ -11,9 +11,11 @@
 //   3. Wind            the wind speed at your altitude (line) and the gust as
 //                      a dashed line (head/tail and crosswind are in the
 //                      readout and table)
-//   4. Rain            precipitation per hour as one bar per sample, with the
-//                      chance of rain as a step line in front of them (0–100 %
-//                      of the strip's height, marked "100%" at the right edge)
+//   4. Rain            precipitation per hour as one bar per forecast step
+//                      (an hour, or 3 hours drawn fainter as an average), with
+//                      the chance of rain as a step line in front of them
+//                      (0–100 % of the strip's height, marked "100%" at the
+//                      right edge)
 //   5. Sky             cloud cover (area, 0–100 %) and sunshine as one bar per
 //                      sample (minutes per hour; full height = 60), estimated
 //                      sunshine fainter (weather.js sunshineAt), with ☀↑ / ☀↓
@@ -25,7 +27,8 @@
 //
 // Rain and its chance are per-hour buckets taken from the NEARER sample (see
 // along-route.js), so both draw as steps that change halfway between samples:
-// the bar or step under the cursor is the value in the readout.
+// the bar or step under the cursor is the value in the readout. Neighbouring
+// samples reading the same forecast step and amount share one bar.
 //
 // Stretches outside the forecast window (values clamped to its nearest hour)
 // are greyed across every strip. The rule matches along-route.js: the whole
@@ -56,7 +59,7 @@ import {
   asUnits, formatElevation, KM_TO_MI, M_TO_FT, MM_TO_IN, UNIT_LABELS,
 } from "./units.js";
 import { isFiniteNumber as isNum } from "./display.js";
-import { timeAtDistance } from "./along-route.js";
+import { nearestSpan, timeAtDistance } from "./along-route.js";
 
 const DEFAULT_WIDTH = 640;
 const MIN_WIDTH = 260;
@@ -199,13 +202,6 @@ export function outsideSpans(samples, results, totalKm) {
   return spans;
 }
 
-// The stretch each sample's per-hour values stand for: halfway to the
-// previous sample to halfway to the next (the route's ends at either end).
-function nearestSpan(samples, i, totalKm) {
-  const mid = (j) => (samples[i].cumDistKm + samples[j].cumDistKm) / 2;
-  return [i === 0 ? 0 : mid(i - 1), i === samples.length - 1 ? totalKm : mid(i + 1)];
-}
-
 // A per-sample value as steps, for d3.area/line with a linear curve and
 // `defined: isNum(v)`: each sample holds its value over its nearestSpan, so
 // the step changes halfway between samples, the nearer-sample rule the
@@ -221,6 +217,30 @@ export function stepPoints(samples, values, totalKm) {
     points.push({ km: from, v }, { km: to, v });
   });
   return points;
+}
+
+// The rain bars, as [{ fromKm, toKm, mm, stepH }] in route order: each
+// sample's amount over its nearestSpan, a run of neighbouring samples merged
+// into one bar when they read the same forecast step (weather.js
+// precipStepEndMs) with the same amount. So an hour, or a 3-hour step, walked
+// through in one grid cell is one bar rather than one per sample (~1 km apart,
+// a dozen identical bars for a 3-hour step at walking pace); neighbours whose
+// cells disagree still split. Nothing where the amount is 0 or missing.
+export function rainBars(samples, results, totalKm) {
+  const bars = [];
+  let prev = null; // { i, endMs } of the last sample with a bar
+  results.forEach((r, i) => {
+    if (!isNum(r.precipMm) || r.precipMm <= 0) return;
+    const [fromKm, toKm] = nearestSpan(samples, i, totalKm);
+    const last = bars[bars.length - 1];
+    if (prev?.i === i - 1 && prev.endMs === r.precipStepEndMs && last.mm === r.precipMm) {
+      last.toKm = toKm;
+    } else {
+      bars.push({ fromKm, toKm, mm: r.precipMm, stepH: r.precipStepH });
+    }
+    prev = { i, endMs: r.precipStepEndMs };
+  });
+  return bars;
 }
 
 // A y domain over `values`, always including `include`, at least `minSpan`
@@ -327,11 +347,12 @@ function drawWind(ctx, h) {
   g.append("path").attr("class", "series s-wind").attr("d", line(y, wind)(rows));
 }
 
-// Rain: the amount per hour as one bar per sample (left axis), over the
-// stretch that sample is the nearer one for, with a 2 px gap between
-// neighbours; nothing where it is 0 or missing. In front of the bars, the
-// chance of rain as a step line (stepPoints: it changes halfway between
-// samples, the nearer-sample rule again) scaled 0–100 % to the strip's full
+// Rain: the amount per hour as one bar per forecast step (rainBars; left
+// axis), with a 2 px gap between neighbours; a 3-hour step's average is drawn
+// fainter. In front of the bars, the chance of rain as a step line
+// (stepPoints: it changes halfway between samples, the nearer-sample rule
+// again; from its own coarser forecast, openmeteo.js withProbability, so it
+// steps less often than the bars) scaled 0–100 % to the strip's full
 // height, with a single "100%" mark at the right edge rather than a second
 // axis. The user asked for both in one strip; the line and the solid bars are
 // deliberately different encodings so the two don't read as one scale.
@@ -344,14 +365,13 @@ function drawRain(ctx, h) {
   const axis = d3.axisLeft(y).ticks(RAIN_TICKS).tickSizeOuter(0);
   const g = ctx.frame(`Rain (${unit.rain})`, y, axis);
 
-  const bars = rows.map((d, i) => {
-    const [from, to] = nearestSpan(samples, i, totalKm);
-    return { d, x0: xk(from), x1: xk(to) };
-  }).filter((b) => isNum(rain(b.d)) && rain(b.d) > 0);
+  const bars = rainBars(samples, rows.map((d) => d.r), totalKm).map((b) => ({
+    x0: xk(b.fromKm), x1: xk(b.toKm), v: cv.rain(b.mm), stepH: b.stepH,
+  }));
   g.append("g").attr("class", "rain-bars").selectAll("rect").data(bars).join("rect")
-    .attr("class", "s-rain")
+    .attr("class", (b) => (b.stepH === 3 ? "s-rain avg" : "s-rain"))
     .attr("x", (b) => b.x0 + 1).attr("width", (b) => Math.max(1, b.x1 - b.x0 - 2))
-    .attr("y", (b) => y(rain(b.d))).attr("height", (b) => h - y(rain(b.d)));
+    .attr("y", (b) => y(b.v)).attr("height", (b) => h - y(b.v));
 
   const yProb = d3.scaleLinear().domain([0, 100]).range([h, 0]);
   const steps = stepPoints(samples, rows.map((d) => d.r.precipProb), totalKm);
@@ -446,6 +466,7 @@ const STRIPS = [
       name: "Rain",
       items: [
         { cls: "rain", label: "rain per hour", swatch: "bar" },
+        { cls: "rain-avg", label: "3-hour average", swatch: "bar" },
         { cls: "prob", label: "chance of rain (full height = 100%)" },
       ],
     },

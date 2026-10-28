@@ -9,11 +9,11 @@
 
 import { describeWeather } from "./weather.js";
 import {
-  formatDistance, formatElevation, formatPrecip, formatTemp, formatWind, MISSING,
+  formatDistance, formatElevation, formatTemp, formatWind, MISSING,
 } from "./units.js";
 import {
   compassPoint, formatCloud, formatCrossWind, formatDateTime, formatDaylight, formatDuration,
-  formatHeadWind, formatSun, isFiniteNumber as isNum,
+  formatHeadWind, formatRainRate, formatSun, isFiniteNumber as isNum,
 } from "./display.js";
 import { positionAtDistance } from "./route.js";
 import { timeAtDistance } from "./along-route.js";
@@ -85,7 +85,7 @@ export function readoutValues(state, weather, distKm, tMs = timeAtDistance(state
     wind: `${formatWind(w.windKmh, units)}${from} · gusts ${formatWind(w.gustKmh, units)}`
       + (w.aboveProfile ? ` ${HELD_NOTE}` : ""),
     relative: `${formatHeadWind(w.headKmh, units)} · ${formatCrossWind(w.crossKmh, units)}`,
-    rain: `${formatPrecip(w.precipMm, units)} · ${chance}`,
+    rain: `${formatRainRate(w.precipMm, w.precipStepH, units)} · ${chance}`,
     sky: `${formatCloud(w.cloudPct)} cloud · sun ${formatSun(w.sunMin, w.sunEstimated)}`,
     model: `10 m wind ${formatWind(w.model10mWindKmh, units)}`
       + ` · cell elevation ${formatElevation(w.cellElev, units)}`,

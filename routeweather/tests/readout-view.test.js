@@ -58,8 +58,13 @@ describe("readoutValues", () => {
     expect(v.temp).toBe("8 °C");
     expect(v.wind).toBe("24 km/h from SW · gusts 41 km/h");
     expect(v.relative).toBe("12 km/h headwind · 8 km/h from left");
-    expect(v.rain).toBe("0.4 mm · 62% chance");
+    expect(v.rain).toBe("0.4 mm/h · 62% chance");
     expect(v.model).toBe("10 m wind 15 km/h · cell elevation 340 m");
+  });
+
+  it("marks rain from a 3-hour forecast step as its average", () => {
+    const v = readoutValues(makeState(), { ...WEATHER, precipStepH: 3 }, 5);
+    expect(v.rain).toBe("0.4 mm/h (3-h avg) · 62% chance");
   });
 
   it("uses imperial units", () => {
@@ -67,7 +72,7 @@ describe("readoutValues", () => {
     expect(v.distance).toMatch(/^3\.1 mi of /);
     expect(v.temp).toBe("46 °F");
     expect(v.wind).toBe("15 mph from SW · gusts 25 mph");
-    expect(v.rain).toBe("0.02 in · 62% chance");
+    expect(v.rain).toBe("0.02 in/h · 62% chance");
     // A plain system string reads as that preset.
     expect(readoutValues(makeState({ units: "imperial" }), WEATHER, 5)).toEqual(v);
   });
@@ -79,7 +84,7 @@ describe("readoutValues", () => {
     expect(v.relative).toBe("7 mph headwind · 5 mph from left");
     expect(v.model).toBe("10 m wind 9 mph · cell elevation 340 m");
     expect(v.temp).toBe("46 °F");
-    expect(v.rain).toBe("0.02 in · 62% chance");
+    expect(v.rain).toBe("0.02 in/h · 62% chance");
     // Distance and elevation stay on the preset.
     expect(v.distance).toMatch(/^5\.0 km of /);
     expect(v.elevation).toMatch(/^\d+ m$/);
@@ -124,7 +129,7 @@ describe("readoutValues", () => {
       ...WEATHER, windKmh: NaN, precipProb: NaN, headKmh: null, crossKmh: null,
     }, 5);
     expect(gaps.wind).toBe(`${MISSING} · gusts 41 km/h`);
-    expect(gaps.rain).toBe(`0.4 mm · ${MISSING}`);
+    expect(gaps.rain).toBe(`0.4 mm/h · ${MISSING}`);
     expect(gaps.relative).toBe(`${MISSING} · ${MISSING}`);
   });
 

@@ -105,6 +105,7 @@ class UnitFact:
     provenance: JsonObject
     # President targets resolve D/R only; the remainder is not an engine party.
     complete_target_parties: bool = True
+    baseline_year: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

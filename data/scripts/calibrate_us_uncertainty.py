@@ -21,6 +21,7 @@ from model_support.us_calibration import (
     render_house_report,
 )
 from model_support.us_calibration_comparison import (
+    comparison_report_stem,
     load_comparison,
     make_comparison_report,
     render_comparison_report,
@@ -53,7 +54,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             ("json", json.dumps(comparison, indent=2, ensure_ascii=False, allow_nan=False) + "\n"),
             ("md", document),
         ):
-            path = args.output_dir / f"{args.model}-comparison-report.{suffix}"
+            path = args.output_dir / f"{comparison_report_stem(args.model)}.{suffix}"
             path.write_text(content)
             print(path)
         return 0

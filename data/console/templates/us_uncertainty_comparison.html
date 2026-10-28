@@ -7,6 +7,15 @@
 {% if error %}<p class="alert">{{ error }}</p>{% endif %}
 {% if report %}
 <p>Kernel {{ report.kernel_version }} · source fingerprint {{ report.input_sha256 }}</p>
+{% if chamber == 'senate' %}
+{% if report.central_estimator is defined %}
+<p><strong>Matching-year House anchors</strong> · {{ report.comparison_version }} · {{ report.central_estimator }} · policy {{ report.anchor_policy_sha256 }}</p>
+<p><a href="{{ url_for('us.uncertainty_calibration', chamber='senate', reference='legacy') }}">Original legacy selected-field comparison</a></p>
+{% else %}
+<p><strong>Legacy selected-field Senate reference.</strong> Matching-year House anchor provenance is unavailable in this original report.</p>
+<p><a href="{{ url_for('us.uncertainty_calibration', chamber='senate') }}">Matching-year House anchor comparison</a></p>
+{% endif %}
+{% endif %}
 <p>These historical references use official outcomes to isolate conditional errors. They do not establish deployable forecasting accuracy or early held-today coverage.</p>
 {% endif %}
 </section>
@@ -19,6 +28,16 @@
 {% endfor %}</tbody></table>
 <p>{{ report.national_mapping }}</p>
 </section>
+{% if report.reference_availability is defined %}
+<section class="card"><h3>Complete-cycle reference availability and signed residuals</h3>
+<p>Official-input and raw-poll signed means use observed minus projected D−R margin. No central bias correction is applied.</p>
+<table><thead><tr><th>Family</th><th>Cycle</th><th>Official-input signed mean</th><th>Raw-poll signed mean</th><th>Centered conditional moment</th></tr></thead><tbody>
+{% for row in report.references %}<tr><td>{{ row.scenario_family }}</td><td>{{ row.cycle }}</td><td>{{ row.conditional_residual.mean|round_display }}</td><td>{{ row.raw_poll_residual.mean|round_display }}</td><td>{{ row.conditional_residual.centered_mean_square|round_display }}</td></tr>{% endfor %}
+</tbody></table>
+<p>2018 House anchors are unavailable. The complete 2024 conditional reference is excluded; its 2020-baseline NE special is retained in the availability ledger. A single usable conditional election leaves conditional holdout fits unavailable. National and local evidence retain their own source qualifications.</p>
+<details><summary>Every race, baseline year and availability reason</summary><pre>{{ report.reference_availability|round_display|tojson(indent=2) }}</pre></details>
+</section>
+{% endif %}
 <section class="card"><h3>Combined fallback response and boundary sensitivities</h3>
 <p>State-only and race-only rows allocate the same measured combined error differently. Their separate components are not identified. No local N, blend weight or alpha is invented. Centered and zero-origin targets are separate comparisons.</p>
 <div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Target second moment</th><th>Source scale</th><th>Recovered second moment</th><th>Recovery compatible</th><th>Status</th></tr></thead><tbody>

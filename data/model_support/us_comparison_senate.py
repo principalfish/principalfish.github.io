@@ -234,7 +234,7 @@ def load_senate_comparison(path: Path | None = None) -> ComparisonData:
                                     ("candidate-votes-excluding-nota", sum(observed))):
             cycle_units[(year, policy)].append(UnitFact(
                 f"{year}-{state}-{event}", names[state], baseline_counts, observed, denominator,
-                tuple(issues), provenance,
+                tuple(issues), provenance, baseline_year=count(baseline["year"]),
             ))
     cycles: list[CycleFact] = []
     for (year, policy), units in sorted(cycle_units.items()):

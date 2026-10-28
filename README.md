@@ -1033,11 +1033,27 @@ validate historical chamber control, presidential district outcomes, or early
 held-today forecasts. Local polling averages remain separate total-error proxies,
 without invented sample sizes or blend weights.
 
-The Senate baseline-only panel has an observed-minus-projected D−R mean of about
-+12.5 points in both 2022 and 2024, even with official House national inputs.
-The selected Senate field and national House generic ballot need a compatible
-baseline anchor. Operational Senate calibration awaits that separate central-model
-correction and a rerun of these comparisons; the current central model is unchanged.
+New Senate comparisons use `senate-house-anchor-v1`: each race's Senate baseline
+receives the current House generic level minus the accepted House baseline for
+that race's source year. The versioned `senate-comparison-report-house-anchor-v2`
+JSON/Markdown files preserve the original `senate-comparison-report` artifacts
+and input bytes. The original files describe the legacy selected-field reference.
+The [review proposal](data/models/us/calibration/senate-comparison-house-anchor-v2-review.md)
+records source identities, output hashes, signed means and unresolved assumptions.
+
+The corrected 2022 panel retains all 35 races in the stochastic field and 31
+singleton moment targets. Its official-input observed-minus-projected raw D−R
+mean is about +0.64 points, while substantial centered residual variation remains.
+2018 House anchors are unavailable under the approved NC-09 policy, so the entire
+2024 conditional reference is unavailable, including the 2020-baseline Nebraska
+special. No partial field or 2019 substitute is fitted. A single usable conditional
+cycle leaves conditional holdout fits unavailable. National and local proxy facts
+retain their independent source qualifications; 2018 stays outside national fitting.
+
+Current-national outcome counterfactuals and national error facts retain the
+original qualified final-RCV proxy counts. Baseline anchors use the accepted
+published-general counts. Their vote-stage/population transport remains unresolved;
+the deterministic correction does not accept any calibration or enable a release.
 
 From `data/`, reproduce the JSON and Markdown reports without database access:
 
@@ -1049,6 +1065,10 @@ From `data/`, reproduce the JSON and Markdown reports without database access:
 Omit `--output-dir` to print the review document without writing files. The default
 model remains House. The read-only console views are
 `/us/senate/uncertainty/calibration` and `/us/president/uncertainty/calibration`.
+The Senate page labels the matching-year estimator and links to
+`/us/senate/uncertainty/calibration?reference=legacy` for the original comparison.
+Senate CLI output always uses the new versioned filenames, so the commands above
+preserve the legacy report bytes. President and House output names are unchanged.
 Each report records source normalization, raw/decided denominator alternatives,
 exact central parity, independent kernel recovery, whole-election conditional
 holdouts, and the assumptions still requiring a decision before release.

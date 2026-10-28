@@ -29,6 +29,7 @@ from db import Database
 from model_support.us_simulation import UsErrorConfig, us_error_budget
 from model_support.us_calibration import read_house_report
 from model_support.us_calibration_comparison import read_comparison_report
+from model_support.us_comparison_inputs import DIRECTORY
 from model_support.us_validation_io import readiness as validation_readiness
 
 # The forecast runners are standalone modules; models.py owns the name models.
@@ -137,7 +138,11 @@ def uncertainty_calibration(chamber: str) -> ResponseReturnValue:
             error = f"Calibration report unavailable: {exc}"
     else:
         try:
-            report = read_comparison_report(chamber)
+            report = (
+                read_comparison_report(chamber, DIRECTORY / "senate-comparison-report.json")
+                if chamber == "senate" and request.args.get("reference") == "legacy"
+                else read_comparison_report(chamber)
+            )
         except (OSError, ValueError) as exc:
             error = f"Comparison report unavailable: {exc}"
     return render_template(

@@ -14,6 +14,7 @@
         <a class="button button-block" href="{{ url_for('polls.poll_list') }}">View Polls</a>
         <a class="button button-block" href="{{ url_for('westminster.model_run_form') }}">Run Westminster Model</a>
         <a class="button button-block" href="{{ url_for('westminster.model_outputs') }}">View Westminster Outputs</a>
+        <a class="button button-block" href="{{ url_for('uncertainty.uncertainty_hub') }}">Uncertainty Diagnostics</a>
       </div>
     </section>
 
@@ -49,6 +50,9 @@
         <a class="button button-block" href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate Race Matchups</a>
         <a class="button button-block" href="{{ url_for('us.race_matchups', chamber='house') }}">House Race Matchups</a>
         <a class="button button-block" href="{{ url_for('us.house_outputs') }}">View House Outputs</a>
+        <a class="button button-block" href="{{ url_for('us.house_uncertainty_hub') }}">House Uncertainty</a>
+        <a class="button button-block" href="{{ url_for('us.senate_uncertainty_hub') }}">Senate Uncertainty</a>
+        <a class="button button-block" href="{{ url_for('us.president_uncertainty_hub') }}">President Uncertainty</a>
         <a class="button button-block" href="{{ url_for('us.president_outputs') }}">View President Outputs</a>
         <a class="button button-block" href="{{ url_for('us.senate_outputs') }}">View Senate Outputs</a>
       </div>

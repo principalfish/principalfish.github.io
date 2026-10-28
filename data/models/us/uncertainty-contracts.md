@@ -1,0 +1,328 @@
+# US uncertainty boundary contracts
+
+These contracts describe held-today simulations. House storage, replay and schema
+dispatch are implemented behind the explicit production release gate.
+House public sidecars and trends are implemented behind the same gate; other
+US model activation remains pending. Golden files under
+`data/tests/fixtures/us_uncertainty/` use **synthetic party/map identifiers and
+results**, not calibrated forecasts. Fingerprints in fixtures are illustrative;
+production producers must hash the canonical frozen input, not assign a label.
+
+## Versioned formats
+
+| Boundary | Schema |
+|-|-|
+| Stored national block / database schema discriminator | `pf-us-model-uncertainty-v1` |
+| Public sidecar | `pf-us-public-uncertainty-v1` |
+| US trend envelope | `pf-us-model-trends-v1` |
+| Existing Westminster stored blocks | `pf-model-uncertainty-v1` (unchanged) |
+
+Both stored and public summary documents have exactly `schema`, `model`,
+`context`, `result_identity`, `summary`. Stored documents additionally have
+`private`, an object reserved for diagnostics, configuration and replay inputs.
+No private field is copied to a public document. This piece fixes the public and
+national-summary boundary; the private replay/input schema is finalized alongside
+its engine before the first write. The current validator checks that `private` is
+an object, **not** that a run can be replayed. A successful contract check is not
+permission to persist or publish an uncalibrated forecast.
+
+`model` is `house`, `senate` or `president`. `result_identity` pairs the central
+results and their summary, extending the existing result-identity inputs with
+model/counting context. An exporter must recompute and compare it; a nonempty
+string check alone does not establish a match.
+
+`summary` contains exactly `simulations` (positive integer), `interval` (strictly
+between zero and one), `metrics`, and `outcomes`. No missing probability means
+zero: all participating series include explicit zero values. Percentages are
+0–100; probabilities are 0–1. Counts are integers, never booleans. All numerical
+values are finite. Public share rounding is at most 2dp; keep sufficient
+probability precision to preserve mutually exclusive outcome conservation.
+
+## Metrics and outcomes
+
+Each metric has `unit`, `domain: "party"`, `total`, `central` (party id to value),
+and `ranges` (same party ids to `[low, median, high]`). Metric names carry meaning;
+consumers cannot infer a metric from a numeric value or the parliament name.
+Party ids are canonical positive decimal database ids. Outcome caucus ids are
+stable names in the saved control policy, a distinct namespace.
+
+| Model | Required metrics | Required outcomes |
+|-|-|-|
+| House | `house_seats` (435 seats), `national_vote_share` (100 percent) | `majority`, `no_majority` |
+| Senate | `senate_contested_seats` (saved field size), `senate_full_seats` (100 seats) | `control`, `unresolved_control`, `majority`, `no_caucus_majority`, `tied_caucuses` |
+| President | `electoral_votes` (538 EVs), `national_vote_share` (100 percent) | `electoral_majority`, `no_electoral_majority` |
+
+`majority` and `electoral_majority` are objects with `domain: "party"` and
+`probabilities: {party_id: probability}`. `control` has `domain: "caucus"` and
+`probabilities: {caucus_id: probability}`. The residual and tied events are scalar
+probabilities. Majority thresholds are 218 seats and 270 EVs. Senate control uses
+saved caucus alignments and VP policy: 51 is an outright majority, not the only
+route to control. Each success-probability sum plus its residual equals one.
+Senate `majority` uses the caucus domain and records outright 51+ membership;
+its sum plus `no_caucus_majority` equals one. This is distinct from VP-resolved
+control. `tied_caucuses` is a subset of `no_caucus_majority`.
+`tied_caucuses` overlaps resolved control and is not added to that sum. A tied
+chamber without a configured tie-breaking assumption remains unresolved. Do not
+call any of these events Westminster's `hung` or infer control from raw party
+seat totals. A Senate whole-chamber popular-vote series is deliberately absent.
+
+Central counts sum to the declared metric total. Vote percentages allow only
+per-party 2dp rounding error in their sum. Bounds are ordered and lie within the
+metric domain; their sums need not equal the total. The deterministic central
+estimate need not lie inside its simulated interval. Full joint consistency,
+Senate holdover arithmetic, EV allocation, histograms and draw replay need engine
+integration tests; this boundary validator does not fabricate those guarantees.
+Regional and race summaries are not national metrics: their separately scoped
+contracts must carry matching race/aggregate identity before UI attachment.
+
+## Context and frozen counting inputs
+
+`UsRunContext` defines every required context field, including explicit nulls for
+inapplicable references. All models pin model, map, as-of date, target cycle,
+matchup, field, baseline, central options and comparability id. Senate additionally
+pins `roster_id` and `control_policy_id`; President pins
+`electoral_allocation_id`. Unknown historic context is null at the **trend point**
+level; do not manufacture a current roster or matchup for it.
+
+References must resolve to immutable inputs saved with the run, independent of
+later database edits. The retention design must preserve the compact counting
+context needed for historical totals even when detailed draws are pruned:
+
+- Senate roster: all 100 unique seat slots, contested race-to-slot mapping,
+  fixed holdovers and vacancies, raw party ids and stable candidate identities.
+  A special and regular race in one state remain distinct; no holdover receives
+  a simulated win probability.
+- Senate control policy: explicit independent/candidate caucus alignments,
+  configured VP caucus, effective dates, provenance and conditional assumption
+  label. Never infer an independent's alignment from a party colour or query
+  today's VP during replay.
+- Presidential allocation: target-cycle EV allocation by state/district unit,
+  exact winner/allocation rule and authoritative provenance. Popular-vote
+  aggregation includes each state once and excludes district duplicates.
+- Matchup/field/baseline/options snapshots: the actual selected candidate field
+  and estimator inputs, including any sanctioned absent-party behaviour.
+
+`segment_id` is SHA-256 over canonical context fields excluding `as_of_date`.
+Seed, changing poll input hashes and run date do not break a comparable series.
+Cycle, matchup, field, roster, control policy, allocation and central-option
+changes do. Config hashes are retained privately; `comparability_id` changes
+explicitly when interpretation changes, rather than on every numerical refit.
+
+## Trend envelope and gaps
+
+The exact new envelope is `{schema, model, points}`. Each point contains
+`election_id`, `election_name`, `as_of_date`, `context`, `parties`, `metrics`,
+`summary`. `context` is the complete context above, or null for legacy unknown
+meaning. `metrics` has the same named metric records as the summary but omits
+`ranges`; it is available independently of simulations when counting context is
+known. `summary` is the complete summary object above or explicit null. With
+unknown context, `metrics` is empty and `summary` must be null; retain legacy
+central `parties` honestly. Matching point/summary/context dates and central
+metrics must be enforced when the trend writer is integrated.
+
+Legacy `parties` remains `{party_id: {s, v, e?}}`:
+
+- House `s` is district wins.
+- Senate `s` remains **contested** wins; full-chamber totals are only in the
+  named `senate_full_seats` metric.
+- President `s` remains allocation-unit wins and `e` remains electoral votes.
+
+Compression compares legacy central values and named central metrics within the
+same context. Ignore ranges/odds differences between otherwise equal summarized
+runs. Preserve the first summary after central-only history, and preserve an
+explicit loss of summary as a gap. Unknown or changed contexts always retain a
+point, even when central totals are identical. Calendar days without a run may
+carry within a known segment only; an explicit central-only run clears ranges
+and chances. Lines, carry-forward and five-update band smoothing stop at context
+boundaries and gaps. Tooltip bounds remain unsmoothed. An ordinary Westminster
+array remains readable without this envelope.
+
+## Reader dispatch before the first US write
+
+House storage dispatch now recognizes the US schema before invoking any legacy
+reader. The following boundaries also describe the remaining model and public
+activation work:
+
+| Reader/writer | Required dispatch |
+|-|-|
+| `model_support/persistence.py` `_encode_payload`, `replace_output` | Carry an explicit payload schema, validate by schema/model, store that schema rather than always writing the Westminster constant. Preserve atomic scoped replacement and detail retention. |
+| Same module `_check_schema`, `load_uncertainty`, `iter_national_blocks`, `uncertainty_status` | Recognize the two stored versions, expose the discriminator to callers, reject unknown versions; never pass a US block to a Westminster validator. |
+| `model_support/trends.py` `_trend_uncertainty`, `_unpolled`, `reconstruct_trends` | Dispatch before any Westminster budget/odds interpretation. Before US trend activation, skip US optional additions and retain byte-identical legacy output. Then emit the new US envelope explicitly, with context boundaries. |
+| `model_support/public_uncertainty.py` and `scripts/export/uncertainty.py` | Keep Westminster functions scoped; add US model dispatch, strict public whitelist and context-aware identity matching. Export each sidecar independently and remove its stale sidecar after a newer central-only result. |
+| `models/us/_common.py` persistence entry | Pass validated model/context explicitly; never infer model from optional metric keys. |
+| `console/services/uncertainty*.py`, blueprints and replay loaders | Resolve allowlisted model and saved scope before selecting the validator/replay adapter; reject wrong-model ids and explain pruned detail. |
+| Frontend `uncertainty*.js` and `features/polltracker*.js` | Decode declared schema/model/metric domain; unsupported or mismatched optional documents hide uncertainty while central data remains usable. |
+
+The summary-validator tests leave legacy Westminster validators unchanged and
+exercise their existing format directly. Full old/new storage and stale-cache
+integration tests are mandatory when dispatch is enabled.
+
+## House private replay and retained race detail
+
+The stored national document's `private.schema` is `pf-us-source-replay-v1`.
+It contains the complete frozen source graph, polling evidence and candidate
+readings, baseline shares/turnout, ordered party and race labels, central rows,
+configuration, release decision, central options, seed and budget. The
+`artifact_id` hashes context/result identity, summary and all private values
+except that hash itself. Every date retains this snapshot after race detail is
+pruned. Replay never resolves today's configuration, map or matchup.
+
+The retained seat block is `pf-us-race-summary-v1`, with explicit model, context,
+result identity, simulation count and interval. Its `seats` mapping contains
+party win probabilities, central share, three-value share ranges and 101-bin
+share histograms. Histogram index `i` counts `[i,i+1)` percent for 0–99; index
+100 counts exactly 100%. Quantiles use temporary float32 share samples and
+float64 quantile calculations, rounded to two decimals. These compact bands and
+histograms are stored even with `--no-raw-sims`. Deterministic central rows and
+raw replay retain their existing exact integer counts and float64 errors.
+
+The raw archive is `pf-us-source-draws-v1` at `us-house-latest.npz` beside
+`SIMULATIONS_PATH`. All bulk arrays are staged before SQLite replacement;
+after commit a small election-ID member binds the archive before atomic
+publication. Reads require matching election ID, model, map, context/date,
+kernel and artifact fingerprint. Publication failures preserve the old file,
+which is rejected for a changed saved run. Older reruns cannot replace newer
+archives or metadata. Detail pruning is isolated by model/map/name-prefix.
+
+Per-race summary sample allocation is capped at 256 MiB, retained numerical
+arrays at 512 MiB, and staged raw arrays at 1 GB. These checks precede their
+allocations and persistence. Lower the simulation count when a summary bound
+is reached, or use `--no-raw-sims` for the raw-only bound. Dry runs validate
+inputs but draw no simulations and write no files or DDL.
+
+`house-release.json` must explicitly enable release, attest target geography,
+name the baseline/map/cycle and reference accepted, labelled calibration.
+Committed production settings remain disabled while geography and calibration
+are unresolved. An explicit `--simulations` request reports the blockers;
+ordinary runs preserve central-only operation while gated, and
+`--no-uncertainty` always selects the central estimator.
+
+House targets roll forward on 1 January of each odd year: dates in 2025–2026
+use the 2026 field, and dates in 2027–2028 use the 2028 field. A release approved
+for one target cannot be reused for another; each requires approved geography
+and calibration.
+
+## House publication and additive regional bands
+
+The public core validator still accepts exactly its five core fields. The
+exporter validates and copies that core first, then adds the reading-guide
+`basis`, the opaque cache `uncertaintyId`, and optional `regional_bands`.
+`uncertaintyId` is also stamped into the central result. It hashes the public
+result, public document and saved artifact identity, so a same-date, same-central
+rerun with a different seed, configuration or summary cannot reuse an old cache.
+The private artifact and its inputs are not published. Westminster's identity
+algorithm and format remain unchanged.
+
+`regional_bands` has exactly the public meaning identified by
+`schema: "pf-us-public-regions-v1"`. Its `regions` maps positive region IDs to
+`members` (sorted frozen district names) and `parties`. Each party has `s`
+(integer low/median/high seat quantiles) and `v` (two-decimal low/high projected
+vote shares). These are correlated aggregates of each complete simulation,
+not sums of district quantiles. The private stored block uses
+`pf-us-region-summary-v1` and also binds context, result identity, interval,
+simulation count and frozen seat IDs. Every region and participating party is
+validated; malformed or incomplete optional detail suppresses publication.
+The existing compact central result's `u` rows carry separately validated
+per-district `[party_id, low_share, high_share, win_probability]` values.
+
+New frozen inputs retain optional UI `region_id` membership. It contributes to
+the field fingerprint when present; old snapshots without it retain their
+original field identity and replay behavior. The exporter compares actual
+recorded central votes and current seat-to-region membership with the frozen
+snapshot before publishing. The frontend also requires exact region membership
+before attaching a region range. Older snapshots lacking frozen membership
+cannot supply regional ranges. Region labels may change cosmetically.
+
+Operational publication requires both today's release approval and the saved
+run's accepted calibration/geography/release decision. Approving today's
+configuration does not upgrade an unaccepted saved run. Missing, malformed or
+gated uncertainty removes a stale House sidecar and leaves central results
+without its cache identity. The pure serializer remains usable with synthetic
+fixtures independently of this operational gate.
+
+Only House activates `pf-us-model-trends-v1` now. Reconstruction retains its
+list API; publication wraps it in `{schema, model: "house", points}`. Console
+readers accept that envelope. Known points retain frozen context and an opaque
+`segment_id`; legacy unknown context remains null. Segment identity excludes
+as-of date, seed and ordinary input-dependent national scale conversion, while
+retaining interpretation and model options. Explicit summary loss clears odds,
+and context changes break compression, carry-forward, smoothing and chart lines.
+Senate and presidential trends retain their legacy arrays until their slices.
+
+Optional actual DOM tests use an existing jsdom 24 installation via
+`PF_TEST_JSDOM=/absolute/path/to/jsdom npm test`; no DOM library ships to the
+browser. Scratch previews contain synthetic data and do not enable production.
+
+## Senate saved runs and release boundary
+
+The Senate runner uses the same frozen source graph and bounded raw archive as
+House, with its own `us-senate-latest.npz`. Its saved context additionally pins
+the full roster, contested `(state, class)` substitutions and control policy.
+Florida and Ohio specials replace only their Class 3 slots. Every draw contains
+35 contested winners and 65 unchanged holdovers in the configured 2026 field.
+The 2028 field cannot produce full-chamber uncertainty without a verified roster.
+
+Raw party seat metrics and caucus outcomes are separate. Independent holdovers
+King and Sanders retain their raw Independent party while joining the Democratic
+caucus under the frozen policy. The Nebraska independent scenario is explicitly
+unaligned. An unspecified or ambiguous independent alignment remains unresolved;
+a holdover's alignment is never borrowed by a different candidate in that state.
+The configured VP resolves exactly 50–50, which is also reported separately from
+outright 51-seat majority. No full-chamber popular-vote metric is published;
+internal vote totals cover contested races only.
+
+`senate-release.json` is disabled and its candidate calibration is unaccepted.
+It contains no adopted numerical defaults. The generic-ballot exposure after
+local blending is an explicit assumption awaiting Senate calibration acceptance.
+Default runs remain central-only while gated, and `--simulations` explains the
+release blockers. Synthetic accepted fixtures exercise the software without
+approving production odds. Publication checks both current and saved acceptance,
+frozen votes, context and artifact identity; stale or gated optional sidecars are
+removed independently. Senate trends retain their legacy contested-seat arrays
+until their map/tracker adapter is activated.
+
+## Senate central history with a saved roster
+
+A central-only Senate run can supply full-chamber counts without an uncertainty
+snapshot when its saved `model_context` validates for the recorded date, its
+contested winners cover exactly the pinned field, and its holdover party IDs are
+unambiguous. This never substitutes the current roster for missing history.
+
+Such a trend point has null `context`, `segment_id` and `summary`, plus a
+`central_basis` object with schema `pf-us-senate-central-roster-v1`, `map_id`,
+`as_of_date`, `target_cycle`, `roster_id` and `field_id`. Its sole explicit metric
+is central `senate_full_seats`, summing to 100. The basis identifies the saved
+counting evidence; it does not claim that baseline, options or calibration
+snapshots exist. An invalid existing uncertainty snapshot cannot be replaced by
+this weaker fallback.
+
+The tracker renders these as isolated central dots. It carries neither totals
+nor odds across the incomplete context, draws no connecting line, and exposes no
+ranges or chances for those dates. Missing or invalid saved counting evidence
+remains a gap. Legacy contested totals stay available to internal list readers
+and are never relabelled as full-chamber totals.
+
+
+President operational exports add a whitelisted `display` extension after the
+strict five-key public core is validated: `target_cycle` equals the saved context
+and `matchup` comes from the saved central options. These labels contain no poll
+records, sample sizes or sources. Current mutable tracked-matchup settings never
+supply labels for a previously saved result. The existing `basis` and opaque
+`uncertaintyId` cache extensions remain separate from the strict core.
+
+President maps and trackers now consume the gated public President contract.
+The explicit `electoral_votes` metric totals 538; legacy `e` supplies historical
+central EV values, while legacy `s` remains a count of allocation units. The
+shared chart's tally arrays receive EVs only at the President adapter boundary.
+Chances mean electoral majority (270 EVs) and no electoral majority. Popular
+vote is off by default and excludes district duplicates in the writer.
+
+President trends use `pf-us-model-trends-v1` with model `president` for the
+database election type `us_presidential_model`. Valid saved inputs can supply
+frozen cycle/matchup labels even while the current release gate hides the
+summary. Matching target and allocation are checked before attaching context.
+Historical central-only points remain visible as isolated EV dots without
+invented matchup, context, ranges or odds. Context changes, including matchup
+and allocation, break totals, bands, chances and carry-forward. Current and
+saved acceptance must both authorize uncertainty; production calibration
+remains disabled.

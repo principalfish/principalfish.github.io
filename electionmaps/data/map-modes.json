@@ -158,6 +158,7 @@
       "nextElectionDate": null,
       "nextElectionLabel": "UK general election",
       "polltrackerDataPath": "results/model_output_trends.json",
+      "uncertaintyDataPath": "results/prediction-uncertainty.json",
       "polltrackerDefaultParties": [
         1,
         2,

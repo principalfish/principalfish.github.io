@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% macro number(value) -%}{{ '%.2f'|format(value) }}{%- endmacro %}
+{% macro link(view_name, label, run_id=none, seat_id=none, index=none, page=none) -%}
+<a href="{{ url_for('us_explorer.explore', model=descriptor.slug, view=view_name, election_id=run_id, seat_id=seat_id, index=index, page=page) }}">{{ label }}</a>
+{%- endmacro %}
+{% block content %}
+<section class="card">
+  <h2>{{ title }}</h2>
+  <nav aria-label="Uncertainty navigation">
+    <a href="{{ url_for('home.home') }}">Console home</a> ·
+    <a href="{{ url_for('us.' ~ descriptor.slug ~ '_uncertainty_hub') }}">Uncertainty hub</a> ·
+    <a href="{{ url_for('us.uncertainty_calibration', chamber=descriptor.slug) }}">Calibration</a> ·
+    {{ link('results', 'Results', run.stored.election_id if run else none) }} ·
+    {{ link('history', 'Odds history') }} ·
+    {{ link('simulations', 'All simulations', run.stored.election_id if run else none) }} ·
+    {{ link('budget', 'Frozen error budget', run.stored.election_id if run else none) }}
+  </nav>
+  <p>Read-only saved nowcasts. Production release gates apply independently.
+    Detail and raw draws are retained only for the latest run in each model scope.
+    Older national summaries remain available; a run saved without raw draws retains
+    race ranges but cannot provide individual simulation replay.</p>
+  {% if run %}
+    <p>Run #{{ run.stored.election_id }} · as of {{ run.as_of }} ·
+      target {{ run.document.context.target_cycle }} ·
+      {{ simulation_count }} simulations ·
+      {{ number(run.document.summary.interval * 100) }}% interval.</p>
+    {% if descriptor.slug == 'president' %}<p>Matchup: {{ run.document.private.options.tracked_matchup }}. 56 allocation units award 538 electoral votes; national popular vote uses 51 states/DC and excludes overlapping district votes.</p>{% endif %}
+    <details><summary>Frozen identity and assumptions</summary>
+      <p>Model {{ run.document.model }}; map #{{ run.document.context.map_id }};
+        comparability {{ run.document.context.comparability_id }};
+        kernel {{ run.inputs.version }}.</p>
+      <p>{{ run.inputs.config.assumption_label }}</p>
+      <p>Field {{ run.document.context.field_id }};
+        baseline {{ run.document.context.baseline_id }};
+        result {{ run.document.result_identity }}.</p>
+    </details>
+  {% endif %}
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+  {% if not error %}
+    {% if view == 'history' %}
+      <form method="get">
+        <label>From <input type="date" name="start" value="{{ start or '' }}"></label>
+        <label>Through <input type="date" name="end" value="{{ end or '' }}"></label>
+        <button type="submit">Filter dates</button>
+      </form>
+      <table><thead><tr><th>As of / run</th><th>{% if descriptor.slug == 'senate' %}Caucus control chances{% else %}Majority chances{% endif %}</th><th>{% if descriptor.slug == 'senate' %}No caucus majority{% elif descriptor.slug == 'president' %}No electoral majority{% else %}No majority{% endif %}</th></tr></thead>
+        <tbody>{% for point in history %}<tr>
+          <td>{{ link('results', point.as_of|string ~ ' / #' ~ point.election_id|string, point.election_id) }}</td>
+          <td>{% if descriptor.slug == 'senate' %}{% for caucus, probability in point.outcomes.control.probabilities.items() %}{{ caucus }} control {{ number(probability * 100) }}%{% if not loop.last %}; {% endif %}{% endfor %}{% else %}{% for party in point.parties %}{{ party.name }} {{ number(party.majority) }}%{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}</td>
+          <td>{{ number(point.no_majority) }}%</td>
+        </tr>{% else %}<tr><td colspan="3">No stored uncertainty summaries in this date range.</td></tr>{% endfor %}</tbody>
+      </table>
+    {% elif not run %}
+      <p>No stored uncertainty run is available for this model.</p>
+    {% elif view == 'results' %}
+      {% if descriptor.slug == 'senate' %}
+      <p>Full chamber: 100 seats, including {{ run.document.private.senate_counting.holdovers|length }} fixed holdovers. Only the {{ run.inputs.seats|length }} contested races are simulated. Outright caucus majority requires 51 seats; the configured VP resolves exactly 50–50.</p>
+      <p>{{ run.document.private.senate_counting.generic_ballot_exposure }}</p>
+      <p>Configured vice-presidential caucus: {{ run.document.private.senate_counting.policy.vice_president }}. This control scenario is conditional on the frozen independent alignments.</p>
+      <table><thead><tr><th>Raw party</th><th>Full central seats</th><th>Full interval</th><th>Seats up central</th><th>Seats up interval</th></tr></thead><tbody>
+      {% for party in parties %}<tr><td>{{ party.name }}</td><td>{{ party.central }}</td><td>{{ party.range|join(' / ') }}</td><td>{{ party.contested }}</td><td>{{ party.contested_range|join(' / ') }}</td></tr>{% endfor %}
+      </tbody></table>
+      {% for caucus, probability in run.document.summary.outcomes.control.probabilities.items() %}
+      <p>{{ caucus }}: outright majority {{ number(run.document.summary.outcomes.majority.probabilities[caucus] * 100) }}%; control {{ number(probability * 100) }}%.</p>
+      {% endfor %}
+      <p>50–50 caucuses: {{ number(run.document.summary.outcomes.tied_caucuses * 100) }}%. Unresolved control: {{ number(run.document.summary.outcomes.unresolved_control * 100) }}%. No caucus majority: {{ number(run.document.summary.outcomes.no_caucus_majority * 100) }}%.</p>
+      <details><summary>Fixed holdovers (not simulated)</summary><ul>{% for member in run.document.private.senate_counting.holdovers %}<li>{{ member.state }}, Class {{ member.seat_class }}: {{ member.candidate }} ({{ member.party }}), fixed holdover.</li>{% endfor %}</ul></details>
+      {% else %}
+      <p>Majority requires {{ descriptor.majority }} {{ descriptor.unit }}. Projected national vote share uses baseline turnout weights.{% if descriptor.slug == 'house' %} It is not the generic-ballot share.{% endif %}</p>
+      <table><thead><tr><th>Party</th><th>Central {{ descriptor.unit }}</th><th>{{ descriptor.unit }} interval (low / median / high)</th><th>Central projected vote</th><th>Vote interval</th><th>Majority</th></tr></thead>
+        <tbody>{% for party in parties %}<tr>
+          <td>{{ party.name }}</td><td>{{ number(party.central) }}</td>
+          <td>{% for value in party.range %}{{ number(value) }}{% if not loop.last %} / {% endif %}{% endfor %}</td>
+          <td>{{ number(party.vote) }}%</td>
+          <td>{% for value in party.vote_range %}{{ number(value) }}{% if not loop.last %} / {% endif %}{% endfor %}%</td>
+          <td>{{ number(party.majority) }}%</td>
+        </tr>{% endfor %}</tbody>
+      </table>
+      <p>{{ 'No electoral majority' if descriptor.slug == 'president' else 'No majority' }}: {{ number(run.document.summary.outcomes['no_electoral_majority' if descriptor.slug == 'president' else 'no_majority'] * 100) }}%.</p>
+      {% endif %}
+      <h3>Frozen {{ 'allocation unit' if descriptor.slug == 'president' else 'race' if descriptor.slug == 'senate' else 'district' }} field</h3>
+      <ul>{% for race in races %}<li>{{ link('race', race.name, run.stored.election_id, race.seat_id) }} ({{ race.state }})</li>{% endfor %}</ul>
+    {% elif view == 'simulations' %}
+      <p>Page {{ page }} of {{ pages }}. Simulation indices start at zero.</p>
+      <table><thead><tr><th>Simulation</th><th>{% if descriptor.slug == 'senate' %}Full chamber and seats up{% else %}{{ descriptor.unit }} and projected vote shares{% endif %}</th></tr></thead>
+        <tbody>{% for row in rows %}<tr>
+          <td>{{ link('simulation', '#' ~ row.index|string, run.stored.election_id, index=row.index) }}</td>
+          <td>{% for party in row.parties %}{{ party.name }}: {{ party.seats }} {{ descriptor.unit }}{% if descriptor.slug == 'senate' %} ({{ party.contested }} contested){% else %}, {{ number(party.vote) }}%{% endif %}{% if not loop.last %}; {% endif %}{% endfor %}</td>
+        </tr>{% endfor %}</tbody>
+      </table>
+      {% if page > 1 %}{{ link('simulations', 'Previous page', run.stored.election_id, page=page-1) }}{% endif %}
+      {% if page < pages %}{{ link('simulations', 'Next page', run.stored.election_id, page=page+1) }}{% endif %}
+    {% elif view == 'simulation' %}
+      <h3>Simulation #{{ index }}</h3>
+      {% if president_tally %}<p>{% for party in president_tally %}{{ party.name }}: {{ party.electoral_votes }} EVs, {{ number(party.popular_share) }}% national popular vote{% if not loop.last %}; {% endif %}{% endfor %}.</p>{% endif %}
+      {% if senate_tally %}<p>{% for party in senate_tally.parties %}{{ party.name }}: {{ party.full }} full seats ({{ party.contested }} contested); {% endfor %}caucuses: {{ senate_tally.caucuses }}.</p>{% endif %}
+      <p>Source errors, recorded counts, {{ 'race winners and contested totals' if descriptor.slug == 'senate' else 'unit winners and national totals' }} match exact replay from frozen inputs.</p>
+      <table><thead><tr><th>{{ 'Allocation unit' if descriptor.slug == 'president' else 'Race' if descriptor.slug == 'senate' else 'District' }}</th><th>Winner</th><th>Central → simulated shares</th></tr></thead>
+        <tbody>{% for race in races %}<tr>
+          <td>{{ link('decomposition', race.name, run.stored.election_id, race.id, index) }}</td>
+          <td>{{ race.winner }}</td>
+          <td>{% for party in race.parties %}{{ party.name }}: {{ number(party.central) }}% → {{ number(party.share) }}% ({{ party.votes }} votes){% if not loop.last %}; {% endif %}{% endfor %}</td>
+        </tr>{% endfor %}</tbody>
+      </table>
+    {% elif view == 'race' %}
+      <h3>{{ seat.name }} ({{ seat.state }}) across simulations</h3>
+      {% if not race %}<p>Race detail was pruned; only the national summary remains.</p>
+      {% else %}
+        {% if race.fixed %}<p>Fixed: {{ race.fixed }}.</p>{% endif %}
+        <table><thead><tr><th>Party</th><th>Central share</th><th>Low / median / high</th><th>Win probability</th></tr></thead>
+          <tbody>{% for party in race_parties %}<tr>
+            <td>{{ party.name }}</td><td>{{ number(party.central_share) }}%</td>
+            <td>{% for value in party.share_range %}{{ number(value) }}{% if not loop.last %} / {% endif %}{% endfor %}%</td>
+            <td>{{ number(party.win_probability * 100) }}%</td>
+          </tr>{% endfor %}</tbody>
+        </table>
+        <details><summary>Vote-share histograms (1 percentage point bins)</summary>
+          <p>Bins 0–99 include their lower bound and exclude their upper bound; bin 100 includes 100%.</p>
+          <table><thead><tr><th>Bin lower bound (%)</th>{% for party in race_parties %}<th>{{ party.name }}</th>{% endfor %}</tr></thead>
+            <tbody>{% for bin in range(101) %}<tr><td>{{ bin }}</td>{% for party in race_parties %}<td>{{ party.share_histogram.counts[bin] }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+          </table>
+        </details>
+        <p>{{ link('decomposition', 'This race in simulation #0', run.stored.election_id, seat.seat_id, 0) }}</p>
+      {% endif %}
+    {% elif view == 'decomposition' %}
+      <h3>{{ seat.name }} · simulation #{{ index }}</h3>
+      <p>{{ link('simulation', 'Back to this simulation', run.stored.election_id, index=index) }} ·
+        {{ link('simulations', 'Back to its simulation page', run.stored.election_id, page=index // page_size + 1) }} ·
+        {{ link('race', 'Race across simulations', run.stored.election_id, seat.seat_id) }}</p>
+      <p>Winner: {{ winner }}. Local blend weight α = {{ number(seat.alpha) }}.
+        {% if seat.single_party_baseline and seat.eligible|sum == 1 %}Fixed: uncontested baseline.{% endif %}
+        {% if baseline_fallback %}All clamped shares were zero; baseline fallback was used.{% endif %}</p>
+      {% if not central_retained %}<p>Detailed central fallback and local blend inputs were not retained in this older snapshot. Baseline and final central input are retained.</p>{% endif %}
+      <table><thead><tr><th>Party</th><th>Baseline</th><th>Central change</th><th>Central raw</th><th>Eligible</th><th>Total applied error</th><th>Clamped</th><th>Normalized share</th><th>Recorded votes</th></tr></thead>
+        <tbody>{% for party in decomposition %}<tr>
+          <td>{{ party.name }}</td><td>{{ number(party.baseline) }}</td><td>{{ number(party.central_change) }}</td><td>{{ number(party.central) }}</td><td>{{ 'yes' if party.eligible else 'no' }}</td><td>{{ number(party.error) }}</td><td>{{ number(party.clamped) }}</td><td>{{ number(party.share) }}%</td><td>{{ party.votes }}</td>
+        </tr>{% endfor %}</tbody>
+      </table>
+      {% for party in decomposition %}
+        <h4>{{ party.name }} source decomposition</h4>
+        <p>Loaded component totals in percentage points:
+          {% for kind, value in party.components.items() %}{{ kind }} {{ number(value) }}{% if not loop.last %}; {% endif %}{% endfor %}.
+          Zero includes sources that do not apply to this race.</p>
+        {% if party.trace %}<p>Region swing {{ number(party.trace.region_swing) }};
+          inherited parent swing {% if party.trace.inherited_swing is not none %}{{ number(party.trace.inherited_swing) }}{% else %}not used{% endif %};
+          eligible fallback {{ number(party.trace.fallback) }};
+          local average {% if party.trace.local_average is not none %}{{ number(party.trace.local_average) }}{% else %}not available{% endif %};
+          weighted fallback {{ number(party.trace.fallback_contribution) }} +
+          local blend contribution {{ number(party.trace.local_contribution) }} =
+          central change {{ number(party.central_change) }} percentage points.</p>{% endif %}
+        <table><thead><tr><th>Source</th><th>Component</th><th>Loaded error (percentage points)</th></tr></thead>
+          <tbody>{% for source in party.sources %}<tr><td>{{ source.id }}</td><td>{{ source.kind }}</td><td>{{ number(source.value) }}</td></tr>{% endfor %}</tbody>
+        </table>
+      {% endfor %}
+      <p>Each shared source appears with its frozen race loading, including inherited effects. Ineligible party errors are excluded, negative inputs clamp to zero, positive shares normalize to 100%, and baseline-turnout counts round to the nearest integer. Exact ties use frozen party order.</p>
+    {% elif view == 'budget' %}
+      <h3>Frozen error budget and polling evidence</h3>
+      <p>Pre-clamp standard deviations are diagnostics, not outcome probabilities.</p>
+      <dl>{% for key, value in options.items() %}<dt>{{ key }}</dt><dd>{% if value is number %}{{ number(value) }}{% else %}{{ value }}{% endif %}</dd>{% endfor %}</dl>
+      <table><thead><tr><th>Race</th><th>Party</th><th>National</th><th>State</th><th>Race</th><th>Local floor</th><th>Sampling</th><th>Combined SD</th></tr></thead>
+        <tbody>{% for row in budget %}<tr><td>{{ row.seat }}</td><td>{{ row.party }}</td>{% for kind in ['national', 'state', 'race', 'local_floor', 'sampling'] %}<td>{{ number(row.sd[kind]) }}</td>{% endfor %}<td>{{ number(row.combined_sd) }}</td></tr>{% endfor %}</tbody>
+      </table>
+      <table><thead><tr><th>Poll</th><th>Kind / population</th><th>Reported N</th><th>Effective N</th><th>Weight</th><th>Evidence</th></tr></thead>
+        <tbody>{% for poll in polls %}<tr><td>#{{ poll.poll_id }}</td><td>{{ poll.evidence_kind }} / {{ poll.population_type }}</td><td>{% if poll.evidence_kind == 'aggregate_estimate' %}Not applicable (aggregate estimate){% else %}{{ poll.sample_size or 'not retained' }}{% endif %}</td><td>{% if poll.evidence_kind == 'aggregate_estimate' %}Not applicable{% elif effective_n.get(poll.poll_id) is not none %}{{ number(effective_n[poll.poll_id]) }}{% else %}Not retained{% endif %}</td><td>{{ number(poll.weight) }}</td><td>{{ poll.evidence_source or poll.source_url or 'not retained' }}</td></tr>{% endfor %}</tbody>
+      </table>
+    {% endif %}
+  {% endif %}
+</section>
+{% endblock %}

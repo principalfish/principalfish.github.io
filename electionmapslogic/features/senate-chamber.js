@@ -21,8 +21,8 @@ export function buildSenateChamber(chamberSeats, contestedSeats, specialClassByS
     const projectedWinner = winnerByState.get(seatKey);
     const contestedClass = specialClassBySeat.get(seatKey) ?? 2;
     const members = (seat.members || []).map((member) => {
-      if (Number(member?.class) !== contestedClass || !projectedWinner) return { ...member };
-      return { ...member, party: projectedWinner, name: `${manifest.labelParty(projectedWinner)} (projected)` };
+      if (Number(member?.class) !== contestedClass || !projectedWinner) return { ...member, forecastStatus: "holdover" };
+      return { ...member, forecastStatus: "contested", party: projectedWinner, name: `${manifest.labelParty(projectedWinner)} (projected)` };
     });
     const parties = members.map((member) => member.party);
     const winner = parties.length && parties.every((party) => party === parties[0]) ? parties[0] : 'split';

@@ -48,6 +48,7 @@ from bs4 import BeautifulSoup, Tag
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from db import Database, StoredPollReadings
+from model_support.us_poll_evidence import simple_random_sample_moe
 from models import Poll, PollRow, Pollster, Seat
 from polls.importers.types import PollImportResult, ScrapedPollRow
 from polls.importers.us.us_geography import (
@@ -314,10 +315,19 @@ class UsPollRow(ScrapedPollRow):
     readings: tuple[CandidateReading, ...]
     sample_size: int | None = None
     population: str | None = None
+    evidence_kind: str = "individual_poll"
     is_lead: bool = False
     collapsed: bool = False
     pollster_tags: tuple[str, ...] = ()
     notes: tuple[str, ...] = ()
+
+    @property
+    def sample_moe(self) -> float | None:
+        """Sample-only 90% MoE at 50%, assuming simple random sampling."""
+        return (
+            simple_random_sample_moe(self.sample_size)
+            if self.evidence_kind == "individual_poll" else None
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1019,6 +1029,10 @@ def _rows_for_table(
             readings=parsed.readings,
             sample_size=parsed.sample_size,
             population=parsed.population,
+            evidence_kind=(
+                "aggregate_estimate"
+                if contest.section_rule == "generic_ballot" else "individual_poll"
+            ),
             is_lead=is_lead,
             collapsed=collapsed,
             pollster_tags=parsed.pollster_tags,
@@ -1754,7 +1768,12 @@ def commit_us_import_plan(
             map_id=plan.map_id,
             fieldwork_start=row.fieldwork_start,
             fieldwork_end=row.fieldwork_end,
-            sample_size=row.sample_size,
+            sample_size=(
+                None if row.evidence_kind == "aggregate_estimate" else row.sample_size
+            ),
+            evidence_kind=row.evidence_kind,
+            population_type=row.population,
+            evidence_source=f"{row.page_url}#{row.heading_path}",
             source_url=row.source_url,
             matchup=row.matchup,
             seat_id=plan.seat_id,

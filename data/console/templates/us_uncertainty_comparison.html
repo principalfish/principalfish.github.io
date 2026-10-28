@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+<h2>US {{ chamber.title() }} calibration comparison</h2>
+<p><a href="{{ url_for('home.home') }}">Console home</a></p>
+<p><strong>Unaccepted comparisons. Calibration remains pending.</strong> No runtime values are nominated. House coefficients are not defaults for this model.</p>
+{% if error %}<p class="alert">{{ error }}</p>{% endif %}
+{% if report %}
+<p>Kernel {{ report.kernel_version }} · source fingerprint {{ report.input_sha256 }}</p>
+<p>These historical references use official outcomes to isolate conditional errors. They do not establish deployable forecasting accuracy or early held-today coverage.</p>
+{% endif %}
+</section>
+{% if report %}
+<section class="card"><h3>National total-error proxy</h3>
+<p>Training elections: {{ report.national.training_cycles|join(', ') }}. National SRS is not added. Signed bias is reported without changing the central projection.</p>
+<table><thead><tr><th>Contrast</th><th>Elections</th><th>Signed mean, points</th><th>RMS, points</th></tr></thead><tbody>
+{% for contrast in ['raw', 'decided'] %}{% set row = report.national[contrast] %}
+<tr><td>{{ contrast }}</td><td>{{ row.n }}</td><td>{{ row.mean|round_display }}</td><td>{{ row.rms|round_display }}</td></tr>
+{% endfor %}</tbody></table>
+<p>{{ report.national_mapping }}</p>
+</section>
+<section class="card"><h3>Combined fallback response and boundary sensitivities</h3>
+<p>State-only and race-only rows allocate the same measured combined error differently. Their separate components are not identified. No local N, blend weight or alpha is invented. Centered and zero-origin targets are separate comparisons.</p>
+<div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Target second moment</th><th>Source scale</th><th>Recovered second moment</th><th>Recovery compatible</th><th>Status</th></tr></thead><tbody>
+{% for row in report.scenarios %}<tr><td>{{ row.scenario_id }}</td><td>{{ row.target_second_moment|round_display }}</td><td>{{ row.scale|round_display if row.scale is not none else 'unavailable' }}</td><td>{{ row.recovered_second_moment|round_display if row.recovered_second_moment is defined else 'unavailable' }}</td><td>{{ row.recovery_compatible|default('unavailable') }}</td><td>{{ row.status }}{% if row.failure_stage is defined %}; {{ row.failure_stage }} at scale {{ row.attempted_scale|round_display }}. {{ row.failure_scope|default('') }}{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+<p>Source scales are square roots of kernel covariance scales. Second moments are squared margin points after masks, clamp and normalization. Independent recovery seeds and Monte Carlo errors check numerical units, not tails.</p>
+</section>
+<section class="card"><h3>National input versus output probes</h3>
+<table><thead><tr><th>Cycle</th><th>Input margin target</th><th>Recovered input SD</th><th>Output vote-margin SD</th><th>Output domain</th></tr></thead><tbody>
+{% for row in report.national_response_probes %}<tr><td>{{ row.cycle }}</td><td>{{ row.national_input_margin_target|round_display }}</td><td>{{ row.recovered_input_margin_sd|round_display }}</td><td>{{ row.output_vote_margin_sd|round_display }}</td><td>{{ row.output_domain }}</td></tr>{% endfor %}
+</tbody></table>
+<p>Post-blend G remains the deployed architecture. The raw-input counterfactual has different exposure; output spread is not forced to equal input error.</p>
+</section>
+<section class="card"><h3>Whole-election conditional holdouts</h3>
+<p>Every held-out election is removed from fitted national, conditional and local-proxy training series. Official outcomes still condition the point reference, so these are conditional transfer diagnostics, not out-of-sample forecast scores.</p>
+<details><summary>Training cycles, fitted boundaries, held-out residuals and conditional intervals</summary><pre>{{ report.whole_election_holdouts|round_display|tojson(indent=2) }}</pre></details>
+</section>
+<section class="card"><h3>Local average proxies and unresolved assumptions</h3>
+<p>Polling-average errors include sampling and systematic error. They are kept outside admitted individual-poll inputs and do not identify a local floor or district transfer. Denominator alternatives carry no selected default.</p>
+<details><summary>Raw and decided errors, election clusters and pooling sensitivity</summary><pre>{{ report.local_proxy_summary|round_display|tojson(indent=2) }}</pre></details>
+<ul>{% for row in report.assumption_ledger %}<li>{{ row.name }}: {{ row.status }}</li>{% endfor %}</ul>
+</section>
+<section class="card"><h3>Evidence, exclusions and practical limits</h3>
+<p>Structural zeros and same-state or district limitations remain explicit exclusions. They are not removed as inconvenient outliers. Prior-baseline EV weights are not used to score target elections. No historical chamber/control or district calibration is claimed.</p>
+<details><summary>Exact central parity, conditional references and source normalization</summary><pre>{{ report.references|round_display|tojson(indent=2) }}</pre></details>
+<details><summary>Full source inventory and retrieval gaps</summary><pre>{{ report.source_coverage_ledger|round_display|tojson(indent=2) }}</pre></details>
+<details><summary>National source records and local-average candidate joins</summary><pre>{{ {'national': report.national_observations, 'local': report.local_proxy_diagnostics}|round_display|tojson(indent=2) }}</pre></details>
+<ul>{% for item in report.limitations %}<li>{{ item }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

@@ -323,6 +323,29 @@ class TestProjectSeatVotes:
         assert next(row for row in projected if row["elected"])["party_id"] == REPUBLICAN
         assert winners == Counter({"Republican": 1})
 
+    @pytest.mark.parametrize("missing_votes", [None, 0.0])
+    def test_absent_party_cannot_enter_through_regional_or_national_fallback(
+        self, missing_votes: float | None,
+    ) -> None:
+        baseline = {REPUBLICAN: 10000.0}
+        if missing_votes is not None:
+            baseline[DEMOCRAT] = missing_votes
+        projected, winners = project_seat_votes(
+            {1: baseline}, {1: 10}, {DEMOCRAT, REPUBLICAN},
+            {10: {DEMOCRAT: 60.0, REPUBLICAN: -10.0}},
+            {DEMOCRAT: "Democratic", REPUBLICAN: "Republican"},
+        )
+        assert _shares_by_party(projected, 1)[DEMOCRAT] == 0.0
+        assert winners == Counter({"Republican": 1})
+
+    def test_others_keeps_fallback_even_without_baseline_votes(self) -> None:
+        projected, _ = project_seat_votes(
+            {1: {REPUBLICAN: 10000.0}}, {1: 10}, {REPUBLICAN, OTHERS},
+            {10: {REPUBLICAN: -10.0, OTHERS: 10.0}},
+            {REPUBLICAN: "Republican", OTHERS: "Others"},
+        )
+        assert _shares_by_party(projected, 1)[OTHERS] == pytest.approx(10.0)
+
     def test_swing_flips_a_marginal_seat(self) -> None:
         # Baseline: Rep 5100 / Dem 4900 (turnout 10000) in region 10.
         # A +3 Dem / -3 Rep swing on the shares (49→52, 51→48) → Dem wins.
@@ -1633,6 +1656,60 @@ class TestBlendSeatSwings:
 
         assert swings[cd2] == pytest.approx(swings[maine])
 
+    def test_local_entrant_gets_only_own_poll_contribution(self) -> None:
+        averages = {1: _average(1.0, {REPUBLICAN: 40.0, INDEPENDENT: 60.0})}
+        baseline = {1: {REPUBLICAN: 10000.0}, 2: {REPUBLICAN: 10000.0}}
+        regions: dict[int, int | None] = {1: 10, 2: 10}
+        names = {REPUBLICAN: "Republican", INDEPENDENT: "Independent"}
+        broad = {10: {REPUBLICAN: -10.0, INDEPENDENT: 40.0}}
+        swings = self._blend(
+            seat_averages=averages, baselines=baseline, region_swings=broad,
+            region_by_seat_id=regions, party_universe={REPUBLICAN, INDEPENDENT},
+            party_names=names,
+        )
+        assert swings[1][INDEPENDENT] == pytest.approx(30.0)
+        projected, _ = project_seat_votes(
+            baseline, regions, {REPUBLICAN, INDEPENDENT}, broad, names,
+            seat_swings=swings, seat_poll_averages=averages,
+        )
+        assert _shares_by_party(projected, 1)[INDEPENDENT] > 0.0
+        assert _shares_by_party(projected, 2)[INDEPENDENT] == 0.0
+
+    @pytest.mark.parametrize("weight,n_polls", [(0.0, 1), (1.0, 0)])
+    def test_noncontributing_average_cannot_admit_entrant(
+        self, weight: float, n_polls: int,
+    ) -> None:
+        averages = {1: _average(weight, {REPUBLICAN: 40.0, INDEPENDENT: 60.0}, n_polls=n_polls)}
+        projected, _ = project_seat_votes(
+            {1: {REPUBLICAN: 10000.0}}, {1: 10}, {REPUBLICAN, INDEPENDENT},
+            {10: {REPUBLICAN: -10.0, INDEPENDENT: 30.0}},
+            {REPUBLICAN: "Republican", INDEPENDENT: "Independent"},
+            seat_poll_averages=averages,
+        )
+        assert _shares_by_party(projected, 1)[INDEPENDENT] == 0.0
+
+    @pytest.mark.parametrize("parent_name", ["Maine", "Nebraska"])
+    def test_parent_poll_cannot_admit_absent_district_party(self, parent_name: str) -> None:
+        parents = seat_parent_ids([
+            SeatRef(id=1, region_id=10, seat_name=parent_name),
+            SeatRef(id=2, region_id=10, seat_name=f"{parent_name} CD-1"),
+        ])
+        baseline = {1: {REPUBLICAN: 5000.0, DEMOCRAT: 5000.0},
+                    2: {REPUBLICAN: 10000.0}}
+        averages = {1: _average(1.0, {REPUBLICAN: 30.0, DEMOCRAT: 70.0})}
+        swings = self._blend(
+            seat_averages=averages, baselines=baseline, parents=parents,
+            region_by_seat_id={1: 10, 2: 10},
+        )
+        assert swings[1][DEMOCRAT] > 0.0
+        assert swings[2][DEMOCRAT] == 0.0
+        projected, _ = project_seat_votes(
+            baseline, {1: 10, 2: 10}, {REPUBLICAN, DEMOCRAT}, {},
+            {REPUBLICAN: "Republican", DEMOCRAT: "Democratic"},
+            seat_swings=swings, seat_poll_averages=averages,
+        )
+        assert _shares_by_party(projected, 2)[DEMOCRAT] == 0.0
+
     def test_a_district_whose_parent_has_no_polls_keeps_the_region_swing(self) -> None:
         maine, cd2 = 1, 3
         swings = self._blend(
@@ -2592,14 +2669,15 @@ class TestSenateFieldAllowlist:
     def test_the_shipped_spec_adds_both_specials_on_their_2022_baseline(self) -> None:
         from run_us_senate_model import SPEC
 
-        assert dict(SPEC.seat_baseline_overrides) == {
+        spec = _common.spec_for_date(SPEC, date(2026, 10, 19))
+        assert dict(spec.seat_baseline_overrides) == {
             "Florida": "2022-us-senate",
             "Ohio": "2022-us-senate",
         }
-        assert SPEC.seat_name_allowlist is not None
-        assert {"Florida", "Ohio"} <= SPEC.seat_name_allowlist
+        assert spec.seat_name_allowlist is not None
+        assert {"Florida", "Ohio"} <= spec.seat_name_allowlist
         # 33 Class-2 states plus the two Class-3 specials.
-        assert len(SPEC.seat_name_allowlist) == 35
+        assert len(spec.seat_name_allowlist) == 35
 
 
 # ── Senate specials: resolving the baseline election ──────────────────────────
@@ -2732,7 +2810,7 @@ class TestPresidentialRecordedSummaries:
         assert diffs == expected_diffs
         assert winners == expected_winners
         assert spec.trend_cache_json.read_bytes() == expected_trends
-        parties = json.loads(expected_trends)[0]["parties"]
+        parties = json.loads(expected_trends)["points"][0]["parties"]
         assert parties[str(dem.id)]["v"] == 35.0
         assert parties[str(rep.id)]["v"] == 65.0
         election = db.get_election_by_name(name)
@@ -2828,7 +2906,7 @@ class TestPresidentialRecordedSummaries:
             (row["seat_id"], row["party_id"], row["vote_total"], row["elected"])
             for row in projected
         )
-        parties = json.loads(spec.trend_cache_json.read_text())[0]["parties"]
+        parties = json.loads(spec.trend_cache_json.read_text())["points"][0]["parties"]
         assert parties[str(dem.id)] == {"s": 2, "v": 56.7, "e": 5}
         assert parties[str(rep.id)] == {
             "s": 1 if district_independent_wins else 2,
@@ -3035,7 +3113,7 @@ class TestSenateSpecialsEndToEnd:
             for party_id in (world.dem.id, world.rep.id)
         }
         assert totals == {world.rep.id: 20900.0, world.dem.id: 14100.0}
-        parties = json.loads(world.spec.trend_cache_json.read_text())[0]["parties"]
+        parties = json.loads(world.spec.trend_cache_json.read_text())["points"][0]["parties"]
         assert parties[str(world.rep.id)] == {"s": 35, "v": 59.7}
         assert parties[str(world.dem.id)] == {"s": 0, "v": 40.3}
 
@@ -4383,9 +4461,14 @@ class TestSelectedUsPollContributors:
             == expected_date
         )
         if contest == "president":
-            assert _shares_by_party(result[1], world.district.id) == pytest.approx(
-                _shares_by_party(result[1], world.seat.id)
-            )
+            state_shares = _shares_by_party(result[1], world.seat.id)
+            district_shares = _shares_by_party(result[1], world.district.id)
+            assert district_shares.get(world.libertarian.id, 0.0) == 0.0
+            remaining = sum(value for party, value in state_shares.items() if party != world.libertarian.id)
+            for party in (world.rep.id, world.dem.id):
+                assert district_shares[party] == pytest.approx(
+                    100.0 * state_shares[party] / remaining, abs=0.1,
+                )
 
     @pytest.mark.parametrize("contest", ["house", "senate", "president"])
     def test_no_decided_seat_shares_do_not_supply_a_contributor(

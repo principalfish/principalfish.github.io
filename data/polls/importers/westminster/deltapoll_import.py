@@ -21,6 +21,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+from polls.importers.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    count_value,
+    make_base,
+    national_shares_from,
+    plan_poll_bases,
+    region_refs,
+    replace_poll_bases,
+)
 from polls.importers.types import PollImportResult
 
 DEFAULT_SOURCE_URL = "https://deltapoll.co.uk/wp-content/uploads/2026/01/260105_Deltapoll-Mirror-pdf.pdf"
@@ -57,12 +67,23 @@ MACRO_ORDER = ["London", "Rest of South", "Midlands", "North", "Wales", "Scotlan
 
 
 class ParsedPoll(BaseModel):
-    """Parsed poll data extracted from source."""
+    """Parsed poll data extracted from source.
+
+    ``bases`` holds the "All GB Adults" (weighted) and "Unweighted Sample"
+    rows: the Total column and, when the regional block parses, its macro
+    region columns. Deltapoll prints only these all-adult bases, though its
+    shares exclude don't-knows and won't-votes.
+    """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_region_percentages: dict[str, dict[str, float]]
+    bases: list[ParsedBase] = Field(default_factory=list)
+
+    def national_shares(self) -> dict[str, float]:
+        """Return canonical party name -> national share."""
+        return national_shares_from(self.party_region_percentages, NATIONAL_KEY)
 
 
 class PlannedPollRow(BaseModel):
@@ -90,6 +111,7 @@ class ImportPlan(BaseModel):
     poll_id: int | None
     poll_exists: bool
     rows: list[PlannedPollRow]
+    bases: list[PlannedPollBase] = Field(default_factory=list)
 
 
 def _month_number(month_text: str) -> int | None:
@@ -474,11 +496,7 @@ def _parse_regional_from_block(lines: list[str], party_order: list[str]) -> dict
             rows are parsed than ``len(party_order) - 1``.
     """
     header_idx = next(
-        (
-            idx
-            for idx, line in enumerate(lines)
-            if "total london rest of south midlands north wales scotland" in line.lower()
-        ),
+        (idx for idx, line in enumerate(lines) if _REGIONAL_HEADER in line.lower()),
         None,
     )
     if header_idx is None:
@@ -511,6 +529,71 @@ def _parse_regional_from_block(lines: list[str], party_order: list[str]) -> dict
         }
 
     return parsed
+
+
+_REGIONAL_HEADER = "total london rest of south midlands north wales scotland"
+
+
+def _parse_bases(lines: list[str], *, with_regions: bool) -> list[ParsedBase]:
+    """Read the all-adult bases for the national and regional columns.
+
+    Page 1 prints "All GB Adults" (weighted) then "Unweighted Sample". The
+    regional block repeats them, unlabelled and in that order, as the first
+    two eight-number rows under its header (six macro regions then two social
+    grades). The regional unweighted counts must add up to the national one,
+    or no regional base is kept.
+
+    Args:
+        lines: Non-empty lines extracted from the Deltapoll PDF.
+        with_regions: Whether the regional shares parsed; regional bases are
+            only read alongside them.
+
+    Returns:
+        The national base then one per macro region, or an empty list when
+        page 1 lacks either row.
+    """
+    def first_count(label: str) -> int | None:
+        line = next((line for line in lines if line.startswith(label)), None)
+        if line is None:
+            return None
+        values = line[len(label):].split()
+        return count_value(values[0]) if values else None
+
+    unweighted = first_count("Unweighted Sample")
+    weighted = first_count("All GB Adults")
+    national = make_base((), unweighted, weighted, "all_adults")
+    if national is None:
+        return []
+    if not with_regions:
+        return [national]
+
+    header_idx = next(
+        (idx for idx, line in enumerate(lines) if _REGIONAL_HEADER in line.lower()),
+        None,
+    )
+    if header_idx is None:
+        return [national]
+    count_rows: list[list[int]] = []
+    for line in lines[header_idx + 1:header_idx + 5]:
+        if line.startswith("%"):
+            break
+        if re.fullmatch(r"\d+(?:\s+\d+){7}", line):
+            count_rows.append([int(v) for v in line.split()])
+    if len(count_rows) != 2:
+        return [national]
+    weighted_row, unweighted_row = count_rows
+    if sum(unweighted_row[:6]) != national.unweighted_n:
+        return [national]
+    candidates = [
+        make_base(
+            tuple(MACRO_TO_INTERNAL_REGIONS[macro]),
+            unweighted_row[i],
+            weighted_row[i],
+            "all_adults",
+        )
+        for i, macro in enumerate(MACRO_ORDER)
+    ]
+    return [national, *[candidate for candidate in candidates if candidate is not None]]
 
 
 def parse_poll(pdf_text: str) -> ParsedPoll:
@@ -556,6 +639,7 @@ def parse_poll(pdf_text: str) -> ParsedPoll:
         fieldwork_start=fieldwork_start,
         fieldwork_end=fieldwork_end,
         party_region_percentages=party_region_percentages,
+        bases=_parse_bases(lines, with_regions=any(regional.values())),
     )
 
 
@@ -584,6 +668,22 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
                 Poll.sample_size == parsed.sample_size,
             )
         ).scalar_one_or_none()
+
+
+def fetch_parsed_poll(source_url: str) -> ParsedPoll:
+    """Resolve a Deltapoll page or PDF URL, download the PDF and parse it.
+
+    Args:
+        source_url: A Deltapoll poll page or PDF URL (Wayback Machine allowed).
+
+    Returns:
+        The parsed poll.
+
+    Raises:
+        ValueError: If no PDF can be resolved or fetched, or it cannot be
+            parsed.
+    """
+    return parse_poll(_extract_pdf_text(_resolve_pdf_url(source_url)))
 
 
 def build_import_plan(
@@ -625,8 +725,7 @@ def build_import_plan(
     regions = db.get_regions_for_map(poll_map.id)
     regions_by_name = {region.name: region for region in regions}
 
-    resolved_pdf_url = _resolve_pdf_url(source_url)
-    parsed = parse_poll(_extract_pdf_text(resolved_pdf_url))
+    parsed = fetch_parsed_poll(source_url)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -693,6 +792,7 @@ def build_import_plan(
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,
         rows=rows,
+        bases=plan_poll_bases(parsed.bases, region_refs(regions)),
     )
 
 
@@ -791,6 +891,7 @@ def commit_import_plan(
                     percentage=row.percentage,
                 )
             )
+        inserted_bases = replace_poll_bases(session, poll_id, plan.bases)
 
     return PollImportResult(
         created_pollster=created_pollster,
@@ -799,6 +900,7 @@ def commit_import_plan(
         inserted_rows=len(plan.rows),
         replaced_rows=replaced_rows,
         skipped_existing_rows=False,
+        inserted_bases=inserted_bases,
     )
 
 
@@ -898,6 +1000,7 @@ def main() -> None:
         if result.replaced_rows:
             print(f"deleted existing rows: {result.replaced_rows}")
         print(f"inserted poll rows: {result.inserted_rows}")
+        print(f"inserted bases: {result.inserted_bases}")
 
 
 if __name__ == "__main__":

@@ -140,25 +140,30 @@
           <h2 class="maps-panel-title">Vote Totals</h2>
           <div class="maps-card-head-actions">
             <button type="button" id="mapsVoteTotalsToggle" class="maps-inline-btn" hidden>Show all</button>
+            <button type="button" id="mapsUncertaintyToggle" class="maps-inline-btn maps-uncertainty-toggle" aria-pressed="false" aria-controls="mapsVoteTotalsTable" hidden>Show uncertainty</button>
             <button type="button" id="mapsVoteTotalsCollapse" class="maps-inline-btn maps-vote-totals-collapse" data-vote-totals-action="collapse" aria-label="Collapse vote totals">▲</button>
           </div>
         </div>
         <nav id="mapsSenateForecastTabNav" class="maps-predict-tabs" hidden aria-label="Senate forecast view"></nav>
         <nav class="maps-vote-tabs" id="mapsVoteTotalsTabNav" hidden aria-label="Vote totals view"></nav>
         <p id="mapsSenateForecastComparison" class="maps-control-note maps-senate-forecast-comparison" hidden></p>
-        <table id="mapsVoteTotalsTable" class="maps-table" aria-label="Vote totals placeholder" aria-describedby="mapsSenateForecastComparison">
-          <thead>
-            <tr>
-              <th data-sort-key="party" role="button" tabindex="0" title="Sort by party">Party</th>
-              <th data-sort-key="seats" role="button" tabindex="0" title="Sort by seats">Seats</th>
-              <th class="comparison-col">±</th>
-              <th class="vote-total-col" data-sort-key="votes" role="button" tabindex="0" title="Sort by votes">Votes</th>
-              <th class="vote-pct-col" data-sort-key="votePct" role="button" tabindex="0" title="Sort by vote percentage">Vote %</th>
-              <th class="comparison-col vote-pct-comparison-col">±</th>
-            </tr>
-          </thead>
-          <tbody id="mapsVoteTotalsBody"></tbody>
-        </table>
+        <div class="maps-vote-table-scroll">
+          <table id="mapsVoteTotalsTable" class="maps-table hide-uncertainty-cols" aria-label="Vote totals" aria-describedby="mapsSenateForecastComparison">
+            <thead>
+              <tr>
+                <th data-sort-key="party" role="button" tabindex="0" title="Sort by party">Party</th>
+                <th data-sort-key="seats" role="button" tabindex="0" title="Sort by seats">Seats</th>
+                <th class="comparison-col">±</th>
+                <th class="uncertainty-col" scope="col" data-uncertainty-label="seats"></th>
+                <th class="vote-total-col" data-sort-key="votes" role="button" tabindex="0" title="Sort by votes">Votes</th>
+                <th class="vote-pct-col" data-sort-key="votePct" role="button" tabindex="0" title="Sort by vote percentage">Vote %</th>
+                <th class="uncertainty-col vote-pct-col" scope="col" data-uncertainty-label="vote range"></th>
+                <th class="comparison-col vote-pct-comparison-col">±</th>
+              </tr>
+            </thead>
+            <tbody id="mapsVoteTotalsBody"></tbody>
+          </table>
+        </div>
       </article>
 
       <article id="mapsPredictWindow" class="maps-predict-window" hidden aria-label="Predict input">

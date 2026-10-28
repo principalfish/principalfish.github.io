@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+<h2>US {{ chamber.title() }} uncertainty calibration</h2>
+<p><a href="{{ url_for('home.home') }}">Console home</a>{% if chamber == 'house' %} · <a href="{{ url_for('us.house_uncertainty_budget') }}">House parity / error budget</a>{% endif %}</p>
+{% if error %}<p class="alert">{{ error }}</p>{% endif %}
+{% if chamber != 'house' %}<p>Model-specific calibration is pending. House coefficients are not defaults for this model.</p>
+{% elif report %}<p><strong>Candidate for explicit acceptance. Stored and public odds remain disabled.</strong> {{ report.status }}</p>
+<ul>{% for blocker in report.release_blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>
+<p>Kernel {{ report.kernel_version }} · source fingerprint {{ report.input_sha256 }}</p>
+{% endif %}
+</section>
+{% if report %}
+{% set national = report.national %}{% set conditional = report.conditional %}
+<section class="card"><h3>Fitted coefficients and proposed assumptions</h3>
+<p>Source scale is √c for covariance c·(diag(t) − tt′). At 50/50 each party SD is half this scale; margin SD is the full scale. National calibration targets the input estimator margin. Its source scale must be recomputed for each frozen run's party composition.</p>
+<div class="table-wrap"><table><thead><tr><th>Coefficient</th><th>Value</th><th>Units</th><th>Status</th><th>Source / method</th></tr></thead><tbody>{% for cell in report.coefficient_ledger %}<tr><td>{{ cell.name }}</td><td>{{ cell.value|round_display }}</td><td>{{ cell.units }}</td><td>{{ cell.status }}</td><td>{{ cell.method }}</td></tr>{% endfor %}</tbody></table></div>
+</section>
+<section class="card"><h3>National input error and whole-election holdouts</h3>
+<p>{{ national.n_elections }} elections. Raw margin RMS {{ '%.2f'|format(national.zero_origin_rms) }} points; signed poll-minus-outcome bias {{ '%+.2f'|format(national.mean_signed_bias) }}; sample SD after estimating the mean {{ '%.2f'|format(national.sample_sd_about_estimated_mean) }}. The zero-mean source preserves the central projection and uses RMS; it does not remove the observed bias. RCP is a proxy for the deployed provider blend and lookback window.</p>
+<table><thead><tr><th>Held-out election</th><th>Training input margin SD</th><th>Held-out error</th><th>Standardized error</th><th>Within 90% normal reference</th></tr></thead><tbody>{% for row in national.leave_election_out %}<tr><td>{{ row.held_out_cycle }}</td><td>{{ '%.2f'|format(row.training_input_margin_sigma) }}</td><td>{{ '%+.2f'|format(row.held_out_error) }}</td><td>{{ '%.2f'|format(row.standardized_error) }}</td><td>{{ row.covered_by_90_percent_normal_reference }}</td></tr>{% endfor %}</tbody></table>
+<p>Entire elections are held out. Six observations do not precisely validate coverage; this is not a district-count sample-size claim.</p>
+</section>
+<section class="card"><h3>Conditional state / race response and recovery</h3>
+<p>The full {{ report.reference.full_measured_baseline_seats }} measured 2022 districts define source shapes; {{ report.reference.moment_districts }} eligible districts in {{ report.reference.moment_states }} states supply one transition. The existing deterministic helper verifies all recorded zero-error rows. Actual raw national D/R changes are applied through the same masks, Others branch, clamping and normalization. National, local and sampling errors are zero while fitting the conditional fallback components.</p>
+<p>Target W {{ '%.2f'|format(conditional.target_moments.within_W) }}; target {{ conditional.centering }} {{ '%.2f'|format(conditional.target_moments.between_B) }}. Fitting moments {{ conditional.fitting_moments|round_display }}; independent recovery {{ conditional.recovered_moments|round_display }}. Recovery MC SE {{ conditional.recovery_monte_carlo_se|round_display }}; tolerance {{ conditional.recovery_absolute_tolerance|round_display }}. Recovery compatible: <strong>{{ conditional.recovery_compatible }}</strong>.</p>
+<p>Fit: {{ conditional.fit_draws }} draws, seed {{ conditional.fit_seed }}. Recovery: {{ conditional.recovery_draws }} draws, seed {{ conditional.recovery_seed }}. Tolerance combines four standard errors from both Monte Carlo runs plus 1% numerical allowance. This checks engine units, not independent predictive performance.</p>
+<p>Empirical residual mean {{ '%+.2f'|format(conditional.empirical_residual_mean) }}; RMS {{ '%.2f'|format(conditional.empirical_residual_rms) }}; centered sample SD {{ '%.2f'|format(conditional.empirical_residual_sample_sd) }}. B0 treats unresolved selected-panel offset as uncertainty while preserving the central projection; centered-between sensitivity is separate.</p>
+</section>
+<section class="card"><h3>Untrimmed tails and practical limits</h3>
+<p><strong>{{ conditional.tail_warning }}</strong> In-sample 90% conditional coverage is {{ '%.2f'|format(100 * conditional.in_sample_90_percent_conditional_coverage) }}%; this does not establish Gaussian tail adequacy.</p>
+<table><thead><tr><th>District</th><th>Residual points</th><th>Conditional output SD</th><th>Absolute SD multiple</th></tr></thead><tbody>{% for row in conditional.untrimmed_largest_residuals %}<tr><td>{{ row.district }}</td><td>{{ '%+.2f'|format(row.residual) }}</td><td>{{ '%.2f'|format(row.conditional_output_sd) }}</td><td>{{ '%.2f'|format(row.absolute_sd_multiple) }}</td></tr>{% endfor %}</tbody></table>
+</section>
+<section class="card"><h3>Input versus output response probes</h3>
+<p>These are historical math probes after fitting, not live forecasts or validation. A national output SD can differ from the fitted input margin error after projection; G is not retuned to force them equal.</p>
+<table><thead><tr><th>Probe</th><th>Input margin SD</th><th>National output margin SD</th><th>Selected output W / B0</th></tr></thead><tbody>{% for name,row in report.response_probes.items() %}<tr><td>{{ name }}</td><td>{{ '%.2f'|format(row.national_input_margin_sigma) }}</td><td>{{ '%.2f'|format(row.national_output_margin_sd) }}</td><td>{{ row.selected_output_moments_W_B0|round_display }}</td></tr>{% endfor %}</tbody></table>
+</section>
+<section class="card"><h3>Assumption sensitivity</h3>
+<p>The local floor is not independently identified: candidate 1× fallback race scale, with 0/0.5/1/2× alternatives. DEFF 2, cap 2,000 and population fractions 1 are proposed assumptions. These cases use synthetic N, never actual poll repairs. National/state terms are omitted to isolate conditional errors. A noisy small local poll can make an alpha-rich scenario wider.</p>
+<div class="table-wrap"><table><thead><tr><th>Axis</th><th>Synthetic N</th><th>Alpha</th><th>Local multiple</th><th>DEFF</th><th>Cap</th><th>Base fraction</th><th>Effective decided N</th><th>Analytic margin SD</th><th>Kernel margin SD</th></tr></thead><tbody>{% for row in report.local_assumptions %}<tr><td>{{ row.axis }}</td><td>{{ row.synthetic_reported_n }}</td><td>{{ '%.2f'|format(row.alpha) }}</td><td>{{ '%.2f'|format(row.local_floor_multiple) }}</td><td>{{ '%.2f'|format(row.design_effect) }}</td><td>{{ row.cap|int }}</td><td>{{ '%.2f'|format(row.population_fraction) }}</td><td>{{ '%.2f'|format(row.effective_decided_n) }}</td><td>{{ '%.2f'|format(row.analytic_conditional_margin_sd) }}</td><td>{{ '%.2f'|format(row.kernel_conditional_margin_sd) }}</td></tr>{% endfor %}</tbody></table></div>
+<details><summary>Raw / decided, uncertified 2018, centered-between, RCV and influence diagnostics</summary><pre>{{ report.sensitivities|round_display|tojson(indent=2) }}</pre></details>
+</section>
+<section class="card"><h3>Evidence and exclusions</h3>
+<details><summary>National observations, original sources, hashes and row/page references</summary><pre>{{ report.national_observations|round_display|tojson(indent=2) }}</pre></details>
+<details><summary>Classification, boundary and outcome provenance</summary><pre>{{ report.provenance|round_display|tojson(indent=2) }}</pre></details>
+<details><summary>Excluded districts and reasons</summary><pre>{{ report.reference.excluded_districts|tojson(indent=2) }}</pre></details>
+<ul>{% for item in report.limitations %}<li>{{ item }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

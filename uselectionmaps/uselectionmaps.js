@@ -1,12 +1,9 @@
 // ─── US election maps — page entry ──────────────────────────────────────────
 //
-// Thin shell for the US page (President, Senate, House). The engine lives in
-// /electionmapslogic; this page enables the `predict` feature (interactive uniform-swing
-// forecasting) and imports only that feature module — it ships none of the poll-tracker or
-// postcode code. The page's brand, parliament tabs, and landing election come from its
-// manifest (uselectionmaps/data/map-modes.json). index.html injects the shared app markup
-// (electionmapslogic/shell.html, no fragments — postcode / referendum-info / polltracker
-// are UK-only) via shell-loader before importing this bundle.
+// Thin shell for the US page (President, Senate, House). Shared engine modules handle
+// the manifest-driven maps, saved uncertainty and poll trackers. The page also enables
+// interactive uniform-swing prediction and the Senate seats-up/full-chamber switch.
+// index.html loads the shared shell and poll-tracker fragment before this bundle.
 //
 // Because only this entry imports the predict modules, esbuild bundles them into
 // uselectionmaps.min.js alone. Predict switches on per parliament via the manifest's
@@ -19,6 +16,9 @@ import {
 } from '../electionmapslogic/features/predict-controller.js';
 import { wirePredictControls } from '../electionmapslogic/features/predict-view.js';
 import { activateSenateForecastView } from '../electionmapslogic/features/senate-forecast-controller.js';
+import {
+  activatePollTrackerMode, wirePollTrackerControls,
+} from "../electionmapslogic/features/polltracker-view.js";
 
 startApp({
   predict: {
@@ -27,4 +27,5 @@ startApp({
     getBaseElection: getPredictBaseElection,
     activateElection: activateSenateForecastView,
   },
+  pollTracker: { wire: wirePollTrackerControls, activate: activatePollTrackerMode },
 });

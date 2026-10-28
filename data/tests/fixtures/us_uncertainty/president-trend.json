@@ -1,0 +1,115 @@
+{
+  "schema": "pf-us-model-trends-v1",
+  "model": "president",
+  "points": [
+    {
+      "election_id": 1,
+      "election_name": "fixture-president 2026-10-22",
+      "as_of_date": "2026-10-22",
+      "context": {
+        "model": "president",
+        "map_id": 23,
+        "as_of_date": "2026-10-22",
+        "target_cycle": 2028,
+        "matchup_id": "fixture-matchup",
+        "field_id": "fixture-field",
+        "baseline_id": "fixture-baseline",
+        "central_options_id": "fixture-options",
+        "comparability_id": "fixture-comparison-v1",
+        "roster_id": null,
+        "control_policy_id": null,
+        "electoral_allocation_id": "fixture-allocation"
+      },
+      "parties": {
+        "1": {
+          "s": 27,
+          "v": 50.8,
+          "e": 280
+        },
+        "2": {
+          "s": 29,
+          "v": 49.2,
+          "e": 258
+        }
+      },
+      "metrics": {
+        "electoral_votes": {
+          "unit": "electoral_votes",
+          "domain": "party",
+          "total": 538,
+          "central": {
+            "1": 280,
+            "2": 258
+          }
+        },
+        "national_vote_share": {
+          "unit": "percent",
+          "domain": "party",
+          "total": 100,
+          "central": {
+            "1": 50.8,
+            "2": 49.2
+          }
+        }
+      },
+      "summary": {
+        "simulations": 1000,
+        "interval": 0.9,
+        "metrics": {
+          "electoral_votes": {
+            "unit": "electoral_votes",
+            "domain": "party",
+            "total": 538,
+            "central": {
+              "1": 280,
+              "2": 258
+            },
+            "ranges": {
+              "1": [
+                200,
+                279,
+                360
+              ],
+              "2": [
+                178,
+                259,
+                338
+              ]
+            }
+          },
+          "national_vote_share": {
+            "unit": "percent",
+            "domain": "party",
+            "total": 100,
+            "central": {
+              "1": 50.8,
+              "2": 49.2
+            },
+            "ranges": {
+              "1": [
+                47.8,
+                50.7,
+                53.8
+              ],
+              "2": [
+                46.2,
+                49.3,
+                52.2
+              ]
+            }
+          }
+        },
+        "outcomes": {
+          "electoral_majority": {
+            "domain": "party",
+            "probabilities": {
+              "1": 0.58,
+              "2": 0.4
+            }
+          },
+          "no_electoral_majority": 0.02
+        }
+      }
+    }
+  ]
+}

@@ -21,6 +21,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+from polls.importers.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    make_base,
+    national_shares_from,
+    plan_poll_bases,
+    region_refs,
+    replace_poll_bases,
+)
 from polls.importers.types import PollImportResult
 
 DEFAULT_XLSX_URL = "https://3959436.fs1.hubspotusercontent-na1.net/hubfs/3959436/Marketing%20content/Focaldata_January%20VI%20tables%2c%2016-19%20Jan%202026.xlsx"
@@ -62,12 +71,23 @@ PARTY_NAME_MAP = {
 
 
 class ParsedPoll(BaseModel):
-    """Parsed poll data extracted from source."""
+    """Parsed poll data extracted from source.
+
+    ``bases`` holds the combined-VI table's "Column n" (unweighted) and
+    "Column Population" (weighted) rows for the Total and macro-region
+    columns. Older Google Sheets layouts print only an all-adult sample above
+    a different table, and give none.
+    """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_macro_percentages: dict[str, dict[str, float]]
+    bases: list[ParsedBase] = Field(default_factory=list)
+
+    def national_shares(self) -> dict[str, float]:
+        """Return canonical party name -> national share."""
+        return national_shares_from(self.party_macro_percentages, NATIONAL_KEY)
 
 
 class PlannedPollRow(BaseModel):
@@ -95,6 +115,7 @@ class ImportPlan(BaseModel):
     poll_id: int | None
     poll_exists: bool
     rows: list[PlannedPollRow]
+    bases: list[PlannedPollBase] = Field(default_factory=list)
 
 
 def _month_number(month_text: str) -> int | None:
@@ -575,6 +596,77 @@ def _find_vi_section_start(sheet: Any) -> int:
     raise ValueError("Could not find voting intention section in tables sheet")
 
 
+def _macro_columns(sheet: Any, start_row: int) -> dict[str, int]:
+    """Map each macro region to its column in the VI section's header row.
+
+    Args:
+        sheet: The tables worksheet.
+        start_row: The VI section's first row.
+
+    Returns:
+        Macro-region name -> column, empty when no region header is found.
+    """
+    region_header_row = None
+    for row in range(start_row + 1, min(sheet.max_row, start_row + 12)):
+        headers = {_cell_text(sheet.cell(row, col).value) for col in range(11, 25)}
+        if any(header in MACRO_TO_INTERNAL_REGIONS for header in headers):
+            region_header_row = row
+            break
+
+    macro_columns: dict[str, int] = {}
+    if region_header_row is not None:
+        for col in range(11, 30):
+            header = _cell_text(sheet.cell(region_header_row, col).value)
+            if header in MACRO_TO_INTERNAL_REGIONS:
+                macro_columns[header] = col
+    return macro_columns
+
+
+def _parse_bases(workbook: Any) -> list[ParsedBase]:
+    """Read the combined-VI table's "Column n" and "Column Population" rows.
+
+    The combined table (weighted by turnout, excluding "would not vote") has
+    no don't-know row, so its column n is a decided base. Only that table is
+    read: in older layouts the section found is a raw question whose shares
+    are later overwritten, and no column base sits under it.
+
+    Args:
+        workbook: An openpyxl workbook loaded in ``data_only`` mode.
+
+    Returns:
+        The national base then one per macro region, or an empty list.
+    """
+    sheet = _find_tables_sheet(workbook)
+    start_row = _find_vi_section_start(sheet)
+    header = _cell_text(sheet.cell(start_row, 1).value).lower()
+    if not ("combined voting intention" in header and "excluding" in header):
+        return []
+
+    label_rows: dict[str, int] = {}
+    for row in range(start_row + 1, min(sheet.max_row, start_row + 180) + 1):
+        label = _cell_text(sheet.cell(row, 1).value).lower()
+        if label.startswith("q") and row > start_row + 3:
+            break
+        for key in ("column n", "column population"):
+            if label.startswith(key):
+                label_rows.setdefault(key, row)
+    unweighted_row = label_rows.get("column n")
+    if unweighted_row is None:
+        return []
+    weighted_row = label_rows.get("column population")
+
+    def base(regions: tuple[str, ...], col: int) -> ParsedBase | None:
+        weighted = sheet.cell(weighted_row, col).value if weighted_row else None
+        unweighted = sheet.cell(unweighted_row, col).value
+        return make_base(regions, unweighted, weighted, "decided")
+
+    candidates = [base((), 2)] + [
+        base(tuple(MACRO_TO_INTERNAL_REGIONS[macro]), col)
+        for macro, col in _macro_columns(sheet, start_row).items()
+    ]
+    return [candidate for candidate in candidates if candidate is not None]
+
+
 def _parse_party_macro_percentages(workbook: Any) -> dict[str, dict[str, float]]:
     """Extract national and macro-region vote-share percentages for each party.
 
@@ -605,20 +697,7 @@ def _parse_party_macro_percentages(workbook: Any) -> dict[str, dict[str, float]]
     """
     sheet = _find_tables_sheet(workbook)
     start_row = _find_vi_section_start(sheet)
-
-    region_header_row = None
-    for row in range(start_row + 1, min(sheet.max_row, start_row + 12)):
-        headers = {_cell_text(sheet.cell(row, col).value) for col in range(11, 25)}
-        if any(header in MACRO_TO_INTERNAL_REGIONS for header in headers):
-            region_header_row = row
-            break
-
-    macro_columns: dict[str, int] = {}
-    if region_header_row is not None:
-        for col in range(11, 30):
-            header = _cell_text(sheet.cell(region_header_row, col).value)
-            if header in MACRO_TO_INTERNAL_REGIONS:
-                macro_columns[header] = col
+    macro_columns = _macro_columns(sheet, start_row)
 
     parsed: dict[str, dict[str, float]] = {}
     for row in range(start_row, min(sheet.max_row, start_row + 180)):
@@ -727,6 +806,7 @@ def parse_poll(
         fieldwork_start=fieldwork_start,
         fieldwork_end=fieldwork_end,
         party_macro_percentages=party_macro_percentages,
+        bases=_parse_bases(workbook),
     )
 
 
@@ -756,6 +836,33 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
                 Poll.sample_size == parsed.sample_size,
             )
         ).scalar_one_or_none()
+
+
+def fetch_parsed_poll(
+    source_url: str,
+    *,
+    year_hint: int | None = None,
+    fieldwork_label: str | None = None,
+) -> ParsedPoll:
+    """Download a Focaldata workbook (or Google Sheet) and parse it.
+
+    Args:
+        source_url: XLSX or Google Sheets URL.
+        year_hint: Fallback year when none can be inferred from the URL.
+        fieldwork_label: Fieldwork text to use when the info sheet has none.
+
+    Returns:
+        The parsed poll.
+
+    Raises:
+        ValueError: If the workbook cannot be fetched or parsed.
+    """
+    return parse_poll(
+        extract_workbook(source_url),
+        source_url=source_url,
+        year_hint=year_hint,
+        fieldwork_label=fieldwork_label,
+    )
 
 
 def build_import_plan(
@@ -800,12 +907,8 @@ def build_import_plan(
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
 
-    workbook = extract_workbook(xlsx_url)
-    parsed = parse_poll(
-        workbook,
-        source_url=xlsx_url,
-        year_hint=year_hint,
-        fieldwork_label=fieldwork_label,
+    parsed = fetch_parsed_poll(
+        xlsx_url, year_hint=year_hint, fieldwork_label=fieldwork_label
     )
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
@@ -883,6 +986,7 @@ def build_import_plan(
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,
         rows=rows,
+        bases=plan_poll_bases(parsed.bases, region_refs(regions)),
     )
 
 
@@ -985,6 +1089,7 @@ def commit_import_plan(
                     percentage=row.percentage,
                 )
             )
+        inserted_bases = replace_poll_bases(session, poll_id, plan.bases)
 
     return PollImportResult(
         created_pollster=created_pollster,
@@ -993,6 +1098,7 @@ def commit_import_plan(
         inserted_rows=len(plan.rows),
         replaced_rows=replaced_rows,
         skipped_existing_rows=False,
+        inserted_bases=inserted_bases,
     )
 
 
@@ -1095,6 +1201,7 @@ def main() -> None:
         if result.replaced_rows:
             print(f"deleted existing rows: {result.replaced_rows}")
         print(f"inserted poll rows: {result.inserted_rows}")
+        print(f"inserted bases: {result.inserted_bases}")
 
 
 if __name__ == "__main__":

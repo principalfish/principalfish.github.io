@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>{% block heading %}Westminster uncertainty{% endblock %}</h2>
+  <nav class="uncertainty-nav">
+    <a href="{{ url_for('uncertainty.uncertainty_hub') }}">Overview</a> ·
+    <a href="{{ url_for('uncertainty_runs.budget', election_id=run.election_id if run else none) }}">Error budget</a> ·
+    <a href="{{ url_for('uncertainty_runs.results', election_id=run.election_id if run else none) }}">Results</a> ·
+    <a href="{{ url_for('uncertainty_runs.history') }}">Odds history</a> ·
+    <a href="{{ url_for('uncertainty_explorer.simulations', election_id=run.election_id if run else none) }}">Explore simulations</a>
+  </nav>
+  {% if error %}<p class="alert">{{ error }}</p>{% endif %}
+  {% if run %}
+  <p>{{ run.name }} · as of {{ run.as_of }} · {{ run.stored.national.get('simulations', 'unknown') }} simulations · seed {{ run.stored.national.get('seed', 'unknown') }}</p>
+  <p><small>Config {{ run.stored.national.get('config_hash', 'not stored') }}</small></p>
+  {% if run.stored.regions is none or run.stored.seats is none %}<p>National summary only: regional and seat details were pruned or never stored. Full details are retained for the latest run.</p>{% endif %}
+  {% endif %}
+</section>
+{% block diagnostics %}{% endblock %}
+{% endblock %}

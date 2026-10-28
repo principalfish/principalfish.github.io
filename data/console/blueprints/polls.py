@@ -1,4 +1,17 @@
-"""Poll viewing: list, detail (party x region matrix), CSV export, delete."""
+"""Poll viewing: list, detail (party x region matrix), CSV export, delete.
+
+The list and detail views also show the respondent count (n) behind each
+column of shares, resolved by ``model_support.poll_bases`` (captured base,
+else sample size, else a population estimate) and labelled with its source;
+``/polls/coverage`` summarises how many polls and crossbreaks have captured
+bases, per pollster.
+
+For Westminster polls they also show sampling error, from
+``model_support.uncertainty`` with the settings loaded once per request: each
+column's kind adjustment and effective n, a margin of error beside each share
+in the detail matrix, and in the list a national margin of error for a party
+on the reference share (30%).
+"""
 
 from __future__ import annotations
 
@@ -16,19 +29,61 @@ from flask import (
 )
 from flask.typing import ResponseReturnValue
 from sqlalchemy import delete, func, select
+from sqlalchemy.orm import Session
 
-from models import Party, Poll, PollRow, Pollster, Region, Seat
+from model_support.us_poll_evidence import simple_random_sample_moe
+from model_support.poll_bases import PollNIndex, ResolvedN, poll_base_coverage
+from model_support.uncertainty import (
+    EffectiveN,
+    UncertaintyConfig,
+    effective_n,
+    load_uncertainty_config,
+    poll_moe,
+)
+from models import Map, Party, Poll, PollBase, PollRow, Pollster, Region, Seat
 
+from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
 from console.db import get_db
 
 bp = Blueprint("polls", __name__)
+
+
+def _westminster_map_id(session: Session) -> int | None:
+    """Return the Westminster map's id, or None when it does not exist."""
+    return session.scalars(
+        select(Map.id).where(Map.name == WESTMINSTER_MAP_NAME)
+    ).one_or_none()
+
+
+def _share_cell(
+    value: float | str,
+    effective: EffectiveN | None,
+    config: UncertaintyConfig | None,
+) -> dict[str, float | str | None]:
+    """Return a matrix cell: the share and its margin of error, if known.
+
+    A blank cell, an unresolved n (or no settings: not a Westminster poll) or
+    a share of 0, 100 or beyond gets no margin: at 0 or 100 the binomial
+    margin is a meaningless ±0.0.
+    """
+    moe = (
+        poll_moe(value, effective.n_eff, config)
+        if effective is not None
+        and config is not None
+        and isinstance(value, float)
+        and 0 < value < 100
+        else None
+    )
+    return {"share": value, "moe": moe}
 
 
 @bp.route("/polls", methods=["GET"])
 def poll_list() -> str:
     """GET /polls — List all polls ordered by fieldwork end date descending with row counts."""
     db = get_db()
+    config = load_uncertainty_config()
     with db.session() as session:
+        westminster_id = _westminster_map_id(session)
         polls = session.execute(
             select(Poll, Pollster)
             .join(Pollster, Poll.pollster_id == Pollster.id)
@@ -42,22 +97,56 @@ def poll_list() -> str:
                 .group_by(PollRow.poll_id)
             ).all()
         }
+        # National n needs only national bases and sample sizes: no rows.
+        national_bases = session.scalars(
+            select(PollBase).where(PollBase.region_id.is_(None))
+        ).all()
+        n_index = PollNIndex.from_records(
+            [poll for poll, _ in polls], [], national_bases, []
+        )
 
-    items = [
-        {
-            "poll_id": poll.id,
-            "pollster_name": pollster.name,
-            "pollster_identifier": pollster.identifier,
-            "fieldwork_start": poll.fieldwork_start,
-            "fieldwork_end": poll.fieldwork_end,
-            "sample_size": poll.sample_size,
-            "source_url": poll.source_url,
-            "row_count": int(row_counts.get(poll.id, 0)),
-        }
-        for poll, pollster in polls
-    ]
+    items = []
+    for poll, pollster in polls:
+        resolved = n_index.resolve(poll.id, None)
+        effective = (
+            effective_n(resolved, config) if poll.map_id == westminster_id else None
+        )
+        n, n_source = resolved.n, resolved.source
+        if poll.evidence_kind == "aggregate_estimate":
+            n, n_source = None, "not applicable"
+        elif poll.evidence_kind == "individual_poll":
+            n = poll.sample_size if poll.sample_size and poll.sample_size > 0 else None
+            n_source = "reported sample" if n is not None else "unresolved"
+        items.append(
+            {
+                "poll_id": poll.id,
+                "pollster_name": pollster.name,
+                "pollster_identifier": pollster.identifier,
+                "fieldwork_start": poll.fieldwork_start,
+                "fieldwork_end": poll.fieldwork_end,
+                "sample_size": poll.sample_size,
+                "evidence_kind": poll.evidence_kind or "unknown",
+                "population_type": poll.population_type,
+                "evidence_source": poll.evidence_source,
+                "sample_moe": (
+                    simple_random_sample_moe(poll.sample_size)
+                    if poll.evidence_kind == "individual_poll" else None
+                ),
+                "source_url": poll.source_url,
+                "row_count": int(row_counts.get(poll.id, 0)),
+                "n": n,
+                "n_source": n_source,
+                "weighted_n": resolved.weighted_n,
+                "effective": effective,
+                "moe": (
+                    poll_moe(config.p_ref * 100, effective.n_eff, config)
+                    if effective is not None
+                    else None
+                ),
+            }
+        )
 
-    return render_template("poll_list.html", polls=items)
+    return render_template("poll_list.html", polls=items, config=config)
 
 
 @bp.route("/polls/<int:poll_id>", methods=["GET"])
@@ -84,6 +173,7 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
             return redirect(url_for("polls.poll_list"))
 
         pollster = session.get(Pollster, poll.pollster_id)
+        show_error = poll.map_id == _westminster_map_id(session)
 
         # By id inside the session: ``poll.seat`` is a relationship, which
         # cannot load once the session has closed.
@@ -97,10 +187,25 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
             .where(PollRow.poll_id == poll_id)
             .order_by(Party.name.asc(), Region.name.asc())
         ).all()
+        n_index = PollNIndex.load(session, [poll_id])
 
     region_headers = sorted(
         {region.name if region is not None else "National" for _, _, region in rows}
     )
+    region_ids: dict[str, int | None] = {
+        (region.name if region is not None else "National"): row.region_id
+        for row, _, region in rows
+    }
+    n_cells: list[ResolvedN] = [
+        n_index.resolve(poll_id, region_ids[name]) for name in region_headers
+    ]
+    # Only Westminster polls read the (Westminster) settings, so a malformed
+    # settings file cannot break other parliaments' poll pages.
+    config = load_uncertainty_config() if show_error else None
+    effective_cells: list[EffectiveN | None] = [
+        effective_n(resolved, config) if config is not None else None
+        for resolved in n_cells
+    ]
     row_keys = sorted(
         {(party.name, row.candidate_name or "") for row, party, _ in rows}
     )
@@ -118,7 +223,8 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
             "party": party_name,
             "candidate": candidate_name,
             "cells": [
-                matrix[(party_name, candidate_name)][name] for name in region_headers
+                _share_cell(matrix[(party_name, candidate_name)][name], cell, config)
+                for name, cell in zip(region_headers, effective_cells, strict=True)
             ],
         }
         for party_name, candidate_name in row_keys
@@ -128,10 +234,40 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
         "poll_detail.html",
         poll=poll,
         pollster=pollster,
+        sample_moe=(
+            simple_random_sample_moe(poll.sample_size)
+            if poll.evidence_kind == "individual_poll" else None
+        ),
         seat_name=seat_name,
         show_candidates=any(candidate for _, candidate in row_keys),
         region_headers=region_headers,
         matrix_rows=matrix_rows,
+        n_cells=n_cells,
+        effective_cells=effective_cells,
+        show_error=show_error,
+        config=config,
+    )
+
+
+@bp.route("/polls/coverage", methods=["GET"])
+def poll_coverage() -> str:
+    """GET /polls/coverage — Per-pollster coverage of captured respondent bases.
+
+    Counts, for the Westminster map, each pollster's polls with a national
+    base and its reported crossbreaks (poll x region with a non-zero share)
+    with a regional base. Uncovered columns fall back to ``sample_size`` or a
+    population estimate when n is resolved.
+    """
+    db = get_db()
+    with db.session() as session:
+        westminster_id = _westminster_map_id(session)
+        coverage = (
+            poll_base_coverage(session, westminster_id)
+            if westminster_id is not None
+            else []
+        )
+    return render_template(
+        "poll_coverage.html", map_name=WESTMINSTER_MAP_NAME, coverage=coverage
     )
 
 

@@ -885,6 +885,9 @@ class Database:
         source_url: str | None = None,
         matchup: str | None = None,
         seat_id: int | None = None,
+        evidence_kind: str | None = None,
+        population_type: str | None = None,
+        evidence_source: str | None = None,
     ) -> Poll:
         """Insert a new Poll row and return it.
 
@@ -894,6 +897,9 @@ class Database:
             fieldwork_start: First date of fieldwork (inclusive).
             fieldwork_end: Last date of fieldwork (inclusive).
             sample_size: Optional number of respondents.
+            evidence_kind: Individual poll, aggregate estimate, or unknown (None).
+            population_type: Reported LV/RV/A population, if available.
+            evidence_source: Source page and section identifying the estimate.
             source_url: Optional URL of the published poll tables.
             matchup: Optional candidate-pairing label (e.g.
                 'Vance (R) vs Newsom (D)'); None for party-only polls.
@@ -916,6 +922,9 @@ class Database:
                 fieldwork_start=fieldwork_start,
                 fieldwork_end=fieldwork_end,
                 sample_size=sample_size,
+                evidence_kind=evidence_kind,
+                population_type=population_type,
+                evidence_source=evidence_source,
                 source_url=source_url,
                 matchup=matchup,
                 seat_id=seat_id,

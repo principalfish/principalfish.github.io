@@ -20,6 +20,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+from polls.importers.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    make_base,
+    national_shares_from,
+    plan_poll_bases,
+    region_refs,
+    replace_poll_bases,
+)
 from polls.importers.types import PollImportResult
 
 DEFAULT_XLSX_URL = "https://www.moreincommon.org.uk/media/dshdwjt0/voting-intention-and-trackers-10-feb.xlsx"
@@ -70,12 +79,22 @@ REGION_HEADER_TO_INTERNAL = {
 
 
 class ParsedPoll(BaseModel):
-    """Parsed poll data extracted from source."""
+    """Parsed poll data extracted from source.
+
+    ``bases`` holds the headline table's "Unweighted N" (and, in older
+    workbooks, "Weighted N") row for the All column and each region column:
+    the respondents who named a party, so the shares' own denominator.
+    """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_region_percentages: dict[str, dict[str, float]]
+    bases: list[ParsedBase] = Field(default_factory=list)
+
+    def national_shares(self) -> dict[str, float]:
+        """Return canonical party name -> national share."""
+        return national_shares_from(self.party_region_percentages, NATIONAL_KEY)
 
 
 class PlannedPollRow(BaseModel):
@@ -103,6 +122,7 @@ class ImportPlan(BaseModel):
     poll_id: int | None
     poll_exists: bool
     rows: list[PlannedPollRow]
+    bases: list[PlannedPollBase] = Field(default_factory=list)
 
 
 def normalize_name(value: str) -> str:
@@ -633,7 +653,57 @@ def parse_poll(
         fieldwork_start=fieldwork_start,
         fieldwork_end=fieldwork_end,
         party_region_percentages=party_region_percentages,
+        bases=_parse_bases(sheet, header_row, national_column, region_columns),
     )
+
+
+def _parse_bases(
+    sheet: Any,
+    header_row: int,
+    national_column: int,
+    region_columns: dict[int, str],
+) -> list[ParsedBase]:
+    """Read the headline table's column bases.
+
+    The table ends in an "Unweighted N" row and, in older workbooks, a
+    "Weighted N" row, each holding one count per column. The headline shares
+    exclude don't-knows (they sum to 100), so these are decided bases. A
+    region printed in two columns takes the later one, as its shares do.
+    Only the run of n rows that ends the share rows is read (the share scan
+    stops at the first of them), so a later table's n rows are never used.
+
+    Args:
+        sheet: The headline worksheet.
+        header_row: Its column-header row.
+        national_column: The "All" column.
+        region_columns: Column -> internal region name.
+
+    Returns:
+        The national base then one per region, or an empty list when the
+        table has no "Unweighted N" row.
+    """
+    label_rows: dict[str, int] = {}
+    for row in range(header_row + 1, header_row + 80):
+        label = normalize_name(_cell_text(sheet.cell(row, 1).value))
+        if label in {"unweighted n", "weighted n"}:
+            label_rows.setdefault(label, row)
+        elif label_rows:
+            break
+    unweighted_row = label_rows.get("unweighted n")
+    if unweighted_row is None:
+        return []
+    weighted_row = label_rows.get("weighted n")
+
+    def base(regions: tuple[str, ...], col: int) -> ParsedBase | None:
+        weighted = sheet.cell(weighted_row, col).value if weighted_row else None
+        unweighted = sheet.cell(unweighted_row, col).value
+        return make_base(regions, unweighted, weighted, "decided")
+
+    columns_by_region = {region: col for col, region in region_columns.items()}
+    candidates = [base((), national_column)] + [
+        base((region,), col) for region, col in columns_by_region.items()
+    ]
+    return [candidate for candidate in candidates if candidate is not None]
 
 
 def _find_existing_poll(
@@ -666,6 +736,27 @@ def _find_existing_poll(
                 Poll.sample_size == parsed.sample_size,
             )
         ).scalar_one_or_none()
+
+
+def fetch_parsed_poll(source_url: str, *, year_hint: int | None = None) -> ParsedPoll:
+    """Download a More in Common workbook and parse it.
+
+    Args:
+        source_url: URL of the XLSX file.
+        year_hint: Year for fieldwork strings without one, overriding the year
+            inferred from the URL. Optional.
+
+    Returns:
+        The parsed poll.
+
+    Raises:
+        ValueError: If the workbook cannot be parsed (see :func:`parse_poll`).
+    """
+    return parse_poll(
+        extract_workbook(source_url),
+        source_url=source_url,
+        fieldwork_year_hint=year_hint,
+    )
 
 
 def build_import_plan(
@@ -719,12 +810,7 @@ def build_import_plan(
         for region_name in sorted(region_ids_by_name.keys())
     )
 
-    workbook = extract_workbook(xlsx_url)
-    parsed = parse_poll(
-        workbook,
-        source_url=xlsx_url,
-        fieldwork_year_hint=fieldwork_year_hint,
-    )
+    parsed = fetch_parsed_poll(xlsx_url, year_hint=fieldwork_year_hint)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -788,6 +874,7 @@ def build_import_plan(
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,
         rows=rows,
+        bases=plan_poll_bases(parsed.bases, region_refs(regions)),
     )
 
 
@@ -891,6 +978,7 @@ def commit_import_plan(
                     percentage=row.percentage,
                 )
             )
+        inserted_bases = replace_poll_bases(session, poll_id, plan.bases)
 
     return PollImportResult(
         created_pollster=created_pollster,
@@ -899,6 +987,7 @@ def commit_import_plan(
         inserted_rows=len(plan.rows),
         replaced_rows=replaced_rows,
         skipped_existing_rows=False,
+        inserted_bases=inserted_bases,
     )
 
 
@@ -1000,6 +1089,7 @@ def main() -> None:
         if result.replaced_rows:
             print(f"deleted existing rows: {result.replaced_rows}")
         print(f"inserted poll rows: {result.inserted_rows}")
+        print(f"inserted bases: {result.inserted_bases}")
 
 
 if __name__ == "__main__":

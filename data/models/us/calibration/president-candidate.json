@@ -1,0 +1,13 @@
+{
+  "schema": "pf-us-president-calibration-candidate-v1",
+  "model": "us-president",
+  "accepted": false,
+  "kernel_version": "us-source-graph-v1",
+  "assumption_label": "National total-error proxy policy proposed; numerical calibration remains unaccepted",
+  "national_error_policy": "total-national-average-error-proxy-without-extra-national-srs",
+  "national_sampling": false,
+  "release_blockers": [
+    "National proxy transfer needs sensitivity and engine recovery",
+    "State/local/district error decomposition remains unaccepted; House coefficients are not transferred"
+  ]
+}

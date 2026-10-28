@@ -13,6 +13,7 @@ import pytest
 from config import DatabaseConfig
 from db import Database, MatchupSummary
 from scripts.migrate_add_us_poll_scope import STEPS, migrate, open_database
+from scripts.migrate_add_us_poll_evidence import migrate as migrate_evidence
 
 MATCHUP = "Paxton (R) vs Talarico (D)"
 
@@ -287,6 +288,7 @@ class TestMigrate:
         This is the only test where they meet TEXT date columns rather than
         SQLAlchemy's own DATE, so it checks the dates come back as ``date``.
         """
+        migrate_evidence(migrated_conn, dry_run=False)
         migrated_conn.close()
         config = DatabaseConfig.model_construct(database_path=str(legacy_path))
         database = Database(config)
@@ -361,7 +363,16 @@ class TestSchemaParity:
         orm_conn: sqlite3.Connection,
         table: str,
     ) -> None:
-        assert list(_columns(migrated_conn, table)) == list(_columns(orm_conn, table))
+        # Later nullable evidence columns are appended by ALTER TABLE, whereas
+        # a fresh ORM schema groups them beside the other polling metadata.
+        migrate_evidence(migrated_conn, dry_run=False)
+        migrated = _columns(migrated_conn, table)
+        fresh = _columns(orm_conn, table)
+        assert migrated.keys() == fresh.keys()
+        evidence_columns = {"evidence_kind", "population_type", "evidence_source"}
+        assert [name for name in migrated if name not in evidence_columns] == [
+            name for name in fresh if name not in evidence_columns
+        ]
 
     @pytest.mark.parametrize(("table", "column"), ADDED_COLUMNS)
     def test_added_column_definitions(

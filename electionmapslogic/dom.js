@@ -7,6 +7,13 @@ import {
 import { manifest, state, page, seatComparisonHidden, Seat } from './state.js';
 import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR, buildStateTrendSeries } from './utils.js';
 import { fetchJson } from './files.js';
+import {
+  activeUncertainty, uncertaintyForTotals, uncertaintyNumber,
+  uncertaintyRange, seatUncertaintyText,
+} from "./uncertainty.js";
+import {
+  renderUncertaintyHeader, renderUncertaintyToggle, wireUncertaintyToggle,
+} from "./uncertainty-view.js";
 
 // ─── Page title ───────────────────────────────────────────────────────────────
 
@@ -100,6 +107,8 @@ function renderSubtitleText(text = '', error = false) {
   mainSpan.className = 'maps-subtitle-main';
   mainSpan.textContent = String(baseText || '').trim();
   subtitle.appendChild(mainSpan);
+
+  renderUncertaintyHeader(subtitle, error ? null : activeUncertainty(state), (party) => manifest.labelParty(party));
 
   const latestPollSnippet = includeSnippet ? state.predictionSnippet : '';
   subtitle.classList.toggle('maps-subtitle-has-latest', Boolean(latestPollSnippet));
@@ -559,6 +568,7 @@ const voteTotalsTabNav = document.getElementById('mapsVoteTotalsTabNav');
 const voteTotalsBody = document.getElementById('mapsVoteTotalsBody');
 const voteTotalsTable = document.getElementById('mapsVoteTotalsTable');
 const voteTotalsToggle = document.getElementById('mapsVoteTotalsToggle');
+const uncertaintyToggle = document.getElementById("mapsUncertaintyToggle");
 const voteTotalsCollapse = document.getElementById('mapsVoteTotalsCollapse');
 
 /**
@@ -602,7 +612,7 @@ function sortPartyRows(rows) {
  * @param {{parties: Array<object>, totalVotes: number}|null} [comparisonSummary] - Comparison for delta columns; defaults to state.filteredSeatsComparisonSummary.
  * @returns {void}
  */
-function renderVoteTotals(
+export function renderVoteTotals(
   summary = state.filteredSeatsSummary,
   comparisonSummary = state.filteredSeatsComparisonSummary
 ) {
@@ -616,6 +626,17 @@ function renderVoteTotals(
   if (seatsHeader) seatsHeader.textContent = state.mapConfig?.tally === 'electoralVotes' ? 'EV' : 'Seats';
   voteTotalsTable.classList.toggle('hide-vote-total-col', !state.voteTotalsColumnVisible('votes'));
   voteTotalsTable.classList.toggle('hide-vote-pct-col', !state.voteTotalsColumnVisible('votePct'));
+  const uncertainty = uncertaintyForTotals(state);
+  const uncertaintySummary = activeUncertainty(state);
+  const showUncertainty = renderUncertaintyToggle(uncertaintyToggle, state);
+  voteTotalsTable.classList.toggle("hide-uncertainty-cols", !showUncertainty);
+  voteTotalsTable.querySelectorAll("[data-uncertainty-label]").forEach((element) => {
+    element.textContent = showUncertainty
+      ? `${uncertaintyNumber(uncertaintySummary.interval * 100)}% ${element.dataset.uncertaintyLabel}` : "";
+  });
+  const descriptions = ["mapsSenateForecastComparison"];
+  if (uncertaintySummary?.basis) descriptions.push("mapsUncertaintyBasis");
+  voteTotalsTable.setAttribute("aria-describedby", descriptions.join(" "));
 
   const hiddenParties = new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []);
   const showComparison = Boolean(comparisonSummary);
@@ -655,12 +676,15 @@ function renderVoteTotals(
 
   visibleRows.forEach((partyRow) => {
     const tr = document.createElement('tr');
+    const band = showUncertainty ? uncertainty.parties[partyRow.party] : null;
     tr.innerHTML = `
       <td><span class="maps-party-cell"><span class="maps-party-swatch" style="background:${manifest.colourParty(partyRow.party)}"></span>${escapeHtml(manifest.labelParty(partyRow.party))}</span></td>
       <td>${formatInt(partyRow.seats)}</td>
       <td class="comparison-col ${showComparison ? deltaClass(partyRow.seatsDelta) : ''}">${showComparison ? formatSigned(partyRow.seatsDelta, 0) : ''}</td>
+      <td class="uncertainty-col">${uncertaintyRange(band?.s)}</td>
       <td class="vote-total-col">${formatInt(partyRow.votes)}</td>
       <td class="vote-pct-col">${formatPct(partyRow.votePct)}</td>
+      <td class="uncertainty-col vote-pct-col">${uncertaintyRange(band?.v, "%")}</td>
       <td class="comparison-col vote-pct-comparison-col ${showComparison ? deltaClass(partyRow.votePctDelta) : ''}">${showComparison ? formatSigned(partyRow.votePctDelta, 2) : ''}</td>
     `;
     voteTotalsBody.appendChild(tr);
@@ -1388,7 +1412,7 @@ function renderSeatPopup(seatName) {
     const rows = seat.members.map((member) => ({
       party: member.party,
       pct: 100,
-      label: member.name,
+      label: member.forecastStatus === "holdover" ? `${member.name} (holdover; fixed)` : member.name,
       years: Seat.memberTermYears(member),
     }));
     // The bar is just a colour accent here, so cap it short to clear the wide "last/up" value.
@@ -1439,7 +1463,15 @@ function renderSeatPopup(seatName) {
   // the party had no comparison data point, which suppresses the delta span entirely.
   renderPopupRows(rows, (row) => {
     const deltaHtml = row.delta == null ? '' : `<span class="${deltaClass(row.delta)}">${formatSigned(row.delta, 2)}</span>`;
-    return `<span>${formatPct(row.pct)}%</span>${deltaHtml}`;
+    const usUncertainty = manifest.parliamentConfig(state.currentParliament).uncertaintyModel;
+    const showBand = !usUncertainty || (
+      state.electionData?.uncertainty && state.voteTotals.showUncertainty
+    );
+    const band = state.view === "election" && state.currentElection.model && showBand
+      ? seat.u[row.party] : null;
+    const bandHtml = band
+      ? `<span class="maps-popup-uncertainty">${seatUncertaintyText(band)}</span>` : "";
+    return `<span>${formatPct(row.pct)}%</span>${deltaHtml}${bandHtml}`;
   });
 
   seatPopup.hidden = false;
@@ -2114,6 +2146,7 @@ export function wireInit() {
   wireMapViewControls();
   wireSeatSearch();
   wireVoteTotalsToggle();
+  wireUncertaintyToggle(uncertaintyToggle, state, renderVoteTotals);
   wireVoteTotalsCollapse();
   wireVoteTotalsSorting();
   wireWindowResize();

@@ -1,0 +1,8 @@
+{
+  "schema": "pf-us-senate-calibration-candidate-v1",
+  "model": "us-senate",
+  "accepted": false,
+  "kernel_version": "us-source-graph-v1",
+  "assumption_label": "No Senate numerical calibration has been proposed or accepted",
+  "release_blockers": ["Senate calibration remains pending; House coefficients are not transferred"]
+}

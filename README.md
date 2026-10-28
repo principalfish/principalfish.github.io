@@ -707,7 +707,7 @@ President. Their electoral allocation remains specific to each contest.
   fallback remains. Polls missing a material candidate are rejected using
   reference polls from the selected window. Senate national swing still uses
   House generic-ballot polling; its contested field and special-election
-  baselines remain restricted by the manifest. Presidential districts inherit
+  baselines resolve from versioned, dated configuration. Presidential districts inherit
   their parent state's blended swing where applicable.
 - **Date caps:** ordinary database-poll runs use the freshest contributing poll
   endpoint. Each candidate endpoint is checked in its own window of the
@@ -965,6 +965,17 @@ Dry-run:
 ./election_data/bin/python scripts/export_elections.py --dry-run
 ```
 
+Scratch export (writes every page under `DIR/<page>/data`, seeding each from the
+repository's page data directory on first use; the repository is not touched):
+
+```bash
+./election_data/bin/python scripts/export_elections.py --output-base /tmp/export-check
+```
+
+`--output-base` works with every mode. `--output-root DIR` applies only to
+`--current-simulation` (the UK page directory to write under) and is refused for the
+other modes.
+
 ### Targeted exports
 
 ```bash
@@ -998,12 +1009,20 @@ Edit each page's `map-modes-shell.json` for hand-authored configuration and
 regenerate its manifest. See the [full manifest reference](electionmaps/data/map-modes.md)
 for supported fields, selection rules, and shell transformations.
 
+Saved Senate forecasts supply their pinned target year, baselines, specials and
+roster reference during export. Those forecast fields override the shell so a
+later shell edit cannot reinterpret an existing forecast.
+
 ### Results schema
 
 - Exported result payloads use compact schema `pf-results-v4`:
 	- top-level: `{"schema":"pf-results-v4","seats":[...]}`
 	- seat keys: `n` (seat name), `r` (region), `w` (winner), `e` (electorate), `m` (majority), `t` (turnout), `p` (party rows)
 	- party row: `[partyKey, total, name]`
+	- model run only, optional: `u` (per-party share range and win probability, aligned to `p`)
+- The current Westminster model run also writes `results/prediction-uncertainty.json`
+  (`pf-uncertainty-v1`: national and regional ranges, odds and seat histograms) when it
+  has full detail; see the [manifest reference](electionmaps/data/map-modes.md).
 - Frontend loader supports both compact and legacy result formats.
 
 ### Topo output behavior
@@ -1094,7 +1113,55 @@ Both matchup pages have an optional "rebuild history" checkbox for their own
 chamber, and **Run US Models** on the home page has one for all three (see
 `--rebuild-history`).
 
+### Offline uncertainty calibration comparisons
+
+The Senate and President comparison reports use committed, hash-pinned evidence
+under `data/models/us/calibration/`. They remain **unaccepted** and do not nominate
+runtime coefficients or enable odds. Their official-outcome-conditioned references
+measure combined fallback error and alternative state/race allocations; they do not
+validate historical chamber control, presidential district outcomes, or early
+held-today forecasts. Local polling averages remain separate total-error proxies,
+without invented sample sizes or blend weights.
+
+The Senate baseline-only panel has an observed-minus-projected D−R mean of about
++12.5 points in both 2022 and 2024, even with official House national inputs.
+The selected Senate field and national House generic ballot need a compatible
+baseline anchor. Operational Senate calibration awaits that separate central-model
+correction and a rerun of these comparisons; the current central model is unchanged.
+
+From `data/`, reproduce the JSON and Markdown reports without database access:
+
+```bash
+./election_data/bin/python scripts/calibrate_us_uncertainty.py --model senate --output-dir models/us/calibration
+./election_data/bin/python scripts/calibrate_us_uncertainty.py --model president --output-dir models/us/calibration
+```
+
+Omit `--output-dir` to print the review document without writing files. The default
+model remains House. The read-only console views are
+`/us/senate/uncertainty/calibration` and `/us/president/uncertainty/calibration`.
+Each report records source normalization, raw/decided denominator alternatives,
+exact central parity, independent kernel recovery, whole-election conditional
+holdouts, and the assumptions still requiring a decision before release.
+
+### 2026 validation preregistration
+
+The [2026 validation preregistration](data/models/us/validation-2026.md) defines
+offline House/Senate capture and scoring. The read-only console views at
+`/us/house/uncertainty/validation` and `/us/senate/uncertainty/validation` show fixed
+definitions and missing-input requirements; certified 2026 scoring and evaluation
+basis review remain pending. `scripts/validate_us_uncertainty.py` requires explicit
+database, snapshot, official-source manifest and new local output paths for the
+respective commands. It never imports results, reconstructs simulations or changes
+releases. Scoring requires an explicitly reviewed policy frozen with the snapshot.
+
 ### Model runs
+
+For gated uncertainty rollout, scratch isolation, timing, retained snapshots and
+separately approved live steps, see the
+[US uncertainty operations runbook](data/models/us/uncertainty-operations.md).
+All three releases remain disabled pending model-specific prerequisites; ordinary
+runs retain central-only behavior, while an explicit `--simulations` request
+requires an accepted release.
 
 **Run US Models** (home page) runs House → President → Senate → export. Its
 **Rebuild all US history** box appends `--rebuild-history` to all three runners
@@ -1126,7 +1193,7 @@ Each runner also takes `--dry-run`, `--as-of-date`, `--half-life-days`, and
 - **As-of cap** — the run date is capped at the latest fieldwork end of the polls
   the run uses, which now **includes seat polls**: a race poll newer than the last
   generic-ballot update moves the cap forward. With `--ignore-seat-polls` only the
-  national polls count.
+  national polls count. A Senate cap cannot silently cross into another cycle.
 - Each polled seat prints a `SEAT_POLL <seat> n= W= α= matchup=` line.
 
 `--rebuild-history` first recomputes every date already stored in SQLite
@@ -1142,30 +1209,34 @@ replaced by the poll window `[first poll, as-of]`. Points outside the new scope
 are dropped only after all required replacement dates succeed. A partial failure
 retains those points and reports failure, so the console does not export the run.
 
-### Senate specials (Ohio, Florida)
+### Senate cycles and specials
 
-Specials are listed in `uselectionmaps/data/map-modes-shell.json`, map mode `"23"`,
-under `senateSpecialElections`:
+The model resolves its field from the run's as-of date using
+[`cycles-v1.json`](data/models/us/senate_cycles/cycles-v1.json):
 
-```json
-{ "seat": "Ohio", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate" }
-```
+- Every 2026 date uses 33 Class-2 races with 2020 baselines, plus the Florida and
+  Ohio Class-3 specials with 2022 baselines.
+- From 1 January 2027 through 2028, the target is the 34 Class-3 races of 2028,
+  using 2022 baselines. Full-chamber context awaits a verified post-2026 roster.
+- Other periods need an explicit configuration before the model can run.
 
-Entries whose `year` matches `parliamentFeatures.us_senate.nextElectionYear` join
-the Senate model (35 seats instead of the 33 class-2 seats), using that baseline
-election's votes for that seat only. The export copies the key into
-`map-modes.json` (dropping past years), and the Senate Predict "Full Senate"
-replaces that state's class-3 member. Edit the shell and re-export when the cycle
-changes. A state with both a regular and a special race in one cycle cannot be
-represented; the queue reports it as a page failure.
+Each saved run retains its field, roster and control policy atomically with its
+vote rows. Export uses that saved context and writes a separate pinned forecast
+roster; `senate-current.json` continues to represent actual membership. Update
+the versioned model configuration when adding a cycle or changing its inputs.
+Editing the shell alone does not change the model. A state with both a regular
+and a special race in one cycle cannot be represented by the current map.
 
 The saved Senate forecast's **Seats up** view compares each seat with its previous
 election: for 2026, the regular seats use 2020 results and Ohio and Florida use
 their declared 2022 baselines. These combined results drive seat and vote-share
 changes, gains and seat popups. If a required baseline is unavailable, the forecast
 still displays but its comparison is hidden and labelled "Comparison unavailable".
-**Full Senate** compares the projected chamber with current Senate membership;
+**Full Senate** compares the projected chamber with its pinned Senate membership;
 returning to **Seats up** restores the per-seat election comparison.
+Without a verified roster, only **Seats up** is offered. See
+[`senate-cycles.md`](data/models/us/senate-cycles.md) for configuration,
+persistence and future chamber-activation details.
 
 ### CLI importers
 

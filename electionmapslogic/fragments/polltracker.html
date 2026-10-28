@@ -9,14 +9,31 @@
     </div>
 
     <div class="maps-polltracker-controls">
-      <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricSeats" type="checkbox" checked /> Seats</label>
-      <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricVotes" type="checkbox" checked /> Vote %</label>
+      <div id="mapsPollTrackerViewControls" class="maps-polltracker-switch" role="radiogroup" aria-label="Poll tracker view" hidden>
+        <label class="maps-polltracker-toggle"><input type="radio" name="mapsPollTrackerView" data-polltracker-view="totals" checked> Seats &amp; votes</label>
+        <label class="maps-polltracker-toggle"><input type="radio" name="mapsPollTrackerView" data-polltracker-view="chances"> Chances</label>
+      </div>
       <div class="maps-polltracker-range-group" aria-label="Poll tracker date range">
         <button type="button" class="maps-apply-btn maps-polltracker-range-btn is-active" data-polltracker-range="all">All</button>
         <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="30">Last 30</button>
         <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="90">Last 90</button>
       </div>
+      <!-- Mode-specific controls sit on their own row below the view switch and date range. -->
+      <div class="maps-polltracker-secondary">
+        <div id="mapsPollTrackerMetrics" class="maps-polltracker-switch">
+          <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricSeats" type="checkbox" checked> Seats</label>
+          <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricVotes" type="checkbox"> Vote %</label>
+          <label id="mapsPollTrackerUncertaintyToggle" class="maps-polltracker-toggle" hidden><input id="mapsPollTrackerShowUncertainty" type="checkbox" checked> Uncertainty</label>
+        </div>
+        <div id="mapsPollTrackerChanceControls" class="maps-polltracker-switch" role="radiogroup" aria-label="Chance measure" hidden>
+          <label class="maps-polltracker-toggle"><input type="radio" name="mapsPollTrackerChance" data-polltracker-chance="pMaj" checked> Majority</label>
+          <label class="maps-polltracker-toggle"><input type="radio" name="mapsPollTrackerChance" data-polltracker-chance="pLargest"> Largest party</label>
+        </div>
+      </div>
     </div>
+
+    <p id="mapsPollTrackerContext" class="maps-control-note" hidden></p>
+    <p id="mapsPollTrackerUncertaintyNote" class="maps-control-note maps-polltracker-status" hidden></p>
 
     <div id="mapsPollTrackerPartyControls" class="maps-polltracker-party-controls" aria-label="Poll tracker party toggles"></div>
 

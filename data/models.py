@@ -1,6 +1,6 @@
 import enum
 from datetime import date
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -13,9 +13,11 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    event,
     text,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.engine import Connection
+from sqlalchemy.orm import DeclarativeBase, Mapped, Mapper, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -257,6 +259,7 @@ class Election(Base):
         map: The owning ``Map`` instance.
         parent_election: Optional parent ``Election`` instance.
         votes: All ``Vote`` records belonging to this election.
+        uncertainty: The run's ``ModelUncertainty`` summary, if one is stored.
     """
 
     __tablename__ = "elections"
@@ -273,6 +276,16 @@ class Election(Base):
     map: Mapped["Map"] = relationship("Map", back_populates="elections")
     parent_election: Mapped[Optional["Election"]] = relationship("Election", remote_side="Election.id")
     votes: Mapped[list["Vote"]] = relationship("Vote", back_populates="election", cascade="all, delete-orphan")
+    # passive_deletes: deleting an election must not SELECT this table, which
+    # a database migrated before migrate_add_model_uncertainty.py lacks; the
+    # foreign key's ON DELETE CASCADE removes the row where it exists.
+    uncertainty: Mapped[Optional["ModelUncertainty"]] = relationship(
+        "ModelUncertainty",
+        back_populates="election",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     def __repr__(self) -> str:
         """Return a debug string representation of the Election."""
@@ -321,6 +334,58 @@ class Vote(Base):
         return (
             f"<Vote {self.candidate_name or '(no candidate)'} "
             f"party={self.party_id} votes={self.vote_total}>"
+        )
+
+
+class ModelUncertainty(Base):
+    """ORM model for the ``model_uncertainty`` table.
+
+    The Monte Carlo summary of one model run, keyed by that run's election.
+    Each block is compact JSON (sorted keys, no whitespace), so the same
+    summary always stores the same text. ``schema`` names the blocks' format
+    (``model_support.persistence.UNCERTAINTY_SCHEMA``), so a reader can tell a
+    row written in an older format from the current one.
+
+    The national block is kept for every run. The region and seat blocks are
+    kept only on the latest-dated run of a scope (model type, map and name
+    prefix): every ``model_support.persistence.replace_output`` sets every
+    other run's to NULL, whatever order the runs were saved in.
+
+    Rows are deleted with their election (ORM cascade, and ``ON DELETE
+    CASCADE`` for raw SQL with foreign keys enforced; the persistence module's
+    raw ``sqlite3`` writers do not enforce them and delete the rows
+    explicitly).
+
+    Attributes:
+        election_id: Primary key and foreign key to the model run's
+            ``Election``.
+        schema: Format of the JSON blocks, e.g. "pf-model-uncertainty-v1".
+        national_json: National outcomes, intervals and error-budget inputs.
+        regions_json: Per-region outcomes and error budget; NULL once pruned.
+        seats_json: Per-seat win probabilities and share intervals; NULL once
+            pruned.
+        election: The owning ``Election`` instance.
+    """
+
+    __tablename__ = "model_uncertainty"
+
+    election_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("elections.id", ondelete="CASCADE"), primary_key=True
+    )
+    schema: Mapped[str] = mapped_column(Text, nullable=False)
+    national_json: Mapped[str] = mapped_column(Text, nullable=False)
+    regions_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    seats_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    election: Mapped["Election"] = relationship(
+        "Election", back_populates="uncertainty"
+    )
+
+    def __repr__(self) -> str:
+        """Return a debug string representation of the ModelUncertainty."""
+        return (
+            f"<ModelUncertainty election={self.election_id} schema={self.schema} "
+            f"detail={self.regions_json is not None or self.seats_json is not None}>"
         )
 
 
@@ -386,6 +451,9 @@ class Poll(Base):
         map_id: Foreign key to the ``Map`` this poll applies to.
         fieldwork_start: Start date of the fieldwork period.
         fieldwork_end: End date of the fieldwork period.
+        evidence_kind: Individual poll, aggregate estimate, or legacy unknown.
+        population_type: Reported LV/RV/A population (nullable).
+        evidence_source: Source page and section, separate from the poll URL.
         sample_size: Optional number of respondents.
         source_url: Optional URL to the published poll source.
         matchup: Optional label of the candidate pairing polled (e.g.
@@ -396,6 +464,8 @@ class Poll(Base):
         map: The associated ``Map`` instance.
         seat: The ``Seat`` this poll covers, if any.
         rows: All ``PollRow`` records belonging to this poll.
+        bases: The ``PollBase`` respondent counts its tables printed, if
+            captured.
     """
 
     __tablename__ = "polls"
@@ -411,6 +481,9 @@ class Poll(Base):
     fieldwork_end: Mapped[date] = mapped_column(Date, nullable=False)
     sample_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     source_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    evidence_kind: Mapped[str | None] = mapped_column(String, nullable=True)
+    population_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    evidence_source: Mapped[str | None] = mapped_column(String, nullable=True)
     matchup: Mapped[str | None] = mapped_column(String, nullable=True)
     seat_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("seats.id"), nullable=True)  # null = national
 
@@ -418,10 +491,40 @@ class Poll(Base):
     map: Mapped["Map"] = relationship("Map")
     seat: Mapped["Seat | None"] = relationship("Seat")
     rows: Mapped[list["PollRow"]] = relationship("PollRow", back_populates="poll", cascade="all, delete-orphan")
+    bases: Mapped[list["PollBase"]] = relationship(
+        "PollBase", back_populates="poll", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         """Return a debug string representation of the Poll."""
         return f"<Poll {self.pollster_id} {self.fieldwork_start}–{self.fieldwork_end}>"
+
+
+@event.listens_for(Poll, "before_insert")
+@event.listens_for(Poll, "before_update")
+def _reject_inverted_fieldwork(
+    _mapper: Mapper[Any], _connection: Connection, target: Poll
+) -> None:
+    """Refuse to flush a poll whose fieldwork starts after it ends.
+
+    Covers every ORM write path (importers, the console, ``db.py``). Core
+    ``update()``/``insert()`` statements and raw ``sqlite3`` bypass mapper
+    events, so they are not covered.
+
+    Args:
+        _mapper: The ``Poll`` mapper (unused).
+        _connection: The flush's connection (unused).
+        target: The poll being inserted or updated.
+
+    Raises:
+        ValueError: If ``fieldwork_start`` is after ``fieldwork_end``.
+    """
+    start, end = target.fieldwork_start, target.fieldwork_end
+    if start is not None and end is not None and start > end:
+        raise ValueError(
+            f"Poll fieldwork_start {start} is after fieldwork_end {end}"
+            f" (pollster_id={target.pollster_id})"
+        )
 
 
 class PollRow(Base):
@@ -462,6 +565,106 @@ class PollRow(Base):
     def __repr__(self) -> str:
         """Return a debug string representation of the PollRow."""
         return f"<PollRow party={self.party_id} pct={self.percentage}>"
+
+
+# What a PollBase counts; mirrors the poll_bases.kind CHECK constraint.
+#   decided       — respondents who named a party: don't-knows, refusals and
+#                   won't-votes removed, so the base is the shares' denominator.
+#   likely_voters — a turnout-filtered base that still includes undecided or
+#                   refusing respondents, so it overstates the shares' n a little.
+#   all_adults    — everyone interviewed in the column, before any turnout or
+#                   don't-know filter.
+PollBaseKind = Literal["decided", "likely_voters", "all_adults"]
+POLL_BASE_KINDS: tuple[PollBaseKind, ...] = ("decided", "likely_voters", "all_adults")
+
+
+class PollBase(Base):
+    """ORM model for the ``poll_bases`` table.
+
+    The number of respondents behind one column of a poll's voting-intention
+    table, as the pollster printed it: national (``region_id`` NULL) or one
+    region. At most one row exists per ``(poll_id, region_id)``, enforced by a
+    unique index over ``IFNULL(region_id, 0)`` because a plain UNIQUE
+    constraint treats every NULL ``region_id`` as distinct.
+
+    A source column that covers several internal regions (YouGov's "North",
+    say) is apportioned across them in proportion to ``regions.population``,
+    keeping whole numbers that sum to the printed base; those rows carry
+    ``split_from_macro`` so a reader knows the per-region n is an estimate of
+    that region's share of the column.
+
+    A pollster that prints only a weighted count of the respondents behind
+    its shares (Find Out Now's "Filtered N") is stored weighted-only:
+    ``unweighted_n`` NULL, ``weighted_n`` set. At least one is always present.
+
+    Rows are deleted with their poll (ORM cascade, and ``ON DELETE CASCADE``
+    for raw SQL with foreign keys enforced).
+
+    Attributes:
+        id: Auto-incrementing primary key.
+        poll_id: Foreign key to the owning ``Poll``.
+        region_id: Optional foreign key to the ``Region`` the column covers.
+            ``None`` means the national ("Total"/"All") column.
+        unweighted_n: Respondents actually interviewed in the column; > 0, or
+            None when the pollster prints only a weighted base.
+        weighted_n: The column's weighted base, when printed; > 0 or None.
+        kind: What the base counts. See ``PollBaseKind``.
+        split_from_macro: True when the counts were apportioned from a wider
+            source column by population rather than printed for the region.
+        poll: The owning ``Poll`` instance.
+        region: The ``Region`` this base covers, if any.
+    """
+
+    __tablename__ = "poll_bases"
+    __table_args__ = (
+        CheckConstraint(
+            "unweighted_n IS NULL OR unweighted_n > 0",
+            name="ck_poll_bases_unweighted_n",
+        ),
+        CheckConstraint(
+            "unweighted_n IS NOT NULL OR weighted_n IS NOT NULL",
+            name="ck_poll_bases_has_n",
+        ),
+        CheckConstraint(
+            "weighted_n IS NULL OR weighted_n > 0", name="ck_poll_bases_weighted_n"
+        ),
+        CheckConstraint(
+            "kind IN ('decided', 'likely_voters', 'all_adults')",
+            name="ck_poll_bases_kind",
+        ),
+        # One base per poll column; IFNULL folds the national column (NULL
+        # region) onto 0, which no autoincrement region id can take.
+        Index(
+            "ux_poll_bases_scope",
+            "poll_id",
+            text("IFNULL(region_id, 0)"),
+            unique=True,
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    poll_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("polls.id", ondelete="CASCADE"), nullable=False
+    )
+    region_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("regions.id"), nullable=True
+    )  # null = national
+    unweighted_n: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weighted_n: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    kind: Mapped[PollBaseKind] = mapped_column(String, nullable=False)
+    split_from_macro: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0")
+    )
+
+    poll: Mapped["Poll"] = relationship("Poll", back_populates="bases")
+    region: Mapped[Optional["Region"]] = relationship("Region")
+
+    def __repr__(self) -> str:
+        """Return a debug string representation of the PollBase."""
+        return (
+            f"<PollBase poll={self.poll_id} region={self.region_id} "
+            f"n={self.unweighted_n} kind={self.kind}>"
+        )
 
 
 # Who set a TrackedMatchup; mirrors the tracked_matchups.source CHECK constraint.

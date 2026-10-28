@@ -1,0 +1,15 @@
+{
+  "schema": "pf-us-president-release-v1",
+  "enabled": false,
+  "allocation_validated": false,
+  "target_cycle": 2028,
+  "map_name": "US Presidential 2024",
+  "baseline_name": "2024 US Presidential Election",
+  "comparability_id": "president-held-today-v1",
+  "calibration_file": "calibration/president-candidate.json",
+  "blockers": [
+    "Accept President-specific national proxy and state/local/district calibration assumptions",
+    "Validate target-cycle allocation and baseline provenance",
+    "Repair actual contributing poll metadata and sample sizes before uncertainty runs"
+  ]
+}

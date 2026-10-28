@@ -20,6 +20,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+from polls.importers.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    make_weighted_base,
+    national_shares_from,
+    plan_poll_bases,
+    region_refs,
+    replace_poll_bases,
+)
 from polls.importers.types import PollImportResult
 
 DEFAULT_XLSX_URL = "https://cms.findoutnow.co.uk/app/uploads/2026/02/11th-February-VI-Find-Out-Now.xlsx"
@@ -57,6 +66,7 @@ REGION_HEADER_TO_INTERNAL = {
 
 NATIONAL_KEY = "__national__"
 
+
 class ParsedPoll(BaseModel):
     """Parsed poll data extracted from source.
 
@@ -71,12 +81,22 @@ class ParsedPoll(BaseModel):
             name (as defined in ``REGION_HEADER_TO_INTERNAL``) plus a special
             ``NATIONAL_KEY`` (``"__national__"``) entry for the national
             all-regions figure.
+        bases: The Headline VI sheet's "Filtered N" row for the All column
+            and each region column, as weighted-only decided bases: it is the
+            weighted (turnout-adjusted, don't-knows squeezed) count behind the
+            shares, and no unweighted count is printed. Empty for the
+            national-only Q2 fallback.
     """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_region_percentages: dict[str, dict[str, float]]
+    bases: list[ParsedBase] = Field(default_factory=list)
+
+    def national_shares(self) -> dict[str, float]:
+        """Return canonical party name -> national share."""
+        return national_shares_from(self.party_region_percentages, NATIONAL_KEY)
 
 
 def _maybe_adjust_fieldwork_year_from_url(parsed: ParsedPoll, url_year: int | None) -> ParsedPoll:
@@ -121,6 +141,7 @@ def _maybe_adjust_fieldwork_year_from_url(parsed: ParsedPoll, url_year: int | No
         fieldwork_start=adjusted_start,
         fieldwork_end=adjusted_end,
         party_region_percentages=parsed.party_region_percentages,
+        bases=parsed.bases,
     )
 
 
@@ -169,6 +190,7 @@ class ImportPlan(BaseModel):
     poll_id: int | None
     poll_exists: bool
     rows: list[PlannedPollRow]
+    bases: list[PlannedPollBase] = Field(default_factory=list)
 
 
 def normalize_name(value: str) -> str:
@@ -494,6 +516,7 @@ def parse_poll(workbook: Any, *, fieldwork_year_hint: int | None = None) -> Pars
                 headline_sheet = sheet_name
                 break
     party_region_percentages: dict[str, dict[str, float]] = {}
+    bases: list[ParsedBase] = []
 
     if headline_sheet is not None:
         sheet = workbook[headline_sheet]
@@ -535,6 +558,7 @@ def parse_poll(workbook: Any, *, fieldwork_year_hint: int | None = None) -> Pars
             for col, internal_region in region_columns.items():
                 region_values[internal_region] = _to_percentage(sheet.cell(row, col).value)
             party_region_percentages[canonical_party] = region_values
+        bases = _parse_filtered_n(sheet, header_row, national_column, region_columns)
     else:
         q2_sheet_name = "Q2" if "Q2" in workbook.sheetnames else None
         if q2_sheet_name is None:
@@ -589,7 +613,50 @@ def parse_poll(workbook: Any, *, fieldwork_year_hint: int | None = None) -> Pars
         fieldwork_start=fieldwork_start,
         fieldwork_end=fieldwork_end,
         party_region_percentages=party_region_percentages,
+        bases=bases,
     )
+
+
+def _parse_filtered_n(
+    sheet: Any,
+    header_row: int,
+    national_column: int,
+    region_columns: dict[int, str],
+) -> list[ParsedBase]:
+    """Read the Headline VI table's "Filtered N" row as weighted-only bases.
+
+    The row closes the share rows and holds, per column, the weighted count of
+    respondents behind the shares (turnout-adjusted, don't-knows squeezed, so
+    a decided base). It is fractional and no unweighted count is printed.
+
+    Args:
+        sheet: The Headline VI worksheet.
+        header_row: Its column-header row.
+        national_column: The "All" column.
+        region_columns: Column -> internal region name.
+
+    Returns:
+        The national base then one per region (a region printed in two
+        columns takes the later one, as its shares do), or an empty list when
+        the table has no "Filtered N" row.
+    """
+    filtered_row = next(
+        (
+            row
+            for row in range(header_row + 1, header_row + 40)
+            if normalize_name(_cell_text(sheet.cell(row, 1).value)) == "filtered n"
+        ),
+        None,
+    )
+    if filtered_row is None:
+        return []
+    columns_by_region = {region: col for col, region in region_columns.items()}
+    national = sheet.cell(filtered_row, national_column).value
+    candidates = [make_weighted_base((), national, "decided")] + [
+        make_weighted_base((region,), sheet.cell(filtered_row, col).value, "decided")
+        for region, col in columns_by_region.items()
+    ]
+    return [candidate for candidate in candidates if candidate is not None]
 
 
 def _find_existing_poll(
@@ -623,6 +690,30 @@ def _find_existing_poll(
                 Poll.sample_size == parsed.sample_size,
             )
         ).scalar_one_or_none()
+
+
+def fetch_parsed_poll(source_url: str, *, year_hint: int | None = None) -> ParsedPoll:
+    """Download a Find Out Now workbook and parse it.
+
+    Without *year_hint* the year is inferred from the URL, and a fieldwork
+    window that straddles New Year is adjusted to it.
+
+    Args:
+        source_url: URL of the XLSX file.
+        year_hint: Year for fieldwork text without one.
+
+    Returns:
+        The parsed poll.
+
+    Raises:
+        ValueError: If the workbook cannot be parsed.
+    """
+    workbook = extract_workbook(source_url)
+    effective_year_hint = year_hint
+    if effective_year_hint is None:
+        effective_year_hint = _infer_year_hint_from_url(source_url)
+    parsed = parse_poll(workbook, fieldwork_year_hint=effective_year_hint)
+    return _maybe_adjust_fieldwork_year_from_url(parsed, effective_year_hint)
 
 
 def build_import_plan(
@@ -682,12 +773,7 @@ def build_import_plan(
         for region_name in sorted(region_ids_by_name.keys())
     )
 
-    workbook = extract_workbook(xlsx_url)
-    effective_year_hint = fieldwork_year_hint
-    if effective_year_hint is None:
-        effective_year_hint = _infer_year_hint_from_url(xlsx_url)
-    parsed = parse_poll(workbook, fieldwork_year_hint=effective_year_hint)
-    parsed = _maybe_adjust_fieldwork_year_from_url(parsed, effective_year_hint)
+    parsed = fetch_parsed_poll(xlsx_url, year_hint=fieldwork_year_hint)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -750,6 +836,7 @@ def build_import_plan(
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,
         rows=rows,
+        bases=plan_poll_bases(parsed.bases, region_refs(regions)),
     )
 
 
@@ -855,6 +942,7 @@ def commit_import_plan(
                     percentage=row.percentage,
                 )
             )
+        inserted_bases = replace_poll_bases(session, poll_id, plan.bases)
 
     return PollImportResult(
         created_pollster=created_pollster,
@@ -863,6 +951,7 @@ def commit_import_plan(
         inserted_rows=len(plan.rows),
         replaced_rows=replaced_rows,
         skipped_existing_rows=False,
+        inserted_bases=inserted_bases,
     )
 
 
@@ -969,6 +1058,7 @@ def main() -> None:
         if result.replaced_rows:
             print(f"deleted existing rows: {result.replaced_rows}")
         print(f"inserted poll rows: {result.inserted_rows}")
+        print(f"inserted bases: {result.inserted_bases}")
 
 
 if __name__ == "__main__":

@@ -10,7 +10,12 @@
       <p><strong>Matchup:</strong> {{ poll.matchup }}</p>
     {% endif %}
     <p><strong>Fieldwork:</strong> {{ poll.fieldwork_start }} to {{ poll.fieldwork_end }}</p>
-    <p><strong>Sample size:</strong> {{ poll.sample_size }}</p>
+    <p><strong>Sample size:</strong> {{ "not applicable" if poll.evidence_kind == "aggregate_estimate" else poll.sample_size }}</p>
+    <p><strong>Evidence:</strong> {{ poll.evidence_kind or "unknown" }} · Population: {{ poll.population_type or "unknown" }}</p>
+    <p><strong>Evidence source:</strong> {{ poll.evidence_source or "unknown" }}</p>
+    {% if sample_moe is not none %}
+      <p>Sample-only MoE: ±{{ "%.2f"|format(sample_moe) }} points at 50%, 90% confidence, assuming simple random sampling. Excludes design, weighting and systematic error.</p>
+    {% endif %}
     <p>
       <strong>Source URL:</strong>
       {% if poll.source_url %}
@@ -44,13 +49,91 @@
               {% if show_candidates %}
                 <td>{{ row.candidate or "-" }}</td>
               {% endif %}
-              {% for value in row.cells %}
-                <td>{{ value }}</td>
+              {% for cell in row.cells %}
+                <td>
+                  {{- cell.share -}}
+                  {%- if cell.moe is not none -%}
+                    {{ " " }}<small>{{ "±%.1f" | format(cell.moe) }}</small>
+                  {%- endif -%}
+                </td>
               {% endfor %}
             </tr>
           {% endfor %}
         </tbody>
+        <tfoot>
+          {% set n_rows = [
+            ("n", "n"), ("n source", "source"), ("Weighted n", "weighted_n"),
+          ] %}
+          {% for label, attribute in n_rows %}
+            <tr class="poll-n">
+              <th scope="row">{{ label }}</th>
+              {% if show_candidates %}
+                <td></td>
+              {% endif %}
+              {% for cell in n_cells %}
+                {% set value = cell[attribute] %}
+                <td>
+                  {{- value if value is not none else "-" -}}
+                  {%- if attribute == "source" and cell.split_from_macro -%}
+                    {{ " (split)" }}
+                  {%- endif -%}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+          {% if show_error %}
+            <tr class="poll-n">
+              <th scope="row">Adjustment</th>
+              {% if show_candidates %}
+                <td></td>
+              {% endif %}
+              {% for cell in effective_cells %}
+                <td>
+                  {{- "×%g" | format(cell.kind_factor) if cell is not none else "-" -}}
+                </td>
+              {% endfor %}
+            </tr>
+            <tr class="poll-n">
+              <th scope="row">n_eff</th>
+              {% if show_candidates %}
+                <td></td>
+              {% endif %}
+              {% for cell in effective_cells %}
+                <td>
+                  {%- if cell is not none -%}
+                    {{ "%.0f" | format(cell.n_eff) }}
+                    {%- if cell.capped %} (capped){% endif -%}
+                  {%- else -%}
+                    -
+                  {%- endif -%}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endif %}
+        </tfoot>
       </table>
     </div>
+    <p>
+      n is the respondent count behind each column's shares: the captured
+      base (<code>base:&lt;kind&gt;</code>; <code>(weighted)</code> means only a
+      weighted base was printed and is used as n; "split" means apportioned
+      from a wider column by population), else the sample size nationally, or
+      regionally a population estimate (<code>estimate:&lt;kind&gt;</code> when
+      scaled from the national base, <code>estimate:sample_size</code> when
+      scaled from the sample size).
+    </p>
+    {% if show_error %}
+      <p>
+        Adjustment turns n into decided respondents: &times;1 for a decided
+        base, &times;{{ "%g" | format(config.likely_voters_fraction) }} for a
+        likely-voter base, &times;{{ "%g" | format(config.decided_fraction) }}
+        for an all-adult base or a sample size (both include don't-knows).
+        n_eff = n &times; adjustment &divide; design effect
+        {{ "%g" | format(config.design_effect) }}, capped at
+        {{ "%g" | format(config.n_eff_cap) }}. The &plusmn; beside each share is
+        its {{ "%g" | format(config.interval * 100) }}% margin of error at its
+        column's n_eff; "-" means n is unresolved.
+      </p>
+    {% endif %}
   </section>
 {% endblock %}

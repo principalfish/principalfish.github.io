@@ -5,8 +5,10 @@ Swings the 2024 US Presidential result by the national two-party head-to-head
 average (imported as national ``PollRow`` rows) and picks a winner-take-all party
 per elector unit (50 states + DC + the Maine/Nebraska congressional-district
 splits). Persists a ``us_presidential_model`` election and appends a poll-tracker
-trend entry. The electoral-vote tally itself is computed by the front end from the
-per-unit winners and the exported database allocation for the target election.
+trend entry. Target-cycle electoral-vote weights are resolved from the database.
+Optional uncertainty uses correlated state/district winners, weighted EV totals
+and a national popular tally excluding overlapping Maine/Nebraska districts.
+Production uncertainty remains gated until President calibration is accepted.
 
 Presidential polls are stored one poll per matchup, so the run follows the
 national tracked matchup chosen in the console. With none set it writes nothing

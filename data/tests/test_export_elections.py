@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
+from contextlib import closing
+from dataclasses import replace
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +20,20 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from db import Database
-from models import Election, ElectionType, Party
+from model_support.persistence import (
+    OutputVote,
+    StoredUncertainty,
+    load_uncertainty,
+    replace_output,
+    westminster_uns_scope,
+)
+from model_support.public_uncertainty import (
+    PublicUncertaintyError,
+    public_document,
+    seat_bands,
+)
+from models import Election, ElectionType, Party, Seat
+import export_elections
 from export_elections import (
     DEM_PARTY_ID,
     REP_PARTY_ID,
@@ -27,7 +44,17 @@ from export_elections import (
     refresh_manifest_modes,
 )
 from scripts.export.ordering import float_model_entries_first, reorder_manifest_entries
+from tests.export_golden import (
+    GOLDEN_PATH,
+    SHELL,
+    read_files,
+    run_export,
+    seed_model_runs,
+)
+from tests.test_westminster_uncertainty_integration import DAY, _cfg, _poll
+from tests.uk_fixtures import WestminsterWorld
 from tests.us_ev_fixtures import seed_canonical_allocations
+import run_uns_model as runner
 
 
 class _Election:
@@ -616,3 +643,441 @@ class TestStateTrendsThirdParty:
         units = self._run_export(db, self._seed(db, tmp_path), tmp_path)
         assert "Mississippi" in units  # export ran and produced a series...
         assert "Alabama" not in units  # ...but the no-Dem/Rep unit is dropped by the guard
+
+
+# ── Model-run uncertainty ────────────────────────────────────────────────────
+
+
+@pytest.fixture()
+def model_run(
+    db: Database,
+    westminster_world: WestminsterWorld,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> StoredUncertainty:
+    """A real 50-simulation UNS run on the Westminster world, stored in full."""
+    draws = tmp_path / "draws.npz"
+    monkeypatch.setenv("SIMULATIONS_PATH", str(draws))
+    monkeypatch.setattr(db.config, "simulations_path", str(draws))
+    monkeypatch.setattr(runner, "TREND_CACHE_JSON", tmp_path / "trend.json")
+    monkeypatch.setattr(runner, "TREND_CACHE_META_JSON", tmp_path / "meta.json")
+    _poll(db, westminster_world)
+    cfg = _cfg(westminster_world)
+    cfg = replace(
+        cfg, uncertainty=replace(cfg.uncertainty, simulations=50, chunk_size=7)
+    )
+    runner.run_simulation(db, cfg)
+    election = db.get_election_by_name(f"UNS {DAY}")
+    assert election is not None
+    stored = load_uncertainty(Path(db.config.database_path), election.id)
+    assert stored is not None
+    assert stored.seats is not None and stored.regions is not None
+    return stored
+
+
+SHELL_WITH_FLAG = {
+    **SHELL,
+    "parliamentFeatures": {
+        "westminster": {
+            **SHELL["parliamentFeatures"]["westminster"],
+            # Not the committed value, so the test sees it copied, not made up.
+            "uncertaintyDataPath": "results/flag-under-test.json",
+        }
+    },
+}
+
+PRIVATE_KEYS = ('"budget"', '"input_hash"', '"config_hash"', '"seed"')
+
+
+class TestModelRunUncertaintyExport:
+    """A model run with full detail publishes ``u`` rows and the uncertainty file."""
+
+    def test_full_export_publishes_the_public_subset(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        result = run_export(db, tmp_path, [], monkeypatch, shell=SHELL_WITH_FLAG)
+        files = result["files"]
+        document = json.loads(files["results/prediction-uncertainty.json"])
+        payload = json.loads(files["results/prediction-simulation.json"])
+        identity = document.pop("uncertaintyId")
+        assert identity == payload["uncertaintyId"]
+        assert len(identity) == 64
+        assert document == public_document(
+            model_run.national,
+            model_run.regions or {},
+            election_name=f"UNS {DAY}",
+            as_of_date=DAY.isoformat(),
+        )
+        assert document["schema"] == "pf-uncertainty-v1"
+        assert document["simulations"] == 50
+        assert "50 simulations" in document["basis"]
+        stored_parties: Any = model_run.national["parties"]
+        assert set(document["national"]["parties"]) == set(stored_parties)
+        for text in (files["results/prediction-uncertainty.json"],
+                     files["results/prediction-simulation.json"]):
+            for private in PRIVATE_KEYS:
+                assert private not in text
+        manifest = json.loads(files["map-modes.json"])
+        assert manifest["parliamentFeatures"]["westminster"][
+            "uncertaintyDataPath"
+        ] == "results/flag-under-test.json"
+        assert result["stdout"].splitlines() == [
+            "Wrote uncertainty: <root>/out/results/prediction-uncertainty.json "
+            f"({len(document['regions'])} regions)",
+            "Wrote manifest: <root>/out/map-modes.json (3 elections)",
+        ]
+
+    def test_seat_rows_align_to_p(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        files = run_export(db, tmp_path, [], monkeypatch)["files"]
+        seats = json.loads(files["results/prediction-simulation.json"])["seats"]
+        bands = seat_bands(model_run.seats or {})
+        ids = _seat_ids(db)
+        assert len(seats) == 4
+        for seat in seats:
+            stored = bands[ids[seat["n"]]]
+            expected = [
+                [row[0], stored[row[0]].lo, stored[row[0]].hi, stored[row[0]].win]
+                for row in seat["p"]
+                if row[0] in stored
+            ]
+            assert expected and seat["u"] == expected
+        # The baseline general election gets none.
+        general = json.loads(files["results/uk-general-2024.json"])["seats"]
+        assert all("u" not in seat for seat in general)
+
+    def test_dry_run_reports_and_writes_nothing(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        result = run_export(db, tmp_path, ["--dry-run"], monkeypatch)
+        assert (
+            "Would write uncertainty: <root>/out/results/prediction-uncertainty.json "
+            f"({len(model_run.regions or {})} regions)"
+        ) in result["stdout"].splitlines()
+        assert list(result["files"]) == ["map-modes-shell.json"]
+
+    @pytest.mark.parametrize("dry_run", [False, True])
+    def test_stale_file_removed_when_the_latest_run_has_no_detail(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        dry_run: bool,
+    ) -> None:
+        # A later run without a summary: the export now ships it, and the
+        # earlier run's detail is pruned.
+        later = DAY + timedelta(days=1)
+        seat_id = next(iter(westminster_world.seat_ids.values()))
+        replace_output(
+            Path(db.config.database_path),
+            westminster_uns_scope(westminster_world.map_id),
+            later,
+            f"UNS {later}",
+            [OutputVote(seat_id, westminster_world.party_ids["Labour"], "", 9.0, True)],
+        )
+        stale = tmp_path / "out" / "results" / "prediction-uncertainty.json"
+        stale.parent.mkdir(parents=True)
+        stale.write_text('{"stale": true}', encoding="utf-8")
+
+        result = run_export(
+            db, tmp_path, ["--dry-run"] if dry_run else [], monkeypatch
+        )
+        lines = result["stdout"].splitlines()
+        if dry_run:
+            assert (
+                "Would remove stale uncertainty file: "
+                "<root>/out/results/prediction-uncertainty.json"
+            ) in lines
+            assert stale.read_text(encoding="utf-8") == '{"stale": true}'
+        else:
+            assert (
+                "Removed stale uncertainty file: "
+                "<root>/out/results/prediction-uncertainty.json"
+            ) in lines
+            assert not stale.exists()
+            seats = json.loads(result["files"]["results/prediction-simulation.json"])
+            assert all("u" not in seat for seat in seats["seats"])
+
+    def test_current_simulation_writes_both_files(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        out = tmp_path / "out"
+        files = run_export(
+            db, tmp_path, ["--current-simulation", "--output-root", str(out)],
+            monkeypatch,
+        )["files"]
+        assert json.loads(files["results/prediction-uncertainty.json"])[
+            "election_name"
+        ] == f"UNS {DAY}"
+        seats = json.loads(files["results/prediction-simulation.json"])["seats"]
+        assert all("u" in seat for seat in seats)
+
+    def test_output_file_carries_u_but_writes_no_uncertainty_file(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        target = tmp_path / "single.json"
+        result = run_export(
+            db, tmp_path, ["--current-simulation", "--output-file", str(target)],
+            monkeypatch,
+        )
+        assert all("u" in seat for seat in json.loads(target.read_text())["seats"])
+        assert "results/prediction-uncertainty.json" not in result["files"]
+
+    def test_another_runs_summary_is_refused(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        stranger = replace(model_run, election_id=model_run.election_id + 1)
+        monkeypatch.setattr(export_elections, "load_uncertainty", lambda *_: stranger)
+        with pytest.raises(ValueError, match="given for"):
+            run_export(db, tmp_path, [], monkeypatch)
+        assert not (tmp_path / "out" / "results").exists()
+
+    @pytest.mark.parametrize("dry_run", [False, True])
+    def test_rerunning_an_older_date_keeps_the_latest_as_the_prediction(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        dry_run: bool,
+    ) -> None:
+        older_id = _rerun_older_date(db, westminster_world)
+        assert older_id > model_run.election_id
+        published = tmp_path / "out" / "results" / "prediction-uncertainty.json"
+        published.parent.mkdir(parents=True)
+        published.write_text('{"earlier": true}', encoding="utf-8")
+
+        result = run_export(
+            db, tmp_path, ["--dry-run"] if dry_run else [], monkeypatch
+        )
+        assert "stale" not in result["stdout"]
+        if dry_run:
+            assert any(
+                line.startswith("Would write uncertainty:")
+                for line in result["stdout"].splitlines()
+            )
+            return
+        document = json.loads(result["files"]["results/prediction-uncertainty.json"])
+        assert document["election_name"] == f"UNS {DAY}"
+        seats = json.loads(result["files"]["results/prediction-simulation.json"])
+        assert all("u" in seat for seat in seats["seats"])
+
+    def test_current_simulation_ships_the_latest_date_after_an_older_rerun(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _rerun_older_date(db, westminster_world)
+        out = tmp_path / "out"
+        result = run_export(
+            db, tmp_path, ["--current-simulation", "--output-root", str(out)],
+            monkeypatch,
+        )
+        assert f"from election 'UNS {DAY}'" in result["stdout"]
+        assert "stale" not in result["stdout"]
+        document = json.loads(result["files"]["results/prediction-uncertainty.json"])
+        assert document["election_name"] == f"UNS {DAY}"
+        seats = json.loads(result["files"]["results/prediction-simulation.json"])
+        assert all("u" in seat for seat in seats["seats"])
+
+    def test_malformed_summary_fails_before_any_result_is_written(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        national = dict(model_run.national)
+        national["hung"] = 2.0
+        with closing(sqlite3.connect(db.config.database_path)) as conn:
+            conn.execute(
+                "UPDATE model_uncertainty SET national_json = ? WHERE election_id = ?",
+                (json.dumps(national), model_run.election_id),
+            )
+            conn.commit()
+        with pytest.raises(PublicUncertaintyError, match="national.hung"):
+            run_export(db, tmp_path, [], monkeypatch)
+        assert not (tmp_path / "out" / "results").exists()
+
+
+def _rerun_older_date(db: Database, world: WestminsterWorld) -> int:
+    """Save a run one day before ``DAY`` after it: a higher id, an earlier date."""
+    older = DAY - timedelta(days=1)
+    seat_id = next(iter(world.seat_ids.values()))
+    _, election_id = replace_output(
+        Path(db.config.database_path),
+        westminster_uns_scope(world.map_id),
+        older,
+        f"UNS {older}",
+        [OutputVote(seat_id, world.party_ids["Labour"], "", 9.0, True)],
+    )
+    return election_id
+
+
+def _seat_ids(db: Database) -> dict[str, int]:
+    with db.session() as session:
+        return {
+            seat.seat_name: seat.id for seat in session.execute(select(Seat)).scalars()
+        }
+
+
+# ── Scratch exports: --output-base / --output-root ───────────────────────────
+
+
+@pytest.fixture()
+def golden_world(db: Database, westminster_world: WestminsterWorld) -> Database:
+    seed_model_runs(db, westminster_world)
+    return db
+
+
+def _golden() -> dict[str, Any]:
+    loaded: dict[str, Any] = json.loads(GOLDEN_PATH.read_text(encoding="utf-8"))
+    return loaded
+
+
+class TestOutputBase:
+    """``--output-base`` writes every page under the base and never the repo."""
+
+    def test_full_export_writes_only_under_the_base(
+        self, golden_world: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base = tmp_path / "base"
+        result = run_export(
+            golden_world, tmp_path, ["--output-base", str(base)], monkeypatch
+        )
+        # The "repository" page root (run_export's root/out) holds only its shell.
+        assert list(result["files"]) == ["map-modes-shell.json"]
+        assert json.loads(result["files"]["map-modes-shell.json"]) == SHELL
+        # The base holds exactly what a normal export writes there.
+        page = base / "electionmaps" / "data"
+        assert read_files(page) == _golden()["full"]["files"]
+        lines = result["stdout"].splitlines()
+        assert lines[0] == (
+            "Seeded scratch page: <root>/out -> <root>/base/electionmaps/data"
+        )
+        assert "\n".join(lines[1:]) + "\n" == _golden()["full"]["stdout"].replace(
+            "<root>/out", "<root>/base/electionmaps/data"
+        )
+
+    def test_existing_base_is_reused_not_reseeded(
+        self, golden_world: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base = tmp_path / "base"
+        run_export(golden_world, tmp_path, ["--output-base", str(base)], monkeypatch)
+        marker = base / "electionmaps" / "data" / "results" / "kept.json"
+        marker.write_text("{}", encoding="utf-8")
+        again = run_export(
+            golden_world, tmp_path, ["--output-base", str(base)], monkeypatch
+        )
+        assert "Seeded" not in again["stdout"]
+        assert marker.read_text(encoding="utf-8") == "{}"
+
+    def test_dry_run_seeds_the_base_and_writes_no_outputs(
+        self, golden_world: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base = tmp_path / "base"
+        result = run_export(
+            golden_world, tmp_path, ["--output-base", str(base), "--dry-run"],
+            monkeypatch,
+        )
+        assert list(result["files"]) == ["map-modes-shell.json"]
+        assert read_files(base / "electionmaps" / "data") == {
+            "map-modes-shell.json": json.dumps(SHELL)
+        }
+        assert "Would write manifest: <root>/base/electionmaps/data/map-modes.json" in (
+            result["stdout"]
+        )
+
+    def test_metadata_only_honours_the_base(
+        self, golden_world: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base = tmp_path / "base"
+        run_export(golden_world, tmp_path, ["--output-base", str(base)], monkeypatch)
+        result = run_export(
+            golden_world, tmp_path, ["--output-base", str(base), "--metadata-only"],
+            monkeypatch,
+        )
+        assert result["stdout"].splitlines() == [
+            "Wrote manifest metadata: <root>/base/electionmaps/data/map-modes.json"
+        ]
+        assert list(result["files"]) == ["map-modes-shell.json"]
+
+    def test_current_simulation_honours_the_base(
+        self, golden_world: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        base = tmp_path / "base"
+        result = run_export(
+            golden_world,
+            tmp_path,
+            ["--current-simulation", "--output-base", str(base)],
+            monkeypatch,
+        )
+        assert list(result["files"]) == ["map-modes-shell.json"]
+        written = (
+            base / "electionmaps" / "data" / "results" / "prediction-simulation.json"
+        )
+        assert written.read_text(encoding="utf-8") == _golden()["current_simulation"][
+            "files"
+        ]["results/prediction-simulation.json"]
+
+    @pytest.mark.parametrize(
+        ("argv", "message"),
+        [
+            (
+                ["--output-root", "x"],
+                "--output-root applies only to --current-simulation",
+            ),
+            (["--metadata-only", "--output-root", "x"], "use --output-base"),
+            (
+                ["--current-simulation", "--output-root", "x", "--output-base", "y"],
+                "not allowed with argument",
+            ),
+        ],
+    )
+    def test_misused_output_flags_are_refused(
+        self,
+        golden_world: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        argv: list[str],
+        message: str,
+    ) -> None:
+        # The placeholders become scratch paths, so nothing could land in data/.
+        argv = [str(tmp_path / arg) if arg in ("x", "y") else arg for arg in argv]
+        with pytest.raises(SystemExit):
+            run_export(golden_world, tmp_path, argv, monkeypatch)
+        assert message in capsys.readouterr().err
+        assert not (tmp_path / "x").exists() and not (tmp_path / "y").exists()
+        assert not (tmp_path / "out" / "results").exists()

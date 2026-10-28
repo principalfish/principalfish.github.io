@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from console.services.model_outputs import build_outputs_context
+from console.services.trends import load_trend_entries
 from db import Database
 from model_support.persistence import (
     OutputScope,
@@ -84,14 +85,19 @@ def test_repaired_history_feeds_export_and_console(
     )
     assert only_the_test_database.read_bytes() == before
     assert len(output_dates(only_the_test_database, scope)) == 4
-    entries = json.loads(cache.read_text())
+    entries = load_trend_entries(cache)
     assert [entry["as_of_date"] for entry in entries] == [
         "2026-06-01",
         "2026-06-02",
+        *(["2026-06-03"] if model.startswith("us-") else []),
         "2026-06-04",
     ]
     excluded_extra = model in {"holyrood", "us-president"}
     expected_a = [60.0, 70.0, 65.0] if excluded_extra else [15.0, 17.5, 16.2]
+    if model in {"us-house", "us-senate"}:
+        expected_a = [15.0, 17.5, 17.5, 16.2]
+    elif model == "us-president":
+        expected_a = [60.0, 70.0, 70.0, 65.0]
     assert [entry["parties"][str(party_a.id)]["v"] for entry in entries] == expected_a
     for entry in entries:
         assert entry["parties"][str(party_a.id)]["s"] == 1
@@ -115,7 +121,7 @@ def test_repaired_history_feeds_export_and_console(
     }
     assert datasets["A"] == expected_a
     tally = {series["label"]: series["data"] for series in chart["seats_datasets"]}
-    assert tally["A"] == ([2, 2, 2] if model == "us-president" else [1, 1, 1])
+    assert tally["A"] == [2 if model == "us-president" else 1] * len(entries)
 
     seats = [
         SeatRow(seat.id, seat.seat_name, None, None, None, seat.electoral_votes)

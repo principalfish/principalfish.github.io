@@ -1,0 +1,28 @@
+{
+  "schema": "pf-us-house-calibration-candidate-v1",
+  "model": "us-house",
+  "accepted": false,
+  "release_blockers": [
+    "House production odds remain gated until 2026 map/baseline alignment is resolved",
+    "Calibration values and labelled assumptions still require explicit acceptance"
+  ],
+  "input_sha256": "1beda8e95c80e1a5db843d7ce28e68798895eb4de8f9f7129ae400601afa4c4d",
+  "kernel_version": "us-source-graph-v1",
+  "calibration_version": "us-house-joint-moments-v1",
+  "national_margin_sigma": 2.438083476146288,
+  "national_reference_source_scale": 2.4586702276200922,
+  "national_reference_q": 0.9833238605740573,
+  "national_conversion": "source_scale = national_margin_sigma / sqrt(q(frozen_run_source_shape))",
+  "state_scale": 1.865337803444325,
+  "race_scale": 4.182389589821625,
+  "local_scale": 4.182389589821625,
+  "local_floor_multiple_of_race": 1,
+  "design_effect": 2,
+  "n_eff_cap": 2000,
+  "lv_fraction": 1,
+  "rv_fraction": 1,
+  "adult_fraction": 1,
+  "unknown_fraction": 1,
+  "distribution": "Gaussian",
+  "central_bias_correction": null
+}

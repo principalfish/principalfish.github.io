@@ -1509,7 +1509,7 @@ class TestSplitRegionHeaders:
         sheet.cell(17, 2, 0.99)
         parsed = mic.parse_poll(workbook, source_url=_SOURCE_URL)
         expected = json.loads(_SPLIT_HEADER_FIXTURE.read_text())["expected"]
-        assert parsed.model_dump(mode="json") == expected
+        assert parsed.model_dump(mode="json", exclude={"bases"}) == expected
         assert "Restore Britain" not in parsed.party_region_percentages
 
     def test_headline_preferred_to_competing_raw_table(self) -> None:
@@ -1535,7 +1535,7 @@ class TestSplitRegionHeaders:
                 sheet.cell(row, right).value = first
         parsed = mic.parse_poll(workbook, source_url=_SOURCE_URL)
         expected = json.loads(_SPLIT_HEADER_FIXTURE.read_text())["expected"]
-        assert parsed.model_dump(mode="json") == expected
+        assert parsed.model_dump(mode="json", exclude={"bases"}) == expected
 
     @pytest.mark.parametrize(
         ("percentage_marker", "count_marker"),
@@ -1566,3 +1566,148 @@ class TestSplitRegionHeaders:
             sheet.cell(6, col + 1).value = "Respondents"
         with pytest.raises(ValueError, match="sufficient region columns"):
             mic.parse_poll(workbook, source_url=_SOURCE_URL)
+
+
+# ── Column bases ──────────────────────────────────────────────────────
+
+
+class TestParseBases:
+    """parse_poll reads the headline table's per-column respondent bases."""
+
+    def test_fixture_bases_are_the_unweighted_n_row_not_the_sample(self) -> None:
+        parsed = mic.parse_poll(_split_header_workbook(), source_url=_SOURCE_URL)
+
+        national = [base for base in parsed.bases if base.regions == ()]
+        assert parsed.sample_size == 2113
+        assert [(b.unweighted_n, b.weighted_n, b.kind) for b in national] == [
+            (1491, None, "decided")
+        ]
+        assert {
+            base.regions: base.unweighted_n for base in parsed.bases if base.regions
+        } == {
+            ("East Midlands",): 102,
+            ("East of England",): 138,
+            ("London",): 239,
+            ("North East England",): 79,
+            ("North West England",): 169,
+            ("Scotland",): 106,
+            ("South East England",): 214,
+            ("South West England",): 133,
+            ("Wales",): 54,
+            ("West Midlands",): 133,
+            ("Yorkshire and The Humber",): 124,
+        }
+        assert {base.kind for base in parsed.bases} == {"decided"}
+        assert all(base.weighted_n is None for base in parsed.bases)
+
+    def test_older_layout_pairs_weighted_and_unweighted_rows_by_column(self) -> None:
+        unweighted = [1609, 92, 165, 230, 76, 178, 128, 255, 133, 79, 131, 142]
+        weighted = [1143.6, 76, 106, 166, 30, 125, 113, 161, 107, 55, 94, 111]
+        rows = _headline_sheet_rows()
+        rows.append(["Weighted N", *weighted])
+        rows.append(["Unweighted N", *unweighted])
+
+        parsed = mic.parse_poll(
+            _full_workbook(headline_rows=rows), source_url=_SOURCE_URL
+        )
+
+        by_column = {
+            base.regions: (base.unweighted_n, base.weighted_n) for base in parsed.bases
+        }
+        assert by_column[()] == (1609, 1144)
+        assert by_column[("London",)] == (230, 166)
+        assert by_column[("Yorkshire and The Humber",)] == (142, 111)
+        assert len(parsed.bases) == 12
+
+    def test_blank_or_zero_column_counts_are_skipped(self) -> None:
+        unweighted: list[object] = [
+            1609, 92, "-", 230, 0, 178, 128, 255, 133, 79, 131, 142,
+        ]
+        rows = _headline_sheet_rows()
+        rows.append(["Unweighted N", *unweighted])
+
+        parsed = mic.parse_poll(
+            _full_workbook(headline_rows=rows), source_url=_SOURCE_URL
+        )
+
+        regions = {base.regions for base in parsed.bases}
+        assert ("East of England",) not in regions
+        assert ("North East England",) not in regions
+        assert ("London",) in regions
+        assert len(parsed.bases) == 10
+
+    def test_a_later_tables_n_rows_are_not_read(self) -> None:
+        rows = _headline_sheet_rows()
+        rows.append(["Unweighted N", 1609, *([100] * 11)])
+        rows.append([None])
+        rows.append(["Second table"])
+        rows.append(["Weighted N", 999, *([50] * 11)])
+        rows.append(["Unweighted N", 888, *([40] * 11)])
+
+        parsed = mic.parse_poll(
+            _full_workbook(headline_rows=rows), source_url=_SOURCE_URL
+        )
+
+        national = next(b for b in parsed.bases if b.regions == ())
+        assert (national.unweighted_n, national.weighted_n) == (1609, None)
+
+    def test_no_unweighted_row_gives_no_bases(self) -> None:
+        rows = _headline_sheet_rows(sample_row=("Weighted N", 1144))
+
+        parsed = mic.parse_poll(
+            _full_workbook(headline_rows=rows), source_url=_SOURCE_URL
+        )
+
+        assert parsed.bases == []
+
+
+class TestMainBases:
+    """main() reports how many bases a commit stored."""
+
+    def test_commit_prints_the_inserted_bases(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        workbook = _split_header_workbook()
+        monkeypatch.setattr(mic, "Database", lambda: db)
+        monkeypatch.setattr(mic, "extract_workbook", lambda *_a, **_k: workbook)
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["prog", "--xlsx-url", "https://example.test/voting-intention-2026.xlsx"],
+        )
+
+        mic.main()
+
+        assert "inserted bases: 12" in capsys.readouterr().out.splitlines()
+
+
+class TestBuildImportPlanBases:
+    """build_import_plan resolves each parsed base to its region id."""
+
+    def test_bases_are_planned_against_the_map_regions(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        world = westminster_world
+        workbook = _split_header_workbook()
+        monkeypatch.setattr(mic, "extract_workbook", lambda *_a, **_k: workbook)
+
+        plan = mic.build_import_plan(
+            db,
+            xlsx_url="https://example.test/voting-intention-2026.xlsx",
+            map_name=world.map_name,
+        )
+
+        planned = {base.region_id: base.unweighted_n for base in plan.bases}
+        assert planned[None] == 1491
+        assert planned[world.region_ids["Wales"]] == 54
+        assert planned[world.region_ids["London"]] == 239
+        assert world.region_ids["Northern Ireland"] not in planned
+        assert len(planned) == 12
+        assert not any(base.split_from_macro for base in plan.bases)

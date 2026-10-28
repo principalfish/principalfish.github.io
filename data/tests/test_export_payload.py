@@ -13,6 +13,9 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
+import pytest
+
+from model_support.public_uncertainty import SeatBand
 from export_elections import (
     SeatRow,
     build_result_payload,
@@ -211,6 +214,53 @@ class TestBuildResultPayload:
         ]
         payload = build_result_payload(seats, votes)
         assert payload["seats"][0]["p"] == [[1, 100, "High"]]
+
+
+class TestSeatUncertaintyRows:
+    """Optional per-seat ``u`` rows from a model run's stored seat block."""
+
+    @staticmethod
+    def _payload(bands: Any) -> list[dict[str, Any]]:
+        set_others_party_id(0)
+        lab = _Party(1, "Labour")
+        con = _Party(2, "Conservative")
+        grn = _Party(6, "Green")
+        seats = [_seat(10, "Alpha"), _seat(20, "Bravo"), _seat(30, "Charlie")]
+        votes = [
+            # Alpha: Conservative leads, so p (and u) start with party 2.
+            _Vote(10, 40.0, party=lab),
+            _Vote(10, 50.0, party=con, elected=True),
+            _Vote(10, 5.0, party=grn),
+            _Vote(10, 0.0, party=_Party(8, "Reform UK")),
+            _Vote(20, 60.0, party=lab, elected=True),
+            _Vote(30, 70.0, party=lab, elected=True),
+        ]
+        return list(build_result_payload(seats, votes, seat_uncertainty=bands)["seats"])
+
+    def test_rows_follow_p_order_and_skip_parties_without_a_band(self) -> None:
+        bands = {
+            10: {
+                # Keyed in another order than p; Green has no band (below the
+                # stored floor); Reform has one but no p row (zero votes).
+                1: SeatBand(35.1, 45.2, 0.2101),
+                2: SeatBand(44.9, 55.3, 0.7899),
+                8: SeatBand(0.0, 1.2, 0.0),
+            },
+            # Bravo's block lists only a party it has no votes for.
+            20: {6: SeatBand(1.0, 2.0, 0.0)},
+        }
+        alpha, bravo, charlie = self._payload(bands)
+        assert [row[0] for row in alpha["p"]] == [2, 1, 6]
+        assert alpha["u"] == [[2, 44.9, 55.3, 0.7899], [1, 35.1, 45.2, 0.2101]]
+        assert list(alpha) == ["n", "r", "w", "p", "u"]
+        assert "u" not in bravo
+        # Charlie has no entry in the block.
+        assert "u" not in charlie
+
+    @pytest.mark.parametrize("bands", [None, {}])
+    def test_absent_without_a_seat_block(self, bands: Any) -> None:
+        assert self._payload(bands) == self._payload(None)
+        assert all("u" not in seat for seat in self._payload(bands))
 
 
 class TestCompactVotesToDict:

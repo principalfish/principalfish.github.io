@@ -13,7 +13,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from config import DatabaseConfig
 from model_support.io import OutputPublicationError, publish_json
 from model_support.persistence import OutputScope
-from model_support.trends import TREND_MODELS, default_trend_path, reconstruct_trends
+from model_support.trends import (
+    TREND_MODELS, default_trend_path, reconstruct_trends, trend_document,
+)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -50,7 +52,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         entries = reconstruct_trends(source, scope)
         if not args.dry_run:
             publish_json(
-                entries, destination, repair="Retry this trend regeneration command."
+                trend_document(scope, entries), destination,
+                repair="Retry this trend regeneration command.",
             )
     except (ValueError, OutputPublicationError) as exc:
         print(str(exc), file=sys.stderr)

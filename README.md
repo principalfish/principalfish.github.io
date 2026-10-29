@@ -78,6 +78,30 @@ the original date, original archive and both saved and evaluated configs and
 kernels; they evaluate current settings on frozen inputs even if polling has
 moved on.
 
+The joint conversion experiment has a separate command and report, preserving
+the audit baseline:
+
+```bash
+cd data
+./election_data/bin/python scripts/validate_westminster_conversion.py
+```
+
+It first checks synthetic recovery, then compares all eight combinations of
+cluster errors, heavy seat tails and predictive lambda uncertainty using
+training-only fits. Historical data are opened read-only; no forecast, config
+or saved simulation is changed. The console Validation page links to the saved
+experimental evidence. The [experiment specification](data/models/westminster/conversion-prototype-method.md)
+records the fitting assumptions and gates. A failed or unidentified fit stops
+before engine integration. `--output /tmp/conversion-experiment.json` selects a
+scratch report; the default is
+`data/models/westminster/uncertainty_conversion_prototype_report.json`.
+Each completed fit and evaluation is saved atomically under the temporary
+directory's `westminster-conversion-checkpoints/`. Repeating the same command
+reuses verified stages with matching source, config, input and numerical
+identities. `--checkpoint-dir /path/to/scratch` selects another checkpoint
+directory; `--no-checkpoint` disables this scratch state. Partial checkpoints
+remain separate from the complete report shown in the console.
+
 Historical seat-total and favourite-reliability checks condition on **actual
 regional votes**. They reproduce the Gaussian conversion experiment with
 leave-one-pair-out fitted seat/lambda scales, not an end-to-end forecast

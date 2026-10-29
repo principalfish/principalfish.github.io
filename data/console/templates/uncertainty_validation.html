@@ -3,6 +3,7 @@
   <section class="card">
     <h2>Westminster Validation</h2>
     <p><a href="{{ url_for('uncertainty.uncertainty_hub') }}">Uncertainty overview</a></p>
+    <p><a href="{{ url_for('uncertainty.uncertainty_conversion_validation') }}">Offline joint conversion experiment</a></p>
     <p>Saved offline diagnostics. Opening this page does not run or reconstruct forecasts.</p>
     {% if error %}
       <p class="alert">{{ error }}</p>

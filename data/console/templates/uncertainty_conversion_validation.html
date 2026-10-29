@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Offline Joint Conversion Experiment</h2>
+    <p><a href="{{ url_for('uncertainty.uncertainty_validation') }}">Audit validation baseline</a></p>
+    <p>
+      Saved experimental evidence. Opening this page does not run simulations.
+      The experiment does not change the active model.
+    </p>
+    {% if error %}
+      <p class="alert">{{ error }}</p>
+    {% elif report %}
+      {% if stale %}
+        <p class="alert">This experiment uses different settings from the current config.</p>
+      {% endif %}
+      <p>
+        Decision: <strong>{{ report.decision|replace('_', ' ') }}</strong>.
+        Synthetic recovery: <strong>{{ 'Passed' if report.synthetic_recovery.passed else 'Failed' }}</strong>.
+        {{ report.simulations }} evaluation draws per fold;
+        {{ report.fit_draws|join(' and ') }} fitting draws.
+      </p>
+      {% if report.get('stop_reason') %}
+        <p class="alert">{{ report.stop_reason }}</p>
+      {% endif %}
+      <p>
+        The experiment declares eight combinations and scores them after synthetic recovery passes. The joint candidate must
+        cover at least 17 of 20 outcomes and pass the fit, attribution and parity
+        gates before engine integration. These elections already informed the
+        design; this is retrospective evidence.
+      </p>
+      <h3>Fitting method</h3>
+      <p>{{ report.contract.estimator }}. {{ report.contract.objective }}.</p>
+      <p>{{ report.contract.nuisance }}. {{ report.contract.lambda }}.</p>
+      <p>{{ report.contract.benchmark }}.</p>
+      <details>
+        <summary>Synthetic recovery results and fixed experiment settings</summary>
+        <pre>{{ report.synthetic_recovery|tojson(indent=2) }}</pre>
+        <pre>{{ report.contract|tojson(indent=2) }}</pre>
+      </details>
+      {% for variant in report.variants %}
+        <h3>{{ variant.name|replace('_', ' ') }}</h3>
+        <p>
+          Coverage: <strong>{{ variant.coverage.covered }}/{{ variant.coverage.count }}</strong>
+          inside 90% intervals. Evidence gate:
+          <strong>{{ 'Passed' if variant.gate.passed else 'Unresolved or failed' }}</strong>.
+        </p>
+        <ul>
+          {% for name, passed in variant.gate.checks.items() %}
+            <li>{{ name|replace('_', ' ') }}: {{ 'Passed' if passed else 'Unresolved or failed' }}.</li>
+          {% endfor %}
+        </ul>
+        <details>
+          <summary>Fold fits, component allocation and held-out outcomes</summary>
+          {% for fold in variant.folds %}
+            <h4>{{ fold.label }}</h4>
+            <p>
+              Training: {{ fold.fit.training_pairs|join(', ') }}.
+              Seat core scale {{ fmt(fold.fit.parameters.sigma_seat) }};
+              cluster scale {{ fmt(fold.fit.parameters.sigma_cluster) }};
+              seat degrees of freedom {{ fold.fit.parameters.nu if fold.fit.parameters.nu is not none else 'Gaussian' }};
+              lambda scale {{ fmt(fold.fit.parameters.sigma_lambda) }};
+              lambda degrees of freedom {{ fold.fit.parameters.lambda_df if fold.fit.parameters.lambda_df is not none else 'Gaussian' }}.
+            </p>
+            <p>
+              Objective {{ fmt(fold.fit.objective) }}.
+              Fitting precision stable: {{ 'Yes' if fold.fit_stability.stable else 'No' }}.
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Party</th><th scope="col">Actual</th>
+                  <th scope="col">5% / median / 95%</th><th scope="col">Mean / SD</th>
+                  <th scope="col">Covered</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in fold.evaluation.seat_totals %}
+                  <tr>
+                    <th scope="row">{{ row.get('party', row.party_id) }}</th>
+                    <td>{{ row.actual }}</td>
+                    <td>{{ fmt(row.low, '.0f') }} / {{ fmt(row.median, '.0f') }} / {{ fmt(row.high, '.0f') }}</td>
+                    <td>{{ fmt(row.mean) }} / {{ fmt(row.sd) }}</td>
+                    <td>{{ 'Yes' if row.covered else 'No' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <p>Favourite reliability and residual tails:</p>
+            <pre>{{ fold.evaluation.reliability|tojson(indent=2) }}</pre>
+            <pre>{{ fold.evaluation.residual_tails|tojson(indent=2) }}</pre>
+            <p>Component allocation and lambda overlap:</p>
+            <pre>{{ fold.fit.component_allocation|tojson(indent=2) }}</pre>
+            <p>Aggregate drift and noise-induced bias:</p>
+            <pre>{{ fold.evaluation.aggregate_drift|tojson(indent=2) }}</pre>
+            <p>Fit diagnostics and degrees-of-freedom profiles:</p>
+            <pre>{{ fold.fit.diagnostics|tojson(indent=2) }}</pre>
+            <pre>{{ fold.fit.profiles|tojson(indent=2) }}</pre>
+          {% endfor %}
+          <p>Standardized leader/runner RMS reference:</p>
+          <pre>{{ variant.standardized_rms|tojson(indent=2) }}</pre>
+        </details>
+      {% endfor %}
+      <h3>Limitations</h3>
+      <ul>{% for line in report.limitations %}<li>{{ line }}</li>{% endfor %}</ul>
+      <details>
+        <summary>Complete report and reproducibility identities</summary>
+        <pre>{{ report|tojson(indent=2) }}</pre>
+      </details>
+    {% endif %}
+  </section>
+{% endblock %}

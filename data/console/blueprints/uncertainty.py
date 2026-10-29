@@ -48,6 +48,7 @@ from model_support.uncertainty import (
     load_uncertainty_config,
 )
 from model_support import westminster_validation
+from model_support import westminster_conversion_report
 from model_support.monte_carlo import config_hash
 from models import Map
 
@@ -416,4 +417,23 @@ def uncertainty_validation() -> str:
     return render_template(
         "uncertainty_validation.html", report=report, error=error,
         stale=stale, fmt=fmt,
+    )
+
+
+@bp.route("/westminster/uncertainty/conversion-validation")
+def uncertainty_conversion_validation() -> str:
+    """Read saved joint-experiment evidence without running the experiment."""
+    report = None
+    error = None
+    stale = False
+    try:
+        report = westminster_conversion_report.read_report()
+        stale = report["identity"]["config_hash"] != config_hash(
+            load_uncertainty_config(),
+        )
+    except (CalibrationError, UncertaintyConfigError) as exc:
+        error = str(exc)
+    return render_template(
+        "uncertainty_conversion_validation.html",
+        report=report, error=error, stale=stale, fmt=fmt,
     )

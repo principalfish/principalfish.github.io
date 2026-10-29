@@ -2,7 +2,8 @@
 """Write reproducible Westminster diagnostics; SQLite is always opened read-only.
 
 Historical inputs are read in a consistent transaction. Runtime precision and
-bias checks use a saved replay snapshot, never a model rerun or a DB write.
+bias checks use frozen model inputs or an explicitly selected replay archive.
+Validation never reruns the live model or writes to the database.
 """
 
 from __future__ import annotations
@@ -29,7 +30,8 @@ from model_support.westminster_validation import (
     fingerprint,
     read_only_database,
 )
-from model_support.westminster_validation_replay import replay_validation
+from model_support.westminster_validation_inputs import INPUTS_PATH
+from model_support.westminster_validation_replay import frozen_input_validation, replay_validation
 from scripts.calibrate_uncertainty import party_names
 
 
@@ -39,7 +41,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--database", type=Path, default=Path(defaults.database_path))
     parser.add_argument("--config", type=Path, default=UNCERTAINTY_CONFIG_PATH)
     parser.add_argument("--final-polls", type=Path, default=FINAL_POLL_ERRORS_PATH)
-    parser.add_argument("--replay", type=Path, default=Path(defaults.simulations_path))
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--inputs", type=Path, default=INPUTS_PATH, help="Frozen aggregate runtime inputs (default: committed 22 October fixture)")
+    source.add_argument("--replay", type=Path, help="Explicit current-format saved replay archive")
     parser.add_argument("--skip-replay", action="store_true", help="Explicitly omit runtime diagnostics")
     parser.add_argument("--simulations", type=int, default=4000, help="Conditional draws per pair/seat")
     parser.add_argument("--replay-simulations", type=int, default=10000)
@@ -48,7 +52,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.simulations < 2 or args.replay_simulations < 2:
         parser.error("Simulation counts must be at least two")
     try:
-        if args.output.resolve() in {path.resolve() for path in (args.database, args.config, args.final_polls, args.replay)}:
+        if args.output.resolve() in {path.resolve() for path in (args.database, args.config, args.final_polls, args.inputs, *([args.replay] if args.replay else []))}:
             raise ValueError("Report output must not overwrite an input")
         config = load_uncertainty_config(args.config)
         table = load_final_poll_table(args.final_polls)
@@ -56,9 +60,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             report = build_report(connection, config, table.elections, count=args.simulations)
             names = party_names(connection)
         report["replay"] = ({"status": "omitted", "reason": "Explicit --skip-replay"}
-                            if args.skip_replay else replay_validation(args.replay, config, names, count=args.replay_simulations))
+                            if args.skip_replay else replay_validation(args.replay, config, names, count=args.replay_simulations)
+                            if args.replay else frozen_input_validation(args.inputs, config, count=args.replay_simulations))
         data_dir = Path(__file__).resolve().parents[1]
         source_files = ["model_support/westminster_validation.py", "model_support/westminster_validation_replay.py",
+                        "model_support/westminster_validation_inputs.py",
                         "model_support/monte_carlo.py", "model_support/calibration.py", "model_support/uncertainty.py",
                         "scripts/calibrate_uncertainty.py", "scripts/validate_westminster_uncertainty.py"]
         report["identity"].update({

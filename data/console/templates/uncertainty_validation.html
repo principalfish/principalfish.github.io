@@ -93,6 +93,17 @@
           {{ report.replay.simulations }} simulations per seed.
           {{ report.replay.method }}
         </p>
+        {% if report.replay.get('input_source') %}
+          <p>
+            Input source: {{ report.replay.input_source|replace('_', ' ') }}.
+            Original config: <code>{{ report.replay.saved_config_hash }}</code>;
+            evaluated config: <code>{{ report.replay.evaluated_config_hash }}</code>.
+            Evaluated kernel: <code>{{ report.replay.evaluated_kernel_version }}</code>.
+            {% if report.replay.get('source_kernel_version') %}
+              Original kernel: <code>{{ report.replay.source_kernel_version }}</code>.
+            {% endif %}
+          </p>
+        {% endif %}
         <table>
           <thead>
             <tr>

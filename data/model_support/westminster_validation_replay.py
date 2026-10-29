@@ -11,6 +11,7 @@ from numpy.typing import NDArray
 
 from model_support.monte_carlo import (
     ErrorStreams,
+    WESTMINSTER_KERNEL_VERSION,
     SimulationFileError,
     SimulationInputs,
     config_hash,
@@ -22,6 +23,7 @@ from model_support.monte_carlo import (
 )
 from model_support.simulation_replay import input_fingerprint
 from model_support.uncertainty import UncertaintyConfig
+from model_support.westminster_validation_inputs import load_validation_inputs
 
 
 def _simulate(
@@ -79,25 +81,59 @@ def replay_validation(
     if draws.replay is None:
         raise SimulationFileError("Saved simulations have no supported replay inputs")
     inputs = draws.replay.inputs
+    return _input_validation(
+        inputs, config, names, count=count, seed=draws.seed,
+        identity={"as_of_date": metadata.as_of_date.isoformat(),
+                  "election_id": metadata.election_id,
+                  "saved_config_hash": draws.config_hash,
+                  "input_source": "saved_replay_archive"},
+    )
+
+
+def frozen_input_validation(
+    path: Path, config: UncertaintyConfig, *, count: int = 10000,
+) -> dict[str, Any]:
+    """Evaluate the current kernel against versioned aggregate baseline inputs."""
+    frozen = load_validation_inputs(path)
+    source = frozen.provenance
+    return _input_validation(
+        frozen.inputs, config, frozen.party_names, count=count, seed=source["seed"],
+        identity={"as_of_date": source["as_of_date"],
+                  "election_id": source["election_id"],
+                  "saved_config_hash": source["config_hash"],
+                  "input_source": "committed_frozen_inputs",
+                  "fixture_sha256": frozen.fixture_sha256,
+                  "source_archive_sha256": source["source_archive_sha256"],
+                  "source_archive_input_hash": source["archive_input_hash"],
+                  "source_kernel_version": source["source_kernel_version"]},
+    )
+
+
+def _input_validation(
+    inputs: SimulationInputs, config: UncertaintyConfig, names: dict[int, str],
+    *, count: int, seed: int, identity: dict[str, Any],
+) -> dict[str, Any]:
+    if count < 2:
+        raise ValueError("Input validation needs at least two simulations")
     variants = []
     for label, settings in (
         ("current_config", config),
         ("no_seat_noise", replace(config, sigma_seat=0.0)),
         ("no_seat_noise_or_lambda", replace(config, sigma_seat=0.0, sigma_lambda=0.0)),
     ):
-        seats, votes = _simulate(inputs, settings, count, draws.seed)
+        seats, votes = _simulate(inputs, settings, count, seed)
         variants.append({"mode": label, **_summary(inputs, settings, seats, votes, names)})
     seeds = (1, 2, 3, 4, 5)
     probabilities = []
-    for seed in seeds:
-        seats, _ = _simulate(inputs, config, count, seed)
+    for spread_seed in seeds:
+        seats, _ = _simulate(inputs, config, count, spread_seed)
         probabilities.append((seats >= config.majority_threshold).mean(axis=0))
     spread = np.array(probabilities)
     return {
-        "status": "complete", "as_of_date": metadata.as_of_date.isoformat(),
-        "election_id": metadata.election_id, "input_hash": input_fingerprint(inputs),
-        "saved_config_hash": draws.config_hash, "evaluated_config_hash": config_hash(config),
-        "seed": draws.seed, "simulations": count, "seed_spread_seeds": list(seeds),
+        "status": "complete", **identity, "input_hash": input_fingerprint(inputs),
+        "evaluated_config_hash": config_hash(config),
+        "evaluated_kernel_version": WESTMINSTER_KERNEL_VERSION,
+        "seed": seed, "simulations": count, "seed_spread_seeds": list(seeds),
         "seed_spread": [{"party_id": party, "majority_probabilities": spread[:, index].tolist(),
                          "sample_sd": float(spread[:, index].std(ddof=1))}
                         for index, party in enumerate(inputs.party_ids)],

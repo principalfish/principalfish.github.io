@@ -42,8 +42,8 @@ Run the offline acceptance harness from `data/`:
 ```
 
 This reads the configured SQLite database with `mode=ro` and `query_only`,
-uses the committed final-poll evidence and current uncertainty config, and
-writes only `models/westminster/uncertainty_validation_report.json`. It does
+uses the committed final-poll evidence, current uncertainty config and frozen
+22 October 2026 aggregate model inputs, and writes only `models/westminster/uncertainty_validation_report.json`. It does
 not rerun or persist a forecast. The console's Westminster Uncertainty →
 Validation page displays this saved report and flags a changed config.
 
@@ -56,18 +56,27 @@ For an explicit input set and scratch output:
   --output /tmp/westminster-validation.json
 ```
 
+`--inputs` selects an alternate frozen aggregate-input fixture; `--replay` instead
+uses an explicitly selected, supported raw-draw archive. The default fixture
+contains shares, turnout, IDs and names, with the original archive SHA, config,
+seed and input fingerprint. It contains no individual polls or simulated draws.
+Its schema, content hash, source config hash and original input fingerprint
+are checked before simulation, so raw-draw format upgrades do not lose the
+baseline comparison.
+
 `--config` and `--final-polls` select alternate local evidence. Default draw
 counts are 4,000 for the historical checks and 10,000 for each runtime check;
 `--simulations` and `--replay-simulations` override them. `--skip-replay`
-explicitly omits runtime diagnostics when no snapshot is available. Missing
+explicitly omits runtime diagnostics. Missing
 required inputs fail without replacing the report. Changing environment
 variables is unnecessary: `--database` names the exact read-only input.
 
 The report records config, historical-input, replay-input and source hashes,
 fixed seeds, draw counts and NumPy version. Repeating the command with the
-same inputs and source produces the same report. Replay diagnostics identify
-the saved date and both saved and evaluated configs; they evaluate the current
-kernel on those frozen inputs, even if current polling has moved on.
+same inputs and source produces the same report. Runtime diagnostics identify
+the original date, original archive and both saved and evaluated configs and
+kernels; they evaluate current settings on frozen inputs even if polling has
+moved on.
 
 Historical seat-total and favourite-reliability checks condition on **actual
 regional votes**. They reproduce the Gaussian conversion experiment with

@@ -1363,8 +1363,9 @@ export function refreshOpenSeatPopup() {
 }
 
 /**
- * Renders the seat detail popup for seatName, showing majority, gain indicator, and a ranked
- * vote share bar chart with comparison deltas. Hides the popup if the seat is not found.
+ * Renders the seat detail popup for seatName, showing majority, by-election marker, gain
+ * indicator, and a ranked vote share bar chart with comparison deltas. Hides the popup if the
+ * seat is not found.
  * @param {string} seatName - Display name of the seat to show.
  * @returns {void}
  */
@@ -1402,6 +1403,7 @@ function renderSeatPopup(seatName) {
   // logic stays in one place and this function has no arithmetic of its own.
   const comparisonSeat = state.comparisonElectionData?.seatsByKey.get(seatKey) || null;
   const gainFrom = seat.gainFromParty(comparisonSeat?.winner || null);
+  const isByElection = Seat.isByElectionSeat(seat, state.currentElection.byElectionSeats);
   const majority = seat.majorityStats();
 
   // Model and referendum elections have no meaningful turnout or raw majority to display.
@@ -1410,6 +1412,7 @@ function renderSeatPopup(seatName) {
   // Populate title (with electoral votes for presidential states) and meta line.
   seatPopupTitle.textContent = seat.ev ? `${seat.seat} - ${formatInt(seat.ev)} EV` : seat.seat;
   seatPopupMeta.innerHTML = `
+    ${isByElection ? '<span class="maps-popup-meta-item maps-by-election-tag">BY-ELECTION</span>' : ''}
     ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${escapeHtml(manifest.labelParty(gainFrom))} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
     <span class="maps-popup-meta-item">${escapeHtml(getRegionLabel(seat.region, state.currentRegionLabelsByKey))}</span>
     <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showCounts ? ` = ${formatInt(majority.raw)}` : ''}</span>
@@ -1496,7 +1499,8 @@ function setSelectedSeatRowByKey(seatKey) {
 
 /**
  * Renders the filtered seats, sorted alphabetically, into the seat list panel. Each row shows
- * the winner colour, name, and gain-from indicator. Click zooms and opens the seat popup.
+ * the winner colour, name, by-election marker, and gain-from indicator. Click zooms and opens
+ * the seat popup.
  * Reads seats and comparison data directly from state.
  * @returns {void}
  */
@@ -1508,6 +1512,7 @@ function renderSeatList() {
   state.seatList.selected = null;
 
   const comparisonSeatsByKey = state.comparisonElectionData?.seatsByKey ?? null;
+  const byElectionSeats = state.currentElection.byElectionSeats;
 
   const ordered = [...seats].sort((a, b) => a.seat.localeCompare(b.seat));
   // Build rowByKey locally so it can be atomically written to state at the end,
@@ -1532,6 +1537,7 @@ function renderSeatList() {
         <span class="maps-seat-name">${escapeHtml(seatName)}</span>
       </span>
       <span class="maps-seat-meta">
+        ${Seat.isByElectionSeat(seat, byElectionSeats) ? '<span class="maps-seat-gain-label maps-by-election-tag">BY-ELECTION</span>' : ''}
         ${gainedFrom ? `<span class="maps-seat-gain"><span class="maps-seat-gain-label">GAIN FROM</span><span class="maps-seat-icon" style="background:${manifest.colourParty(gainedFrom)}" title="${escapeHtml(manifest.labelParty(gainedFrom))}"></span></span>` : '<span class="maps-seat-gain-placeholder"></span>'}
       </span>
     `;

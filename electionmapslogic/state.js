@@ -531,6 +531,18 @@ export class Seat {
   }
 
   /**
+   * Returns true when seat had a by-election folded into the current election's results.
+   * Shared by matchesPrimaryFilters (the By-elections filter) and the seat popup / seat list
+   * BY-ELECTION marker, so the filter and the marker always agree.
+   * @param {{seat: string}} seat - The seat to test.
+   * @param {Set<string>|null} byElectionSeats - Set of by-election seat names, or null when the election has none.
+   * @returns {boolean}
+   */
+  static isByElectionSeat(seat, byElectionSeats) {
+    return !!byElectionSeats?.has(seat.seat);
+  }
+
+  /**
    * Returns true when seat passes all active primary filters.
    * Static so it accepts any Seat instance without binding to a particular `this`.
    * @param {Seat} seat - The seat to test.
@@ -571,7 +583,7 @@ export class Seat {
 
     if (filterState.gainsOnly) {
       if (byElectionSeats) {
-        if (!byElectionSeats.has(seat.seat)) return false;
+        if (!Seat.isByElectionSeat(seat, byElectionSeats)) return false;
       } else {
         const gainFrom = seat.gainFromParty(comparisonSeat?.winner);
         if (!gainFrom) return false;

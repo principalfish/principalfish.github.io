@@ -1430,6 +1430,12 @@ a {
   letter-spacing: 0.02em;
 }
 
+/* BY-ELECTION marker. Only the accent colour: the seat-list row takes its font from
+   .maps-seat-gain-label and the popup chip from .maps-seat-popup-meta. */
+.maps-by-election-tag {
+  color: #92400e;
+}
+
 .maps-controls-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -145,3 +145,16 @@ describe('Seat.gainFromParty', () => {
     expect(seat.gainFromParty(null)).toBe(null);
   });
 });
+
+describe('Seat.isByElectionSeat', () => {
+  const seat = new Seat({ seat: 'A', region: 'r', winner: 'labour', votes: { labour: 600, conservative: 400 } });
+
+  it('returns true when the seat is in the by-election set', () => {
+    expect(Seat.isByElectionSeat(seat, new Set(['A', 'B']))).toBe(true);
+  });
+
+  it('returns false when the seat is not in the set or the election has no by-elections', () => {
+    expect(Seat.isByElectionSeat(seat, new Set(['B']))).toBe(false);
+    expect(Seat.isByElectionSeat(seat, null)).toBe(false);
+  });
+});

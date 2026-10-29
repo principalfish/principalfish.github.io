@@ -34,7 +34,7 @@
 <table><thead><tr><th>Family</th><th>Cycle</th><th>Official-input signed mean</th><th>Raw-poll signed mean</th><th>Centered conditional moment</th></tr></thead><tbody>
 {% for row in report.references %}<tr><td>{{ row.scenario_family }}</td><td>{{ row.cycle }}</td><td>{{ row.conditional_residual.mean|round_display }}</td><td>{{ row.raw_poll_residual.mean|round_display }}</td><td>{{ row.conditional_residual.centered_mean_square|round_display }}</td></tr>{% endfor %}
 </tbody></table>
-<p>2018 House anchors are unavailable. The complete 2024 conditional reference is excluded; its 2020-baseline NE special is retained in the availability ledger. A single usable conditional election leaves conditional holdout fits unavailable. National and local evidence retain their own source qualifications.</p>
+<p>{{ availability_summary }}</p>
 <details><summary>Every race, baseline year and availability reason</summary><pre>{{ report.reference_availability|round_display|tojson(indent=2) }}</pre></details>
 </section>
 {% endif %}

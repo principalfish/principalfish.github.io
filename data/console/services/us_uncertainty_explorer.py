@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import sys
 from contextlib import closing
 from dataclasses import dataclass
 from datetime import date
@@ -27,6 +28,14 @@ from model_support.us_senate import senate_counts, senate_outcomes
 from model_support.us_president import president_counts
 from model_support.us_uncertainty import US_STORED_SCHEMA, validate_document
 from models import Map
+
+# Standalone runners share the models.py module name, so import their helpers
+# through the runner directory rather than a models.us package.
+_RUNNER_DIRECTORY = Path(__file__).resolve().parents[2] / "models/us"
+if str(_RUNNER_DIRECTORY) not in sys.path:
+    sys.path.insert(0, str(_RUNNER_DIRECTORY))
+
+from _common import is_others_party, senate_fallback_swings, weighted_average
 
 PAGE_SIZE = 50
 
@@ -271,6 +280,16 @@ def senate_fallback_provenance(
         for party, share in poll.shares:
             national_sums[party] = national_sums.get(party, 0.0) + share * poll.weight
             national_weights[party] = national_weights.get(party, 0.0) + poll.weight
+    national_deltas = senate_fallback_swings(
+        anchor_shares_by_seat={
+            int(key): value["shares"] for key, value in anchor["races"].items()
+        },
+        region_by_seat_id={}, region_swings={},
+        weighted_sums={(None, party): value for party, value in national_sums.items()},
+        total_weights={(None, party): value for party, value in national_weights.items()},
+        party_name_by_id=dict(zip(run.inputs.party_ids, run.inputs.party_names)),
+        party_universe=run.inputs.party_ids,
+    )
     provenance = private["provenance"]
     selected = provenance.get("selected_polls")
     regional_evidence = {
@@ -294,13 +313,10 @@ def senate_fallback_provenance(
         for j, (party, name) in enumerate(zip(
             run.inputs.party_ids, run.inputs.party_names,
         )):
-            component = "Others" if name.strip().casefold() in {
-                "other", "others",
-            } else name
+            component = "Others" if is_others_party(name) else name
             house = reference["shares"].get(component) if reference else None
-            current = (
-                national_sums[party] / national_weights[party]
-                if party in national_weights else None
+            current = weighted_average(
+                national_sums.get(party, 0.0), national_weights.get(party, 0.0),
             )
             trace = retained["parties"].get(str(party)) if retained else None
             if trace is not None and trace["inherited_swing"] is not None:
@@ -322,8 +338,8 @@ def senate_fallback_provenance(
                 "baseline_year": reference["baseline_id"][:4] if reference else None,
                 "house_year": reference["evidence"]["year"] if reference else None,
                 "house": house, "current": current,
-                "delta": current - house if current is not None and house is not None
-                else None,
+                "delta": national_deltas[seat.seat_id][party]
+                if current is not None and house is not None else None,
                 "route": route, "broad_allowed": seat.broad_mask[j],
                 "fallback": trace["fallback"] if trace else None,
                 "weighted_fallback": trace["fallback_contribution"] if trace else None,

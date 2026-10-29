@@ -18,7 +18,7 @@ from datetime import date
 import numpy as np
 from numpy.typing import NDArray
 
-from model_support.monte_carlo import _python_sum
+from model_support.monte_carlo import _python_sum, interval_quantiles
 from model_support.summaries import RecordedVoteRow
 from model_support.us_poll_evidence import validate_contributor
 
@@ -669,7 +669,8 @@ def run_us_simulations(
                     projection.winners[:, indices] == party_index
                 ).sum(axis=1)
     central = project_us_seats(inputs, np.zeros((1, len(inputs.seats), k)))
-    quantiles = [(1 - interval) / 2, 0.5, (1 + interval) / 2]
+    lo, hi = interval_quantiles(interval)
+    quantiles = [lo, 0.5, hi]
     share_ranges = np.empty((3, len(inputs.seats), k), dtype=np.float64)
     histograms = np.empty((len(inputs.seats), k, 101), dtype=np.int64)
     for i in range(len(inputs.seats)):

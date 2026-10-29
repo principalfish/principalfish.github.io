@@ -63,9 +63,9 @@ Anchor policy SHA256: 6568de70b4317be92b58a7450de2d4d262e397989e5364cb8a8447bfbd
 
 Anchor catalogue SHA256: e20765425615bdc43a2e063f0ab260ca6f00e2ebd27bff6e1be9101dabe50757
 
-Reference identity SHA256: 0216619d980848443cf282d3168d4ff32d92c831c1c9cb5221038d240aef767e
+Reference identity SHA256: a5f6f86065f4f881d9ed0eaa37e0f40e6b9df33ee360a3f836045ade82198df6
 
-Legacy selected-field reports remain in senate-comparison-report.json/.md.
+Legacy selected-field reports remain in senate-comparison-report.json and its Markdown companion.
 
 |Family|Cycle|Official-input signed mean|Raw-poll signed mean|Centered conditional moment|
 |-|-|-|-|-|
@@ -83,7 +83,8 @@ Legacy selected-field reports remain in senate-comparison-report.json/.md.
 |2024|candidate-votes-excluding-nota|34|False|33|
 |2024|reported-including-nota|34|False|33|
 
-Every race and its source baseline year, structural exclusions and availability reason remain in the companion JSON. The unavailable 2018 reference excludes the complete 2024 field, including the available 2020-baseline NE special.
+Every race and its source baseline year, structural exclusions and availability reason remain in the companion JSON.
+1 usable conditional election(s): 2022. Excluded complete fields: 2024. Fewer than two usable elections leave conditional holdout fits unavailable. Unavailable anchors: 2018: Unavailable: uncertified NC-09 is not an accepted historical proxy.
 
 
 ## Scope and unresolved assumptions
@@ -98,8 +99,8 @@ Every race and its source baseline year, structural exclusions and availability 
 - Gaussian kernel moment recovery validates numerical units, not distributional tails or the assumptions needed for release.
 - Undefined decided contrasts at a probed scale remain unavailable; probe failure alone does not establish target unreachability.
 - Prior-cycle baseline EV weights are not target allocations; no target EV outcome is scored.
-- 2018 House anchors are unavailable under the accepted NC-09 policy; the complete 2024 conditional field is excluded, including its separately available 2020-baseline NE special. National and local proxy observations retain their own source qualifications.
-- Only one complete conditional election (2022) is available. Leave-one-election-out conditional fits and intervals are unavailable; no scale-transfer validation is claimed.
+- 1 usable conditional election(s): 2022. Excluded complete fields: 2024. Fewer than two usable elections leave conditional holdout fits unavailable. Unavailable anchors: 2018: Unavailable: uncertified NC-09 is not an accepted historical proxy.
+- National and local proxy observations retain their own source qualifications.
 - The matching-year House anchor changes deterministic fallback only. Pooled Senate baseline composition remains the stochastic source shape. Structural candidate zeros, paired-slot moment exclusions, minor-party mapping and RCV limitations are unchanged.
 - Conditional and raw-poll signed means are observed minus projected; centered fits remove the cycle mean only for the target moment and do not correct central bias.
 - Official current-national counterfactual levels and G facts retain the original final_RCV_no_nominal_view proxy. Baseline anchors use accepted published-general counts. Vote-stage/population transport remains unaccepted, including the 2022 Alaska general/tabulator discrepancy and 2024 verification limits; matching-year anchoring does not resolve it.

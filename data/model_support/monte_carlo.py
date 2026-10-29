@@ -1386,14 +1386,18 @@ def seat_outcome_probabilities(
     return p_majority, p_largest
 
 
-def _interval_quantiles(config: UncertaintyConfig) -> tuple[float, float]:
+def interval_quantiles(interval: float) -> tuple[float, float]:
     """The interval's tail quantiles, rounded off float dust.
 
     ``(1 − 0.99) / 2`` is 0.0050000000000000044, which would push an
     inverted-CDF rank up by one; rounding to 12 places gives 0.005.
     """
-    tail = round((1 - config.interval) / 2, 12)
+    tail = round((1 - interval) / 2, 12)
     return tail, round(1 - tail, 12)
+
+
+def _interval_quantiles(config: UncertaintyConfig) -> tuple[float, float]:
+    return interval_quantiles(config.interval)
 
 
 def _seat_range(seats: NDArray[np.integer], config: UncertaintyConfig) -> IndexArray:

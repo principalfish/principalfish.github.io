@@ -84,7 +84,8 @@ def test_export_uses_frozen_regions_and_only_whitelisted_fields(
         for j, party in enumerate(draws.inputs.party_ids):
             counts = (draws.winners[:, indices] == j).sum(axis=1)
             interval = stored.national["summary"]["interval"]
-            quantiles = [(1 - interval) / 2, 0.5, (1 + interval) / 2]
+            assert interval == 0.9
+            quantiles = [0.05, 0.5, 0.95]
             expected = np.quantile(counts, quantiles, method="nearest")
             assert block["parties"][str(party)]["s"] == expected.tolist()
         assert len(block["members"]) == len(indices)

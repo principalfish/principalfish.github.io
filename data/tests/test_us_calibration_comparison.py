@@ -92,7 +92,7 @@ def test_shared_central_transform_has_exact_zero_error_parity(
     evidence: ComparisonData,
 ) -> None:
     for cycle in evidence.cycles:
-        if evidence.model == "senate" and cycle.cycle == 2024:
+        if evidence.model == "senate" and not comparison.senate_reference_availability(cycle)["available"]:
             continue
         reference = comparison.build_reference(evidence, cycle)
         inputs = reference.inputs

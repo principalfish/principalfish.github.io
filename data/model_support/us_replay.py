@@ -213,7 +213,7 @@ def load_us_draws(path: Path, stored: StoredUncertainty) -> UsDraws:
             inputs, document, arrays["errors"], arrays["votes"], arrays["winners"],
             arrays["seat_totals"], arrays["vote_totals"], private["seed"],
         )
-    except (OSError, KeyError, TypeError, zipfile.BadZipFile, zlib.error) as exc:
+    except (OSError, EOFError, KeyError, TypeError, zipfile.BadZipFile, zlib.error) as exc:
         raise ValueError(f"cannot read US simulation archive: {exc}") from exc
 
 

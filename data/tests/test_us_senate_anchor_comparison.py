@@ -25,6 +25,7 @@ from model_support.us_senate_anchors import (
     SENATE_ANCHOR_POLICY_SHA256,
     SENATE_CENTRAL_ESTIMATOR,
     resolve_senate_house_anchors,
+    load_senate_anchor_policy,
 )
 from tests.console_fixtures import app
 
@@ -131,7 +132,7 @@ def test_corrupt_anchor_policy_is_an_error_even_for_unavailable_cycle(
     def corrupt(*args: object, **kwargs: object) -> object:
         raise HouseAnchorError("policy bytes differ")
 
-    monkeypatch.setattr(comparison, "resolve_senate_house_anchors", corrupt)
+    monkeypatch.setattr(comparison, "load_senate_anchor_policy", corrupt)
     data = comparison.load_comparison("senate")
     with pytest.raises(HouseAnchorError, match="policy bytes differ"):
         comparison.senate_reference_availability(data.cycles[-1])
@@ -171,9 +172,13 @@ def test_signed_means_versions_and_anchor_identity_are_explicit(
     )
     path = tmp_path / "report.json"
     for key in ("central_estimator", "anchor_policy_sha256", "anchor_catalogue_sha256",
-                "reference_identity_sha256"):
+                "reference_identity_sha256", "reference_availability"):
         path.write_text(json.dumps({**current_report, key: "wrong"}))
-        with pytest.raises(ComparisonError, match="stale/mismatched"):
+        with pytest.raises(ComparisonError, match="anchor identity"):
+            comparison.read_comparison_report("senate", path)
+    for version in (comparison.VERSION, "wrong"):
+        path.write_text(json.dumps({**current_report, "comparison_version": version}))
+        with pytest.raises(ComparisonError):
             comparison.read_comparison_report("senate", path)
     markdown = comparison.render_comparison_report(current_report)
     assert "Official-input signed mean" in markdown
@@ -207,7 +212,7 @@ def test_console_distinguishes_current_and_legacy(
     current = client.get("/us/senate/uncertainty/calibration").get_data(as_text=True)
     assert "Matching-year House anchors" in current
     assert "Raw-poll signed mean" in current
-    assert "single usable conditional election" in current
+    assert "1 usable conditional election(s): 2022" in current
     legacy = client.get("/us/senate/uncertainty/calibration?reference=legacy").get_data(as_text=True)
     assert "Legacy selected-field Senate reference" in legacy
     assert "Matching-year House anchor provenance is unavailable" in legacy
@@ -216,8 +221,8 @@ def test_console_distinguishes_current_and_legacy(
 
 def test_committed_corrected_reports_are_pinned_and_load_as_current() -> None:
     expected = {
-        "json": "ccffea86c2d3c40d464d5a3000cdff9aa4eac40107e2cf47fa65ccc59f6c0a02",
-        "md": "42e4ba461a974b36a46eb0ed7ff598f1cdc0158407596a508d250ebf9a60026f",
+        "json": "fdcd87a5f05b1e981177a3b7d25c536eefd398ebd53f18e839098d8e55cfe15e",
+        "md": "0fd1ef7772a9c04aedd55f3ef320b93d45c774ca3604a489658036e5a374591c",
     }
     for suffix, digest in expected.items():
         path = DIRECTORY / f"{comparison.SENATE_REPORT_STEM}.{suffix}"
@@ -229,3 +234,58 @@ def test_committed_corrected_reports_are_pinned_and_load_as_current() -> None:
     folds = [obj(fold) for fold in seq(report["national_proxy_holdouts"])]
     assert {fold["held_out_cycle"] for fold in folds} == {2012, 2014, 2016, 2020, 2022, 2024}
     assert all(fold["held_out_cycle"] not in seq(fold["training_cycles"]) for fold in folds)
+
+
+def test_legacy_report_survives_kernel_bump_but_rejects_resealed_content(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    path = DIRECTORY / comparison.LEGACY_SENATE_REPORT_FILENAME
+    monkeypatch.setattr(comparison, "US_KERNEL_VERSION", "future-kernel")
+    legacy = comparison.read_comparison_report("senate", path)
+    assert legacy["kernel_version"] != "future-kernel"
+    changed = tmp_path / path.name
+    changed.write_text(json.dumps(legacy))
+    with pytest.raises(ComparisonError, match="pinned bytes"):
+        comparison.read_comparison_report("senate", changed)
+    with pytest.raises(ComparisonError, match="stale/mismatched"):
+        comparison.read_comparison_report("senate")
+
+
+def test_report_with_no_available_reference_has_valid_catalogue_identity() -> None:
+    data = comparison.load_comparison("senate")
+    data = dataclasses.replace(data, cycles=tuple(
+        cycle for cycle in data.cycles
+        if not comparison.senate_reference_availability(cycle)["available"]
+    ))
+    report = comparison.make_comparison_report(data, fit_draws=128, recovery_draws=128)
+    assert report["references"] == []
+    assert report["scenarios"] == []
+    assert report["anchor_catalogue_sha256"] == load_senate_anchor_policy().catalogue.sha256
+    assert "0 usable conditional election(s): none" in comparison.render_comparison_report(report)
+
+
+def test_policy_is_loaded_once_and_availability_has_no_duplicate_provenance() -> None:
+    with patch.object(
+        comparison, "load_senate_anchor_policy", wraps=load_senate_anchor_policy,
+    ) as load:
+        report = comparison.read_comparison_report("senate")
+    assert load.call_count == 1
+    assert all(
+        "provenance" not in obj(row)
+        for group in seq(report["reference_availability"])
+        for row in seq(obj(group)["rows"])
+    )
+
+
+def test_availability_uses_verified_policy_years_and_reasons() -> None:
+    data = comparison.load_comparison("senate")
+    cycle = data.cycles[0]
+    policy = load_senate_anchor_policy()
+    policy = dataclasses.replace(
+        policy, accepted_years=(), unavailable_years=(*policy.accepted_years, *policy.unavailable_years),
+        policies={"2016": "Synthetic policy withholding 2016"},
+    )
+    availability = comparison.senate_reference_availability(cycle, policy=policy)
+    assert availability["available"] is False
+    first = obj(seq(availability["rows"])[0])
+    assert first["reason"] == "Synthetic policy withholding 2016"

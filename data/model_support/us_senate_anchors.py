@@ -13,6 +13,7 @@ from model_support.us_house_anchors import (
     CATALOGUE_PATH,
     AnchorYear,
     HouseAnchorError,
+    HouseAnchorCatalogue,
     inspect_house_anchor_catalogue,
 )
 
@@ -54,13 +55,46 @@ class SenateHouseAnchor:
         }
 
 
-def resolve_senate_house_anchors(
-    baseline_by_seat: Mapping[int, str],
+@dataclass(frozen=True, slots=True)
+class SenateAnchorPolicy:
+    catalogue: HouseAnchorCatalogue
+    accepted_years: tuple[int, ...]
+    unavailable_years: tuple[int, ...]
+    policies: Mapping[str, str]
+
+    def resolve(self, baseline_by_seat: Mapping[int, str]) -> dict[int, SenateHouseAnchor]:
+        years = {
+            item.year: item
+            for item in self.catalogue.for_baselines(baseline_by_seat.values())
+        }
+        if unavailable := sorted(set(years) - set(self.accepted_years)):
+            raise HouseAnchorError(
+                f"House anchors unavailable for Senate baseline years {unavailable}; "
+                "configure an approved reference before computing this run",
+            )
+        return {
+            seat_id: SenateHouseAnchor(
+                baseline_id, years[int(baseline_id[:4])], self.catalogue.sha256,
+                SENATE_ANCHOR_POLICY_SHA256,
+            )
+            for seat_id, baseline_id in baseline_by_seat.items()
+        }
+
+    def unavailable_reason(self, baseline_id: str) -> str | None:
+        evidence, = self.catalogue.for_baselines((baseline_id,))
+        if evidence.year in self.accepted_years:
+            return None
+        return self.policies.get(
+            str(evidence.year), evidence.view("published-general").qualification,
+        )
+
+
+def load_senate_anchor_policy(
     *,
     policy_path: Path = SENATE_ANCHOR_POLICY_PATH,
     catalogue_path: Path = CATALOGUE_PATH,
-) -> dict[int, SenateHouseAnchor]:
-    """Resolve actual race baselines; missing/unapproved references fail closed."""
+) -> SenateAnchorPolicy:
+    """Verify pinned policy and catalogue bytes once before resolving races."""
     try:
         raw = policy_path.read_bytes()
         if hashlib.sha256(raw).hexdigest() != SENATE_ANCHOR_POLICY_SHA256:
@@ -75,28 +109,24 @@ def resolve_senate_house_anchors(
         or policy.get("schema") != "pf-us-senate-house-anchor-policy-v1"
         or policy.get("estimator") != SENATE_CENTRAL_ESTIMATOR
         or policy.get("selected_view") != "published-general"
-        or policy.get("accepted_years") != [2016, 2020, 2022]
-        or policy.get("unavailable_years") != [2018, 2024]
     ):
         raise HouseAnchorError("Invalid accepted Senate House anchor policy")
     catalogue = inspect_house_anchor_catalogue(catalogue_path)
     if catalogue.sha256 != policy.get("candidate_sha256"):
         raise HouseAnchorError("Accepted Senate policy names another candidate digest")
-    years = {
-        item.year: item
-        for item in catalogue.for_baselines(baseline_by_seat.values())
-    }
-    accepted = cast(list[int], policy["accepted_years"])
-    if unavailable := sorted(set(years) - set(accepted)):
-        raise HouseAnchorError(
-            f"House anchors unavailable for Senate baseline years {unavailable}; "
-            "configure an approved reference before computing this run",
-        )
-    result: dict[int, SenateHouseAnchor] = {}
-    for seat_id, baseline_id in baseline_by_seat.items():
-        year = int(baseline_id[:4])
-        result[seat_id] = SenateHouseAnchor(
-            baseline_id, years[year], catalogue.sha256,
-            SENATE_ANCHOR_POLICY_SHA256,
-        )
-    return result
+    return SenateAnchorPolicy(
+        catalogue, tuple(policy["accepted_years"]),
+        tuple(policy["unavailable_years"]), cast(dict[str, str], policy["policies"]),
+    )
+
+
+def resolve_senate_house_anchors(
+    baseline_by_seat: Mapping[int, str],
+    *,
+    policy_path: Path = SENATE_ANCHOR_POLICY_PATH,
+    catalogue_path: Path = CATALOGUE_PATH,
+) -> dict[int, SenateHouseAnchor]:
+    """Resolve actual race baselines; missing/unapproved references fail closed."""
+    return load_senate_anchor_policy(
+        policy_path=policy_path, catalogue_path=catalogue_path,
+    ).resolve(baseline_by_seat)

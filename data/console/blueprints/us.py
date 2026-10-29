@@ -28,7 +28,10 @@ from flask.typing import ResponseReturnValue
 from db import Database
 from model_support.us_simulation import UsErrorConfig, us_error_budget
 from model_support.us_calibration import read_house_report
-from model_support.us_calibration_comparison import read_comparison_report
+from model_support.us_calibration_comparison import (
+    LEGACY_SENATE_REPORT_FILENAME, read_comparison_report,
+    reference_availability_summary,
+)
 from model_support.us_comparison_inputs import DIRECTORY
 from model_support.us_validation_io import readiness as validation_readiness
 
@@ -139,7 +142,7 @@ def uncertainty_calibration(chamber: str) -> ResponseReturnValue:
     else:
         try:
             report = (
-                read_comparison_report(chamber, DIRECTORY / "senate-comparison-report.json")
+                read_comparison_report(chamber, DIRECTORY / LEGACY_SENATE_REPORT_FILENAME)
                 if chamber == "senate" and request.args.get("reference") == "legacy"
                 else read_comparison_report(chamber)
             )
@@ -150,6 +153,10 @@ def uncertainty_calibration(chamber: str) -> ResponseReturnValue:
         else "us_uncertainty_comparison.html",
         title=f"US {chamber.title()} uncertainty calibration",
         chamber=chamber, report=report, error=error,
+        availability_summary=(
+            reference_availability_summary(report["reference_availability"])
+            if report and isinstance(report.get("reference_availability"), list) else None
+        ),
     )
 
 

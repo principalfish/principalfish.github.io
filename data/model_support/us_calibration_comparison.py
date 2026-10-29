@@ -7,6 +7,7 @@ No runtime calibration configuration is emitted or accepted here.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import json
 import math
 import sys
@@ -28,7 +29,7 @@ from model_support.us_comparison_president import load_president_comparison
 from model_support.us_comparison_senate import load_senate_comparison
 from model_support.us_senate_anchors import (
     SENATE_ANCHOR_POLICY_SHA256, SENATE_CENTRAL_ESTIMATOR,
-    SenateHouseAnchor, resolve_senate_house_anchors,
+    SenateAnchorPolicy, SenateHouseAnchor, load_senate_anchor_policy,
 )
 from model_support.us_simulation import (
     US_KERNEL_VERSION, FloatArray, UsErrorConfig, UsErrorStreams, UsSeatInput,
@@ -49,6 +50,10 @@ SCHEMA = "pf-us-calibration-comparison-report-v1"
 VERSION = "us-conditional-comparisons-v1"
 SENATE_VERSION = "us-senate-house-anchor-comparisons-v2"
 SENATE_REPORT_STEM = "senate-comparison-report-house-anchor-v2"
+LEGACY_SENATE_REPORT_FILENAME = "senate-comparison-report.json"
+LEGACY_SENATE_REPORT_SHA256 = (
+    "70fc7dc0dd920ac69d9feef5962d1cb55d6a328717f9b27dce01745dfda4e7e2"
+)
 FIT_SEED = 402_701
 RECOVERY_SEED = 809_117
 
@@ -88,50 +93,83 @@ def _margins(shares: FloatArray, decided: bool) -> FloatArray:
     return result
 
 
-def _senate_anchors(cycle: CycleFact) -> dict[int, SenateHouseAnchor]:
+def _senate_baseline_ids(cycle: CycleFact) -> dict[int, str]:
     baseline_ids: dict[int, str] = {}
     for i, unit in enumerate(cycle.units):
         source = obj(unit.provenance.get("baseline_source"))
         if unit.baseline_year is None or count(source["year"]) != unit.baseline_year:
             raise ComparisonError(f"Senate baseline year missing/mismatched for {unit.key}")
         baseline_ids[i] = f"{unit.baseline_year}-us-senate"
-    return resolve_senate_house_anchors(baseline_ids)
+    return baseline_ids
 
 
-def senate_reference_availability(cycle: CycleFact) -> JsonObject:
+def _senate_anchors(cycle: CycleFact) -> dict[int, SenateHouseAnchor]:
+    return load_senate_anchor_policy().resolve(_senate_baseline_ids(cycle))
+
+
+def senate_reference_availability(
+    cycle: CycleFact, *, policy: SenateAnchorPolicy | None = None,
+) -> JsonObject:
     """Retain the complete field when an approved reference is unavailable."""
-    # Validate accepted evidence even when this cycle's reference is unavailable.
-    resolve_senate_house_anchors({year: f"{year}-us-senate" for year in (2016, 2020, 2022)})
+    policy = policy or load_senate_anchor_policy()
+    baseline_ids = _senate_baseline_ids(cycle)
     rows: list[JsonObject] = []
-    for unit in cycle.units:
-        source = obj(unit.provenance.get("baseline_source"))
-        if unit.baseline_year is None or count(source["year"]) != unit.baseline_year:
-            raise ComparisonError(f"Senate baseline year missing/mismatched for {unit.key}")
-        unavailable = unit.baseline_year in {2018, 2024}
-        if not unavailable:
-            _senate_anchors(dataclasses.replace(cycle, units=(unit,)))
+    for i, unit in enumerate(cycle.units):
+        reason = policy.unavailable_reason(baseline_ids[i])
         rows.append({
             "key": unit.key, "baseline_year": unit.baseline_year,
-            "available": not unavailable,
+            "available": reason is None,
             "baseline_counts": list(unit.baseline),
             "observed_counts": list(unit.observed),
-            "structural_issues": list(unit.issues), "provenance": unit.provenance,
-            "reason": (
-                "2018 unavailable: uncertified NC-09; no proxy or 2019 substitution"
-                if unit.baseline_year == 2018 else "2024 anchor audit unavailable"
-            ) if unavailable else None,
+            "structural_issues": list(unit.issues), "reason": reason,
         })
     return {
         "cycle": cycle.cycle, "denominator_policy": cycle.denominator_policy,
-        "available": all(row["available"] for row in rows),
+        "available": bool(rows) and all(row["available"] for row in rows),
         "full_field_units": len(cycle.units), "rows": rows,
         "policy": "Whole conditional cycle excluded if any anchor is unavailable; no partial cohort or substituted year",
     }
 
 
+def _senate_identity(
+    data: ComparisonData, availability: list[JsonObject], policy: SenateAnchorPolicy,
+) -> JsonObject:
+    return {
+        "central_estimator": SENATE_CENTRAL_ESTIMATOR,
+        "anchor_policy_sha256": SENATE_ANCHOR_POLICY_SHA256,
+        "anchor_catalogue_sha256": policy.catalogue.sha256,
+        "reference_availability": availability,
+        "reference_identity_sha256": fingerprint({
+            "version": SENATE_VERSION, "estimator": SENATE_CENTRAL_ESTIMATOR,
+            "anchor_policy_sha256": SENATE_ANCHOR_POLICY_SHA256,
+            "input_sha256": data.input_sha256, "availability": availability,
+        }),
+    }
+
+
+def reference_availability_summary(availability: Sequence[JsonObject]) -> str:
+    available = sorted({count(row["cycle"]) for row in availability if row["available"]})
+    excluded = sorted({count(row["cycle"]) for row in availability if not row["available"]})
+    reasons = sorted({
+        f"{obj(row)['baseline_year']}: {obj(row)['reason']}"
+        for group in availability for row in seq(group["rows"])
+        if not obj(row)["available"]
+    })
+    text = (
+        f"{len(available)} usable conditional election(s): "
+        f"{', '.join(map(str, available)) or 'none'}. "
+        f"Excluded complete fields: {', '.join(map(str, excluded)) or 'none'}."
+    )
+    if len(available) < 2:
+        text += " Fewer than two usable elections leave conditional holdout fits unavailable."
+    if reasons:
+        text += " Unavailable anchors: " + "; ".join(reasons) + "."
+    return text
+
+
 def build_reference(
     data: ComparisonData, cycle: CycleFact, *, decided: bool = False,
-    legacy_senate: bool = False,
+    anchors: dict[int, SenateHouseAnchor] | None = None,
 ) -> ComparisonReference:
     """Use central pure helpers for both raw and official-input counterfactuals."""
     units = cycle.units
@@ -143,7 +181,8 @@ def build_reference(
     totals = {j: sum(votes[i][j] for i in references) for j in range(6)}
     baseline_national = baseline_shares_for_seat(totals)
     names = dict(enumerate(PARTY_NAMES))
-    anchors = _senate_anchors(cycle) if data.model == "senate" and not legacy_senate else {}
+    if anchors is None:
+        anchors = _senate_anchors(cycle) if data.model == "senate" else {}
 
     def central(
         levels: tuple[float, float],
@@ -480,22 +519,26 @@ def make_comparison_report(
         if type(draws) is not int or not 128 <= draws <= 100_000:
             raise ComparisonError("comparison draw counts must be in [128, 100000]")
     families: dict[tuple[str, bool], list[ComparisonReference]] = defaultdict(list)
-    availability = [senate_reference_availability(cycle) for cycle in data.cycles] if data.model == "senate" else []
+    policy = load_senate_anchor_policy() if data.model == "senate" else None
+    availability = [
+        senate_reference_availability(cycle, policy=policy) for cycle in data.cycles
+    ] if policy is not None else []
     for cycle in data.cycles:
         if data.model == "senate" and not next(
             row["available"] for row in availability
             if row["cycle"] == cycle.cycle and row["denominator_policy"] == cycle.denominator_policy
         ):
             continue
+        anchors = policy.resolve(_senate_baseline_ids(cycle)) if policy else {}
         for decided in (False, True):
             families[(cycle.denominator_policy, decided)].append(
-                build_reference(data, cycle, decided=decided),
+                build_reference(data, cycle, decided=decided, anchors=anchors),
             )
     scenarios: list[JsonObject] = []
     references: list[JsonObject] = []
     holdouts: list[JsonObject] = []
-    for (policy, decided), refs in families.items():
-        identity = f"{policy}-{'decided' if decided else 'raw'}"
+    for (denominator_policy, decided), refs in families.items():
+        identity = f"{denominator_policy}-{'decided' if decided else 'raw'}"
         for ref in refs:
             references.append({
                 "scenario_family": identity, "cycle": ref.cycle,
@@ -552,8 +595,8 @@ def make_comparison_report(
     ]
     if data.model == "senate":
         limitations.extend([
-            "2018 House anchors are unavailable under the accepted NC-09 policy; the complete 2024 conditional field is excluded, including its separately available 2020-baseline NE special. National and local proxy observations retain their own source qualifications.",
-            "Only one complete conditional election (2022) is available. Leave-one-election-out conditional fits and intervals are unavailable; no scale-transfer validation is claimed.",
+            reference_availability_summary(availability),
+            "National and local proxy observations retain their own source qualifications.",
             "The matching-year House anchor changes deterministic fallback only. Pooled Senate baseline composition remains the stochastic source shape. Structural candidate zeros, paired-slot moment exclusions, minor-party mapping and RCV limitations are unchanged.",
             "Conditional and raw-poll signed means are observed minus projected; centered fits remove the cycle mean only for the target moment and do not correct central bias.",
             "Official current-national counterfactual levels and G facts retain the original final_RCV_no_nominal_view proxy. Baseline anchors use accepted published-general counts. Vote-stage/population transport remains unaccepted, including the 2022 Alaska general/tabulator discrepancy and 2024 verification limits; matching-year anchoring does not resolve it.",
@@ -563,26 +606,15 @@ def make_comparison_report(
         "comparison_version": SENATE_VERSION if data.model == "senate" else VERSION,
         "model": data.model,
         **({
-            "central_estimator": SENATE_CENTRAL_ESTIMATOR,
-            "anchor_policy_sha256": SENATE_ANCHOR_POLICY_SHA256,
-            "anchor_catalogue_sha256": next(
-                obj(obj(row)["house_anchor"])["catalogue_sha256"]
-                for ref in references for row in seq(ref["ledger"])
-            ),
-            "reference_availability": availability,
-            "reference_identity_sha256": fingerprint({
-                "version": SENATE_VERSION, "estimator": SENATE_CENTRAL_ESTIMATOR,
-                "anchor_policy_sha256": SENATE_ANCHOR_POLICY_SHA256,
-                "input_sha256": data.input_sha256, "availability": availability,
-            }),
-            "legacy_report": "senate-comparison-report.json",
+            **_senate_identity(data, availability, policy),
+            "legacy_report": LEGACY_SENATE_REPORT_FILENAME,
             "national_proxy_holdouts": [
                 {"held_out_cycle": fact.cycle, **national_holdout(data, fact.cycle)}
                 for fact in data.national if fact.included
             ],
             "current_national_proxy_policy": "Original final_RCV_no_nominal_view outcome facts retained; qualified final-RCV proxy, not the published-general baseline-anchor population",
             "baseline_anchor_policy": "Accepted published-general measured candidate-party raw shares; Other retained in denominator; no nominal vote imputation; fusion and NY-14 correction preserved",
-        } if data.model == "senate" else {}),
+        } if policy is not None else {}),
         "accepted": False, "status": "Unaccepted comparison report; production calibration unresolved",
         "input_sha256": data.input_sha256, "payload_sha256": data.payload_sha256,
         "kernel_version": US_KERNEL_VERSION,
@@ -651,33 +683,25 @@ def comparison_report_stem(model: str) -> str:
 
 
 def read_comparison_report(model: str, path: Path | None = None) -> JsonObject:
-    report = obj(json.loads((path or DIRECTORY / f"{comparison_report_stem(model)}.json").read_text()))
+    raw = (path or DIRECTORY / f"{comparison_report_stem(model)}.json").read_bytes()
+    report = obj(json.loads(raw))
+    if model == "senate" and path is not None and report.get("comparison_version") == VERSION:
+        if hashlib.sha256(raw).hexdigest() != LEGACY_SENATE_REPORT_SHA256:
+            raise ComparisonError("legacy Senate comparison report differs from pinned bytes")
+        return report
     data = load_comparison(model)
     if (report.get("schema") != SCHEMA or report.get("model") != model
             or report.get("accepted") is not False
-            or report.get("comparison_version") not in (
-                ({VERSION, SENATE_VERSION} if path is not None else {SENATE_VERSION})
-                if model == "senate" else {VERSION}
-            )
+            or report.get("comparison_version") != (SENATE_VERSION if model == "senate" else VERSION)
             or report.get("kernel_version") != US_KERNEL_VERSION
             or report.get("input_sha256") != data.input_sha256
             or report.get("payload_sha256") != fingerprint(data.payload)):
         raise ComparisonError("comparison report has stale/mismatched identity, inputs or acceptance")
-    if model == "senate" and report.get("comparison_version") == SENATE_VERSION:
-        availability = [senate_reference_availability(cycle) for cycle in data.cycles]
-        identity = fingerprint({
-            "version": SENATE_VERSION, "estimator": SENATE_CENTRAL_ESTIMATOR,
-            "anchor_policy_sha256": SENATE_ANCHOR_POLICY_SHA256,
-            "input_sha256": data.input_sha256, "availability": availability,
-        })
-        catalogue = resolve_senate_house_anchors({0: "2016-us-senate"})[0].catalogue_sha256
-        if (
-            report.get("central_estimator") != SENATE_CENTRAL_ESTIMATOR
-            or report.get("anchor_policy_sha256") != SENATE_ANCHOR_POLICY_SHA256
-            or report.get("anchor_catalogue_sha256") != catalogue
-            or report.get("reference_identity_sha256") != identity
-            or report.get("reference_availability") != availability
-        ):
+    if model == "senate":
+        policy = load_senate_anchor_policy()
+        availability = [senate_reference_availability(cycle, policy=policy) for cycle in data.cycles]
+        expected = _senate_identity(data, availability, policy)
+        if any(report.get(key) != value for key, value in expected.items()):
             raise ComparisonError("comparison report has stale/mismatched anchor identity")
     for scenario in seq(report["scenarios"]):
         if obj(scenario).get("accepted") is not False:
@@ -709,7 +733,7 @@ def render_comparison_report(report: JsonObject) -> str:
             f"Anchor policy SHA256: {report['anchor_policy_sha256']}", "",
             f"Anchor catalogue SHA256: {report['anchor_catalogue_sha256']}", "",
             f"Reference identity SHA256: {report['reference_identity_sha256']}", "",
-            "Legacy selected-field reports remain in senate-comparison-report.json/.md.", "",
+            f"Legacy selected-field reports remain in {LEGACY_SENATE_REPORT_FILENAME} and its Markdown companion.", "",
             "|Family|Cycle|Official-input signed mean|Raw-poll signed mean|Centered conditional moment|",
             "|-|-|-|-|-|",
         ])
@@ -734,8 +758,8 @@ def render_comparison_report(report: JsonObject) -> str:
             )
         lines.extend([
             "", "Every race and its source baseline year, structural exclusions and availability "
-            "reason remain in the companion JSON. The unavailable 2018 reference excludes "
-            "the complete 2024 field, including the available 2020-baseline NE special.", "",
+            "reason remain in the companion JSON.",
+            reference_availability_summary([obj(item) for item in seq(report["reference_availability"])]), "",
         ])
     lines.extend(["", "## Scope and unresolved assumptions", ""])
     lines.extend(f"- {item}" for item in seq(report["limitations"]))

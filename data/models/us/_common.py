@@ -95,6 +95,7 @@ from model_support.us_run import (
 from model_support.us_senate_anchors import (
     SENATE_ANCHOR_POLICY_SHA256,
     SENATE_CENTRAL_ESTIMATOR,
+    SenateHouseAnchor,
     resolve_senate_house_anchors,
 )
 from model_support.us_replay import stage_us_draws, us_raw_path
@@ -2523,12 +2524,7 @@ def prepare_us_projection(
     seat_fallbacks: dict[int, dict[int, float]] = {}
     anchor_context: dict[str, object] | None = None
     if spec.election_type == "us_senate_model":
-        baseline_id = manifest_id_for_election(baseline)
-        baseline_by_seat = {
-            seat.id: spec.seat_baseline_overrides.get(seat.seat_name, baseline_id)
-            for seat in seats if seat.id in seat_party_vote_totals
-        }
-        anchors = resolve_senate_house_anchors(baseline_by_seat)
+        anchors = _resolve_projection_anchors(spec, baseline, seats, seat_party_vote_totals)
         seat_fallbacks = senate_fallback_swings(
             anchor_shares_by_seat={
                 seat: anchor.shares for seat, anchor in anchors.items()
@@ -3144,11 +3140,18 @@ def _validate_history_inputs(db: Database, spec: UsModelSpec) -> None:
     )
     _validate_senate_field(spec, seats, vote_totals)
     if spec.election_type == "us_senate_model":
-        baseline_id = manifest_id_for_election(baseline)
-        resolve_senate_house_anchors({
-            seat.id: spec.seat_baseline_overrides.get(seat.seat_name, baseline_id)
-            for seat in seats if seat.id in vote_totals
-        })
+        _resolve_projection_anchors(spec, baseline, seats, vote_totals)
+
+
+def _resolve_projection_anchors(
+    spec: UsModelSpec, baseline: Election, seats: Sequence[SeatRef],
+    votes: Mapping[int, Mapping[int, float]],
+) -> dict[int, SenateHouseAnchor]:
+    baseline_id = manifest_id_for_election(baseline)
+    return resolve_senate_house_anchors({
+        seat.id: spec.seat_baseline_overrides.get(seat.seat_name, baseline_id)
+        for seat in seats if seat.id in votes
+    })
 
 
 def _validate_senate_field(

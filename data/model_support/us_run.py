@@ -11,6 +11,7 @@ from typing import Any
 
 import numpy as np
 
+from model_support.monte_carlo import interval_quantiles
 from model_support.persistence import UncertaintyPayload
 from model_support.senate_cycles import (
     SenateCycle, senate_cycle_snapshot, senate_cycle_from_snapshot,
@@ -264,7 +265,8 @@ def _run_payload(
         raise ValueError("summary interval differs from collected race ranges")
     parties = run.inputs.party_ids
     simulations = len(run.winners)
-    quantiles = [(1 - interval) / 2, 0.5, (1 + interval) / 2]
+    lo, hi = interval_quantiles(interval)
+    quantiles = [lo, 0.5, hi]
     central_seats = np.bincount(run.central.winners[0], minlength=len(parties))
     central_votes = us_popular_votes(run.inputs, run.central.votes)[0]
     if (run.vote_totals.sum(axis=1) <= 0).any() or central_votes.sum() <= 0:

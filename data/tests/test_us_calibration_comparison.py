@@ -422,6 +422,8 @@ def test_reader_rejects_stale_or_accepted_reports(
     path.write_text(json.dumps(report))
     assert comparison.read_comparison_report(evidence.model, path) == report
     for key, value in (("input_sha256", "0" * 64), ("kernel_version", "old"),
+                       ("payload_sha256", "0" * 64), ("schema", "unknown"),
+                       ("comparison_version", "unknown"),
                        ("model", "wrong"), ("accepted", True)):
         broken = {**report, key: value}
         path.write_text(json.dumps(broken))
@@ -432,6 +434,28 @@ def test_reader_rejects_stale_or_accepted_reports(
     path.write_text(json.dumps(broken))
     with pytest.raises(ComparisonError, match="acceptance"):
         comparison.read_comparison_report(evidence.model, path)
+
+
+def test_default_reader_cannot_silently_use_the_legacy_senate_report(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(comparison, "comparison_report_stem", lambda model: "senate-comparison-report")
+    with pytest.raises(ComparisonError, match="stale/mismatched"):
+        comparison.read_comparison_report("senate")
+
+
+def test_unreachable_boundary_returns_no_candidate_scale(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    data = comparison.load_comparison("president")
+    reference = comparison.build_reference(data, data.cycles[0])
+    monkeypatch.setattr(comparison, "moment_samples", lambda *args, **kwargs: np.zeros(8))
+    result = comparison.fit_boundary([reference], "state", fit_draws=8, recovery_draws=16)
+    assert result["status"] == "target not bracketed"
+    assert result["scale"] is None
+    assert result["accepted"] is False
+    assert result["failure_stage"] == "bracket probe"
+    assert result["attempted_scale"] == 256
 
 
 def test_cli_default_prints_and_explicit_output_only_writes_comparison(

@@ -250,6 +250,29 @@ def test_corrupt_compressed_stream_is_a_safe_detail_error(
         load_us_draws(_raw(), stored)
 
 
+@pytest.mark.parametrize("array", ["errors", "votes", "winners", "seat_totals", "vote_totals"])
+def test_resealed_numeric_mismatch_withholds_replay_decomposition(
+    explorer: tuple[FlaskClient[Any], Any, Any], array: str,
+) -> None:
+    client, _, stored = explorer
+    with np.load(_raw(), allow_pickle=False) as archive:
+        arrays = {key: archive[key] for key in archive.files}
+    if array == "winners":
+        arrays[array][0, 0] = (arrays[array][0, 0] + 1) % 3
+    else:
+        arrays[array].flat[0] += 1
+    # Recompression gives the edited member a valid CRC; replay must verify
+    # numerical contents independently of ZIP integrity and header identity.
+    np.savez_compressed(_raw(), **arrays)
+    draws = load_us_draws(_raw(), stored)
+    with pytest.raises(ValueError, match="replay differs"):
+        replay_us_simulation(draws, 0)
+    response = client.get(_url("simulations/0/races/1", stored))
+    assert response.status_code == 200
+    assert "Saved detail unavailable" in response.text
+    assert "central change" not in response.text
+
+
 def test_legacy_central_diagnostics_are_explicitly_absent(
     explorer: tuple[FlaskClient[Any], Any, Any], db: Database,
 ) -> None:

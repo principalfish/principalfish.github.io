@@ -35,6 +35,7 @@ from model_support.us_calibration import (
     simulate_moments,
 )
 from model_support.us_simulation import (
+    FloatArray,
     UsErrorConfig,
     UsSeatInput,
     build_us_simulation_inputs,
@@ -254,6 +255,53 @@ def test_joint_fit_and_independent_recovery_use_kernel_moments() -> None:
     assert fitted["recovery_compatible"] is True
     with pytest.raises(UsCalibrationError, match="seed must differ"):
         fit_conditional_scales(_small_reference(), fit_seed=1, recovery_seed=1)
+
+
+@pytest.mark.parametrize("exit_reason", ["singular", "no_improvement"])
+def test_joint_fit_does_not_claim_convergence_when_optimizer_cannot_improve(
+    monkeypatch: pytest.MonkeyPatch, exit_reason: str,
+) -> None:
+    def flat_response(
+        reference: CalibrationReference, state_scale: float, race_scale: float,
+        *, draws: int, seed: int, centered: bool = False,
+        retain_innovations: bool = False, **kwargs: object,
+    ) -> tuple[FloatArray, FloatArray | None]:
+        return (np.ones((draws, 2)),
+                np.repeat(np.arange(draws, dtype=float)[:, None], 4, axis=1)
+                if retain_innovations else None)
+
+    monkeypatch.setattr(calibration, "simulate_moments", flat_response)
+    if exit_reason == "no_improvement":
+        original = np.linalg.solve
+        calls = 0
+
+        def stationary_step(matrix: FloatArray, target: FloatArray) -> FloatArray:
+            nonlocal calls
+            calls += 1
+            return original(matrix, target) if calls == 1 else np.zeros(2)
+
+        monkeypatch.setattr(np.linalg, "solve", stationary_step)
+    fitted = fit_conditional_scales(
+        _small_reference(), fit_draws=8, recovery_draws=16,
+    )
+    trace = fitted["optimizer_trace"]
+    loss = fitted["optimizer_relative_squared_loss"]
+    assert isinstance(trace, list) and len(trace) == 1
+    assert isinstance(loss, float) and loss > 0
+    assert fitted["recovery_compatible"] is False
+
+
+def test_joint_fit_refuses_unidentifiable_response_and_unsupported_bound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reference = _small_reference()
+    with monkeypatch.context() as patch:
+        patch.setattr(calibration, "linear_response_matrix", lambda *args, **kwargs: np.zeros((2, 2)))
+        with pytest.raises(UsCalibrationError, match="not identifiable"):
+            fit_conditional_scales(reference, fit_draws=8, recovery_draws=16)
+    reference = dataclasses.replace(reference, residuals=(-300, -100, 100, 300))
+    with pytest.raises(UsCalibrationError, match="unsupported scale bound"):
+        fit_conditional_scales(reference, fit_draws=128, recovery_draws=256)
 
 
 def test_response_probes_do_not_refit_input_target_to_output(

@@ -19,7 +19,7 @@ describe.skipIf(!JSDOM)("open race popup uncertainty interaction", () => {
   it("shows and hides bands in the existing popup when the shared toggle is clicked", async () => {
     vi.resetModules();
     browser = new JSDOM(shell, { url: "http://localhost/uselectionmaps/", pretendToBeVisual: true });
-    for (const key of ["window", "document", "navigator", "SVGElement", "Element", "HTMLElement"])
+    for (const key of ["window", "document", "navigator", "Node", "SVGElement", "Element", "HTMLElement"])
       vi.stubGlobal(key, browser.window[key]);
     vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
     vi.stubGlobal("IntersectionObserver", class { observe() {} disconnect() {} });

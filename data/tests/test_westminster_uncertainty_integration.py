@@ -404,6 +404,44 @@ def test_raw_target_cannot_overwrite_database(
         runner.run_simulation(db, _cfg(westminster_world))
 
 
+@pytest.mark.parametrize("target", ["TREND_CACHE_JSON", "TREND_CACHE_META_JSON"])
+def test_raw_target_cannot_overwrite_trend_artifacts(
+    db: Database, westminster_world: WestminsterWorld,
+    monkeypatch: pytest.MonkeyPatch, target: str,
+) -> None:
+    destination = getattr(runner, target)
+    destination.write_text("keep existing cache")
+    monkeypatch.setenv("SIMULATIONS_PATH", str(destination))
+    with pytest.raises(ValueError, match="must not overwrite"):
+        runner.run_simulation(db, _cfg(westminster_world))
+    assert destination.read_text() == "keep existing cache"
+
+
+def test_true_zero_national_and_regional_averages_keep_zero_sampling_variance(
+    db: Database, westminster_world: WestminsterWorld,
+) -> None:
+    world = westminster_world
+    labour = world.party_ids["Labour"]
+    conservative = world.party_ids["Conservative"]
+    region = world.region_ids["Scotland"]
+    _poll(db, world, national={labour: 0.0, conservative: 100.0},
+          regional={region: {labour: 0.0, conservative: 100.0}})
+    aggregation = _aggregate(db, world)
+    assert aggregation.averages[(None, labour)] == 0.0
+    assert aggregation.averages[(region, labour)] == 0.0
+    assert (None, labour) not in aggregation.sampling()
+    assert (region, labour) not in aggregation.sampling()
+    runner.run_simulation(db, _cfg(world))
+    draws, _ = load_draws(Path(runner.DatabaseConfig.from_env().simulations_path))
+    assert draws.replay is not None
+    inputs = draws.replay.inputs
+    party_index = inputs.party_ids.index(labour)
+    region_index = inputs.region_ids.index(region)
+    assert inputs.region_variance[region_index, party_index] == 0.0
+    assert not inputs.region_fallback[region_index, party_index]
+    assert _stored(db).national["budget"]["parties"][str(labour)]["sampling_sd"] == 0.0
+
+
 @pytest.mark.parametrize("count", ["0", "-1"])
 def test_cli_rejects_nonpositive_simulation_counts(
     db: Database, westminster_world: WestminsterWorld,

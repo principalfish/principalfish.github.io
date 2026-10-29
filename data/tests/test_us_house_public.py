@@ -233,3 +233,37 @@ def test_fractional_or_null_recorded_votes_cannot_supply_trend_metadata(
         )
     entry = reconstruct_trends(database_file(db), _scope(cfg))[0]
     assert entry["context"] is None and entry["summary"] is None
+
+
+@pytest.mark.parametrize("corruption", [
+    "missing_artifact", "result_identity", "renamed_seat", "dropped_band_party",
+])
+def test_tampered_identity_withholds_optional_export_and_trend_summary(
+    public_run: tuple[Any, Any, Any, Any, Any], db: Database,
+    monkeypatch: pytest.MonkeyPatch, corruption: str,
+) -> None:
+    from model_support import trends
+
+    cfg, stored, election, votes, seats = public_run
+    national = copy.deepcopy(stored.national)
+    if corruption == "missing_artifact":
+        national["private"].pop("artifact_id")
+    elif corruption == "result_identity":
+        national["result_identity"] = "different-result"
+    elif corruption == "renamed_seat":
+        national["private"]["inputs"]["seats"][0]["name"] = "renamed-district"
+    else:
+        national["summary"]["metrics"]["house_seats"]["ranges"].pop("1")
+    tampered = replace(stored, national=national)
+    exported = _published((cfg, tampered, election, votes, seats))
+    assert exported.document is None
+    assert exported.seat_bands is None
+    with closing(sqlite3.connect(database_file(db))) as connection, connection:
+        connection.execute(
+            "UPDATE model_uncertainty SET national_json=? WHERE election_id=?",
+            (json.dumps(national), stored.election_id),
+        )
+    # Exercise validation independently of the default disabled release gate.
+    monkeypatch.setattr(trends, "house_publication_allowed", lambda document: True)
+    entry = reconstruct_trends(database_file(db), _scope(cfg))[0]
+    assert entry["context"] is None and entry["summary"] is None

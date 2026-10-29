@@ -263,6 +263,43 @@ def test_legacy_field_must_match_before_borrowing_roster(
         assert senate_cycle_for_election(session, election) is None
 
 
+@pytest.mark.parametrize("invalid", [
+    "unscoped_name", "date_disagrees", "unknown_legacy_year", "saved_field",
+])
+def test_senate_export_refuses_invalid_saved_or_legacy_context(
+    db: Database, senate_world: UsModelSpec, invalid: str,
+) -> None:
+    cfg = _cfg(senate_world, date(2026, 10, 19), dry_run=False)
+    name, *_ = _common.run_simulation(db, cfg)
+    election = db.get_election_by_name(name)
+    assert election is not None
+    with db.session() as session:
+        if invalid == "unscoped_name":
+            election.name = "Custom projection"
+        elif invalid == "date_disagrees":
+            election.election_date = date(2026, 10, 18)
+        elif invalid == "unknown_legacy_year":
+            session.execute(text("DELETE FROM model_context"))
+            election.name = "US Senate UNS 2028-10-19"
+            election.election_date = date(2028, 10, 19)
+        else:
+            session.execute(text(
+                "DELETE FROM votes WHERE election_id=:id AND seat_id="
+                "(SELECT MIN(seat_id) FROM votes WHERE election_id=:id)"
+            ), {"id": election.id})
+        if invalid in {"date_disagrees", "saved_field"}:
+            with pytest.raises(ValueError, match="date disagrees|field disagrees"):
+                senate_cycle_for_election(session, election)
+        else:
+            assert senate_cycle_for_election(session, election) is None
+
+
+def test_pinned_senate_roster_cannot_be_exported_without_saved_json() -> None:
+    cycle = resolve_senate_cycle(date(2026, 10, 19))
+    with pytest.raises(ValueError, match="roster is unavailable"):
+        pinned_roster_payload(dataclasses.replace(cycle, roster_json=None))
+
+
 def _args() -> argparse.Namespace:
     return argparse.Namespace(half_life_days=14, seat_prior_weight=1.0, dry_run=False,
         ignore_seat_polls=False, progress_every=0, continue_on_error=False)

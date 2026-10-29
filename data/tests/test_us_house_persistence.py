@@ -33,7 +33,7 @@ from model_support.us_release import HOUSE_RELEASE, UsReleaseError, house_releas
 from model_support.us_replay import (
     load_us_draws, raw_detail_available, replay_us_simulation, us_raw_path,
 )
-from model_support.us_simulation import US_KERNEL_VERSION
+from model_support.us_simulation import US_KERNEL_VERSION, project_us_seats
 from model_support.us_run import restore_run_inputs
 from models import ElectionType
 from tests.console_fixtures import app
@@ -524,3 +524,37 @@ def test_replay_snapshot_must_resolve_declared_context_and_central_identity(
     document["result_identity"] = "another result"
     with pytest.raises(ValueError, match="result identity"):
         restore_run_inputs(document)
+
+
+def test_staging_projection_mismatch_leaves_no_raw_or_temporary_files(
+    db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from model_support import us_replay
+
+    cfg = _world(db, tmp_path)
+    original = project_us_seats
+
+    def changed_projection(*args: Any, **kwargs: Any) -> Any:
+        projection = original(*args, **kwargs)
+        votes = projection.votes.copy()
+        votes[0, 0, 0] += 1
+        return replace(projection, votes=votes)
+
+    monkeypatch.setattr(us_replay, "project_us_seats", changed_projection)
+    with pytest.raises(ValueError, match="raw staging differs"):
+        run_simulation(db, cfg)
+    assert not _raw().exists()
+    assert not list(_raw().parent.glob(".us-*"))
+    assert db.get_election_by_name(f"US House UNS {cfg.as_of_date}") is None
+
+
+def test_raw_destination_cannot_overwrite_trend_cache(
+    db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg = _world(db, tmp_path)
+    destination = _raw()
+    cfg = replace(cfg, spec=replace(cfg.spec, trend_cache_json=destination))
+    destination.write_text("keep existing cache")
+    with pytest.raises(ValueError, match="overlap"):
+        run_simulation(db, cfg)
+    assert destination.read_text() == "keep existing cache"

@@ -69,9 +69,24 @@ describe("Senate public metric domains", () => {
     expect(activeUncertainty(state)).toBeNull();
     expect(ElectionData.fromSeats([], "User scenario").uncertaintyId).toBeNull();
   });
+  it("rejects tied-caucus probability greater than no-majority probability", () => {
+    const value = payload();
+    value.summary.outcomes.tied_caucuses = value.summary.outcomes.no_caucus_majority + .01;
+    expect(decode(value)).toBeNull();
+  });
 });
 
 describe("Senate full-chamber tracker", () => {
+  it("retains central counts but withholds stale ranges and caucus odds", () => {
+    const entry = point(1);
+    entry.metrics.senate_full_seats.central = { 1: 47, 2: 52, 3: 1 };
+    const data = tracker([entry]);
+    expect(data.seriesByParty.get("1").seats).toEqual([47]);
+    expect(data.seriesByParty.get("1").seatLo).toEqual([null]);
+    expect(data.senateChances.control.democratic).toEqual([null]);
+    expect(data.senateChances.tied).toEqual([null]);
+  });
+
   it("shows saved-roster central points without carrying totals or inventing odds", () => {
     const partial = point(3, { known: false, summary: false });
     partial.central_basis = { schema: "pf-us-senate-central-roster-v1",

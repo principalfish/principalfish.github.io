@@ -81,9 +81,40 @@ describe("explicit House public adapter", () => {
     value.regional_bands.regions[1].members = ["different-seat"];
     expect(decode(value).regions).toEqual({});
   });
+  it.each(["schema", "unknown region", "empty members", "duplicate member", "non-string member", "party", "seat range", "vote range", "empty parties"])("rejects malformed regional %s", (kind) => {
+    const value = payload();
+    const block = { members: ["TX-01"], parties: { 1: { s: [0, 1, 1], v: [45, 60] } } };
+    value.regional_bands = { schema: "pf-us-public-regions-v1", regions: { 1: block } };
+    if (kind === "schema") value.regional_bands.schema = "unknown";
+    if (kind === "unknown region") value.regional_bands.regions = { 99: block };
+    if (kind === "empty members") block.members = [];
+    if (kind === "duplicate member") block.members = ["TX-01", "TX-01"];
+    if (kind === "non-string member") block.members = [1];
+    if (kind === "party") block.parties = { private: block.parties[1] };
+    if (kind === "seat range") block.parties[1].s = [0, 1, 2];
+    if (kind === "vote range") block.parties[1].v = [60, 45];
+    if (kind === "empty parties") block.parties = {};
+    expect(decode(value)).toBeNull();
+  });
 });
 
 describe("House trend meaning and display", () => {
+  it.each(["seats", "votes"])("withholds ranges and odds when %s central values differ from the summary", (kind) => {
+    const entry = point(1);
+    if (kind === "seats") {
+      entry.metrics.house_seats.central = { 1: 219, 2: 216 };
+    } else {
+      entry.metrics.national_vote_share.central = { 1: 49, 2: 51 };
+    }
+    const data = tracker([entry]);
+    const row = data.seriesByParty.get("1");
+    expect(row.seats).toEqual([entry.metrics.house_seats.central[1]]);
+    expect(row.votePct).toEqual([entry.metrics.national_vote_share.central[1]]);
+    expect(row.seatLo).toEqual([null]);
+    expect(row.pMaj).toEqual([null]);
+    expect(data.residual).toEqual([null]);
+  });
+
   it("carries within known context, clears explicit missing summaries, and splits changed context", () => {
     const data = tracker([point(1), point(3, { summary: false }), point(5, { segment: "meaning-b" })]);
     const row = data.seriesByParty.get("1");

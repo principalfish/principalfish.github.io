@@ -190,6 +190,43 @@ def test_snapshot_validation_and_stale_same_date(db: Database, saved: dict[str, 
         raw_run(path, saved["record"])
 
 
+@pytest.mark.parametrize("invalid, message", [
+    ("header", "header"), ("missing_config", "settings"),
+    ("boolean_setting", "not numeric"), ("fractional_count", "integer"),
+    ("missing_array", "input_seat_turnout"),
+    ("float_precision", "float64"), ("mask_dtype", "region_polled"),
+    ("fingerprint", "fingerprint"),
+])
+def test_tampered_westminster_snapshot_is_rejected(
+    saved: dict[str, Any], invalid: str, message: str,
+) -> None:
+    path = saved["path"]
+    with np.load(path, allow_pickle=False) as archive:
+        arrays = {key: archive[key] for key in archive.files}
+    header = json.loads(str(arrays["meta"].item()))
+    replay = header["replay"]
+    if invalid == "header":
+        header["replay"] = []
+    elif invalid == "missing_config":
+        replay["config"].pop("sigma_nat")
+    elif invalid == "boolean_setting":
+        replay["config"]["sigma_nat"] = True
+    elif invalid == "fractional_count":
+        replay["config"]["simulations"] = 50.5
+    elif invalid == "missing_array":
+        arrays.pop("input_seat_turnout")
+    elif invalid == "float_precision":
+        arrays["input_seat_turnout"] = arrays["input_seat_turnout"].astype(np.float32)
+    elif invalid == "mask_dtype":
+        arrays["input_region_polled"] = arrays["input_region_polled"].astype(np.int64)
+    else:
+        replay["input_hash"] = "different-inputs"
+    arrays["meta"] = np.array(json.dumps(header))
+    np.savez_compressed(path, **arrays)
+    with pytest.raises(SimulationFileError, match=message):
+        load_draws(path)
+
+
 def test_replay_refuses_corruption(saved: dict[str, Any]) -> None:
     draws = saved["draws"]
     changed = draws.e_nat.copy()

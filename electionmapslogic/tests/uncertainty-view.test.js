@@ -91,6 +91,14 @@ describe("uncertainty display controls", () => {
     expect(header.children).toEqual([]);
   });
 
+  it("retains the full basis when no outcome odds are available", () => {
+    const header = element();
+    renderUncertaintyHeader(header, { basis: summary.basis, national: { parties: {} } }, () => "Labour");
+    expect(header.children).toHaveLength(1);
+    expect(header.children[0].id).toBe("mapsUncertaintyBasis");
+    expect(header.children[0].textContent).toBe(summary.basis);
+  });
+
   it("places the toggle beside Show all and the seat range after the seat change", () => {
     const shell = readFileSync(new URL("../shell.html", import.meta.url), "utf8");
     expect(shell).toMatch(/id="mapsVoteTotalsToggle"[^>]*>Show all<\/button>\s*<button[^>]*id="mapsUncertaintyToggle"[^>]*aria-pressed="false"/);

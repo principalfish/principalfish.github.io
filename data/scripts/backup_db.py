@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""Back up elections.db to the local archive (and Drive), or restore from it.
+"""Back up elections.db to the local archive, or restore from it.
 
 The console backs up by itself after every write it makes. Run this after a
-writing script run straight from a terminal (an import, a model run), to push
-Drive on demand, or to restore.
+writing script run straight from a terminal (an import, a model run), or to
+restore. The hourly restic job (``~/.config/restic/backup.sh``) also runs it
+before sending the plain newest copy to Backblaze B2.
 
 Settings come from the environment / .env (see ``backup.py``):
-``DATABASE_PATH``, ``ELECTIONS_ARCHIVE_DIR``, ``ELECTIONS_BACKUP_DIR``,
-``ELECTIONS_BACKUP_KEEP``.
+``DATABASE_PATH``, ``ELECTIONS_ARCHIVE_DIR``, ``ELECTIONS_BACKUP_KEEP``.
 
 Usage:
-    python data/scripts/backup_db.py                 # archive if changed; Drive if due
-    python data/scripts/backup_db.py --push          # ...and refresh Drive regardless
+    python data/scripts/backup_db.py                 # archive if changed
     python data/scripts/backup_db.py restore         # restore the newest archive
     python data/scripts/backup_db.py --dry-run       # show paths and state only
 """
@@ -34,15 +33,9 @@ import backup
 def print_status() -> None:
     """Print where backups go and what is already there."""
     state = backup.status()
-    if state.sync_dir:
-        drive = f"{state.sync_dir} ({'mounted' if state.sync_mounted else 'MISSING'})"
-    else:
-        drive = "off (ELECTIONS_BACKUP_DIR not set)"
     print(f"Database:        {state.db_path}")
     print(f"Archive dir:     {state.archive_dir} ({state.archives} archives)")
     print(f"Newest archive:  {state.newest_archive or 'none'}")
-    print(f"Drive dir:       {drive}")
-    print(f"Last Drive push: {state.last_drive_push or 'never'}")
     print(f"Restore source:  {state.restore_source or 'none'}")
 
 
@@ -64,19 +57,11 @@ def main(argv: list[str] | None = None) -> int:
         help="backup (default) or restore the newest archive",
     )
     parser.add_argument(
-        "--push",
-        action="store_true",
-        help="Refresh the Drive copy even if it was already pushed today",
-    )
-    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Show the paths and archive state without writing anything",
     )
     args = parser.parse_args(argv)
-
-    if args.push and args.action == "restore":
-        parser.error("--push only applies to backup")
 
     if args.dry_run:
         print_status()
@@ -95,7 +80,7 @@ def main(argv: list[str] | None = None) -> int:
         if not db_path.is_file():
             print(f"Error: database not found: {db_path}", file=sys.stderr)
             return 1
-        made = backup.backup_database(push=args.push)
+        made = backup.backup_database()
     except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1

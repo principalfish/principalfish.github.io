@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import sqlite3
 from pathlib import Path
 
@@ -14,7 +13,7 @@ from scripts import backup_db
 
 @pytest.fixture()
 def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
-    """A real tiny database plus archive and Drive folders, wired via env."""
+    """A real tiny database plus an archive folder, wired via env."""
     db = tmp_path / "live" / "elections.db"
     db.parent.mkdir()
     conn = sqlite3.connect(db)
@@ -23,12 +22,9 @@ def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
     conn.commit()
     conn.close()
     archive = tmp_path / "archive"
-    sync = tmp_path / "sync"
-    sync.mkdir()
     monkeypatch.setenv("DATABASE_PATH", str(db))
     monkeypatch.setenv("ELECTIONS_ARCHIVE_DIR", str(archive))
-    monkeypatch.setenv("ELECTIONS_BACKUP_DIR", str(sync))
-    return {"db": db, "archive": archive, "sync": sync}
+    return {"db": db, "archive": archive}
 
 
 def test_backup_then_unchanged(
@@ -37,24 +33,9 @@ def test_backup_then_unchanged(
     assert backup_db.main([]) == 0
     assert "Archived to" in capsys.readouterr().out
     assert len(backup._archives(env["archive"])) == 1
-    assert os.listdir(env["sync"]) == [backup.SYNC_NAME]
 
     assert backup_db.main(["backup"]) == 0
     assert "Unchanged" in capsys.readouterr().out
-
-
-def test_push_passes_through(
-    env: dict[str, Path], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    seen: dict[str, bool] = {}
-
-    def fake(push: bool = False) -> Path | None:
-        seen["push"] = push
-        return None
-
-    monkeypatch.setattr(backup, "backup_database", fake)
-    assert backup_db.main(["--push"]) == 0
-    assert seen == {"push": True}
 
 
 def test_dry_run_writes_nothing(
@@ -64,21 +45,8 @@ def test_dry_run_writes_nothing(
 
     out = capsys.readouterr().out
     assert str(env["db"]) in out
-    assert "mounted" in out
-    assert "never" in out
+    assert str(env["archive"]) in out
     assert not env["archive"].exists()
-    assert os.listdir(env["sync"]) == []
-
-
-def test_dry_run_reports_missing_drive(
-    env: dict[str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    monkeypatch.setenv("ELECTIONS_BACKUP_DIR", str(env["sync"] / "gone"))
-
-    assert backup_db.main(["--dry-run"]) == 0
-    assert "MISSING" in capsys.readouterr().out
 
 
 def test_missing_database_is_an_error(
@@ -113,17 +81,12 @@ def test_restore_with_nothing_to_restore_is_an_error(
     assert "no archive to restore from" in capsys.readouterr().err
 
 
-def test_push_with_restore_is_rejected(env: dict[str, Path]) -> None:
-    with pytest.raises(SystemExit):
-        backup_db.main(["restore", "--push"])
-
-
 def test_a_locked_database_is_an_error_not_a_traceback(
     env: dict[str, Path],
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    def locked(push: bool = False) -> Path | None:
+    def locked() -> Path | None:
         raise sqlite3.OperationalError("database is locked")
 
     monkeypatch.setattr(backup, "backup_database", locked)

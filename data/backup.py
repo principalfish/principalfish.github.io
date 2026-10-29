@@ -1,22 +1,14 @@
 """
-Archived backups of the elections database, with one copy carried to Drive.
+Archived backups of the elections database.
 
 Ported from the budget / hillstuff design. Every backup takes a consistent
 snapshot with SQLite's own backup API, checks it, keeps a plain always-newest
 copy, and gzips it into a dated archive — skipped when nothing has changed.
-The newest archive is then pushed to a Google Drive for Desktop folder mounted
-under WSL, where Drive syncs whatever lands in it.
 
-Two things differ from budget / hillstuff, both because elections.db is large
-(~481 MB, mostly geometry blobs) and Drive is nearly full:
-
-* Drive holds one file, ``elections.db.gz``, overwritten in place — never a
-  run of dated archives. The rolling history lives on local disk only.
-* The Drive push is throttled to once per calendar day. Every overwrite of a
-  file this size leaves a Drive revision that counts against the quota for
-  about 30 days, so pushing on every write would eat the free space quickly.
-  An explicit ``push=True`` (the console's Backup button, the CLI's --push)
-  bypasses the throttle.
+Getting it off the machine isn't done here: an hourly restic job outside the
+repo (``~/.config/restic/backup.sh``) runs ``scripts/backup_db.py`` to refresh
+the plain newest copy, then sends that copy to Backblaze B2. Restoring from B2
+is a manual ``restic dump``; ``restore_latest`` only uses local archives.
 
 Settings are read from the environment at call time, not import time, so the
 test suite's per-test ``monkeypatch.setenv`` is honoured (see
@@ -24,7 +16,6 @@ test suite's per-test ``monkeypatch.setenv`` is honoured (see
 
     DATABASE_PATH           the live database (via ``DatabaseConfig``)
     ELECTIONS_ARCHIVE_DIR   where local archives are kept (default ~/dbs/elections)
-    ELECTIONS_BACKUP_DIR    the Drive folder that gets elections.db.gz (default off)
     ELECTIONS_BACKUP_KEEP   how many local archives to keep (default 30)
 """
 
@@ -39,21 +30,14 @@ import sqlite3
 import threading
 import time
 from collections.abc import Iterator
-from contextlib import closing, contextmanager, suppress
+from contextlib import closing, contextmanager
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 from config import DatabaseConfig
 
 log = logging.getLogger(__name__)
-
-# The name of the single file kept in the Drive folder.
-SYNC_NAME = "elections.db.gz"
-
-# Records the date of the last Drive push, so automatic backups refresh the
-# Drive copy at most once a day. Lives beside the archives, not on Drive.
-DRIVE_PUSH_STAMP = ".last_drive_push"
 
 # Held (flock) for the whole of a backup or restore. Lives beside the archives.
 LOCK_NAME = ".lock"
@@ -104,19 +88,6 @@ def _archive_dir() -> Path:
     return Path(configured) if configured else Path.home() / "dbs" / "elections"
 
 
-def _sync_dir() -> Path | None:
-    """The Drive folder, or None when Drive pushes are off."""
-    configured = os.environ.get("ELECTIONS_BACKUP_DIR")
-    return Path(configured) if configured else None
-
-
-def _as_sync_dir(sync_dir: str | Path | None) -> Path | None:
-    """An explicit ``sync_dir`` argument: None means the default, "" means off."""
-    if sync_dir is None:
-        return _sync_dir()
-    return Path(sync_dir) if str(sync_dir) else None
-
-
 def _keep() -> int:
     return int(os.environ.get("ELECTIONS_BACKUP_KEEP") or "30")
 
@@ -129,11 +100,6 @@ def _stamp() -> str:
     would then delete the newer archive.
     """
     return datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S")
-
-
-def _today() -> str:
-    """Today's date as written to the Drive push stamp."""
-    return date.today().strftime("%Y-%m-%d")
 
 
 def _archives(folder: Path) -> list[Path]:
@@ -188,65 +154,12 @@ def _same_contents(a: Path, b: Path) -> bool:
                 return True
 
 
-def _push_to_drive(archive_dir: Path, sync_dir: Path | None, force: bool) -> bool:
-    """Overwrite the Drive copy with the newest archive, at most once a day.
-
-    Returns whether a push happened. Without ``force`` the push is skipped when
-    the Drive copy was already refreshed today, or when no archive has been
-    made since the last push (so an idle day doesn't re-upload the same file).
-    A failed push is logged, not raised: the local archive is already made, and
-    the next push catches Drive up.
-    """
-    # Drive syncs whatever lands in its folder, so copying is the whole job.
-    # Missing means not mounted — Drive for Desktop restarting drops the mount
-    # out from under WSL, and the archive is already safely on disk, so it
-    # isn't worth an error. The next push catches Drive up.
-    if sync_dir is None or not sync_dir.is_dir():
-        return False
-    existing = _archives(archive_dir)
-    if not existing:
-        return False
-    newest = existing[-1]
-
-    stamp = archive_dir / DRIVE_PUSH_STAMP
-    if not force and stamp.exists():
-        pushed_today = stamp.read_text(encoding="utf-8").strip() == _today()
-        if pushed_today or newest.stat().st_mtime <= stamp.stat().st_mtime:
-            return False
-
-    # Written under a temporary name and moved into place, so Drive never
-    # syncs a half-written file over the last good copy.
-    target = sync_dir / SYNC_NAME
-    tmp = sync_dir / f"{SYNC_NAME}.tmp"
-    try:
-        # copyfile, not copy2: Drive's mount refuses to have permissions set on
-        # it, and copy2 does that after writing the bytes — so the file lands
-        # and then the call raises, which reads as a failed backup. Only the
-        # contents matter here anyway.
-        shutil.copyfile(newest, tmp)
-        tmp.replace(target)
-    except OSError:
-        # Drive is nearly full, so running out of space here is a real case.
-        # A half-written .tmp would sit in the Drive folder, syncing, forever.
-        log.exception("Drive push of %s failed; the local archive stands", newest)
-        # The mount can drop out mid-copy, and then removing the .tmp fails
-        # too; that mustn't turn the made archive into a failed backup.
-        with suppress(OSError):
-            tmp.unlink(missing_ok=True)
-        return False
-
-    stamp.write_text(_today(), encoding="utf-8")
-    return True
-
-
 def backup_database(
     archive_dir: str | Path | None = None,
-    sync_dir: str | Path | None = None,
     keep: int | None = None,
     db_path: str | Path | None = None,
-    push: bool = False,
 ) -> Path | None:
-    """Archive the database locally, and refresh the Drive copy if it is due.
+    """Archive the database locally.
 
     SQLite's own backup rather than a file copy: the console may be part way
     through a write, and a file copied mid-transaction restores as a corrupt
@@ -255,18 +168,14 @@ def backup_database(
 
     Args:
         archive_dir: Local archive folder (default ``ELECTIONS_ARCHIVE_DIR``).
-        sync_dir: Drive folder (default ``ELECTIONS_BACKUP_DIR``; "" = off).
         keep: Local archives to keep (default ``ELECTIONS_BACKUP_KEEP``).
         db_path: Database to back up (default ``DATABASE_PATH``).
-        push: Refresh the Drive copy even if it was already pushed today.
 
     Returns:
         The new local archive, or None if the database is missing or nothing
-        had changed since the last archive. Whether Drive was pushed does not
-        affect the return value.
+        had changed since the last archive.
     """
     archive = _archive_dir() if archive_dir is None else Path(archive_dir)
-    sync = _as_sync_dir(sync_dir)
     keep = _keep() if keep is None else keep
     db = _database_path() if db_path is None else Path(db_path)
 
@@ -321,21 +230,13 @@ def backup_database(
             made = archive / f"elections-{_stamp()}.db.gz"
             gz_partial.replace(made)
             _prune(archive, keep)
-
-        # Considered even when nothing new was archived: a push skipped earlier
-        # — throttled, or the mount was down — still gets caught up next day.
-        _push_to_drive(archive, sync, force=push)
     return made
 
 
-def _restore_source(archive_dir: Path, sync_dir: Path | None) -> Path | None:
-    """The archive a restore would use: newest local, else the Drive copy."""
+def _restore_source(archive_dir: Path) -> Path | None:
+    """The archive a restore would use: the newest local one."""
     local = _archives(archive_dir)
-    if local:
-        return local[-1]
-    if sync_dir is not None and (sync_dir / SYNC_NAME).is_file():
-        return sync_dir / SYNC_NAME
-    return None
+    return local[-1] if local else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -344,63 +245,50 @@ class BackupStatus:
 
     db_path: Path
     archive_dir: Path
-    sync_dir: Path | None
-    sync_mounted: bool
     archives: int
     newest_archive: Path | None
     restore_source: Path | None
-    last_drive_push: str | None
 
 
 def status() -> BackupStatus:
     """Report the current settings and archive state without writing anything."""
     archive_dir = _archive_dir()
-    sync_dir = _sync_dir()
     archives = _archives(archive_dir)
-    stamp = archive_dir / DRIVE_PUSH_STAMP
-    last_push = stamp.read_text(encoding="utf-8").strip() if stamp.is_file() else ""
     return BackupStatus(
         db_path=_database_path(),
         archive_dir=archive_dir,
-        sync_dir=sync_dir,
-        sync_mounted=sync_dir is not None and sync_dir.is_dir(),
         archives=len(archives),
         newest_archive=archives[-1] if archives else None,
-        restore_source=_restore_source(archive_dir, sync_dir),
-        last_drive_push=last_push or None,
+        restore_source=_restore_source(archive_dir),
     )
 
 
 def restore_latest(
     db_path: str | Path | None = None,
     archive_dir: str | Path | None = None,
-    sync_dir: str | Path | None = None,
 ) -> Path:
-    """Replace the database with the newest archive.
+    """Replace the database with the newest local archive.
 
-    The newest local archive is preferred; with none on disk (a fresh machine),
-    the Drive copy is used instead. The archive is unpacked beside the database
-    and integrity-checked before it is trusted, and the current database is
-    kept as ``<db>.prerestore`` so a bad restore can be undone. The caller must
-    have closed its own connections first, since the file is swapped under it.
+    The archive is unpacked beside the database and integrity-checked before
+    it is trusted, and the current database is kept as ``<db>.prerestore`` so
+    a bad restore can be undone. The caller must have closed its own
+    connections first, since the file is swapped under it. On a fresh machine
+    with no local archives, fetch one from B2 with ``restic dump`` first.
 
     Returns:
         The archive restored from.
 
     Raises:
-        FileNotFoundError: Neither a local nor a Drive archive exists.
+        FileNotFoundError: No local archive exists.
         RuntimeError: The archive didn't unpack to an intact database.
     """
     db = _database_path() if db_path is None else Path(db_path)
     archive = _archive_dir() if archive_dir is None else Path(archive_dir)
-    sync = _as_sync_dir(sync_dir)
 
     with _exclusive(archive):
-        source = _restore_source(archive, sync)
+        source = _restore_source(archive)
         if source is None:
-            checked = str(archive / "elections-*.db.gz")
-            if sync is not None:
-                checked += f" or {sync / SYNC_NAME}"
+            checked = archive / "elections-*.db.gz"
             raise FileNotFoundError(f"no archive to restore from (checked {checked})")
 
         db.parent.mkdir(parents=True, exist_ok=True)
@@ -463,11 +351,7 @@ def _backup_worker() -> None:
 
 
 def request_backup() -> None:
-    """Ask for a backup shortly. Does none of the work itself.
-
-    Never forces a Drive push — the automatic path respects the daily
-    throttle; only an explicit ``backup_database(push=True)`` bypasses it.
-    """
+    """Ask for a backup shortly. Does none of the work itself."""
     global _backup_thread
     with _backup_thread_lock:
         if _backup_thread is None or not _backup_thread.is_alive():

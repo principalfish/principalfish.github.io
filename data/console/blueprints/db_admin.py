@@ -1,4 +1,4 @@
-"""Database admin routes: back up to the local archive and Drive, or restore."""
+"""Database admin routes: back up to the local archive, or restore from it."""
 
 from __future__ import annotations
 
@@ -16,32 +16,22 @@ bp = Blueprint("db_admin", __name__)
 def _status_lines() -> list[str]:
     """Where backups live now, for the bottom of a result page."""
     state = backup.status()
-    if state.sync_dir:
-        mount = "mounted" if state.sync_mounted else "MISSING — not pushed"
-        drive = f"{state.sync_dir} ({mount})"
-    else:
-        drive = "off (ELECTIONS_BACKUP_DIR not set)"
-    return [
-        f"Archive dir:     {state.archive_dir} ({state.archives} archives)",
-        f"Drive dir:       {drive}",
-        f"Last Drive push: {state.last_drive_push or 'never'}",
-    ]
+    return [f"Archive dir:     {state.archive_dir} ({state.archives} archives)"]
 
 
 @bp.route("/db/backup", methods=["POST"])
 def backup_database() -> ResponseReturnValue:
-    """POST /db/backup — Archive the database now and push the Drive copy.
+    """POST /db/backup — Archive the database now.
 
     Runs in the request (~20 s on the full database) rather than on the
-    background thread, so the page can report the outcome. ``push=True``
-    refreshes Drive even if the day's automatic push has already happened.
+    background thread, so the page can report the outcome.
 
     Returns:
         Rendered command_result.html.
     """
     stdout, stderr, code = "", "", 0
     try:
-        made = backup.backup_database(push=True)
+        made = backup.backup_database()
         stdout = f"Archived to {made}" if made else "Unchanged since the last archive"
     except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
         # sqlite3.Error isn't an OSError: "database is locked" while an import
@@ -51,7 +41,7 @@ def backup_database() -> ResponseReturnValue:
 
     return render_command_result(
         title="Backup Database",
-        command="backup.backup_database(push=True)",
+        command="backup.backup_database()",
         stdout=stdout,
         stderr=stderr,
         return_code=code,
@@ -64,8 +54,8 @@ def restore_database() -> ResponseReturnValue:
 
     Drops the cached engine first so no pooled connection holds the file
     while it is swapped; the next ``get_db()`` reconnects to the restored
-    database. The newest local archive is used, else the Drive copy, and the
-    replaced database is kept as ``<db>.prerestore``.
+    database. The newest local archive is used, and the replaced database is
+    kept as ``<db>.prerestore``.
 
     Returns:
         Rendered command_result.html.

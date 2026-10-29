@@ -432,31 +432,40 @@ importers below, or restored from a backup (below).
 
 ### Backups
 
-The live database stays on local disk — SQLite must not run off the Drive mount.
-`data/backup.py` backs it up with SQLite's own backup API (safe mid-write) and
+The live database stays on local disk — SQLite must not run off a network or
+synced mount. `data/backup.py` backs it up with SQLite's own backup API (safe mid-write) and
 integrity-checks the copy:
 
 - **Local archives** (`ELECTIONS_ARCHIVE_DIR`, default `~/dbs/elections`): a dated
   `elections-<UTC stamp>.db.gz` whenever the data has changed, plus a plain newest
   `elections.db`. The newest `ELECTIONS_BACKUP_KEEP` (default 30) are kept.
-- **Google Drive** (`ELECTIONS_BACKUP_DIR`, e.g. `/mnt/g/My Drive/dbs`): one file,
-  `elections.db.gz`, overwritten at most once a day. Drive is nearly full and each
-  overwrite leaves a revision that counts against the quota, so history lives
-  locally. If the Drive folder isn't mounted the push is skipped, not failed.
+- **Off-machine (Backblaze B2)**: an hourly restic job outside the repo
+  (`restic-backup.timer` → `~/.config/restic/backup.sh`) runs `backup_db.py` to
+  refresh the plain newest copy, then sends `~/dbs/elections/elections.db` to B2
+  (24 hourly, 30 daily, 12 weekly, 24 monthly snapshots). Google Drive was
+  dropped on 2026-10-29.
 
 The data console backs up by itself after any request that could write (including
 the scripts it launches) and once on startup. Its **Backup now** button archives
-immediately and refreshes the Drive copy regardless of the daily limit; **Restore
-newest archive** restores from the newest local archive, or the Drive copy if
-there is none, keeping the replaced database as `<db>.prerestore`.
+immediately; **Restore newest archive** restores from the newest local archive,
+keeping the replaced database as `<db>.prerestore`.
 
 From a terminal in `data/` — after running a writing script directly, for example:
 
 ```bash
-./election_data/bin/python scripts/backup_db.py            # archive if changed; Drive if due
-./election_data/bin/python scripts/backup_db.py --push     # ...and refresh Drive now
+./election_data/bin/python scripts/backup_db.py            # archive if changed
 ./election_data/bin/python scripts/backup_db.py --dry-run  # show paths and state only
 ./election_data/bin/python scripts/backup_db.py restore    # restore (stop the console first)
+```
+
+From B2 (no local archives, or an older version): list versions with
+`~/.config/restic/versions.sh elections`, then, with the console stopped:
+
+```bash
+set -a; . ~/.config/restic/env; set +a
+restic dump <snapshot> /home/philiph/dbs/elections/elections.db > /tmp/elections.restored.db
+sqlite3 /tmp/elections.restored.db "PRAGMA integrity_check"
+# move ~/dbs/elections.db and any -wal/-shm aside, then copy the restored file in
 ```
 
 A backup of the full database takes about 20 s (most of it gzip and the integrity
@@ -901,7 +910,7 @@ sqlite3 "$DATABASE_PATH" "SELECT type, count(*) FROM elections GROUP BY type ORD
 
 - **Database is locked**
 	- SQLite uses WAL journaling; make sure no other writer (e.g. a model run)
-	  is mid-transaction, and never open the live DB off the Google Drive mount.
+	  is mid-transaction, and never open the live DB off a network or synced mount.
 
 - **Poll importer skips everything**
 	- Check the Catch Up from Wikipedia summary's window and already-imported count.

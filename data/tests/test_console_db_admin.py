@@ -30,7 +30,7 @@ def requested(monkeypatch: pytest.MonkeyPatch) -> list[bool]:
 
 @pytest.fixture()
 def live_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A real tiny database at DATABASE_PATH, with a Drive folder."""
+    """A real tiny database at DATABASE_PATH."""
     db = tmp_path / "live" / "elections.db"
     db.parent.mkdir()
     conn = sqlite3.connect(db)
@@ -38,10 +38,7 @@ def live_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     conn.execute("INSERT INTO t VALUES ('a')")
     conn.commit()
     conn.close()
-    sync = tmp_path / "sync"
-    sync.mkdir()
     monkeypatch.setenv("DATABASE_PATH", str(db))
-    monkeypatch.setenv("ELECTIONS_BACKUP_DIR", str(sync))
     return db
 
 
@@ -103,36 +100,27 @@ def test_db_admin_routes_do_not_ask(
 # --- routes ----------------------------------------------------------------------
 
 
-def test_backup_route_archives_and_pushes(
-    app: Flask, live_db: Path, tmp_path: Path
-) -> None:
+def test_backup_route_archives(app: Flask, live_db: Path) -> None:
     body = app.test_client().post("/db/backup").get_data(as_text=True)
 
     assert "Archived to" in body
-    assert "mounted" in body
-    assert (tmp_path / "sync" / backup.SYNC_NAME).exists()
+    assert "Archive dir:" in body
+    assert len(backup._archives(backup.status().archive_dir)) == 1
 
 
-def test_backup_route_forces_the_drive_push(
+def test_backup_route_reports_an_unchanged_database(
     app: Flask, live_db: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    seen: dict[str, bool] = {}
-
-    def fake(push: bool = False) -> Path | None:
-        seen["push"] = push
-        return None
-
-    monkeypatch.setattr(backup, "backup_database", fake)
+    monkeypatch.setattr(backup, "backup_database", lambda: None)
     body = app.test_client().post("/db/backup").get_data(as_text=True)
 
-    assert seen == {"push": True}
     assert "Unchanged" in body
 
 
 def test_backup_route_reports_a_failure(
     app: Flask, live_db: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def fail(push: bool = False) -> Path | None:
+    def fail() -> Path | None:
         raise RuntimeError("the copy didn't come out intact")
 
     monkeypatch.setattr(backup, "backup_database", fail)
@@ -194,7 +182,7 @@ def test_a_locked_database_is_reported_not_a_500(
     app: Flask, live_db: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # sqlite3.Error isn't an OSError; an import holding the write lock raises it.
-    def locked(push: bool = False) -> Path | None:
+    def locked() -> Path | None:
         raise sqlite3.OperationalError("database is locked")
 
     monkeypatch.setattr(backup, "backup_database", locked)
@@ -238,7 +226,7 @@ def test_a_cross_site_post_is_refused(
     headers: dict[str, str],
 ) -> None:
     ran: list[str] = []
-    monkeypatch.setattr(backup, "backup_database", lambda push=False: ran.append("b"))
+    monkeypatch.setattr(backup, "backup_database", lambda: ran.append("b"))
     monkeypatch.setattr(backup, "restore_latest", lambda: ran.append("r"))
 
     response = app.test_client().post(route, headers=headers)
@@ -264,8 +252,8 @@ def test_a_same_origin_post_is_allowed(
 ) -> None:
     ran: list[bool] = []
 
-    def fake(push: bool = False) -> Path | None:
-        ran.append(push)
+    def fake() -> Path | None:
+        ran.append(True)
         return None
 
     monkeypatch.setattr(backup, "backup_database", fake)

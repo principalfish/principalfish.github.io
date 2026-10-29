@@ -44,7 +44,6 @@ def _never_open_the_live_database(
     # wakes, this fixture has restored the live DATABASE_PATH.
     monkeypatch.setattr(backup, "request_backup", lambda: None)
     monkeypatch.setenv("ELECTIONS_ARCHIVE_DIR", str(tmp_path / "backup-guard"))
-    monkeypatch.delenv("ELECTIONS_BACKUP_DIR", raising=False)
     console.db.reset_db()
     yield
     console.db.reset_db()

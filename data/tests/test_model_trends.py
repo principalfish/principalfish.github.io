@@ -457,6 +457,7 @@ def national_block(
     return {
         "budget": {"parties": {"secret": 1}},
         "config_hash": "c0ffee",
+        "kernel_version": "pf-westminster-mc-v1",
         "input_hash": "feed",
         "seed": 739901,
         "simulations": 10000,
@@ -587,7 +588,7 @@ def test_first_summary_is_kept_after_an_equal_run_without_one(
     ]
 
 
-def test_equal_run_without_a_summary_after_one_with_is_dropped(
+def test_equal_runs_preserve_summary_gaps(
     db: Database, only_the_test_database: Path
 ) -> None:
     scope, seats, parties = setup_scope(db, "westminster")
@@ -596,7 +597,7 @@ def test_equal_run_without_a_summary_after_one_with_is_dropped(
         national_block(parties),
     )
     store_with_summary(only_the_test_database, scope, 2, seats[0], parties, 60, None)
-    # A later equal run with a summary is still a duplicate of day 1.
+    # A later equal run must restart the bands after the explicit gap.
     store_with_summary(
         only_the_test_database, scope, 3, seats[0], parties, 60,
         national_block(parties, hung=0.5),
@@ -605,8 +606,51 @@ def test_equal_run_without_a_summary_after_one_with_is_dropped(
     entries = reconstruct_trends(only_the_test_database, scope)
     assert [(e["as_of_date"], e.get("hung")) for e in entries] == [
         ("2026-06-01", 0.2688),
+        ("2026-06-02", None),
+        ("2026-06-03", 0.5),
         ("2026-06-04", None),
     ]
+
+
+@pytest.mark.parametrize("field", ["config_hash", "kernel_version"])
+def test_equal_central_runs_preserve_each_identity_boundary(
+    db: Database, only_the_test_database: Path, field: str,
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day in range(1, 5):
+        block = national_block(parties, hung=0.1 * day)
+        if day in (2, 3):
+            block[field] = "changed-identity"
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, 60, block,
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [e["as_of_date"] for e in entries] == [
+        "2026-06-01", "2026-06-02", "2026-06-04",
+    ]
+    assert entries[0]["segment_id"] == entries[2]["segment_id"]
+    assert entries[0]["segment_id"] != entries[1]["segment_id"]
+    assert isinstance(entries[0]["segment_id"], str)
+
+
+@pytest.mark.parametrize("field", ["config_hash", "kernel_version"])
+@pytest.mark.parametrize("value", [None, "", " ", 1])
+def test_unknown_identity_never_proves_equal_bands_comparable(
+    db: Database, only_the_test_database: Path, field: str, value: object,
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day in range(1, 4):
+        block = national_block(parties)
+        if value is None:
+            block.pop(field)
+        else:
+            block[field] = value
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, 60, block,
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert len(entries) == 3
+    assert all(e["segment_id"] is None for e in entries)
 
 
 def polled_block(parties: list[int], counts: tuple[int, ...]) -> dict[str, object]:
@@ -808,5 +852,5 @@ def test_full_backfill_trend_size(
     assert 300 <= len(entries) <= 340
     assert all("hung" in entry for entry in entries)
     size = destination.stat().st_size
-    # Includes both vote and seat bounds for every party in the full history.
-    assert size < 300_000, size
+    # Includes both bounds per party and a config/kernel segment hash per point.
+    assert size < 330_000, size

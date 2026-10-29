@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westmin
 from model_support.monte_carlo import (
     COMPACT_SHARE_FLOOR,
     SHARE_BINS_PER_POINT,
+    WESTMINSTER_KERNEL_VERSION,
     DrawsMeta,
     ErrorDraws,
     ErrorStreams,
@@ -1444,6 +1445,7 @@ class TestToJsonDict:
         assert national["interval"] == 0.9
         assert national["seed"] == SEED
         assert national["config_hash"] == config_hash(world_config())
+        assert national["kernel_version"] == WESTMINSTER_KERNEL_VERSION
         assert national["hung"] == round(summary.p_hung, 4)
         assert set(national["parties"]) == {str(p) for p in inputs.party_ids}
         party = national["parties"]["5"]

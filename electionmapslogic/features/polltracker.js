@@ -86,7 +86,9 @@ export function parsePollTrackerData(data, model = null) {
         || !Number.isFinite(new Date(`${asOfDate}T00:00:00Z`).getTime())) continue;
     const hung = probability(entry.hung);
     const residual = us ? probability(entry.residual) : hung;
-    runsByDate.set(asOfDate, { hung, residual, segment: entry.segment_id ?? null,
+    const segment = typeof entry.segment_id === "string" && entry.segment_id.trim()
+      ? entry.segment_id : null;
+    runsByDate.set(asOfDate, { hung, residual, segment,
       senateOutcomes: entry.senateOutcomes ?? null, display: entry.display ?? null });
     for (const [partyIdStr, pdata] of Object.entries(entry.parties || {})) {
       const partyId = Number(partyIdStr);
@@ -148,13 +150,16 @@ export function parsePollTrackerData(data, model = null) {
     }
     return entries;
   })();
-  if (us) {
+  // A null point immediately before a changed run breaks lines and band smoothing.
+  // Legacy central-only Westminster history has no uncertainty to separate.
+  {
     let previous;
     timeline = timeline.flatMap((entry) => {
       const current = runsByDate.get(entry.dateKey);
       const boundary = current && previous !== undefined
-        && (!current.segment || !previous || current.segment !== previous);
-      if (current) previous = current.segment;
+        && (us || current.hung !== null || previous.hung !== null)
+        && (!current.segment || !previous.segment || current.segment !== previous.segment);
+      if (current) previous = current;
       return boundary ? [{ ...entry, boundary: true,
         dateValue: new Date(entry.dateValue.getTime() - 1) }, entry] : [entry];
     });
@@ -191,9 +196,11 @@ export function parsePollTrackerData(data, model = null) {
       }
       // Calendar gaps carry forward; an explicit run clears any missing optional values.
       if (!entry.boundary && runsByDate.has(entry.dateKey)) lastOptional = row ?? optionalFields(null, false);
-      if (us && !runsByDate.has(entry.dateKey) && !lastContext) {
-        lastSeats = null;
-        lastVotePct = null;
+      if (!runsByDate.has(entry.dateKey) && !lastContext) {
+        if (us) {
+          lastSeats = null;
+          lastVotePct = null;
+        }
         lastOptional = optionalFields(null, false);
       }
       for (const key of Object.keys(optional)) optional[key].push(lastOptional[key]);
@@ -230,7 +237,10 @@ export function parsePollTrackerData(data, model = null) {
       lastHung = run.hung;
       lastResidual = run.residual;
       lastSegment = run.segment;
-    } else if (us && !lastSegment) lastResidual = null;
+    } else if (!lastSegment) {
+      lastResidual = null;
+      if (!us) lastHung = null;
+    }
     residual.push(lastResidual);
     return lastHung;
   });

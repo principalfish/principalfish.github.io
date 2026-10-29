@@ -116,6 +116,9 @@ MAX_PARTIES: Final = 256
 
 DRAWS_FORMAT: Final = "pf-simulations-v1"
 
+# Bump when simulation mathematics changes so saved tracker bands never bridge kernels.
+WESTMINSTER_KERNEL_VERSION: Final = "pf-westminster-mc-v1"
+
 # Decimal places kept by SimulationSummary.to_json_dict.
 _SHARE_DECIMALS: Final = 2
 _PROBABILITY_DECIMALS: Final = 4
@@ -1281,6 +1284,7 @@ class SimulationSummary:
             "interval": self.interval,
             "seed": self.seed,
             "config_hash": self.config_hash,
+            "kernel_version": WESTMINSTER_KERNEL_VERSION,
             "hung": round(self.p_hung, _PROBABILITY_DECIMALS),
             "parties": {
                 str(party_id): {

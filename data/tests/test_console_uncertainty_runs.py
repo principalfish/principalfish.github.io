@@ -118,6 +118,19 @@ def test_all_seats_exact_decomposition_and_routes(app: Flask, saved: dict[str, A
         assert "Seat raw / applied SD" in body
 
 
+def test_summary_without_kernel_identity_still_replays_exactly(
+    saved: dict[str, Any],
+) -> None:
+    record = saved["record"]
+    national = dict(record.stored.national)
+    national.pop("kernel_version")
+    older = replace(record, stored=replace(record.stored, national=national))
+    draws = raw_run(saved["path"], older)
+    for index in (0, 24, 49):
+        result = replay_simulation(draws, index)
+        assert np.array_equal(result.projection.winner[0], draws.winner[index])
+
+
 def test_filters_match_hand_count(saved: dict[str, Any], app: Flask) -> None:
     draws = saved["draws"]
     p = draws.party_ids[0]
@@ -353,7 +366,7 @@ def test_hub_previews_the_published_export(
     assert "1 run on this map has a stored national block" in body
     withheld = re.findall(r"<li>((?:national|region|seat)[^<]*)</li>", body)
     assert withheld == [
-        "national: budget, config_hash, input_hash, seed",
+        "national: budget, config_hash, input_hash, kernel_version, seed",
         "national parties: none",
         "regions: budget",
         "region parties: none",

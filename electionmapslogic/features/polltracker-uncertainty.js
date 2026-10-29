@@ -23,7 +23,7 @@ export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes
   const metrics = [];
   if (seats && capabilities.seatBands) metrics.push(descriptor.rangeLabel);
   if (votes && capabilities.voteBands) metrics.push("vote-share");
-  return metrics.length ? `Shaded bands show 90% ${metrics.join(" and ")} ranges (averaged over ${BAND_SMOOTHING_POINTS} model updates) ${basis}`
+  return metrics.length ? `Shaded bands show 90% ${metrics.join(" and ")} ranges (trailing average over up to ${BAND_SMOOTHING_POINTS} model updates) ${basis}`
     : `Uncertainty describes an election held today, conditional on current polls and the model's error assumptions.`;
 }
 
@@ -82,13 +82,14 @@ function validBand(values) {
 }
 
 /**
- * Centred moving average of both bounds over model updates, damping run-to-run simulation noise.
+ * Trailing moving average of both bounds over model updates, damping run-to-run simulation noise.
  * Days carried forward repeat their run's band, so consecutive equal bands form one step that
  * counts once and stays flat. The window stays inside each unbroken stretch of valid steps
- * (shrinking at its ends), so smoothing never bridges a missing day or drags an isolated range.
+ * (including only past and current steps), so smoothing never bridges a missing day or
+ * changes a historical band when later updates arrive.
  */
 export function smoothPollTrackerBand(band, points = BAND_SMOOTHING_POINTS) {
-  const radius = Math.floor(points / 2);
+  const windowSize = Math.max(1, Math.floor(points));
   const steps = [];
   band.forEach((values, index) => {
     const previous = steps.at(-1);
@@ -100,10 +101,8 @@ export function smoothPollTrackerBand(band, points = BAND_SMOOTHING_POINTS) {
   steps.forEach((step, position) => {
     if (!isValidStep(step)) return;
     let first = position;
-    let last = position;
-    while (first > position - radius && isValidStep(steps[first - 1])) first -= 1;
-    while (last < position + radius && isValidStep(steps[last + 1])) last += 1;
-    const window = steps.slice(first, last + 1);
+    while (first > position - windowSize + 1 && isValidStep(steps[first - 1])) first -= 1;
+    const window = steps.slice(first, position + 1);
     const mean = [0, 1].map((side) => window.reduce((sum, { values }) => sum + values[side], 0) / window.length);
     for (let index = step.start; index <= step.end; index += 1) smoothed[index] = mean;
   });

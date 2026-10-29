@@ -11,10 +11,9 @@ probability 0, and a party lacking ``vl``/``vh`` was not in the summary.
 
 Consecutive runs with the same seats and shares collapse to the first, as
 before; uncertainty does not keep a duplicate (the simulation seed changes
-daily, so its odds always differ slightly). The one exception: a run with a
-summary is kept after an equal run without one, so the odds appear. The
-reverse is not kept: an equal run without a summary after one with a summary
-adds nothing, and the earlier entry's odds carry forward. With no summaries
+daily, so its odds always differ slightly). Westminster retains changes in
+summary availability or config/kernel identity, even with unchanged central
+values. Unknown identities cannot establish comparability. With no summaries
 anywhere the rule is exactly the old one.
 
 A run whose stored error budget shows no national polls for any party is
@@ -289,7 +288,7 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             ):
                 if eid in metrics:
                     metrics[eid][str(pid)]["e"] += ev_by_election[eid][unit_name]
-        uncertainty, unpolled = _trend_uncertainty(conn, scope, elections)
+        uncertainty, unpolled, segments = _trend_uncertainty(conn, scope, elections)
         us_metadata = (
             _us_metadata(conn, scope)
             if scope.election_type in _US_MODEL_TYPES
@@ -318,7 +317,9 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
                 continue
             summary = uncertainty.get(eid)
             metadata = us_metadata.get(eid, {}) if us_metadata is not None else None
-            segment = metadata.get("segment_id") if metadata else None
+            segment = (
+                metadata.get("segment_id") if metadata else segments.get(eid)
+            )
             has_summary = bool(metadata.get("summary")) if metadata else summary is not None
             if us_metadata is not None and previous is not None and not keep_trend_point(
                 previous_context=previous_segment, context=segment,
@@ -332,6 +333,15 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
                 previous is not None
                 and previous[0] == parties
                 and (summary is None or previous[1])
+                and not (
+                    scope.election_type == "model_uns"
+                    and (
+                        previous[1] != has_summary
+                        or (has_summary and (
+                            segment is None or segment != previous_segment
+                        ))
+                    )
+                )
             ):
                 continue
             previous = (parties, has_summary)
@@ -353,6 +363,8 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             }
             if summary is not None:
                 entry["hung"] = summary.hung
+                if scope.election_type == "model_uns":
+                    entry["segment_id"] = segment
             if us_metadata is not None:
                 entry.update({
                     "context": metadata.get("context") if metadata else None,
@@ -582,7 +594,7 @@ def trend_document(scope: OutputScope, entries: list[TrendEntry]) -> object:
 
 def _trend_uncertainty(
     conn: sqlite3.Connection, scope: OutputScope, election_ids: Collection[int]
-) -> tuple[dict[int, TrendUncertainty], set[int]]:
+) -> tuple[dict[int, TrendUncertainty], set[int], dict[int, str | None]]:
     """Read each scoped run's trend additions from its stored national block.
 
     Args:
@@ -592,7 +604,8 @@ def _trend_uncertainty(
 
     Returns:
         Election id -> its additions, for the runs with a summary; and the
-        runs whose budget shows no national polls (:func:`_unpolled`).
+        runs whose budget shows no national polls (:func:`_unpolled`); and
+        config/kernel segment identities (unknown for older stored summaries).
 
     Raises:
         ValueError: A stored block is unreadable or lacks a published field
@@ -600,8 +613,9 @@ def _trend_uncertainty(
     """
     result: dict[int, TrendUncertainty] = {}
     unpolled: set[int] = set()
+    segments: dict[int, str | None] = {}
     if scope.election_type in _US_MODEL_TYPES:
-        return result, unpolled
+        return result, unpolled, segments
     try:
         for election_id, national in iter_national_blocks(conn, scope):
             if election_id not in election_ids:
@@ -613,13 +627,21 @@ def _trend_uncertainty(
                 unpolled.add(election_id)
             try:
                 result[election_id] = trend_uncertainty(national)
+                config = national.get("config_hash")
+                kernel = national.get("kernel_version")
+                segments[election_id] = (
+                    fingerprint([config, kernel])
+                    if (isinstance(config, str) and config.strip()
+                        and isinstance(kernel, str) and kernel.strip())
+                    else None
+                )
             except PublicUncertaintyError as err:
                 raise ValueError(
                     f"Stored uncertainty for election {election_id}: {err}"
                 ) from err
     except UncertaintyStoreError as err:
         raise ValueError(f"Stored uncertainty is unreadable: {err}") from err
-    return result, unpolled
+    return result, unpolled, segments
 
 
 def _unpolled(national: Mapping[str, object]) -> bool:

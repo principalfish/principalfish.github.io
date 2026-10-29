@@ -65,6 +65,8 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
     }, us_presidential: {
       polltrackerDataPath: "results/us-president-trends.json", polltrackerDefaultParties: [20, 21],
       uncertaintyModel: "president",
+    }, westminster: {
+      polltrackerDataPath: "results/model_output_trends.json", polltrackerDefaultParties: [20, 21],
     } } });
     state.view = "polltracker";
     state.currentParliament = "us_house";
@@ -88,6 +90,32 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
     expect(document.querySelectorAll("#mapsPollTrackerChartWrap svg")).toHaveLength(1);
     expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(2);
     expect(document.querySelectorAll(".maps-polltracker-band-shade")).toHaveLength(32);
+  });
+
+  it("draws separate Westminster segments and restarts trailing smoothing at each boundary", async () => {
+    state.currentParliament = "westminster";
+    fetchJson.mockResolvedValue(Array.from({ length: 6 }, (_, index) => ({
+      as_of_date: `2026-09-0${index + 1}`, segment_id: index < 3 ? "old-config" : "new-config",
+      hung: 0.5, parties: { 20: {
+        s: 300, v: 40, sl: index < 3 ? 200 - index * 100 : 400,
+        sh: index < 3 ? 400 - index * 100 : 600, pm: 0.5,
+      } },
+    })));
+    await view.activatePollTrackerMode();
+    const band = document.querySelector(".maps-polltracker-band--seats");
+    expect(band.getAttribute("d").match(/M/g)).toHaveLength(2);
+    expect(band.__data__).toEqual([
+      [200, 400], [150, 350], [100, 300], [null, null], [400, 600], [400, 600], [400, 600],
+    ]);
+    expect(state.pollTrackerData.seriesByParty.get("20").seatLo)
+      .toEqual([200, 100, 0, null, 400, 400, 400]);
+    expect(document.getElementById("mapsPollTrackerUncertaintyNote").textContent)
+      .toContain("trailing average over up to 5 model updates");
+    state.currentParliament = "us_house";
+    fetchJson.mockResolvedValue(history());
+    await view.activatePollTrackerMode();
+    expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(2);
+    expect(state.pollTrackerData.descriptor.model).toBe("house");
   });
 
   it("switches to majority / no-majority chances without exposing a largest-party choice", async () => {

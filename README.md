@@ -33,6 +33,56 @@ pipeline that powers its interactive UK election maps.
 | `scripts/` | Static export scripts that partition elections by parliament into the per-page data dirs (`electionmaps/data`, `uselectionmaps/data`) |
 | `tests/` | Pytest suite — run with `./run_tests.sh` (strict mypy, then pytest) |
 
+## Westminster uncertainty validation
+
+Run the offline acceptance harness from `data/`:
+
+```bash
+./election_data/bin/python scripts/validate_westminster_uncertainty.py
+```
+
+This reads the configured SQLite database with `mode=ro` and `query_only`,
+uses the committed final-poll evidence and current uncertainty config, and
+writes only `models/westminster/uncertainty_validation_report.json`. It does
+not rerun or persist a forecast. The console's Westminster Uncertainty →
+Validation page displays this saved report and flags a changed config.
+
+For an explicit input set and scratch output:
+
+```bash
+./election_data/bin/python scripts/validate_westminster_uncertainty.py \
+  --database /path/to/elections.db \
+  --replay /path/to/westminster-latest.npz \
+  --output /tmp/westminster-validation.json
+```
+
+`--config` and `--final-polls` select alternate local evidence. Default draw
+counts are 4,000 for the historical checks and 10,000 for each runtime check;
+`--simulations` and `--replay-simulations` override them. `--skip-replay`
+explicitly omits runtime diagnostics when no snapshot is available. Missing
+required inputs fail without replacing the report. Changing environment
+variables is unnecessary: `--database` names the exact read-only input.
+
+The report records config, historical-input, replay-input and source hashes,
+fixed seeds, draw counts and NumPy version. Repeating the command with the
+same inputs and source produces the same report. Replay diagnostics identify
+the saved date and both saved and evaluated configs; they evaluate the current
+kernel on those frozen inputs, even if current polling has moved on.
+
+Historical seat-total and favourite-reliability checks condition on **actual
+regional votes**. They reproduce the Gaussian conversion experiment with
+leave-one-pair-out fitted seat/lambda scales, not an end-to-end forecast
+backtest. Only four transitions and nine national final-poll elections are
+available. Any new conversion-error component must also be added to this
+conditional experiment before its historical coverage can validate that
+component. Runtime bias and Monte Carlo precision use the real model kernel.
+
+The initial report covers 12/20 seat-total cells at 90%, loses 34/396 (8.59%)
+of 2024 ≥95% favourites under held-out scales and 28/371 (7.55%) under current
+scales, and covers 30/35 (85.7%) national cells with lead z RMS 1.177. Current
+config reliability uses rounded deployed scales (4.90/0.38); the original
+Gaussian reference used unrounded fitted scales (4.9029/0.3818).
+
 ## Static site local preview (`/`, `/bio`, `/electionmaps`)
 
 Prerequisites:

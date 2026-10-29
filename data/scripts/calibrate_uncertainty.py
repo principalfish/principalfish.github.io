@@ -89,7 +89,7 @@ from model_support.uncertainty import (
     UncertaintyConfigError,
     load_uncertainty_config,
 )
-from run_uns_model import PARTY_ID_ALIASES
+from run_uns_model import PARTY_ID_ALIASES as PARTY_ID_ALIASES
 from scripts.migrate_add_us_poll_scope import open_database
 
 # Consecutive general elections on the same boundaries: (label, earlier, later).

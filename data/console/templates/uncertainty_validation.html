@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Westminster Validation</h2>
+    <p><a href="{{ url_for('uncertainty.uncertainty_hub') }}">Uncertainty overview</a></p>
+    <p>Saved offline diagnostics. Opening this page does not run or reconstruct forecasts.</p>
+    {% if error %}
+      <p class="alert">{{ error }}</p>
+    {% elif report %}
+      {% if stale %}
+        <p class="alert">This report uses different settings from the current config.</p>
+      {% endif %}
+      <p>
+        Conditional seat-total coverage:
+        <strong>{{ report.historical.coverage.covered }}/{{ report.historical.coverage.count }}</strong>
+        inside 90% intervals. National leave-one-out coverage:
+        <strong>{{ fmt(100 * report.national.coverage.rate, '.1f') }}%</strong>.
+        Lead z RMS: <strong>{{ fmt(report.national.lead_z_rms) }}</strong> (target 1).
+      </p>
+      <p>These checks condition on known regional results; they are not a full forecast backtest.</p>
+      {% for pair in report.historical.pairs %}
+        <h3>{{ pair.label }}</h3>
+        <p>
+          Training pairs: {{ pair.training_pairs|join(', ') }}.
+          Seat scale {{ fmt(pair.sigma_seat) }}; lambda scale {{ fmt(pair.sigma_lambda) }}.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Party</th><th scope="col">Actual</th>
+              <th scope="col">Uniform swing</th><th scope="col">5% / median / 95%</th>
+              <th scope="col">Covered</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in pair.seat_totals %}
+              <tr>
+                <th scope="row">{{ row.party }}</th><td>{{ row.actual }}</td>
+                <td>{{ row.central }}</td>
+                <td>{{ fmt(row.low, '.0f') }} / {{ fmt(row.median, '.0f') }} / {{ fmt(row.high, '.0f') }}</td>
+                <td>{{ 'Yes' if row.covered else 'No' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% for mode in pair.reliability %}
+          <h4>{{ mode.mode|replace('_', ' ') }}</h4>
+          <p>
+            Favourites rated at least 95%: {{ mode.favourite_losses }} losses among
+            {{ mode.favourites }} favourites
+            {% if mode.favourite_loss_rate is not none %}
+              ({{ fmt(100 * mode.favourite_loss_rate, '.2f') }}%).
+            {% endif %}
+            Brier score: {{ fmt(mode.brier, '.4f') }}.
+          </p>
+          <details>
+            <summary>Win probability reliability bins</summary>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Bin</th><th scope="col">Candidates</th>
+                  <th scope="col">Mean probability</th><th scope="col">Observed wins</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for bin in mode.bins %}
+                  <tr>
+                    <th scope="row">{{ fmt(100 * bin.low, '.0f') }}–{{ fmt(100 * bin.high, '.0f') }}%</th>
+                    <td>{{ bin.count }}</td>
+                    <td>{{ fmt(100 * bin.mean_probability, '.1f') }}%</td>
+                    <td>{{ fmt(100 * bin.observed_frequency, '.1f') }}%</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </details>
+        {% endfor %}
+      {% endfor %}
+      <h3>Residual tails</h3>
+      <p>Excess kurtosis: {{ fmt(report.historical.tails.excess_kurtosis) }}.</p>
+      <ul>
+        {% for band in report.historical.tails.bands %}
+          <li>
+            Outside the {{ fmt(100 * band.nominal, '.1f') }}% Gaussian band:
+            {{ fmt(100 * band.observed_outside, '.2f') }}% observed.
+          </li>
+        {% endfor %}
+      </ul>
+      <h3>Monte Carlo precision and central bias</h3>
+      {% if report.replay.status == 'complete' %}
+        <p>
+          Frozen inputs from {{ report.replay.as_of_date }};
+          {{ report.replay.simulations }} simulations per seed.
+          {{ report.replay.method }}
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Party</th><th scope="col">Uniform swing</th>
+              <th scope="col">MC median</th><th scope="col">90% interval</th>
+              <th scope="col">Majority probability ± MC SE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.replay.variants[0].parties %}
+              <tr>
+                <th scope="row">{{ row.party }}</th><td>{{ row.central_seats }}</td>
+                <td>{{ row.median_seats }}</td><td>{{ row.low }}–{{ row.high }}</td>
+                <td>{{ fmt(100 * row.majority_probability) }}% ± {{ fmt(100 * row.majority_mc_se) }} pp</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>{{ report.replay.reason }}</p>
+      {% endif %}
+      <h3>Method and limitations</h3>
+      <ul>{% for line in report.methods.values() %}<li>{{ line }}</li>{% endfor %}</ul>
+      <ul>{% for line in report.limitations %}<li>{{ line }}</li>{% endfor %}</ul>
+      <details>
+        <summary>Complete numbers and reproducibility identities</summary>
+        <pre>{{ report|tojson(indent=2) }}</pre>
+      </details>
+    {% endif %}
+  </section>
+{% endblock %}

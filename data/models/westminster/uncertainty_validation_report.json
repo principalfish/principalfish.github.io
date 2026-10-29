@@ -1,0 +1,2278 @@
+{
+  "historical": {
+    "coverage": {
+      "count": 20,
+      "covered": 12,
+      "rate": 0.6
+    },
+    "pairs": [
+      {
+        "input_hash": "4c1540befa34f346592b3ccb23b31bb3e0b6d5bdd7d82cc147a9e3600bc965af",
+        "label": "2010\u21922015",
+        "reliability": [
+          {
+            "bins": [
+              {
+                "count": 297,
+                "high": 0.05,
+                "low": 0.0,
+                "mean_probability": 0.009668350168350168,
+                "observed_frequency": 0.010101010101010102
+              },
+              {
+                "count": 44,
+                "high": 0.1,
+                "low": 0.05,
+                "mean_probability": 0.07144318181818182,
+                "observed_frequency": 0.0
+              },
+              {
+                "count": 50,
+                "high": 0.2,
+                "low": 0.1,
+                "mean_probability": 0.14614000000000002,
+                "observed_frequency": 0.08
+              },
+              {
+                "count": 41,
+                "high": 0.3,
+                "low": 0.2,
+                "mean_probability": 0.23759756097560977,
+                "observed_frequency": 0.12195121951219512
+              },
+              {
+                "count": 38,
+                "high": 0.4,
+                "low": 0.3,
+                "mean_probability": 0.3430855263157895,
+                "observed_frequency": 0.34210526315789475
+              },
+              {
+                "count": 31,
+                "high": 0.5,
+                "low": 0.4,
+                "mean_probability": 0.4444112903225806,
+                "observed_frequency": 0.4838709677419355
+              },
+              {
+                "count": 31,
+                "high": 0.6,
+                "low": 0.5,
+                "mean_probability": 0.5511129032258065,
+                "observed_frequency": 0.5161290322580645
+              },
+              {
+                "count": 39,
+                "high": 0.7,
+                "low": 0.6,
+                "mean_probability": 0.6583589743589743,
+                "observed_frequency": 0.6666666666666666
+              },
+              {
+                "count": 40,
+                "high": 0.8,
+                "low": 0.7,
+                "mean_probability": 0.76036875,
+                "observed_frequency": 0.875
+              },
+              {
+                "count": 47,
+                "high": 0.9,
+                "low": 0.8,
+                "mean_probability": 0.8549574468085108,
+                "observed_frequency": 0.9148936170212766
+              },
+              {
+                "count": 39,
+                "high": 0.95,
+                "low": 0.9,
+                "mean_probability": 0.9299102564102563,
+                "observed_frequency": 0.9743589743589743
+              },
+              {
+                "count": 452,
+                "high": 1.0,
+                "low": 0.95,
+                "mean_probability": 0.9944640486725663,
+                "observed_frequency": 0.9977876106194691
+              }
+            ],
+            "brier": 0.08451681933744222,
+            "favourite_loss_rate": 0.0022123893805309734,
+            "favourite_losses": 1,
+            "favourites": 452,
+            "mode": "leave_one_pair_out",
+            "seats": 649,
+            "sigma_lambda": 0.41876465732118373,
+            "sigma_seat": 4.933402258271614
+          },
+          {
+            "bins": [
+              {
+                "count": 280,
+                "high": 0.05,
+                "low": 0.0,
+                "mean_probability": 0.00979732142857143,
+                "observed_frequency": 0.010714285714285714
+              },
+              {
+                "count": 44,
+                "high": 0.1,
+                "low": 0.05,
+                "mean_probability": 0.07174431818181819,
+                "observed_frequency": 0.0
+              },
+              {
+                "count": 52,
+                "high": 0.2,
+                "low": 0.1,
+                "mean_probability": 0.15022115384615384,
+                "observed_frequency": 0.057692307692307696
+              },
+              {
+                "count": 39,
+                "high": 0.3,
+                "low": 0.2,
+                "mean_probability": 0.2408653846153846,
+                "observed_frequency": 0.15384615384615385
+              },
+              {
+                "count": 36,
+                "high": 0.4,
+                "low": 0.3,
+                "mean_probability": 0.34433333333333327,
+                "observed_frequency": 0.3333333333333333
+              },
+              {
+                "count": 31,
+                "high": 0.5,
+                "low": 0.4,
+                "mean_probability": 0.4453548387096775,
+                "observed_frequency": 0.4838709677419355
+              },
+              {
+                "count": 31,
+                "high": 0.6,
+                "low": 0.5,
+                "mean_probability": 0.5504274193548387,
+                "observed_frequency": 0.5161290322580645
+              },
+              {
+                "count": 36,
+                "high": 0.7,
+                "low": 0.6,
+                "mean_probability": 0.6554791666666666,
+                "observed_frequency": 0.6944444444444444
+              },
+              {
+                "count": 39,
+                "high": 0.8,
+                "low": 0.7,
+                "mean_probability": 0.7560448717948718,
+                "observed_frequency": 0.8205128205128205
+              },
+              {
+                "count": 48,
+                "high": 0.9,
+                "low": 0.8,
+                "mean_probability": 0.8507447916666666,
+                "observed_frequency": 0.9375
+              },
+              {
+                "count": 40,
+                "high": 0.95,
+                "low": 0.9,
+                "mean_probability": 0.9280249999999999,
+                "observed_frequency": 0.975
+              },
+              {
+                "count": 454,
+                "high": 1.0,
+                "low": 0.95,
+                "mean_probability": 0.9946910792951543,
+                "observed_frequency": 0.9977973568281938
+              }
+            ],
+            "brier": 0.08396512654083203,
+            "favourite_loss_rate": 0.0022026431718061676,
+            "favourite_losses": 1,
+            "favourites": 454,
+            "mode": "current_config",
+            "seats": 649,
+            "sigma_lambda": 0.38,
+            "sigma_seat": 4.9
+          }
+        ],
+        "residual_coverage": {
+          "contender_rate": 0.8775193798449612,
+          "count": 2664,
+          "covered": 2359,
+          "rate": 0.8855105105105106
+        },
+        "seat_totals": [
+          {
+            "actual": 330,
+            "actual_percentile": 0.9935,
+            "central": 316,
+            "covered": false,
+            "high": 326.0,
+            "low": 305.0,
+            "mean": 315.091,
+            "median": 315.0,
+            "party": "Conservative",
+            "party_id": 4,
+            "sd": 6.390204926291489
+          },
+          {
+            "actual": 232,
+            "actual_percentile": 0.004375,
+            "central": 247,
+            "covered": false,
+            "high": 256.0,
+            "low": 237.95000000000002,
+            "mean": 246.53225,
+            "median": 246.0,
+            "party": "Labour",
+            "party_id": 1,
+            "sd": 5.5043128488032
+          },
+          {
+            "actual": 56,
+            "actual_percentile": 0.977,
+            "central": 55,
+            "covered": false,
+            "high": 55.0,
+            "low": 48.0,
+            "mean": 51.955,
+            "median": 52.0,
+            "party": "Scottish National Party",
+            "party_id": 8,
+            "sd": 2.2228304028872743
+          },
+          {
+            "actual": 8,
+            "actual_percentile": 0.265875,
+            "central": 9,
+            "covered": true,
+            "high": 27.0,
+            "low": 2.0,
+            "mean": 13.448,
+            "median": 13.0,
+            "party": "Liberal Democrats",
+            "party_id": 5,
+            "sd": 7.599493140993022
+          },
+          {
+            "actual": 8,
+            "actual_percentile": 0.661375,
+            "central": 8,
+            "covered": true,
+            "high": 9.0,
+            "low": 6.0,
+            "mean": 7.563,
+            "median": 8.0,
+            "party": "Democratic Unionist Party",
+            "party_id": 9,
+            "sd": 0.8674854465638027
+          }
+        ],
+        "sigma_lambda": 0.41876465732118373,
+        "sigma_seat": 4.933402258271614,
+        "training_pairs": [
+          "2015\u21922017",
+          "2017\u21922019",
+          "2019n\u21922024"
+        ]
+      },
+      {
+        "input_hash": "126772ca1ec60130a443efd593dbefb4819f0d0d7868951d77682309a9dda252",
+        "label": "2015\u21922017",
+        "reliability": [
+          {
+            "bins": [
+              {
+                "count": 276,
+                "high": 0.05,
+                "low": 0.0,
+                "mean_probability": 0.010370471014492755,
+                "observed_frequency": 0.010869565217391304
+              },
+              {
+                "count": 33,
+                "high": 0.1,
+                "low": 0.05,
+                "mean_probability": 0.07017424242424243,
+                "observed_frequency": 0.12121212121212122
+              },
+              {
+                "count": 68,
+                "high": 0.2,
+                "low": 0.1,
+                "mean_probability": 0.14606985294117647,
+                "observed_frequency": 0.20588235294117646
+              },
+              {
+                "count": 44,
+                "high": 0.3,
+                "low": 0.2,
+                "mean_probability": 0.24478409090909087,
+                "observed_frequency": 0.18181818181818182
+              },
+              {
+                "count": 32,
+                "high": 0.4,
+                "low": 0.3,
+                "mean_probability": 0.346234375,
+                "observed_frequency": 0.4375
+              },
+              {
+                "count": 27,
+                "high": 0.5,
+                "low": 0.4,
+                "mean_probability": 0.44478703703703704,
+                "observed_frequency": 0.5555555555555556
+              },
+              {
+                "count": 26,
+                "high": 0.6,
+                "low": 0.5,
+                "mean_probability": 0.5541153846153846,
+                "observed_frequency": 0.46153846153846156
+              },
+              {
+                "count": 30,
+                "high": 0.7,
+                "low": 0.6,
+                "mean_probability": 0.6488833333333334,
+                "observed_frequency": 0.5
+              },
+              {
+                "count": 38,
+                "high": 0.8,
+                "low": 0.7,
+                "mean_probability": 0.7495921052631578,
+                "observed_frequency": 0.8421052631578947
+              },
+              {
+                "count": 61,
+                "high": 0.9,
+                "low": 0.8,
+                "mean_probability": 0.8523360655737705,
+                "observed_frequency": 0.7868852459016393
+              },
+              {
+                "count": 28,
+                "high": 0.95,
+                "low": 0.9,
+                "mean_probability": 0.9312321428571427,
+                "observed_frequency": 0.8571428571428571
+              },
+              {
+                "count": 462,
+                "high": 1.0,
+                "low": 0.95,
+                "mean_probability": 0.9948160173160173,
+                "observed_frequency": 0.9956709956709957
+              }
+            ],
+            "brier": 0.11655023247303543,
+            "favourite_loss_rate": 0.004329004329004329,
+            "favourite_losses": 2,
+            "favourites": 462,
+            "mode": "leave_one_pair_out",
+            "seats": 649,
+            "sigma_lambda": 0.36140316626178587,
+            "sigma_seat": 4.9898524179315755
+          },
+          {
+            "bins": [
+              {
+                "count": 273,
+                "high": 0.05,
+                "low": 0.0,
+                "mean_probability": 0.010130952380952381,
+                "observed_frequency": 0.014652014652014652
+              },
+              {
+                "count": 33,
+                "high": 0.1,
+                "low": 0.05,
+                "mean_probability": 0.06960606060606063,
+                "observed_frequency": 0.09090909090909091
+              },
+              {
+                "count": 71,
+                "high": 0.2,
+                "low": 0.1,
+                "mean_probability": 0.1474049295774648,
+                "observed_frequency": 0.19718309859154928
+              },
+              {
+                "count": 41,
+                "high": 0.3,
+                "low": 0.2,
+                "mean_probability": 0.24887195121951222,
+                "observed_frequency": 0.1951219512195122
+              },
+              {
+                "count": 29,
+                "high": 0.4,
+                "low": 0.3,
+                "mean_probability": 0.34225,
+                "observed_frequency": 0.41379310344827586
+              },
+              {
+                "count": 28,
+                "high": 0.5,
+                "low": 0.4,
+                "mean_probability": 0.44107142857142856,
+                "observed_frequency": 0.5714285714285714
+              },
+              {
+                "count": 30,
+                "high": 0.6,
+                "low": 0.5,
+                "mean_probability": 0.5564166666666668,
+                "observed_frequency": 0.4666666666666667
+              },
+              {
+                "count": 26,
+                "high": 0.7,
+                "low": 0.6,
+                "mean_probability": 0.6555961538461539,
+                "observed_frequency": 0.5
+              },
+              {
+                "count": 35,
+                "high": 0.8,
+                "low": 0.7,
+                "mean_probability": 0.7430571428571427,
+                "observed_frequency": 0.8285714285714286
+              },
+              {
+                "count": 66,
+                "high": 0.9,
+                "low": 0.8,
+                "mean_probability": 0.8526628787878788,
+                "observed_frequency": 0.803030303030303
+              },
+              {
+                "count": 28,
+                "high": 0.95,
+                "low": 0.9,
+                "mean_probability": 0.9345625000000001,
+                "observed_frequency": 0.8928571428571429
+              },
+              {
+                "count": 461,
+                "high": 1.0,
+                "low": 0.95,
+                "mean_probability": 0.995236442516269,
+                "observed_frequency": 0.9934924078091106
+              }
+            ],
+            "brier": 0.11627908166409862,
+            "favourite_loss_rate": 0.006507592190889371,
+            "favourite_losses": 3,
+            "favourites": 461,
+            "mode": "current_config",
+            "seats": 649,
+            "sigma_lambda": 0.38,
+            "sigma_seat": 4.9
+          }
+        ],
+        "residual_coverage": {
+          "contender_rate": 0.8904320987654321,
+          "count": 3011,
+          "covered": 2646,
+          "rate": 0.8787778146795084
+        },
+        "seat_totals": [
+          {
+            "actual": 317,
+            "actual_percentile": 0.503875,
+            "central": 319,
+            "covered": true,
+            "high": 325.0,
+            "low": 309.0,
+            "mean": 316.88325,
+            "median": 317.0,
+            "party": "Conservative",
+            "party_id": 4,
+            "sd": 5.048427422227638
+          },
+          {
+            "actual": 262,
+            "actual_percentile": 0.19549999999999998,
+            "central": 262,
+            "covered": true,
+            "high": 276.0499999999997,
+            "low": 257.0,
+            "mean": 266.925,
+            "median": 267.0,
+            "party": "Labour",
+            "party_id": 1,
+            "sd": 5.7996874915809045
+          },
+          {
+            "actual": 35,
+            "actual_percentile": 0.676625,
+            "central": 37,
+            "covered": true,
+            "high": 38.0,
+            "low": 29.0,
+            "mean": 33.61675,
+            "median": 34.0,
+            "party": "Scottish National Party",
+            "party_id": 8,
+            "sd": 2.9400458223469923
+          },
+          {
+            "actual": 12,
+            "actual_percentile": 0.717875,
+            "central": 10,
+            "covered": true,
+            "high": 14.0,
+            "low": 7.0,
+            "mean": 10.7815,
+            "median": 11.0,
+            "party": "Liberal Democrats",
+            "party_id": 5,
+            "sd": 2.134422111485917
+          },
+          {
+            "actual": 10,
+            "actual_percentile": 0.57025,
+            "central": 10,
+            "covered": true,
+            "high": 10.0,
+            "low": 9.0,
+            "mean": 9.84275,
+            "median": 10.0,
+            "party": "Democratic Unionist Party",
+            "party_id": 9,
+            "sd": 0.4690654938278876
+          }
+        ],
+        "sigma_lambda": 0.36140316626178587,
+        "sigma_seat": 4.9898524179315755,
+        "training_pairs": [
+          "2010\u21922015",
+          "2017\u21922019",
+          "2019n\u21922024"
+        ]
+      },
+      {
+        "input_hash": "af8298f87dfbabdd71286b1fed4261fdd093c3501d713c6b620969256f4e361a",
+        "label": "2017\u21922019",
+        "reliability": [
+          {
+            "bins": [
+              {
+                "count": 231,
+                "high": 0.05,
+                "low": 0.0,
+                "mean_probability": 0.009485930735930737,
+                "observed_frequency": 0.004329004329004329
+              },
+              {
+                "count": 39,
+                "high": 0.1,
+                "low": 0.05,
+                "mean_probability": 0.07195512820512819,
+                "observed_frequency": 0.05128205128205128
+              },
+              {
+                "count": 50,
+                "high": 0.2,
+                "low": 0.1,
+                "mean_probability": 0.14468999999999999,
+                "observed_frequency": 0.08
+              },
+              {
+                "count": 36,
+                "high": 0.3,
+                "low": 0.2,
+                "mean_probability": 0.24572222222222218,
+                "observed_frequency": 0.3611111111111111
+              },
+              {
+                "count": 30,
+                "high": 0.4,
+                "low": 0.3,
+                "mean_probability": 0.347825,
+                "observed_frequency": 0.3333333333333333
+              },
+              {
+                "count": 30,
+                "high": 0.5,
+                "low": 0.4,
+                "mean_probability": 0.44802499999999995,
+                "observed_frequency": 0.36666666666666664
+              },
+              {
+                "count": 29,
+                "high": 0.6,
+                "low": 0.5,
+                "mean_probability": 0.5518362068965518,
+                "observed_frequency": 0.6551724137931034
+              },
+              {
+                "count": 30,
+                "high": 0.7,
+                "low": 0.6,
+                "mean_probability": 0.6499166666666666,
+                "observed_frequency": 0.6333333333333333
+              },
+              {
+                "count": 36,
+                "high": 0.8,
+                "low": 0.7,
+                "mean_probability": 0.7555555555555556,
+                "observed_frequency": 0.6388888888888888
+              },
+              {
+                "count": 48,
+                "high": 0.9,
+                "low": 0.8,
+                "mean_probability": 0.8555208333333333,
+                "observed_frequency": 0.9166666666666666
+              },
+              {
+                "count": 37,
+                "high": 0.95,
+                "low": 0.9,
+                "mean_probability": 0.9279527027027026,
+                "observed_frequency": 0.9459459459459459
+              },
+              {
+                "count": 467,
+                "high": 1.0,
+                "low": 0.95,
+                "mean_probability": 0.99560278372591,
+                "observed_frequency": 1.0
+              }
+            ],
+            "brier": 0.08933229166666667,
+            "favourite_loss_rate": 0.0,
+            "favourite_losses": 0,
+            "favourites": 467,
+            "mode": "leave_one_pair_out",
+            "seats": 648,
+            "sigma_lambda": 0.43555323851784405,
+            "sigma_seat": 5.171365600571094
+          },
+          {
+            "bins": [
+              {
+                "count": 217,
+                "high": 0.05,
+                "low": 0.0,
+                "mean_probability": 0.010142857142857144,
+                "observed_frequency": 0.004608294930875576
+              },
+              {
+                "count": 34,
+                "high": 0.1,
+                "low": 0.05,
+                "mean_probability": 0.07253676470588237,
+                "observed_frequency": 0.058823529411764705
+              },
+              {
+                "count": 48,
+                "high": 0.2,
+                "low": 0.1,
+                "mean_probability": 0.144921875,
+                "observed_frequency": 0.125
+              },
+              {
+                "count": 34,
+                "high": 0.3,
+                "low": 0.2,
+                "mean_probability": 0.24319117647058822,
+                "observed_frequency": 0.35294117647058826
+              },
+              {
+                "count": 32,
+                "high": 0.4,
+                "low": 0.3,
+                "mean_probability": 0.3502109375,
+                "observed_frequency": 0.34375
+              },
+              {
+                "count": 25,
+                "high": 0.5,
+                "low": 0.4,
+                "mean_probability": 0.45044000000000006,
+                "observed_frequency": 0.36
+              },
+              {
+                "count": 25,
+                "high": 0.6,
+                "low": 0.5,
+                "mean_probability": 0.5520499999999999,
+                "observed_frequency": 0.64
+              },
+              {
+                "count": 31,
+                "high": 0.7,
+                "low": 0.6,
+                "mean_probability": 0.6490725806451612,
+                "observed_frequency": 0.6451612903225806
+              },
+              {
+                "count": 34,
+                "high": 0.8,
+                "low": 0.7,
+                "mean_probability": 0.7591176470588235,
+                "observed_frequency": 0.6470588235294118
+              },
+              {
+                "count": 45,
+                "high": 0.9,
+                "low": 0.8,
+                "mean_probability": 0.8540222222222221,
+                "observed_frequency": 0.8666666666666667
+              },
+              {
+                "count": 34,
+                "high": 0.95,
+                "low": 0.9,
+                "mean_probability": 0.9275808823529411,
+                "observed_frequency": 0.9411764705882353
+              },
+              {
+                "count": 478,
+                "high": 1.0,
+                "low": 0.95,
+                "mean_probability": 0.9956882845188284,
+                "observed_frequency": 1.0
+              }
+            ],
+            "brier": 0.08921067283950616,
+            "favourite_loss_rate": 0.0,
+            "favourite_losses": 0,
+            "favourites": 478,
+            "mode": "current_config",
+            "seats": 648,
+            "sigma_lambda": 0.38,
+            "sigma_seat": 4.9
+          }
+        ],
+        "residual_coverage": {
+          "contender_rate": 0.9249806651198763,
+          "count": 2869,
+          "covered": 2612,
+          "rate": 0.9104217497385849
+        },
+        "seat_totals": [
+          {
+            "actual": 364,
+            "actual_percentile": 0.882625,
+            "central": 355,
+            "covered": true,
+            "high": 367.0,
+            "low": 348.0,
+            "mean": 356.9685,
+            "median": 357.0,
+            "party": "Conservative",
+            "party_id": 4,
+            "sd": 5.773561097797442
+          },
+          {
+            "actual": 202,
+            "actual_percentile": 0.303375,
+            "central": 203,
+            "covered": true,
+            "high": 213.0,
+            "low": 196.0,
+            "mean": 204.70975,
+            "median": 205.0,
+            "party": "Labour",
+            "party_id": 1,
+            "sd": 5.3389142096029225
+          },
+          {
+            "actual": 48,
+            "actual_percentile": 0.309375,
+            "central": 51,
+            "covered": true,
+            "high": 52.0,
+            "low": 46.0,
+            "mean": 49.0315,
+            "median": 49.0,
+            "party": "Scottish National Party",
+            "party_id": 8,
+            "sd": 2.0142015167306373
+          },
+          {
+            "actual": 11,
+            "actual_percentile": 0.25637499999999996,
+            "central": 17,
+            "covered": true,
+            "high": 24.0,
+            "low": 4.0,
+            "mean": 15.055,
+            "median": 16.0,
+            "party": "Liberal Democrats",
+            "party_id": 5,
+            "sd": 6.134368345640812
+          },
+          {
+            "actual": 8,
+            "actual_percentile": 0.410375,
+            "central": 9,
+            "covered": true,
+            "high": 10.0,
+            "low": 7.0,
+            "mean": 8.267,
+            "median": 8.0,
+            "party": "Democratic Unionist Party",
+            "party_id": 9,
+            "sd": 1.0638190635629727
+          }
+        ],
+        "sigma_lambda": 0.43555323851784405,
+        "sigma_seat": 5.171365600571094,
+        "training_pairs": [
+          "2010\u21922015",
+          "2015\u21922017",
+          "2019n\u21922024"
+        ]
+      },
+      {
+        "input_hash": "f9c4126b69b43fb22904f71fb5ae3f885d497a3fd0094ba50c284a56b07274c7",
+        "label": "2019n\u21922024",
+        "reliability": [
+          {
+            "bins": [
+              {
+                "count": 449,
+                "high": 0.05,
+                "low": 0.0,
+                "mean_probability": 0.00805011135857461,
+                "observed_frequency": 0.09131403118040089
+              },
+              {
+                "count": 66,
+                "high": 0.1,
+                "low": 0.05,
+                "mean_probability": 0.07189015151515152,
+                "observed_frequency": 0.22727272727272727
+              },
+              {
+                "count": 70,
+                "high": 0.2,
+                "low": 0.1,
+                "mean_probability": 0.14578571428571432,
+                "observed_frequency": 0.3
+              },
+              {
+                "count": 52,
+                "high": 0.3,
+                "low": 0.2,
+                "mean_probability": 0.24343269230769232,
+                "observed_frequency": 0.4807692307692308
+              },
+              {
+                "count": 49,
+                "high": 0.4,
+                "low": 0.3,
+                "mean_probability": 0.34763265306122454,
+                "observed_frequency": 0.42857142857142855
+              },
+              {
+                "count": 35,
+                "high": 0.5,
+                "low": 0.4,
+                "mean_probability": 0.4490928571428572,
+                "observed_frequency": 0.5142857142857142
+              },
+              {
+                "count": 36,
+                "high": 0.6,
+                "low": 0.5,
+                "mean_probability": 0.5487708333333332,
+                "observed_frequency": 0.5
+              },
+              {
+                "count": 44,
+                "high": 0.7,
+                "low": 0.6,
+                "mean_probability": 0.6531647727272728,
+                "observed_frequency": 0.5
+              },
+              {
+                "count": 51,
+                "high": 0.8,
+                "low": 0.7,
+                "mean_probability": 0.7531666666666668,
+                "observed_frequency": 0.5490196078431373
+              },
+              {
+                "count": 62,
+                "high": 0.9,
+                "low": 0.8,
+                "mean_probability": 0.8522983870967742,
+                "observed_frequency": 0.6612903225806451
+              },
+              {
+                "count": 56,
+                "high": 0.95,
+                "low": 0.9,
+                "mean_probability": 0.9265,
+                "observed_frequency": 0.6607142857142857
+              },
+              {
+                "count": 396,
+                "high": 1.0,
+                "low": 0.95,
+                "mean_probability": 0.9934141414141415,
+                "observed_frequency": 0.9141414141414141
+              }
+            ],
+            "brier": 0.32222790793528505,
+            "favourite_loss_rate": 0.08585858585858586,
+            "favourite_losses": 34,
+            "favourites": 396,
+            "mode": "leave_one_pair_out",
+            "seats": 649,
+            "sigma_lambda": 0.2954317491935546,
+            "sigma_seat": 4.539728608595282
+          },
+          {
+            "bins": [
+              {
+                "count": 506,
+                "high": 0.05,
+                "low": 0.0,
+                "mean_probability": 0.006975790513833993,
+                "observed_frequency": 0.0691699604743083
+              },
+              {
+                "count": 80,
+                "high": 0.1,
+                "low": 0.05,
+                "mean_probability": 0.07113749999999999,
+                "observed_frequency": 0.225
+              },
+              {
+                "count": 78,
+                "high": 0.2,
+                "low": 0.1,
+                "mean_probability": 0.14522115384615383,
+                "observed_frequency": 0.2948717948717949
+              },
+              {
+                "count": 54,
+                "high": 0.3,
+                "low": 0.2,
+                "mean_probability": 0.24259722222222221,
+                "observed_frequency": 0.4074074074074074
+              },
+              {
+                "count": 50,
+                "high": 0.4,
+                "low": 0.3,
+                "mean_probability": 0.34215,
+                "observed_frequency": 0.46
+              },
+              {
+                "count": 45,
+                "high": 0.5,
+                "low": 0.4,
+                "mean_probability": 0.44875000000000004,
+                "observed_frequency": 0.5111111111111111
+              },
+              {
+                "count": 41,
+                "high": 0.6,
+                "low": 0.5,
+                "mean_probability": 0.5544451219512194,
+                "observed_frequency": 0.4878048780487805
+              },
+              {
+                "count": 45,
+                "high": 0.7,
+                "low": 0.6,
+                "mean_probability": 0.6577888888888889,
+                "observed_frequency": 0.5111111111111111
+              },
+              {
+                "count": 55,
+                "high": 0.8,
+                "low": 0.7,
+                "mean_probability": 0.7546318181818181,
+                "observed_frequency": 0.6
+              },
+              {
+                "count": 69,
+                "high": 0.9,
+                "low": 0.8,
+                "mean_probability": 0.8559311594202899,
+                "observed_frequency": 0.6231884057971014
+              },
+              {
+                "count": 61,
+                "high": 0.95,
+                "low": 0.9,
+                "mean_probability": 0.9279918032786885,
+                "observed_frequency": 0.7049180327868853
+              },
+              {
+                "count": 371,
+                "high": 1.0,
+                "low": 0.95,
+                "mean_probability": 0.9933861185983827,
+                "observed_frequency": 0.9245283018867925
+              }
+            ],
+            "brier": 0.31704222746533123,
+            "favourite_loss_rate": 0.07547169811320754,
+            "favourite_losses": 28,
+            "favourites": 371,
+            "mode": "current_config",
+            "seats": 649,
+            "sigma_lambda": 0.38,
+            "sigma_seat": 4.9
+          }
+        ],
+        "residual_coverage": {
+          "contender_rate": 0.6584953508030431,
+          "count": 2589,
+          "covered": 1875,
+          "rate": 0.7242178447276941
+        },
+        "seat_totals": [
+          {
+            "actual": 411,
+            "actual_percentile": 1.0,
+            "central": 333,
+            "covered": false,
+            "high": 354.0,
+            "low": 328.0,
+            "mean": 340.64375,
+            "median": 341.0,
+            "party": "Labour",
+            "party_id": 1,
+            "sd": 8.004176156076277
+          },
+          {
+            "actual": 121,
+            "actual_percentile": 0.0,
+            "central": 223,
+            "covered": false,
+            "high": 234.0,
+            "low": 197.0,
+            "mean": 215.7865,
+            "median": 216.0,
+            "party": "Conservative",
+            "party_id": 4,
+            "sd": 11.251374038311944
+          },
+          {
+            "actual": 72,
+            "actual_percentile": 1.0,
+            "central": 52,
+            "covered": false,
+            "high": 59.0,
+            "low": 45.0,
+            "mean": 51.91525,
+            "median": 52.0,
+            "party": "Liberal Democrats",
+            "party_id": 5,
+            "sd": 4.271658628390148
+          },
+          {
+            "actual": 9,
+            "actual_percentile": 0.00575,
+            "central": 17,
+            "covered": false,
+            "high": 20.0,
+            "low": 11.0,
+            "mean": 15.51925,
+            "median": 16.0,
+            "party": "Scottish National Party",
+            "party_id": 8,
+            "sd": 2.4589895155327524
+          },
+          {
+            "actual": 7,
+            "actual_percentile": 1.0,
+            "central": 1,
+            "covered": false,
+            "high": 3.0,
+            "low": 1.0,
+            "mean": 1.9185,
+            "median": 2.0,
+            "party": "Others",
+            "party_id": 15,
+            "sd": 0.7898466623338989
+          }
+        ],
+        "sigma_lambda": 0.2954317491935546,
+        "sigma_seat": 4.539728608595282,
+        "training_pairs": [
+          "2010\u21922015",
+          "2015\u21922017",
+          "2017\u21922019"
+        ]
+      }
+    ],
+    "seeds": {
+      "reliability": 12345,
+      "seat_totals": 2024
+    },
+    "simulations": 4000,
+    "tails": {
+      "bands": [
+        {
+          "gaussian_outside": 0.09996981107824277,
+          "nominal": 0.9,
+          "observed_outside": 0.15021231422505307,
+          "z": 1.645
+        },
+        {
+          "gaussian_outside": 0.00999506463146993,
+          "nominal": 0.99,
+          "observed_outside": 0.05139773531493277,
+          "z": 2.576
+        },
+        {
+          "gaussian_outside": 0.0010018738275714423,
+          "nominal": 0.999,
+          "observed_outside": 0.026008492569002124,
+          "z": 3.29
+        }
+      ],
+      "count": 11304,
+      "excess_kurtosis": 22.59931672094157,
+      "mean_lambda": 0.33999710314959414,
+      "plain_sd": 6.830954345956314,
+      "sigma_lambda": 0.3817599470938242,
+      "sigma_seat_raw": 4.902941071320801
+    }
+  },
+  "identity": {
+    "config": {
+      "chunk_size": 1000,
+      "decided_fraction": 0.8,
+      "design_effect": 1.5,
+      "interval": 0.9,
+      "lambda_min_share": 1.0,
+      "likely_voters_fraction": 0.9,
+      "majority_threshold": 326,
+      "min_polled_share": 0.5,
+      "n_eff_cap": 3000.0,
+      "p_ref": 0.3,
+      "sigma_lambda": 0.38,
+      "sigma_nat": 2.94,
+      "sigma_reg": 1.5,
+      "sigma_seat": 4.9,
+      "simulations": 10000
+    },
+    "config_file_sha256": "a47be0d8ead397a57258ec4f66611665b062bfe804eae7312c65cbe2c6b6f882",
+    "config_hash": "730a3349d3836bc6",
+    "final_polls_sha256": "7a01a6a73185486f3ea8d5646d3b2099b5f6107dad5443f2017fdf00a422b933",
+    "numpy_version": "2.5.3",
+    "source_sha256": {
+      "model_support/calibration.py": "96fcdfb78427e5f4485f954dd6fc85d6f98a68e65c9ef3f500bfbc1eafb86929",
+      "model_support/monte_carlo.py": "15d3dc5cf88cba4be3fa2ced7271956b9d1d57675296aac11d874e33300a9254",
+      "model_support/uncertainty.py": "85b5a2f144e555489730024f38eef15c10a345b50e2f0059578199e695ccd996",
+      "model_support/westminster_validation.py": "13bb4a120b4b139023d59a55d1dc0e84d0d192e01ca3579763c8084c2e3239ef",
+      "model_support/westminster_validation_replay.py": "8afba96b2d40ad1a7484fe51e86de8ef5b60673a9a71f8c805f4a7b8568f54ad",
+      "scripts/calibrate_uncertainty.py": "cf77230c7e93693e8629c7c0e3c06e83920a904629a5b50eee25813cc2df504d",
+      "scripts/validate_westminster_uncertainty.py": "71d01b9de4f5016897c58b601d6563464b10db1299b7fdb0fe596c0e184aeb30"
+    }
+  },
+  "limitations": [
+    "Conditional conversion diagnostics know actual regional votes. They do not validate the full forecast pipeline or polling windows.",
+    "Only four election transitions and nine final-poll elections inform the production baseline.",
+    "Historical conditional draws reproduce the Gaussian audit experiment; new model components require extending this experiment before claiming validation.",
+    "Current-config reliability uses rounded deployed scales; the original audit used 4.9029 and 0.3818."
+  ],
+  "methods": {
+    "national": "Leave one election out; election-weighted RMS of centring-corrected misses; 1.645 Gaussian band; top-two covariance from (I-q1^T)D(I-q1^T)^T.",
+    "reliability": "Same conditional model, independent Monte Carlo batches per seat; bins exclude zero-probability non-winners; favourite threshold >=0.95; multiclass Brier summed per seat.",
+    "seat_totals": "Perfect actual regional swing; shared zero-centred lambda; independent centred Gaussian seat errors; refit on other pairs; top five actual parties per election; linear 5/50/95 quantiles.",
+    "tails": "Pooled centring-corrected residuals after each pair's fitted lambda; population excess kurtosis; zero-centred Gaussian tail thresholds."
+  },
+  "national": {
+    "coverage": {
+      "count": 35,
+      "covered": 30,
+      "rate": 0.8571428571428571
+    },
+    "elections": [
+      {
+        "count": 3,
+        "covered": 1,
+        "lead": [
+          "con",
+          "lab"
+        ],
+        "lead_error": -8.699999999999996,
+        "lead_sd": 4.125631739798656,
+        "lead_z": -2.108767953298852,
+        "model_correlation": -0.5555595411950933,
+        "sigma_nat_raw": 2.745569189158072,
+        "training_years": [
+          1997,
+          2001,
+          2005,
+          2010,
+          2015,
+          2017,
+          2019,
+          2024
+        ],
+        "year": 1992
+      },
+      {
+        "count": 3,
+        "covered": 3,
+        "lead": [
+          "lab",
+          "con"
+        ],
+        "lead_error": 2.8000000000000007,
+        "lead_sd": 4.541148216871386,
+        "lead_z": 0.6165841470660155,
+        "model_correlation": -0.5124921754034256,
+        "sigma_nat_raw": 3.0574833078168946,
+        "training_years": [
+          1992,
+          2001,
+          2005,
+          2010,
+          2015,
+          2017,
+          2019,
+          2024
+        ],
+        "year": 1997
+      },
+      {
+        "count": 3,
+        "covered": 3,
+        "lead": [
+          "lab",
+          "con"
+        ],
+        "lead_error": 4.700000000000003,
+        "lead_sd": 4.46684262467913,
+        "lead_z": 1.05219735614429,
+        "model_correlation": -0.5155976521157098,
+        "sigma_nat_raw": 3.001327478496823,
+        "training_years": [
+          1992,
+          1997,
+          2005,
+          2010,
+          2015,
+          2017,
+          2019,
+          2024
+        ],
+        "year": 2001
+      },
+      {
+        "count": 3,
+        "covered": 3,
+        "lead": [
+          "lab",
+          "con"
+        ],
+        "lead_error": 2.1666999999999987,
+        "lead_sd": 4.549211132465325,
+        "lead_z": 0.4762803784896686,
+        "model_correlation": -0.4728306742760091,
+        "sigma_nat_raw": 3.0980371292310127,
+        "training_years": [
+          1992,
+          1997,
+          2001,
+          2010,
+          2015,
+          2017,
+          2019,
+          2024
+        ],
+        "year": 2005
+      },
+      {
+        "count": 3,
+        "covered": 2,
+        "lead": [
+          "con",
+          "lab"
+        ],
+        "lead_error": 0.8000000000000007,
+        "lead_sd": 4.20776421520961,
+        "lead_z": 0.19012472160590124,
+        "model_correlation": -0.44823119633211317,
+        "sigma_nat_raw": 2.9008407619354055,
+        "training_years": [
+          1992,
+          1997,
+          2001,
+          2005,
+          2015,
+          2017,
+          2019,
+          2024
+        ],
+        "year": 2010
+      },
+      {
+        "count": 5,
+        "covered": 5,
+        "lead": [
+          "con",
+          "lab"
+        ],
+        "lead_error": -5.916700000000002,
+        "lead_sd": 4.330576414698057,
+        "lead_z": -1.3662615396690871,
+        "model_correlation": -0.43439417606840475,
+        "sigma_nat_raw": 2.9583752280221387,
+        "training_years": [
+          1992,
+          1997,
+          2001,
+          2005,
+          2010,
+          2017,
+          2019,
+          2024
+        ],
+        "year": 2015
+      },
+      {
+        "count": 5,
+        "covered": 3,
+        "lead": [
+          "con",
+          "lab"
+        ],
+        "lead_error": 4.236399999999996,
+        "lead_sd": 4.100007542882667,
+        "lead_z": 1.033266391754351,
+        "model_correlation": -0.6129734995191233,
+        "sigma_nat_raw": 2.690323469026571,
+        "training_years": [
+          1992,
+          1997,
+          2001,
+          2005,
+          2010,
+          2015,
+          2019,
+          2024
+        ],
+        "year": 2017
+      },
+      {
+        "count": 5,
+        "covered": 5,
+        "lead": [
+          "con",
+          "lab"
+        ],
+        "lead_error": -2.483300000000007,
+        "lead_sd": 4.60380160316316,
+        "lead_z": -0.5394020451041573,
+        "model_correlation": -0.5240506698924403,
+        "sigma_nat_raw": 3.0737888744880966,
+        "training_years": [
+          1992,
+          1997,
+          2001,
+          2005,
+          2010,
+          2015,
+          2017,
+          2024
+        ],
+        "year": 2019
+      },
+      {
+        "count": 5,
+        "covered": 5,
+        "lead": [
+          "lab",
+          "con"
+        ],
+        "lead_error": 7.173699999999993,
+        "lead_sd": 4.1091927915059205,
+        "lead_z": 1.7457686616283108,
+        "model_correlation": -0.3562702005043169,
+        "sigma_nat_raw": 2.9387777714710897,
+        "training_years": [
+          1992,
+          1997,
+          2001,
+          2005,
+          2010,
+          2015,
+          2017,
+          2019
+        ],
+        "year": 2024
+      }
+    ],
+    "input_hash": "834cdb3f5937c34006269aa721d28b9d50d653e4999a11304bdbd5997e70c482",
+    "lead_z_rms": 1.1771038278354786
+  },
+  "replay": {
+    "as_of_date": "2026-10-22",
+    "election_id": 104583,
+    "evaluated_config_hash": "730a3349d3836bc6",
+    "input_hash": "cdd6fefd8f68db5f60e926271f898f23dd83b07a313ab5fa91858d7114a79f91",
+    "method": "Actual runtime draw_errors/project_seats_vectorised on frozen saved inputs; current settings. Binomial SE for majority and hung; sample SE for tie-split largest-party credit. Five independent seeds measure majority-odds spread.",
+    "saved_config_hash": "730a3349d3836bc6",
+    "seed": 739911,
+    "seed_spread": [
+      {
+        "majority_probabilities": [
+          0.1865,
+          0.1876,
+          0.1867,
+          0.193,
+          0.1882
+        ],
+        "party_id": 1,
+        "sample_sd": 0.0026617663308412354
+      },
+      {
+        "majority_probabilities": [
+          0.0002,
+          0.0005,
+          0.0006,
+          0.0002,
+          0.0005
+        ],
+        "party_id": 2,
+        "sample_sd": 0.00018708286933869707
+      },
+      {
+        "majority_probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "party_id": 3,
+        "sample_sd": 0.0
+      },
+      {
+        "majority_probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "party_id": 4,
+        "sample_sd": 0.0
+      },
+      {
+        "majority_probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "party_id": 5,
+        "sample_sd": 0.0
+      },
+      {
+        "majority_probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "party_id": 6,
+        "sample_sd": 0.0
+      },
+      {
+        "majority_probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "party_id": 8,
+        "sample_sd": 0.0
+      },
+      {
+        "majority_probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "party_id": 9,
+        "sample_sd": 0.0
+      },
+      {
+        "majority_probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "party_id": 10,
+        "sample_sd": 0.0
+      },
+      {
+        "majority_probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "party_id": 11,
+        "sample_sd": 0.0
+      },
+      {
+        "majority_probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "party_id": 12,
+        "sample_sd": 0.0
+      },
+      {
+        "majority_probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "party_id": 13,
+        "sample_sd": 0.0
+      },
+      {
+        "majority_probabilities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "party_id": 15,
+        "sample_sd": 0.0
+      }
+    ],
+    "seed_spread_seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "simulations": 10000,
+    "status": "complete",
+    "variants": [
+      {
+        "hung_mc_se": 0.0039206365554588195,
+        "hung_probability": 0.8103,
+        "mode": "current_config",
+        "parties": [
+          {
+            "central_outside_interval": false,
+            "central_seats": 300,
+            "central_vote": 25.48098158850933,
+            "high": 359,
+            "largest_mc_se": 0.002390821533021709,
+            "largest_probability": 0.9388,
+            "low": 199,
+            "majority_mc_se": 0.003915880360787341,
+            "majority_probability": 0.1891,
+            "mean_seats": 281.309,
+            "mean_vote": 25.462506304599593,
+            "median_seats": 282,
+            "party": "Labour",
+            "party_id": 1,
+            "vote_bias": -0.018475283909737072
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 109,
+            "central_vote": 23.225696594935748,
+            "high": 219,
+            "largest_mc_se": 0.002308644783000063,
+            "largest_probability": 0.05685,
+            "low": 51,
+            "majority_mc_se": 0.0002448754785600224,
+            "majority_probability": 0.0006,
+            "mean_seats": 127.2415,
+            "mean_vote": 23.14239237362623,
+            "median_seats": 122,
+            "party": "Reform UK",
+            "party_id": 2,
+            "vote_bias": -0.08330422130951831
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 6,
+            "central_vote": 0.9457044613360515,
+            "high": 8,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 4,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 5.8388,
+            "mean_vote": 0.9371496755888135,
+            "median_seats": 6,
+            "party": "Plaid Cymru",
+            "party_id": 3,
+            "vote_bias": -0.008554785747238003
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 113,
+            "central_vote": 20.245875031292023,
+            "high": 173,
+            "largest_mc_se": 0.0006562399066511486,
+            "largest_probability": 0.00435,
+            "low": 60,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 113.1584,
+            "mean_vote": 20.19730141454892,
+            "median_seats": 111,
+            "party": "Conservative",
+            "party_id": 4,
+            "vote_bias": -0.04857361674310212
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 70,
+            "central_vote": 10.813843039840041,
+            "high": 78,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 55,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 67.3211,
+            "mean_vote": 10.901932906793263,
+            "median_seats": 68,
+            "party": "Liberal Democrats",
+            "party_id": 5,
+            "vote_bias": 0.08808986695322218
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 5,
+            "central_vote": 10.90387448756827,
+            "high": 11,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 3,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 6.091,
+            "mean_vote": 10.83834049965214,
+            "median_seats": 5,
+            "party": "Green",
+            "party_id": 6,
+            "vote_bias": -0.06553398791612963
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 17,
+            "central_vote": 2.2338016831171887,
+            "high": 29,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 9,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 18.6262,
+            "mean_vote": 2.220247418882239,
+            "median_seats": 18,
+            "party": "Scottish National Party",
+            "party_id": 8,
+            "vote_bias": -0.013554264234949542
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 5,
+            "central_vote": 0.597982122260649,
+            "high": 6,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 3,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 4.4671,
+            "mean_vote": 0.597251338018523,
+            "median_seats": 4,
+            "party": "Democratic Unionist Party",
+            "party_id": 9,
+            "vote_bias": -0.0007307842421259148
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 1,
+            "central_vote": 0.4072936038420051,
+            "high": 3,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 0,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 1.2794,
+            "mean_vote": 0.40685356427772296,
+            "median_seats": 1,
+            "party": "Alliance",
+            "party_id": 10,
+            "vote_bias": -0.0004400395642821242
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 1,
+            "central_vote": 0.32940140862814893,
+            "high": 2,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 1,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 1.2607,
+            "mean_vote": 0.32910107441417785,
+            "median_seats": 1,
+            "party": "Ulster Unionist Party",
+            "party_id": 11,
+            "vote_bias": -0.0003003342139710763
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 2,
+            "central_vote": 0.30188265074383186,
+            "high": 2,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 1,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 1.935,
+            "mean_vote": 0.30232361184016565,
+            "median_seats": 2,
+            "party": "SDLP",
+            "party_id": 12,
+            "vote_bias": 0.00044096109633379177
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 7,
+            "central_vote": 0.7329449821901366,
+            "high": 8,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 6,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 7.4347,
+            "mean_vote": 0.7320355051226476,
+            "median_seats": 7,
+            "party": "Sinn F\u00e9in",
+            "party_id": 13,
+            "vote_bias": -0.0009094770674890063
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 14,
+            "central_vote": 3.7807183457366054,
+            "high": 18,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 10,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 14.0371,
+            "mean_vote": 3.9325643126355674,
+            "median_seats": 14,
+            "party": "Others",
+            "party_id": 15,
+            "vote_bias": 0.15184596689896201
+          }
+        ]
+      },
+      {
+        "hung_mc_se": 0.004626573678220201,
+        "hung_probability": 0.6896,
+        "mode": "no_seat_noise",
+        "parties": [
+          {
+            "central_outside_interval": false,
+            "central_seats": 300,
+            "central_vote": 25.48098158850933,
+            "high": 384,
+            "largest_mc_se": 0.0025980475332638754,
+            "largest_probability": 0.9268,
+            "low": 199,
+            "majority_mc_se": 0.004622462979840942,
+            "majority_probability": 0.3094,
+            "mean_seats": 293.9524,
+            "mean_vote": 25.490323267562818,
+            "median_seats": 295,
+            "party": "Labour",
+            "party_id": 1,
+            "vote_bias": 0.00934167905348815
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 109,
+            "central_vote": 23.225696594935748,
+            "high": 231,
+            "largest_mc_se": 0.0025016345791415567,
+            "largest_probability": 0.06745,
+            "low": 25,
+            "majority_mc_se": 0.0003160696125855822,
+            "majority_probability": 0.001,
+            "mean_seats": 115.8801,
+            "mean_vote": 23.172540956000276,
+            "median_seats": 109,
+            "party": "Reform UK",
+            "party_id": 2,
+            "vote_bias": -0.05315563893547193
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 6,
+            "central_vote": 0.9457044613360515,
+            "high": 7,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 4,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 6.0126,
+            "mean_vote": 0.9401456177193067,
+            "median_seats": 6,
+            "party": "Plaid Cymru",
+            "party_id": 3,
+            "vote_bias": -0.005558843616744746
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 113,
+            "central_vote": 20.245875031292023,
+            "high": 180,
+            "largest_mc_se": 0.0007544870277662212,
+            "largest_probability": 0.00575,
+            "low": 50,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 110.97,
+            "mean_vote": 20.217168637690268,
+            "median_seats": 108,
+            "party": "Conservative",
+            "party_id": 4,
+            "vote_bias": -0.02870639360175531
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 70,
+            "central_vote": 10.813843039840041,
+            "high": 78,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 60,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 70.5166,
+            "mean_vote": 10.871374151486815,
+            "median_seats": 71,
+            "party": "Liberal Democrats",
+            "party_id": 5,
+            "vote_bias": 0.05753111164677449
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 5,
+            "central_vote": 10.90387448756827,
+            "high": 7,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 4,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 5.1416,
+            "mean_vote": 10.841960115596494,
+            "median_seats": 5,
+            "party": "Green",
+            "party_id": 6,
+            "vote_bias": -0.06191437197177585
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 17,
+            "central_vote": 2.2338016831171887,
+            "high": 32,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 8,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 17.1492,
+            "mean_vote": 2.227121166571215,
+            "median_seats": 17,
+            "party": "Scottish National Party",
+            "party_id": 8,
+            "vote_bias": -0.006680516545973791
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 5,
+            "central_vote": 0.597982122260649,
+            "high": 5,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 5,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 5.0,
+            "mean_vote": 0.5979821222606488,
+            "median_seats": 5,
+            "party": "Democratic Unionist Party",
+            "party_id": 9,
+            "vote_bias": -1.1102230246251565e-16
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 1,
+            "central_vote": 0.4072936038420051,
+            "high": 1,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 1,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 1.0,
+            "mean_vote": 0.4072936038420051,
+            "median_seats": 1,
+            "party": "Alliance",
+            "party_id": 10,
+            "vote_bias": 0.0
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 1,
+            "central_vote": 0.32940140862814893,
+            "high": 1,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 1,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 1.0,
+            "mean_vote": 0.329401408628149,
+            "median_seats": 1,
+            "party": "Ulster Unionist Party",
+            "party_id": 11,
+            "vote_bias": 5.551115123125783e-17
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 2,
+            "central_vote": 0.30188265074383186,
+            "high": 2,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 2,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 2.0,
+            "mean_vote": 0.3018826507438318,
+            "median_seats": 2,
+            "party": "SDLP",
+            "party_id": 12,
+            "vote_bias": -5.551115123125783e-17
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 7,
+            "central_vote": 0.7329449821901366,
+            "high": 7,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 7,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 7.0,
+            "mean_vote": 0.7329449821901367,
+            "median_seats": 7,
+            "party": "Sinn F\u00e9in",
+            "party_id": 13,
+            "vote_bias": 1.1102230246251565e-16
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 14,
+            "central_vote": 3.7807183457366054,
+            "high": 18,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 11,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 14.3775,
+            "mean_vote": 3.8698613197080327,
+            "median_seats": 14,
+            "party": "Others",
+            "party_id": 15,
+            "vote_bias": 0.08914297397142734
+          }
+        ]
+      },
+      {
+        "hung_mc_se": 0.00459426501194696,
+        "hung_probability": 0.6973,
+        "mode": "no_seat_noise_or_lambda",
+        "parties": [
+          {
+            "central_outside_interval": false,
+            "central_seats": 300,
+            "central_vote": 25.48098158850933,
+            "high": 384,
+            "largest_mc_se": 0.0024925017565692207,
+            "largest_probability": 0.93325,
+            "low": 203,
+            "majority_mc_se": 0.0045903895259552865,
+            "majority_probability": 0.3018,
+            "mean_seats": 294.4713,
+            "mean_vote": 25.467616925754776,
+            "median_seats": 296,
+            "party": "Labour",
+            "party_id": 1,
+            "vote_bias": -0.013364662754554502
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 109,
+            "central_vote": 23.225696594935748,
+            "high": 227,
+            "largest_mc_se": 0.0024008823739653223,
+            "largest_probability": 0.06155,
+            "low": 29,
+            "majority_mc_se": 0.0002998649696113236,
+            "majority_probability": 0.0009,
+            "mean_seats": 115.6785,
+            "mean_vote": 23.187930065168572,
+            "median_seats": 108,
+            "party": "Reform UK",
+            "party_id": 2,
+            "vote_bias": -0.03776652976717543
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 6,
+            "central_vote": 0.9457044613360515,
+            "high": 7,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 4,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 6.0489,
+            "mean_vote": 0.9417430936349698,
+            "median_seats": 6,
+            "party": "Plaid Cymru",
+            "party_id": 3,
+            "vote_bias": -0.003961367701081686
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 113,
+            "central_vote": 20.245875031292023,
+            "high": 178,
+            "largest_mc_se": 0.0007157843493144232,
+            "largest_probability": 0.0052,
+            "low": 51,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 110.8276,
+            "mean_vote": 20.219061140732286,
+            "median_seats": 108,
+            "party": "Conservative",
+            "party_id": 4,
+            "vote_bias": -0.02681389055973682
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 70,
+            "central_vote": 10.813843039840041,
+            "high": 79,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 62,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 70.7874,
+            "mean_vote": 10.865330079133368,
+            "median_seats": 71,
+            "party": "Liberal Democrats",
+            "party_id": 5,
+            "vote_bias": 0.05148703929332754
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 5,
+            "central_vote": 10.90387448756827,
+            "high": 6,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 4,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 4.9304,
+            "mean_vote": 10.848874693619202,
+            "median_seats": 5,
+            "party": "Green",
+            "party_id": 6,
+            "vote_bias": -0.05499979394906873
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 17,
+            "central_vote": 2.2338016831171887,
+            "high": 30,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 8,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 16.8684,
+            "mean_vote": 2.2294512940374034,
+            "median_seats": 17,
+            "party": "Scottish National Party",
+            "party_id": 8,
+            "vote_bias": -0.004350389079785355
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 5,
+            "central_vote": 0.597982122260649,
+            "high": 5,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 5,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 5.0,
+            "mean_vote": 0.5979821222606488,
+            "median_seats": 5,
+            "party": "Democratic Unionist Party",
+            "party_id": 9,
+            "vote_bias": -1.1102230246251565e-16
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 1,
+            "central_vote": 0.4072936038420051,
+            "high": 1,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 1,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 1.0,
+            "mean_vote": 0.4072936038420051,
+            "median_seats": 1,
+            "party": "Alliance",
+            "party_id": 10,
+            "vote_bias": 0.0
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 1,
+            "central_vote": 0.32940140862814893,
+            "high": 1,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 1,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 1.0,
+            "mean_vote": 0.329401408628149,
+            "median_seats": 1,
+            "party": "Ulster Unionist Party",
+            "party_id": 11,
+            "vote_bias": 5.551115123125783e-17
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 2,
+            "central_vote": 0.30188265074383186,
+            "high": 2,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 2,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 2.0,
+            "mean_vote": 0.3018826507438318,
+            "median_seats": 2,
+            "party": "SDLP",
+            "party_id": 12,
+            "vote_bias": -5.551115123125783e-17
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 7,
+            "central_vote": 0.7329449821901366,
+            "high": 7,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 7,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 7.0,
+            "mean_vote": 0.7329449821901367,
+            "median_seats": 7,
+            "party": "Sinn F\u00e9in",
+            "party_id": 13,
+            "vote_bias": 1.1102230246251565e-16
+          },
+          {
+            "central_outside_interval": false,
+            "central_seats": 14,
+            "central_vote": 3.7807183457366054,
+            "high": 18,
+            "largest_mc_se": 0.0,
+            "largest_probability": 0.0,
+            "low": 11,
+            "majority_mc_se": 0.0,
+            "majority_probability": 0.0,
+            "mean_seats": 14.3875,
+            "mean_vote": 3.870487940254649,
+            "median_seats": 14,
+            "party": "Others",
+            "party_id": 15,
+            "vote_bias": 0.08976959451804367
+          }
+        ]
+      }
+    ]
+  },
+  "report_hash": "08266bae1367a0a3f936508cedc0e4ffe6b409b1fa63f56646c2f5ed0572f380",
+  "schema": "westminster-validation-v1"
+}

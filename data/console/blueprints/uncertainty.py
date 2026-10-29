@@ -47,6 +47,8 @@ from model_support.uncertainty import (
     UncertaintyConfigError,
     load_uncertainty_config,
 )
+from model_support import westminster_validation
+from model_support.monte_carlo import config_hash
 from models import Map
 
 bp = Blueprint("uncertainty", __name__)
@@ -397,4 +399,21 @@ def uncertainty_calibration() -> str:
         credit_name=POLLBASE_CREDIT,
         credit_url=POLLBASE_URL,
         fmt=fmt,
+    )
+
+
+@bp.route("/westminster/uncertainty/validation")
+def uncertainty_validation() -> str:
+    """Show saved offline diagnostics without running simulations or reading DB."""
+    report = None
+    error = None
+    stale = False
+    try:
+        report = westminster_validation.read_report()
+        stale = report["identity"].get("config_hash") != config_hash(load_uncertainty_config())
+    except (CalibrationError, UncertaintyConfigError) as exc:
+        error = str(exc)
+    return render_template(
+        "uncertainty_validation.html", report=report, error=error,
+        stale=stale, fmt=fmt,
     )

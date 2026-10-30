@@ -1,17 +1,32 @@
 # Resume point: read this first
 
-Written 2026-10-30, when the plans were consolidated, from thread 4's Notes (2026-10-28/29) and its `assessment.md`. Issue state: `building`. Nothing has happened on the branch since `ab3fc62e` (2026-10-29).
+Updated 2026-10-30 (builder, Piece 2a-H1 at its review pause). Issue state: `building`.
 
 ## Where we are
 
-Thread 4, **Piece 2a** (correlated vote-to-seat conversion error, decision W-1): the historical-evidence route is decided (decision 5 below), and **Piece 2a-H1 hasn't started**. All work is committed. No job is running. Nothing is staged, and nothing is half-done in the working tree.
+**Piece 2a-H1 is implemented, checked and through three analysis-loop rounds, but NOT committed.** Waiting on Phil's review and one pending data decision (below).
 
 Check before doing anything else:
-- branch `poll-errors-simulation`, HEAD `ab3fc62e`, clean tree;
-- `sha256sum data/models/westminster/uncertainty_conversion_prototype_report.json` = `e732edbdadc7f0e21911ecdeffafa98493292d92ebdab0bc939880172874b317` (the file);
-- its internal `report_hash` field = `3ead7c5851e96e1fd143a26c9370de1fca963b31925c55648a3a4dd889201428`. Recompute it with `model_support.westminster_conversion_report.fingerprint` over the report minus that key. Earlier notes cite this value as "the report hash"; it isn't the file SHA.
+- branch `poll-errors-simulation`, HEAD `ab3fc62e`;
+- working tree: untracked `data/scripts/build_westminster_historical_fixture.py`, `data/model_support/westminster_historical_transitions.py`, `data/tests/test_westminster_historical_transitions.py`, `data/models/westminster/historical-transitions-v1.json`; modified `data/model_support/westminster_validation_inputs.py` (`_content_hash` → public `content_hash`, behaviour unchanged);
+- fixture `sha256sum` = `1ccb080d09f79a40d46c5b02e4841297d973e7bcf9e0b74ca5b261ab3210a5e5`;
+- raw sources in the 2026-10-30 session scratchpad `hist-sources/` (may not survive; the builder rebuilds byte-identically from them, and provenance SHA-256s are in the fixture);
+- checks at the pause: mypy clean (307 files), 6435 tests passed, export dry-run lists no new elections, console builds, `git diff --check` clean.
 
-If anything differs, stop and tell Phil before going further.
+## Pending decision (Phil)
+
+The 2005n fixture has 5 zero-vote party entries (E14000634 green, E14000760 green, E14000763 ukip, E14001002 ukip, E14001013 green), while the loader docstring says `votes` holds only parties that stood. Options: (a) drop zero entries in the builder and have the loader reject them (fixture bytes change; recommended: a zero notional total isn't a contested-seat signal, and H2's fit could misread key presence or take log/logit of 0); (b) keep them, document them, and have the loader allow them deliberately.
+
+## Decisions taken in this session (2026-10-30)
+
+- Source for 1997, 2001 and Scotland 2005: Parliament's psephology.db behind api.parliament.uk at a pinned commit (accepted instead of scraping ~1,377 HTML pages; 3 index + 10 sampled pages matched exactly).
+- Referendum Party → other (not UKIP). NI Conservatives → con; Green (NI) and Scottish Greens → green.
+- 2005n unknown_other limitation accepted and recorded in the fixture audit (NI Alliance and unnamed minors in unknown_other; Greens named in 190 seats).
+- Not retrieved: Commons Library CBP-8647 (403). No independent published national totals exist in the retrieved sources; the fixture records `independent: false`.
+
+## After the pause
+
+Commit H1 on approval (stage only the five files above), push, tick H1, then stop. H2 needs Phil's answers first: weight of the new transitions (equal across six recommended), and whether their held-out folds feed any guard or are report-only.
 
 ## The test 2a has to pass
 

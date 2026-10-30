@@ -12,7 +12,7 @@ Check before doing anything else:
 
 ## Next: 2a-H2 (don't start unasked)
 
-Ask Phil first: (1) the weight of the new transitions (recommended: equal across all six); (2) whether their held-out folds feed any guard (RMS, stability, drift) or are report-only. Then revise the experiment contract per `plan.md` 2a-H2 and pause before the batch run.
+Phil's answers (2026-10-30): equal weight across all six transitions; the two new held-out folds are report-only (no gate, no guard). Revise the experiment contract per `plan.md` 2a-H2 and pause before the batch run.
 
 ## Decisions taken in this session (2026-10-30)
 

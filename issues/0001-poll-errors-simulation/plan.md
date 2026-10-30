@@ -79,9 +79,9 @@ Remaining work, in order. Pieces 2a-H1 to 2a-H3 are written out in full here, be
         - the export dry-run lists no new elections.
       - **Pause:** show Phil the audit numbers and any open data-quality points before H2.
    2. **2a-H2: revise the experiment contract for six transitions.**
-      - **Ask Phil before starting:**
-        - the weight of the new transitions (recommended: equal across all six);
-        - whether their held-out folds feed any guard (RMS, stability, drift) or are report-only.
+      - **Phil decided (2026-10-30):**
+        - all six transitions weighted equally;
+        - the two new held-out folds are report-only: they feed no guard (RMS, stability, drift) and no gate.
       - Files:
         - `data/model_support/westminster_conversion_validation.py`, `westminster_conversion_design.py`, `westminster_conversion_report.py`, `westminster_conversion_checkpoint.py`;
         - `data/scripts/validate_westminster_conversion.py`;
@@ -177,3 +177,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-10-30: Resumed. Explained the full flow for the historical-evidence route; Phil chose **scope A** (1997→2001, 2005→2010), **entry "both"** (training augmentation in every fold plus separate held-out diagnostics; gate stays 17/20 on the original 20 cells) and **storage as a frozen in-repo fixture** (no DB write or export). Next: Piece 2a-H1 (acquire and audit both transitions into the fixture, then pause), 2a-H2 (contract revision, then pause before the run), 2a-H3 (run and report). Resume check corrected: `3ead7c58…1428` is the report's internal `report_hash` (verified), not the file's `sha256sum` (`e732edbd…b317`).
 - 2026-10-30 (builder): 2a-H1 implemented and paused before commit. Deviation: 1997/2001/Scotland-2005 taken from Parliament's psephology.db at a pinned commit rather than scraped HTML (Phil accepted). Phil confirmed Referendum→other, NI Con→con, NI/Scottish Greens→green, and the 2005n unknown_other limitation. CBP-8647 returned 403; no independent national totals available (recorded as `independent: false`). `_content_hash` in `westminster_validation_inputs.py` made public (`content_hash`) for reuse. Zero-vote 2005n party entries (5 seats): Phil chose to drop them in the builder and reject them in the loader.
 - 2026-10-30: 2a-H1 committed as `eaa73607` and pushed (the push also published the 10 earlier local commits). Fixture sha256 `3e351456e756169699eacf15f53b7a06cb111fb8a9370c3ef4152b5b3ad88bb5`. Next: 2a-H2, after Phil answers its two questions.
+- 2026-10-30: H2 questions answered by Phil: equal weight across all six transitions; the two new held-out folds are report-only (no gate, no guard). H2 not started.

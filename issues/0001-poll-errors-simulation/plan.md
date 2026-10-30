@@ -17,17 +17,19 @@ Branch `poll-errors-simulation` (base `master`) holds all of the poll-error unce
 
 Reviews of the branch (all six) are in `threads/reviews/`.
 
-### Where it stopped (2026-10-29), and what's needed to resume
+### Where it stopped (updated 2026-10-30), and what's needed to resume
 
-**Start with `resume.md`** in this folder. It has the exact resume point: state checks, the decision chain so far, the pending decision, what to do first, and the standing constraints. In short:
+**Start with `resume.md`** in this folder. It has the state checks, the decision chain, the next open point and the standing constraints. In short:
 
-The work is **stopped in thread 4, Piece 2a (correlated vote-to-seat conversion error), waiting on Phil.**
+**Thread 4, Piece 2a** (correlated vote-to-seat conversion error) is being worked through Pieces **2a-H1 → 2a-H3** below. **2a-H1 hasn't started.**
 - The offline joint validation completed: cluster variants cover 15/20 against the unchanged 17/20 gate, and no-cluster controls cover 13/20. The decision was `stop_before_engine`.
-- Phil chose to investigate more comparable historical evidence. Read-only research found two candidate transitions: 1997→2001 and 2005→2010, with the source limits recorded in thread 4's Notes.
-- **Open question: the historical scope.** Start with 1997→2001 and 2005→2010 (recommended), or include the 1980s/early 1990s now? Phil asked for an explanation of the full flow, then said he'd come back to it.
+- Phil chose to investigate more comparable history. On 2026-10-30 he decided:
+  - **scope A:** 1997→2001 and 2005→2010; the 1980s/early 1990s are not included;
+  - **entry "both":** the new transitions train in every original fold and are also held out as separate diagnostics;
+  - **storage:** a frozen in-repo fixture; no DB write, no export.
 - Don't add older outcomes to the 20-outcome gate's denominator. Don't lower the gate, integrate the failed model, or move to 2b/2c on this evidence.
 
-Thread 4's archives of the 2a prototype were written to `/tmp/poll-errors-piece2a-prototype-complete-2026-10-29.*` and may not survive a reboot. The committed report (`data/models/westminster/uncertainty_conversion_prototype_report.json`, SHA-256 `3ead7c58…1428`) is the durable copy.
+Thread 4's archives of the 2a prototype were written to `/tmp/poll-errors-piece2a-prototype-complete-2026-10-29.*` and may not survive a reboot. The committed report (`data/models/westminster/uncertainty_conversion_prototype_report.json`) is the durable copy. Its file SHA-256 is `e732edbd…b317`; its internal `report_hash` field is `3ead7c58…1428`.
 
 ## Approach
 
@@ -39,9 +41,76 @@ Where an open checkpoint appears in two threads, both are listed below and cross
 
 ## Pieces
 
-Remaining work, in order. Each entry's full text (Files, What, Acceptance, decisions) is in the named thread plan's `## Pieces`.
+Remaining work, in order. Pieces 2a-H1 to 2a-H3 are written out in full here, because they were planned after the threads were consolidated. Every other entry's full text (Files, What, Acceptance, decisions) is in the named thread plan's `## Pieces`.
 
-1. **Thread 4 / Piece 2a:** correlated vote-to-seat conversion error. Blocked on the historical-scope answer. Model: frontier.
+1. **Thread 4 / Piece 2a:** correlated vote-to-seat conversion error. The thread 4 entry still holds the design constraints and the evidence gate. The current route is 2a-H1 → 2a-H3; 2a itself is done only after H3 passes and the engine integration in thread 4's entry is built. Model: frontier.
+   1. **2a-H1: acquire and audit 1997→2001 and 2005→2010 into a frozen fixture.**
+      - Files:
+        - new `data/scripts/build_westminster_historical_fixture.py`;
+        - new `data/models/westminster/historical-transitions-v1.json`;
+        - a fixture loader module next to `data/model_support/westminster_validation_inputs.py` (follow its loader/fingerprint pattern);
+        - new tests in `data/tests/`.
+      - What:
+        - **Sources.** Fetch read-only into a fresh scratch dir; parse with `python -I`.
+          - 2005 notional (591 England/Wales/NI seats on 2010 boundaries): `https://electionresults.parliament.uk/general-elections/7/candidacies.csv`.
+          - 1997, 2001, and the actual 2005 results for Scotland's 59 seats (already on the 2010 Scottish boundaries): `https://api.parliament.uk/uk-general-elections/general-elections/42`, `/43` and `/44`.
+          - Boundary documentation: `https://commonslibrary.parliament.uk/research-briefings/cbp-8647/`.
+        - **Fixture contents.** Per seat: party vote totals, nation/region, and the Speaker flag. Provenance: URLs, download SHA-256s and dates. A content fingerprint over the whole fixture.
+        - **Crosswalks.**
+          - 2005n seat code → existing 2010 seat names on the "UK Constituencies pre 2019" map.
+          - A 659-seat 1997/2001 seat list with explicit nation/region. Reject unsupported regions; never default to England.
+          - The old site's constituency IDs don't encode boundary changes, so match by code and region.
+        - **Party mapping.**
+          - Labour Co-op → Labour.
+          - Speaker excluded: Boothroyd 1997, Martin 2001/2005.
+          - Referendum Party, UKIP and the NI parties map to the existing keys, aligned with `calibrate_uncertainty.py` (`PARTY_ID_ALIASES`, `DB_PARTY_NAMES`).
+          - The 349 unnamed 2005 minor-party aggregates stay one "unknown other" total. Never split them, and never turn unknown into zero.
+        - **Off limits.** No `elections.db` write, no export, no change to production `ELECTION_PAIRS`.
+      - Depends on: none.
+      - Acceptance:
+        - the fixture loads and its fingerprint verifies; a malformed or tampered fixture is rejected;
+        - the audit is recorded in the fixture and asserted by tests:
+          - seat counts 659 (1997/2001) and 650 (2005n/2010);
+          - one winner per seat;
+          - candidate sums reconcile with published valid votes;
+          - national party shares match published totals;
+          - every 2005n seat matches a 2010 seat by code and region;
+        - the nation-mapping reject is tested;
+        - the export dry-run lists no new elections.
+      - **Pause:** show Phil the audit numbers and any open data-quality points before H2.
+   2. **2a-H2: revise the experiment contract for six transitions.**
+      - **Ask Phil before starting:**
+        - the weight of the new transitions (recommended: equal across all six);
+        - whether their held-out folds feed any guard (RMS, stability, drift) or are report-only.
+      - Files:
+        - `data/model_support/westminster_conversion_validation.py`, `westminster_conversion_design.py`, `westminster_conversion_report.py`, `westminster_conversion_checkpoint.py`;
+        - `data/scripts/validate_westminster_conversion.py`;
+        - `data/models/westminster/conversion-prototype-method.md`;
+        - the console Validation view;
+        - tests.
+      - What:
+        - Load the fixture transitions alongside the four DB transitions, as identical cell structures.
+        - Each original fold trains on its 3 original transitions plus the 2 new ones. Two extra folds hold out each new transition and are reported separately.
+        - The coverage gate denominator stays the original 20 cells.
+        - Lambda predictive df follows the training count (5 per original fold).
+        - New statistical contract hash, and a new report file (e.g. `uncertainty_conversion_historical_report.json`). The committed 15/20 report stays untouched.
+      - Depends on: 2a-H1.
+      - Acceptance:
+        - tests cover holdout exclusion (including the new folds), the 20-cell gate denominator, and fixture/DB cell parity on a known seat;
+        - synthetic recovery passes under the new contract;
+        - the method doc describes the change.
+      - **Pause:** Phil's go-ahead before the batch run.
+   3. **2a-H3: run the six-transition experiment and report.**
+      - Files: the new report file only.
+      - What:
+        - Run the checkpointed eight-variant batch from `data/`: `OPENBLAS_NUM_THREADS=1 ./election_data/bin/python scripts/validate_westminster_conversion.py`, plus H2's contract flag.
+        - The gates are unchanged: 17/20, the RMS predictive reference, 128/256 stability, drift ≤0.15, and lambda attribution.
+        - Report every variant, both new diagnostic folds, and 2024's intervals.
+      - Depends on: 2a-H2 and Phil's go-ahead.
+      - Acceptance: the report is saved and hash-verified, the console route returns HTTP 200, and the results are presented to Phil.
+        - **Pass:** take the W-1 decisions, then do 2a's engine integration (off by default).
+        - **Fail:** the replan-with-new-assumptions question; 1983–92 becomes a candidate.
+        - Adding the transitions to production `ELECTION_PAIRS` is a separate live-calibration go-ahead.
 2. **Thread 4 / Pieces 2b–2f:** heavy seat-level tails; error-scale parameter uncertainty; house effects and sparse windows; nation-only parties and lead calibration; joint recalibration. Depends on 2a.
 3. **Thread 4 / Piece 3a:** Westminster and US display changes.
 4. **Thread 4 / Pieces 4a–4d:** small US model fixes; US national parameter uncertainty; Senate state/race allocation; correlated US state errors.
@@ -54,7 +123,10 @@ Remaining work, in order. Each entry's full text (Files, What, Acceptance, decis
 ## Checkpoints
 
 - [x] Threads 1–4: 40 completed checkpoints, recorded with their commits in each thread plan's `## Checkpoints` (thread 1: 12, thread 2: 16, thread 3: 8, thread 4: 4).
-- [ ] T4 · Piece 2a: Correlated vote-to-seat conversion error.
+- [ ] T4 · Piece 2a-H1: 1997→2001 and 2005→2010 fixture built and audited.
+- [ ] T4 · Piece 2a-H2: six-transition experiment contract revised and tested.
+- [ ] T4 · Piece 2a-H3: six-transition experiment run and reported to Phil.
+- [ ] T4 · Piece 2a: Correlated vote-to-seat conversion error (ticked only after H3 passes and the engine integration is built).
 - [ ] T4 · Piece 2b: Heavy seat-level tails.
 - [ ] T4 · Piece 2c: Error-scale parameter uncertainty.
 - [ ] T4 · Piece 2d: House effects and sparse windows.

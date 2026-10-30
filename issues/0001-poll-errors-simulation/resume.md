@@ -1,6 +1,6 @@
 # Resume point: read this first
 
-Written 2026-10-30, when the plans were consolidated, from thread 4's Notes (2026-10-28/29) and its `assessment.md`. Nothing has happened on the branch since `ab3fc62e` (2026-10-29).
+Written 2026-10-30, when the plans were consolidated, from thread 4's Notes (2026-10-28/29) and its `assessment.md`. Issue state: `building`. Nothing has happened on the branch since `ab3fc62e` (2026-10-29).
 
 ## Where we are
 

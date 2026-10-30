@@ -9,19 +9,20 @@ Updated 2026-10-30 (builder, Piece 2a-H1 at its review pause). Issue state: `bui
 Check before doing anything else:
 - branch `poll-errors-simulation`, HEAD `ab3fc62e`;
 - working tree: untracked `data/scripts/build_westminster_historical_fixture.py`, `data/model_support/westminster_historical_transitions.py`, `data/tests/test_westminster_historical_transitions.py`, `data/models/westminster/historical-transitions-v1.json`; modified `data/model_support/westminster_validation_inputs.py` (`_content_hash` → public `content_hash`, behaviour unchanged);
-- fixture `sha256sum` = `1ccb080d09f79a40d46c5b02e4841297d973e7bcf9e0b74ca5b261ab3210a5e5`;
+- fixture `sha256sum` = `3e351456e756169699eacf15f53b7a06cb111fb8a9370c3ef4152b5b3ad88bb5`;
 - raw sources in the 2026-10-30 session scratchpad `hist-sources/` (may not survive; the builder rebuilds byte-identically from them, and provenance SHA-256s are in the fixture);
-- checks at the pause: mypy clean (307 files), 6435 tests passed, export dry-run lists no new elections, console builds, `git diff --check` clean.
+- checks at the pause: mypy clean (307 files), 6438 tests passed, export dry-run lists no new elections, console builds, `git diff --check` clean.
 
-## Pending decision (Phil)
+## Pending
 
-The 2005n fixture has 5 zero-vote party entries (E14000634 green, E14000760 green, E14000763 ukip, E14001002 ukip, E14001013 green), while the loader docstring says `votes` holds only parties that stood. Options: (a) drop zero entries in the builder and have the loader reject them (fixture bytes change; recommended: a zero notional total isn't a contested-seat signal, and H2's fit could misread key presence or take log/logit of 0); (b) keep them, document them, and have the loader allow them deliberately.
+Phil's approval to commit H1. No open data decision.
 
 ## Decisions taken in this session (2026-10-30)
 
 - Source for 1997, 2001 and Scotland 2005: Parliament's psephology.db behind api.parliament.uk at a pinned commit (accepted instead of scraping ~1,377 HTML pages; 3 index + 10 sampled pages matched exactly).
 - Referendum Party → other (not UKIP). NI Conservatives → con; Green (NI) and Scottish Greens → green.
 - 2005n unknown_other limitation accepted and recorded in the fixture audit (NI Alliance and unnamed minors in unknown_other; Greens named in 190 seats).
+- Zero-vote party entries (5 seats in 2005n): option (a), dropped by the builder and rejected by the loader.
 - Not retrieved: Commons Library CBP-8647 (403). No independent published national totals exist in the retrieved sources; the fixture records `independent: false`.
 
 ## After the pause

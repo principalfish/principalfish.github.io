@@ -21,7 +21,7 @@ Reviews of the branch (all six) are in `threads/reviews/`.
 
 **Start with `resume.md`** in this folder. It has the state checks, the decision chain, the next open point and the standing constraints. In short:
 
-**Thread 4, Piece 2a** (correlated vote-to-seat conversion error) is being worked through Pieces **2a-H1 → 2a-H3** below. **2a-H1 hasn't started.**
+**Thread 4, Piece 2a** (correlated vote-to-seat conversion error) is being worked through Pieces **2a-H1 → 2a-H3** below. **2a-H1 is done (`eaa73607`); 2a-H2 is next.**
 - The offline joint validation completed: cluster variants cover 15/20 against the unchanged 17/20 gate, and no-cluster controls cover 13/20. The decision was `stop_before_engine`.
 - Phil chose to investigate more comparable history. On 2026-10-30 he decided:
   - **scope A:** 1997→2001 and 2005→2010; the 1980s/early 1990s are not included;
@@ -123,7 +123,7 @@ Remaining work, in order. Pieces 2a-H1 to 2a-H3 are written out in full here, be
 ## Checkpoints
 
 - [x] Threads 1–4: 40 completed checkpoints, recorded with their commits in each thread plan's `## Checkpoints` (thread 1: 12, thread 2: 16, thread 3: 8, thread 4: 4).
-- [ ] T4 · Piece 2a-H1: 1997→2001 and 2005→2010 fixture built and audited.
+- [x] T4 · Piece 2a-H1: 1997→2001 and 2005→2010 fixture built and audited (`eaa73607`).
 - [ ] T4 · Piece 2a-H2: six-transition experiment contract revised and tested.
 - [ ] T4 · Piece 2a-H3: six-transition experiment run and reported to Phil.
 - [ ] T4 · Piece 2a: Correlated vote-to-seat conversion error (ticked only after H3 passes and the engine integration is built).
@@ -176,3 +176,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - **Authorisations:** the thread Notes record approvals given in earlier sessions (for example "existing all-pieces authorization"). Under the current workflow every piece still stops for review before its commit. Live database writes, backfills, reruns and publication each need a fresh, explicit go-ahead.
 - 2026-10-30: Resumed. Explained the full flow for the historical-evidence route; Phil chose **scope A** (1997→2001, 2005→2010), **entry "both"** (training augmentation in every fold plus separate held-out diagnostics; gate stays 17/20 on the original 20 cells) and **storage as a frozen in-repo fixture** (no DB write or export). Next: Piece 2a-H1 (acquire and audit both transitions into the fixture, then pause), 2a-H2 (contract revision, then pause before the run), 2a-H3 (run and report). Resume check corrected: `3ead7c58…1428` is the report's internal `report_hash` (verified), not the file's `sha256sum` (`e732edbd…b317`).
 - 2026-10-30 (builder): 2a-H1 implemented and paused before commit. Deviation: 1997/2001/Scotland-2005 taken from Parliament's psephology.db at a pinned commit rather than scraped HTML (Phil accepted). Phil confirmed Referendum→other, NI Con→con, NI/Scottish Greens→green, and the 2005n unknown_other limitation. CBP-8647 returned 403; no independent national totals available (recorded as `independent: false`). `_content_hash` in `westminster_validation_inputs.py` made public (`content_hash`) for reuse. Zero-vote 2005n party entries (5 seats): Phil chose to drop them in the builder and reject them in the loader.
+- 2026-10-30: 2a-H1 committed as `eaa73607` and pushed (the push also published the 10 earlier local commits). Fixture sha256 `3e351456e756169699eacf15f53b7a06cb111fb8a9370c3ef4152b5b3ad88bb5`. Next: 2a-H2, after Phil answers its two questions.

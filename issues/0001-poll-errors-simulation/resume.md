@@ -4,18 +4,15 @@ Updated 2026-10-30 (builder, Piece 2a-H1 at its review pause). Issue state: `bui
 
 ## Where we are
 
-**Piece 2a-H1 is implemented, checked and through three analysis-loop rounds, but NOT committed.** Waiting on Phil's review and one pending data decision (below).
+**Piece 2a-H1 is committed (`eaa73607`) and pushed.** All work is committed; nothing is running.
 
 Check before doing anything else:
-- branch `poll-errors-simulation`, HEAD `ab3fc62e`;
-- working tree: untracked `data/scripts/build_westminster_historical_fixture.py`, `data/model_support/westminster_historical_transitions.py`, `data/tests/test_westminster_historical_transitions.py`, `data/models/westminster/historical-transitions-v1.json`; modified `data/model_support/westminster_validation_inputs.py` (`_content_hash` → public `content_hash`, behaviour unchanged);
-- fixture `sha256sum` = `3e351456e756169699eacf15f53b7a06cb111fb8a9370c3ef4152b5b3ad88bb5`;
-- raw sources in the 2026-10-30 session scratchpad `hist-sources/` (may not survive; the builder rebuilds byte-identically from them, and provenance SHA-256s are in the fixture);
-- checks at the pause: mypy clean (307 files), 6438 tests passed, export dry-run lists no new elections, console builds, `git diff --check` clean.
+- branch `poll-errors-simulation`, HEAD `eaa73607`, clean tree (apart from `model_output_trends.json` if a test run dirtied it);
+- `sha256sum data/models/westminster/historical-transitions-v1.json` = `3e351456e756169699eacf15f53b7a06cb111fb8a9370c3ef4152b5b3ad88bb5`; it loads via `model_support.westminster_historical_transitions.load_historical_transitions()`.
 
-## Pending
+## Next: 2a-H2 (don't start unasked)
 
-Phil's approval to commit H1. No open data decision.
+Ask Phil first: (1) the weight of the new transitions (recommended: equal across all six); (2) whether their held-out folds feed any guard (RMS, stability, drift) or are report-only. Then revise the experiment contract per `plan.md` 2a-H2 and pause before the batch run.
 
 ## Decisions taken in this session (2026-10-30)
 
@@ -24,10 +21,6 @@ Phil's approval to commit H1. No open data decision.
 - 2005n unknown_other limitation accepted and recorded in the fixture audit (NI Alliance and unnamed minors in unknown_other; Greens named in 190 seats).
 - Zero-vote party entries (5 seats in 2005n): option (a), dropped by the builder and rejected by the loader.
 - Not retrieved: Commons Library CBP-8647 (403). No independent published national totals exist in the retrieved sources; the fixture records `independent: false`.
-
-## After the pause
-
-Commit H1 on approval (stage only the five files above), push, tick H1, then stop. H2 needs Phil's answers first: weight of the new transitions (equal across six recommended), and whether their held-out folds feed any guard or are report-only.
 
 ## The test 2a has to pass
 

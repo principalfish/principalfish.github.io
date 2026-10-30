@@ -4,11 +4,12 @@ Written 2026-10-30, when the plans were consolidated, from thread 4's Notes (202
 
 ## Where we are
 
-Thread 4, **Piece 2a** (correlated vote-to-seat conversion error, decision W-1) is **stopped, waiting on a decision from Phil**. All work is committed. No job is running. Nothing is staged, and nothing is half-done in the working tree.
+Thread 4, **Piece 2a** (correlated vote-to-seat conversion error, decision W-1): the historical-evidence route is decided (decision 5 below), and **Piece 2a-H1 hasn't started**. All work is committed. No job is running. Nothing is staged, and nothing is half-done in the working tree.
 
 Check before doing anything else:
 - branch `poll-errors-simulation`, HEAD `ab3fc62e`, clean tree;
-- `sha256sum data/models/westminster/uncertainty_conversion_prototype_report.json` = `3ead7c5851e96e1fd143a26c9370de1fca963b31925c55648a3a4dd889201428`.
+- `sha256sum data/models/westminster/uncertainty_conversion_prototype_report.json` = `e732edbdadc7f0e21911ecdeffafa98493292d92ebdab0bc939880172874b317` (the file);
+- its internal `report_hash` field = `3ead7c5851e96e1fd143a26c9370de1fca963b31925c55648a3a4dd889201428`. Recompute it with `model_support.westminster_conversion_report.fingerprint` over the report minus that key. Earlier notes cite this value as "the report hash"; it isn't the file SHA.
 
 If anything differs, stop and tell Phil before going further.
 
@@ -26,14 +27,22 @@ If anything differs, stop and tell Phil before going further.
 2. **2026-10-28.** Read-only reassessment (`assessment.md`): full-loading residual calibration and a regional-balancing diagnostic still gave 15/20. → **Phil approved revising 2a into a bounded offline experiment.** It tests the already-approved components together (nation × baseline-share clusters + heavy seat tails + lambda predictive uncertainty), with no new prior, regime term, regional balancing or new data.
 3. **2026-10-29.** The eight-variant experiment completed. No-cluster controls gave 13/20 and cluster variants 15/20. The full candidate also failed RMS, stability, identification and drift. For held-out 2024: Labour 317–361 vs actual 411, Conservatives 181–242 vs 121. Decision recorded in the report: `stop_before_engine`. Question: **investigate more comparable historical evidence first (recommended), or replan the conversion model on the existing four transitions with explicitly new assumptions?** → **Phil chose to investigate more historical evidence.**
 4. **2026-10-29.** Read-only research found two usable-looking transitions (details below). Then Phil asked for the active work to be committed (six commits, `c067f150` → `ab3fc62e`) and said he'd come back to the model investigation later.
+5. **2026-10-30.** After the full-flow explanation, Phil chose:
+   - **scope A:** 1997→2001 and 2005→2010; the 1980s/early 1990s are not included;
+   - **entry "both":** the new transitions train in every original fold and are also held out as separate diagnostics; the gate stays 17/20 on the original 20 cells;
+   - **storage:** a frozen, hashed in-repo fixture; no DB write, no export.
 
-## The pending decision (exact)
+   The risk was stated and accepted: both are low/moderate-change elections, and they could lower the training cluster scales.
 
-**Question:** which historical scope to bring in first?
-- **(A) 1997→2001 and 2005→2010 now.** This is the one recommended to Phil.
-- **(B) Also include the 1980s / early 1990s now.**
+## Next open point
 
-**Phil hasn't chosen.** He asked for **an explanation of the full flow** first, then left. So the next session's first job is that explanation, not the question.
+**Piece 2a-H1, not started.** Acquire and audit both transitions into `data/models/westminster/historical-transitions-v1.json`, built by `data/scripts/build_westminster_historical_fixture.py`, with loader/fingerprint tests. Then pause and show Phil the audit before any fitting.
+
+After that:
+- **2a-H2:** revise the experiment contract. Ask first: the new transitions' weight (equal across six is recommended), and whether their held-out folds feed any guard or are report-only. Write a new report file; the committed 15/20 report stays untouched. Pause before the batch.
+- **2a-H3:** run the multi-hour checkpointed batch and report.
+
+The approved plan for H1–H3 is in this issue's `plan.md` Notes (2026-10-30) and the thread 4 Notes.
 
 ### What's known about each candidate transition (from read-only research; nothing written to disk)
 
@@ -53,22 +62,14 @@ If anything differs, stop and tell Phil before going further.
 
 ## What the next session does
 
-1. `/planner resume poll-errors-simulation`. Read this file, `decisions.md`, thread 4's `plan.md` Notes from "Piece 2a prerequisite" (2026-10-28) onward, its `assessment.md`, and `data/models/westminster/conversion-prototype-method.md`. Run the checks under **Where we are**.
-2. **Explain the full flow** to Phil, end to end, for each scope option. Cover:
-   - **Acquiring and auditing the data:** sources, crosswalks, party mapping, the minor-party aggregates, Labour Co-op/Speaker. What gets written and where; data writes need his approval.
-   - **How the new transitions would enter the experiment.** They're additional evidence and **stay out of the original 20-outcome gate's denominator**. Exactly how they enter the fits isn't designed yet; that design is part of what he approves, so present the options rather than deciding.
-   - **Rerunning the fixed offline experiment** under the same contract and gates, and what it would show.
-   - **The two outcomes:**
-     - if the gate and guards pass, the W-1 decision, then engine integration of 2a, then 2b–2f;
-     - if they fail, back to the replan-with-new-assumptions question.
-   - **What changes with option B:** more boundary/notional work, unverified sources, and more time before any result. Say what's still uncertain about each step.
-3. **Then ask the scope question** (AskUserQuestion, with A as the recommended option). Record the answer in `decisions.md` and in this issue's `plan.md` Notes. Rewrite this file's "pending decision" section to the next open point.
-4. Only then start the work the answer implies, as a planned piece with the usual pauses.
+1. `/planner resume poll-errors-simulation`, or `/builder`, for H1. Run the checks under **Where we are**.
+2. Brief 2a-H1 to Phil: sources, crosswalks, party mapping, audit checks, and the files it writes. Then implement it, check it, and pause for review before the commit.
+3. Don't start H2 or H3 unasked.
 
 ## Don't (standing constraints from thread 4)
 
 - Don't lower the 17/20 gate, or dilute it by adding older outcomes to its denominator.
 - Don't silently add a cluster-scale prior, regime/fragmentation dependence, regional balancing or exact-regional-total projection.
 - Don't claim 2a complete, integrate the failed candidate into the engine, or start 2b/2c on this evidence.
-- No live DB writes, model or config changes, backfills, reruns, activation or publication without a fresh, explicit go-ahead.
+- No live DB writes, model or config changes, backfills, reruns, activation or publication without a fresh, explicit go-ahead. The historical data goes into a repo fixture only. Don't import it into `elections.db`, and don't add it to production `ELECTION_PAIRS`.
 - The six commits from 2026-10-29 haven't had a self-review. Don't describe the branch as reviewed.

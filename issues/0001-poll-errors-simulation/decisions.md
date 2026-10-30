@@ -10,10 +10,13 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - Piece 2a's offline joint model failed the unchanged 17/20 coverage gate (15/20; `stop_before_engine`). It isn't integrated, the gate isn't lowered, and 2b/2c don't start on this evidence (2026-10-29).
 - Next step for 2a: investigate more comparable historical evidence, rather than replan on the existing four transitions with new assumptions (2026-10-29).
 - Commit the active work and pause the model investigation until Phil returns (2026-10-29; commits `c067f150` → `ab3fc62e`).
+- 2a historical scope: **A**, adding 1997→2001 and 2005→2010 now; the 1980s/early 1990s are not included (2026-10-30, after the full-flow explanation). The risk is accepted: both are low/moderate-change elections and may not contain a 2024-sized miss.
+- 2a entry: **both**. The new transitions join every fold's training set, and each is also held out and reported as a separate diagnostic. The gate stays 17/20 on the original 20 cells (2026-10-30).
+- 2a storage: a **frozen, hashed in-repo fixture** that only the experiment reads. No DB write, no export, nothing on the site (2026-10-30).
 
 ## Open
-- **Historical scope for 2a:** (A) 1997→2001 and 2005→2010 now (recommended), or (B) also the 1980s/early 1990s now? **Phil asked for an explanation of the full flow before choosing, so give that first** (outline in `resume.md`). This blocks all remaining model work.
+- **2a-H2 contract details** (ask when H2 starts): the weight of the two new transitions (equal across all six is the natural extension), and whether their held-out folds count toward any guard (RMS, stability, drift) or are report-only.
 - Thread 4's per-piece decisions, to raise when each piece starts: W-1 cluster definition and 2024 weighting (2a), W-2 regime scaling (2b), W-4 headline median (3a), US-2 correlation source (4d), and the live-run go-aheads (4e, Phase 5).
 
 ## Assumed
-- Older historical outcomes, if added, stay outside the original 20-outcome gate's denominator (thread 4 Notes).
+- Older historical outcomes stay outside the original 20-outcome gate's denominator (thread 4 Notes; confirmed by the 2026-10-30 entry decision).

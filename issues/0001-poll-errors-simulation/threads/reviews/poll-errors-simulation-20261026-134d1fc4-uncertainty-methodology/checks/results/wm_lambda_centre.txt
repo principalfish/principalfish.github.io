@@ -1,0 +1,4 @@
+lambda=0.00: Lab 300, Ref 109, PC 6, Con 113, LD 70, Grn 5, SNP 17, Oth 14
+lambda=0.34: Lab 284, Ref 137, PC 6, Con 98, LD 69, Grn 6, SNP 20, Oth 14
+lambda=0.57: Lab 275, Ref 148, PC 6, Con 96, LD 68, Grn 6, SNP 20, Oth 15
+lambda=1.00: Lab 244, Ref 179, PC 6, Con 89, LD 64, Grn 10, SNP 27, Oth 15

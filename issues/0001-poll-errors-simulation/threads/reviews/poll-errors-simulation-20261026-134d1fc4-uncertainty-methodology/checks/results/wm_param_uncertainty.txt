@@ -1,0 +1,5 @@
+as built (Gaussian national, Gaussian seat)    Lab P(maj)=0.1856 (MC SE 0.0039)  Lab P(largest)=0.9397 (SE 0.0024)  hung=0.8142  Lab seats 5/50/95=(201, 283, 359)  Ref P(maj)=0.0002 P(largest)=0.0555
+t9 posterior-predictive national               Lab P(maj)=0.1945 (MC SE 0.0040)  Lab P(largest)=0.9179 (SE 0.0027)  hung=0.8023  Lab seats 5/50/95=(191, 282, 365)  Ref P(maj)=0.0029 P(largest)=0.0678
+t4 seat tails (same MAD)                       Lab P(maj)=0.1489 (MC SE 0.0036)  Lab P(largest)=0.9395 (SE 0.0024)  hung=0.8509  Lab seats 5/50/95=(199, 277, 351)  Ref P(maj)=0.0002 P(largest)=0.0560
+t9 national + t4 seat                          Lab P(maj)=0.1588 (MC SE 0.0037)  Lab P(largest)=0.9203 (SE 0.0027)  hung=0.8387  Lab seats 5/50/95=(192, 277, 357)  Ref P(maj)=0.0024 P(largest)=0.0673
+Lab P(maj) across 5 seeds: [np.float64(0.1887), np.float64(0.1831), np.float64(0.1885), np.float64(0.1837), np.float64(0.1906)] SD 0.0033

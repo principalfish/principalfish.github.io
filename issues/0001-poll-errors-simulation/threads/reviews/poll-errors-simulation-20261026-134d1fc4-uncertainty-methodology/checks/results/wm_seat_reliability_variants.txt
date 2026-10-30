@@ -1,0 +1,10 @@
+== 2015→2017 train: sigma_raw=4.99, rms_lam=0.36, mean_lam=0.31, sd_lam=0.19
+   as built (lam~N(0,rms), gauss, robust sigma)  Brier=0.1160  fav>=95%: 2/462 lost (0.43%); cells 0<p<5%: 3/267 won (1.12%)
+   lam centred at train mean                     Brier=0.1161  fav>=95%: 5/470 lost (1.06%); cells 0<p<5%: 6/243 won (2.47%)
+   t4 seat tails, same MAD                       Brier=0.1164  fav>=95%: 1/420 lost (0.24%); cells 0<p<5%: 1/796 won (0.13%)
+   lam mean + t4 tails                           Brier=0.1156  fav>=95%: 1/424 lost (0.24%); cells 0<p<5%: 2/778 won (0.26%)
+== 2019n→2024 train: sigma_raw=4.54, rms_lam=0.30, mean_lam=0.26, sd_lam=0.13
+   as built (lam~N(0,rms), gauss, robust sigma)  Brier=0.3231  fav>=95%: 34/397 lost (8.56%); cells 0<p<5%: 24/424 won (5.66%)
+   lam centred at train mean                     Brier=0.3047  fav>=95%: 34/401 lost (8.48%); cells 0<p<5%: 25/449 won (5.57%)
+   t4 seat tails, same MAD                       Brier=0.3144  fav>=95%: 25/344 lost (7.27%); cells 0<p<5%: 31/1715 won (1.81%)
+   lam mean + t4 tails                           Brier=0.2975  fav>=95%: 20/342 lost (5.85%); cells 0<p<5%: 29/1749 won (1.66%)

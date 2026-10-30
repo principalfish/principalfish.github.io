@@ -1,0 +1,6 @@
+national raw changes {'D': -0.03369959884446416, 'R': 0.025508148691848476}
+districts 315 mean margin swing -0.8 SD of district margin swing 4.29
+residual ~ 1 + margin + |margin|: beta [ 0.7269 -0.0339 -0.0281] R^2 0.072
+between-state var (district-weighted) 4.83  within var 13.59
+within-state residual ~ margin terms: R^2 0.07 beta [ 0.7408 -0.0271 -0.0287]
+competitive districts (|baseline margin|<15): 97

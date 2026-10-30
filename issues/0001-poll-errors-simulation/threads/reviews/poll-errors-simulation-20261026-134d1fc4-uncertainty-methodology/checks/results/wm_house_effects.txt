@@ -1,0 +1,8 @@
+polls in window 15 (Lord Ashcroft shares renormalised to 100 as the model does)
+pollster weight shares: {'find_out_now': 0.279, 'more_in_common': 0.217, 'opinium': 0.201, 'survation': 0.187, 'lord_ashcroft': 0.061, 'bmg_research': 0.055}
+effective number of pollsters (Kish on pollster weight): 4.83  raw pollsters: 6
+Lab: average 27.6; pollster-mean SD (house-effect proxy) 1.25 pts; implied house-effect SD of deployed average 0.57 vs equal-weight-by-pollster 0.51
+Ref: average 22.7; pollster-mean SD (house-effect proxy) 2.03 pts; implied house-effect SD of deployed average 0.92 vs equal-weight-by-pollster 0.83
+Con: average 20.1; pollster-mean SD (house-effect proxy) 1.53 pts; implied house-effect SD of deployed average 0.70 vs equal-weight-by-pollster 0.62
+LD: average 9.7; pollster-mean SD (house-effect proxy) 0.99 pts; implied house-effect SD of deployed average 0.45 vs equal-weight-by-pollster 0.40
+Grn: average 9.7; pollster-mean SD (house-effect proxy) 2.20 pts; implied house-effect SD of deployed average 1.00 vs equal-weight-by-pollster 0.90

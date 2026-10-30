@@ -1,0 +1,24 @@
+== 2010→2015: LOO sigma_seat_raw=4.93 sigma_lambda=0.42
+   Conservative       actual  330  central(additive)  316  sim 5/50/95 305/315/326  actual percentile 0.994
+   Labour             actual  232  central(additive)  247  sim 5/50/95 237/246/256  actual percentile 0.004
+   Scottish National  actual   56  central(additive)   55  sim 5/50/95 48/52/55  actual percentile 0.977
+   Liberal Democrats  actual    8  central(additive)    9  sim 5/50/95 2/13/27  actual percentile 0.266
+   Democratic Unionis actual    8  central(additive)    8  sim 5/50/95 6/8/9  actual percentile 0.661
+== 2015→2017: LOO sigma_seat_raw=4.99 sigma_lambda=0.36
+   Conservative       actual  317  central(additive)  319  sim 5/50/95 309/317/325  actual percentile 0.504
+   Labour             actual  262  central(additive)  262  sim 5/50/95 257/267/276  actual percentile 0.195
+   Scottish National  actual   35  central(additive)   37  sim 5/50/95 29/34/38  actual percentile 0.677
+   Liberal Democrats  actual   12  central(additive)   10  sim 5/50/95 7/11/14  actual percentile 0.718
+   Democratic Unionis actual   10  central(additive)   10  sim 5/50/95 9/10/10  actual percentile 0.570
+== 2017→2019: LOO sigma_seat_raw=5.17 sigma_lambda=0.44
+   Conservative       actual  364  central(additive)  355  sim 5/50/95 348/357/367  actual percentile 0.883
+   Labour             actual  202  central(additive)  203  sim 5/50/95 196/205/213  actual percentile 0.303
+   Scottish National  actual   48  central(additive)   51  sim 5/50/95 46/49/52  actual percentile 0.309
+   Liberal Democrats  actual   11  central(additive)   17  sim 5/50/95 4/16/24  actual percentile 0.256
+   Democratic Unionis actual    8  central(additive)    9  sim 5/50/95 7/8/10  actual percentile 0.410
+== 2019n→2024: LOO sigma_seat_raw=4.54 sigma_lambda=0.30
+   Labour             actual  411  central(additive)  333  sim 5/50/95 328/341/354  actual percentile 1.000
+   Conservative       actual  121  central(additive)  223  sim 5/50/95 197/216/234  actual percentile 0.000
+   Liberal Democrats  actual   72  central(additive)   52  sim 5/50/95 45/52/59  actual percentile 1.000
+   Scottish National  actual    9  central(additive)   17  sim 5/50/95 11/16/20  actual percentile 0.006
+   Others             actual    7  central(additive)    1  sim 5/50/95 1/2/3  actual percentile 1.000

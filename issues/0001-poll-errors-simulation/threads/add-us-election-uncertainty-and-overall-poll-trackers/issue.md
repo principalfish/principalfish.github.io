@@ -1,0 +1,7 @@
+# Add US election uncertainty and overall poll trackers
+
+Extend the existing US House, Senate and presidential projections with reproducible Monte Carlo uncertainty for an election held today, preserving their current central calculations and candidate-matchup selection. Use US-specific calibration with correlated national, state and local errors; retain generic-ballot averages and calibrate their aggregate error without inventing sample sizes or treating overlapping averages as independent surveys.
+
+Provide overall trackers for House seats, the full 100-seat Senate, and presidential electoral votes plus national popular vote, using the shared Westminster controls and uncertainty-band styling. Senate simulations must combine contested races with fixed holdovers, retain raw party totals, and report caucus-control chances using explicit independent alignments and a configured vice-presidential party, alongside the probability of a 50–50 split. Presidential outputs must distinguish electoral-majority chances from no-majority outcomes; resolving a contingent election is outside scope.
+
+Include public headline, totals and race-level ranges, plus console calibration reports, error budgets, odds histories and individual simulation exploration. Save the inputs and electoral rules needed for reproducible replay, verify calibration and historical coverage, and backfill each model's supported history through separately approved operational steps.

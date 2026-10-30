@@ -1,0 +1,5 @@
+trend entries: 440
+latest 2026-10-19 {'Lab': (300, 202, 358, 0.187, 0.9378), 'Ref': (109, 51, 219, 0.0006, 0.0576), 'Con': (113, 61, 174, None, 0.0046), 'LD': (70, 55, 78, None, None), 'Grn': (5, 3, 11, None, None), 'SNP': (17, 10, 30, None, None)}
+runs with uncertainty: 840
+party 1: central outside 90% seat range in 37 runs (2024-07-05 .. 2024-10-02)
+Labour central minus MC median seats: mean 2.6, min -21, max 42

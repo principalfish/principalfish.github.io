@@ -1,0 +1,4 @@
+class-2 states from roster: 33
+pooled 2020 Senate field (33 states): D 47.10 R 49.36  (D-R -2.26)
+accepted 2020 House anchor: D 50.80 R 47.72 (D-R +3.09)
+legacy minus new subtractor on D-R margin: -5.35 pts -> legacy fallback shifted unpolled races by +5.35 D-R

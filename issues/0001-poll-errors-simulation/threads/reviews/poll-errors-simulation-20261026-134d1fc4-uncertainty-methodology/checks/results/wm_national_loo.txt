@@ -1,0 +1,13 @@
+all-election sigma_raw 2.9436
+1992: LOO sigma_raw=2.746; cells inside 90%: 1/3; lead con-lab error -8.70 pts, model SD 4.13, z=-2.11, model rho=-0.56
+1997: LOO sigma_raw=3.057; cells inside 90%: 3/3; lead lab-con error +2.80 pts, model SD 4.54, z=+0.62, model rho=-0.51
+2001: LOO sigma_raw=3.001; cells inside 90%: 3/3; lead lab-con error +4.70 pts, model SD 4.47, z=+1.05, model rho=-0.52
+2005: LOO sigma_raw=3.098; cells inside 90%: 3/3; lead lab-con error +2.17 pts, model SD 4.55, z=+0.48, model rho=-0.47
+2010: LOO sigma_raw=2.901; cells inside 90%: 2/3; lead con-lab error +0.80 pts, model SD 4.21, z=+0.19, model rho=-0.45
+2015: LOO sigma_raw=2.958; cells inside 90%: 5/5; lead con-lab error -5.92 pts, model SD 4.33, z=-1.37, model rho=-0.43
+2017: LOO sigma_raw=2.690; cells inside 90%: 3/5; lead con-lab error +4.24 pts, model SD 4.10, z=+1.03, model rho=-0.61
+2019: LOO sigma_raw=3.074; cells inside 90%: 5/5; lead con-lab error -2.48 pts, model SD 4.60, z=-0.54, model rho=-0.52
+2024: LOO sigma_raw=2.939; cells inside 90%: 5/5; lead lab-con error +7.17 pts, model SD 4.11, z=+1.75, model rho=-0.36
+LOO cell coverage of nominal 90%: 0.857 (30/35)
+lead z: RMS=1.177 (1.0 = calibrated), |z|>1.645: 2/9
+historical zero-origin corr(Con err, Lab err) = -0.63  (centred: -0.527 )

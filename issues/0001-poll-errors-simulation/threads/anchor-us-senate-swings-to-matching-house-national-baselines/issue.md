@@ -1,0 +1,5 @@
+# Anchor Senate swings to matching House national baselines
+
+The Senate fallback compares national House generic-ballot levels with the selected Senate cohort's past vote shares, creating a cohort-composition swing. Reproduce this with a 70/30 Senate race and unchanged 50/50 House generic levels: the current fallback projects 50/50, while a matching 50/50 House baseline should leave the race at 70/30.
+
+Audit and pin House national reference levels, then compute each Senate race's fallback against the House election corresponding to that race's own baseline year, including special elections. Preserve local blending, eligibility, normalization and exact uncertainty-on/off central parity, with House and President behavior unchanged. Freeze anchor provenance in central and uncertainty outputs, preserve legacy replay and split incompatible trend segments. Regenerate historical comparisons only under explicit source policies; the 2018 uncertified NC-09 proxy and other denominator/fusion qualifications require review. Keep calibration, live reruns/backfills and publication gated separately.

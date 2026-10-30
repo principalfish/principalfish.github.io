@@ -1,0 +1,73 @@
+det seats {'Lab': 300, 'Ref': 109, 'PC': 6, 'Con': 113, 'LD': 70, 'Grn': 5, 'SNP': 17, 'DUP': 5, 'All': 1, 'UUP': 1, 'SDLP': 2, 'SF': 7, 'Oth': 14}
+--- production config
+party   det_v mc_mean  mc_med   bias | det_s mean_s med_s   p5  p95  sd_v
+Lab     25.48   25.46   25.42  -0.02 |   300  281.3   282  199  359  2.33
+Ref     23.23   23.14   23.15  -0.08 |   109  127.2   122   51  219  2.39
+PC       0.95    0.94    0.94  -0.01 |     6    5.8     6    4    8  0.08
+Con     20.25   20.20   20.22  -0.05 |   113  113.2   111   60  173  2.24
+LD      10.81   10.90   10.84   0.09 |    70   67.3    68   55   78  1.65
+Grn     10.90   10.84   10.82  -0.07 |     5    6.1     5    3   11  1.83
+SNP      2.23    2.22    2.22  -0.01 |    17   18.6    18    9   29  0.15
+DUP      0.60    0.60    0.60  -0.00 |     5    4.5     4    3    6  0.02
+All      0.41    0.41    0.41  -0.00 |     1    1.3     1    0    3  0.02
+UUP      0.33    0.33    0.33  -0.00 |     1    1.3     1    1    2  0.02
+SDLP     0.30    0.30    0.30   0.00 |     2    1.9     2    1    2  0.02
+SF       0.73    0.73    0.73  -0.00 |     7    7.4     7    6    8  0.02
+Oth      3.78    3.93    3.83   0.15 |    14   14.0    14   10   18  0.91
+seats where central winner has P(win)<0.5: 56  modal winner != central winner: 2
+max |mean seat share - central| = 1.552  mean abs over contested cells (det share>5): 0.098
+expected seats (sum pwin): {'Lab': np.float64(281.3), 'Ref': np.float64(127.2), 'PC': np.float64(5.8), 'Con': np.float64(113.2), 'LD': np.float64(67.3), 'Grn': np.float64(6.1), 'SNP': np.float64(18.6), 'DUP': np.float64(4.5), 'All': np.float64(1.3), 'UUP': np.float64(1.3), 'SDLP': np.float64(1.9), 'SF': np.float64(7.4), 'Oth': np.float64(14.0)}
+--- no seat noise
+party   det_v mc_mean  mc_med   bias | det_s mean_s med_s   p5  p95  sd_v
+Lab     25.48   25.49   25.45   0.01 |   300  294.0   295  199  384  2.34
+Ref     23.23   23.17   23.17  -0.05 |   109  115.9   109   25  231  2.39
+PC       0.95    0.94    0.94  -0.01 |     6    6.0     6    4    7  0.07
+Con     20.25   20.22   20.25  -0.03 |   113  111.0   108   50  180  2.26
+LD      10.81   10.87   10.82   0.06 |    70   70.5    71   60   78  1.70
+Grn     10.90   10.84   10.83  -0.06 |     5    5.1     5    4    7  1.84
+SNP      2.23    2.23    2.23  -0.01 |    17   17.1    17    8   32  0.15
+DUP      0.60    0.60    0.60  -0.00 |     5    5.0     5    5    5  0.00
+All      0.41    0.41    0.41   0.00 |     1    1.0     1    1    1  0.00
+UUP      0.33    0.33    0.33   0.00 |     1    1.0     1    1    1  0.00
+SDLP     0.30    0.30    0.30  -0.00 |     2    2.0     2    2    2  0.00
+SF       0.73    0.73    0.73   0.00 |     7    7.0     7    7    7  0.00
+Oth      3.78    3.87    3.79   0.09 |    14   14.4    14   11   18  0.96
+seats where central winner has P(win)<0.5: 16  modal winner != central winner: 0
+max |mean seat share - central| = 1.506  mean abs over contested cells (det share>5): 0.063
+expected seats (sum pwin): {'Lab': np.float64(294.0), 'Ref': np.float64(115.9), 'PC': np.float64(6.0), 'Con': np.float64(111.0), 'LD': np.float64(70.5), 'Grn': np.float64(5.1), 'SNP': np.float64(17.1), 'DUP': np.float64(5.0), 'All': np.float64(1.0), 'UUP': np.float64(1.0), 'SDLP': np.float64(2.0), 'SF': np.float64(7.0), 'Oth': np.float64(14.4)}
+--- no seat noise, no lambda
+party   det_v mc_mean  mc_med   bias | det_s mean_s med_s   p5  p95  sd_v
+Lab     25.48   25.47   25.42  -0.01 |   300  294.5   296  203  384  2.34
+Ref     23.23   23.19   23.19  -0.04 |   109  115.7   108   29  227  2.40
+PC       0.95    0.94    0.94  -0.00 |     6    6.0     6    4    7  0.07
+Con     20.25   20.22   20.25  -0.03 |   113  110.8   108   51  178  2.26
+LD      10.81   10.87   10.81   0.05 |    70   70.8    71   62   79  1.70
+Grn     10.90   10.85   10.84  -0.05 |     5    4.9     5    4    6  1.84
+SNP      2.23    2.23    2.23  -0.00 |    17   16.9    17    8   30  0.15
+DUP      0.60    0.60    0.60  -0.00 |     5    5.0     5    5    5  0.00
+All      0.41    0.41    0.41   0.00 |     1    1.0     1    1    1  0.00
+UUP      0.33    0.33    0.33   0.00 |     1    1.0     1    1    1  0.00
+SDLP     0.30    0.30    0.30  -0.00 |     2    2.0     2    2    2  0.00
+SF       0.73    0.73    0.73   0.00 |     7    7.0     7    7    7  0.00
+Oth      3.78    3.87    3.79   0.09 |    14   14.4    14   11   18  0.96
+seats where central winner has P(win)<0.5: 16  modal winner != central winner: 0
+max |mean seat share - central| = 1.105  mean abs over contested cells (det share>5): 0.053
+expected seats (sum pwin): {'Lab': np.float64(294.5), 'Ref': np.float64(115.7), 'PC': np.float64(6.0), 'Con': np.float64(110.8), 'LD': np.float64(70.8), 'Grn': np.float64(4.9), 'SNP': np.float64(16.9), 'DUP': np.float64(5.0), 'All': np.float64(1.0), 'UUP': np.float64(1.0), 'SDLP': np.float64(2.0), 'SF': np.float64(7.0), 'Oth': np.float64(14.4)}
+--- seat noise only (sampling ~0)
+party   det_v mc_mean  mc_med   bias | det_s mean_s med_s   p5  p95  sd_v
+Lab     25.48   25.47   25.46  -0.01 |   300  285.8   286  272  300  0.23
+Ref     23.23   23.21   23.21  -0.01 |   109  122.8   123  108  138  0.24
+PC       0.95    0.94    0.94  -0.00 |     6    5.9     6    4    8  0.05
+Con     20.25   20.23   20.23  -0.02 |   113  112.3   112  101  124  0.23
+LD      10.81   10.83   10.83   0.02 |    70   68.5    69   64   73  0.17
+Grn     10.90   10.90   10.90  -0.01 |     5    5.5     5    4    7  0.18
+SNP      2.23    2.23    2.23  -0.00 |    17   18.6    19   13   24  0.07
+DUP      0.60    0.60    0.60  -0.00 |     5    4.5     4    3    6  0.02
+All      0.41    0.41    0.41  -0.00 |     1    1.3     1    0    3  0.02
+UUP      0.33    0.33    0.33  -0.00 |     1    1.3     1    1    2  0.02
+SDLP     0.30    0.30    0.30   0.00 |     2    1.9     2    1    2  0.02
+SF       0.73    0.73    0.73  -0.00 |     7    7.4     7    6    8  0.02
+Oth      3.78    3.83    3.83   0.05 |    14   14.2    14   11   17  0.09
+seats where central winner has P(win)<0.5: 41  modal winner != central winner: 0
+max |mean seat share - central| = 0.244  mean abs over contested cells (det share>5): 0.036
+expected seats (sum pwin): {'Lab': np.float64(285.8), 'Ref': np.float64(122.8), 'PC': np.float64(5.9), 'Con': np.float64(112.3), 'LD': np.float64(68.5), 'Grn': np.float64(5.5), 'SNP': np.float64(18.6), 'DUP': np.float64(4.5), 'All': np.float64(1.3), 'UUP': np.float64(1.3), 'SDLP': np.float64(1.9), 'SF': np.float64(7.4), 'Oth': np.float64(14.2)}

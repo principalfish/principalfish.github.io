@@ -1,0 +1,4 @@
+recipe fallback swing (expect 0/0): {1: {20: 0.0, 21: 0.0}}
+mixed-year deltas: {1: {20: 0.0, 21: 2.0}, 2: {20: 3.0, 21: -1.0}}
+2022 reported-incl-NOTA raw: corrected mean +0.6433 (n=31), legacy mean +12.4969; corrected centred MS 197.37, legacy centred MS 196.33
+   corrected raw-poll mean +0.8322

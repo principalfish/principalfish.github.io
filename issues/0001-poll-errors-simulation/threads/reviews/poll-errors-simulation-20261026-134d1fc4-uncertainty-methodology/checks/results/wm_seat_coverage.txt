@@ -1,0 +1,12 @@
+pooled sigma_seat_raw 4.9029 sigma_lambda 0.3818 mean_lambda 0.34
+raw u: plain SD 6.831 robust SD 4.903  kurtosis(excess) 22.60
+in-sample: frac |u_raw - 0| < 1.645*sigma_raw (engine 90% seat-noise interval): 0.850
+  outside 90% gaussian: observed 0.1502 vs nominal 0.1000
+  outside 99% gaussian: observed 0.0514 vs nominal 0.0100
+  outside 99.9% gaussian: observed 0.0260 vs nominal 0.0010
+
+Leave-one-pair-out coverage of (y - a) by engine seat+lambda distribution (centred seat noise, lambda~N(0,sigma_l^2)):
+  hold out 2010→2015: train sigma_seat_raw=4.933 sigma_lambda=0.419 (held lam_hat=0.238); coverage all cells 0.886 (n=2664), contenders 0.878
+  hold out 2015→2017: train sigma_seat_raw=4.990 sigma_lambda=0.361 (held lam_hat=0.437); coverage all cells 0.879 (n=3011), contenders 0.890
+  hold out 2017→2019: train sigma_seat_raw=5.171 sigma_lambda=0.436 (held lam_hat=0.118); coverage all cells 0.910 (n=2869), contenders 0.925
+  hold out 2019n→2024: train sigma_seat_raw=4.540 sigma_lambda=0.295 (held lam_hat=0.567); coverage all cells 0.724 (n=2589), contenders 0.658

@@ -49,7 +49,7 @@ Phil's answers (2026-10-30): equal weight across all six transitions; the two ne
 
 After that:
 - **2a-H2:** revise the experiment contract with equal weights across six and report-only new folds (decided 2026-10-30). Write a new report file; the committed 15/20 report stays untouched. Pause before the batch.
-- **2a-H3:** run the multi-hour checkpointed batch and report.
+- **2a-H3:** run the checkpointed batch (the 15/20 run took ~28 min on 2026-10-29; six transitions estimated 45–90 min) and report.
 
 The approved plan for H1–H3 is in this issue's `plan.md` Notes (2026-10-30) and the thread 4 Notes.
 

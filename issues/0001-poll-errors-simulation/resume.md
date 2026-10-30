@@ -4,15 +4,17 @@ Updated 2026-10-30 (builder, Piece 2a-H1 at its review pause). Issue state: `bui
 
 ## Where we are
 
-**Piece 2a-H1 is committed (`eaa73607`) and pushed.** All work is committed; nothing is running.
+**2a-H1 (`eaa73607`) and 2a-H2 (`88bfc2a0`) are committed and pushed. 2a-H3, the six-transition batch, was started 2026-10-30 with Phil's go-ahead.**
 
 Check before doing anything else:
-- branch `poll-errors-simulation`, HEAD `eaa73607`, clean tree (apart from `model_output_trends.json` if a test run dirtied it);
-- `sha256sum data/models/westminster/historical-transitions-v1.json` = `3e351456e756169699eacf15f53b7a06cb111fb8a9370c3ef4152b5b3ad88bb5`; it loads via `model_support.westminster_historical_transitions.load_historical_transitions()`.
+- branch `poll-errors-simulation`, HEAD `88bfc2a0`;
+- the batch: from `data/`, `OPENBLAS_NUM_THREADS=1 ./election_data/bin/python scripts/validate_westminster_conversion.py --contract six-transition --checkpoint-dir /tmp/westminster-conversion-checkpoints-six`; log in the session scratchpad `h3-run.log`. If interrupted, re-run the identical command to reuse completed checkpoints;
+- output: `data/models/westminster/uncertainty_conversion_historical_report.json` (the only file H3 writes). The 15/20 report stays `e732edbd…b317`;
+- contracts: four-transition `ec72d608…7437`, six-transition `0fbda040e90b9bef1a3960c260965b6c0dcd257ba06e9eb329d7f7a7e5c30b49`.
 
-## Next: 2a-H2 (don't start unasked)
+## Next
 
-Phil's answers (2026-10-30): equal weight across all six transitions; the two new held-out folds are report-only (no gate, no guard). Revise the experiment contract per `plan.md` 2a-H2 and pause before the batch run.
+When the run finishes: verify the report hash, check the console route returns 200, and present every variant, both report-only folds, and 2024's intervals to Phil. Pass → W-1 decisions, then 2a engine integration (off by default). Fail → the replan-with-new-assumptions question; 1983–92 becomes a candidate.
 
 ## Decisions taken in this session (2026-10-30)
 

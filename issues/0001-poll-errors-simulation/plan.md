@@ -21,7 +21,7 @@ Reviews of the branch (all six) are in `threads/reviews/`.
 
 **Start with `resume.md`** in this folder. It has the state checks, the decision chain, the next open point and the standing constraints. In short:
 
-**Thread 4, Piece 2a** (correlated vote-to-seat conversion error) is being worked through Pieces **2a-H1 → 2a-H3** below. **2a-H1 is done (`eaa73607`); 2a-H2 is next.**
+**Thread 4, Piece 2a** (correlated vote-to-seat conversion error) is being worked through Pieces **2a-H1 → 2a-H3** below. **2a-H1 (`eaa73607`) and 2a-H2 (`88bfc2a0`) are done; 2a-H3 (the run) is in progress.**
 - The offline joint validation completed: cluster variants cover 15/20 against the unchanged 17/20 gate, and no-cluster controls cover 13/20. The decision was `stop_before_engine`.
 - Phil chose to investigate more comparable history. On 2026-10-30 he decided:
   - **scope A:** 1997→2001 and 2005→2010; the 1980s/early 1990s are not included;
@@ -124,7 +124,7 @@ Remaining work, in order. Pieces 2a-H1 to 2a-H3 are written out in full here, be
 
 - [x] Threads 1–4: 40 completed checkpoints, recorded with their commits in each thread plan's `## Checkpoints` (thread 1: 12, thread 2: 16, thread 3: 8, thread 4: 4).
 - [x] T4 · Piece 2a-H1: 1997→2001 and 2005→2010 fixture built and audited (`eaa73607`).
-- [ ] T4 · Piece 2a-H2: six-transition experiment contract revised and tested.
+- [x] T4 · Piece 2a-H2: six-transition experiment contract revised and tested (`88bfc2a0`).
 - [ ] T4 · Piece 2a-H3: six-transition experiment run and reported to Phil.
 - [ ] T4 · Piece 2a: Correlated vote-to-seat conversion error (ticked only after H3 passes and the engine integration is built).
 - [ ] T4 · Piece 2b: Heavy seat-level tails.
@@ -181,4 +181,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-10-30: 2a-H2 implemented (uncommitted). New contract `bce3c3f55090dd05a4e1096308fd3161d04bf13b0038d5f83215178e4d7d82f2` via `--contract six-transition`; four-transition stays default and reproduces the committed report. Phil confirmed: 2005n unknown_other is its own additive, unfitted column (it swings out in 2010; 2010 Alliance/unnamed Greens are excluded new candidacies); Speaker votes count under Others in regional totals as in the DB path (seat still excluded); synthetic recovery trains on 5 synthetic transitions to match the folds; 1997/2001 seats get internal ids from 1,000,000. Timing correction: the 15/20 batch took ~28 min (checkpoints 09:02→09:30, 2026-10-29), not multiple hours.
 - 2026-10-30: H2 analysis loop. Correctness found that elections.db stores all Scottish 2010 minor parties (Greens included) as Others; Phil chose to fold Scottish 2005n Green votes into Others for transitions into DB 2010 (fixture unchanged; recorded in the contract, new six-transition hash `0fbda040e90b9bef1a3960c260965b6c0dcd257ba06e9eb329d7f7a7e5c30b49`; four-transition hash unchanged). A party × nation audit found no other case of that pattern. Phil accepted as documented limits: NI Alliance/NI Greens and ~120 English Green seats unnamed in 2005n (their 2010 cells excluded as new candidacies); NI 2005n names no minor parties.
 - **Open data-quality issue (logged 2026-10-30, not in scope for H2):** the DB's 2010 NI rows have no Conservative row (UCUNF appears stored as UUP) and no UUP votes in Belfast West, Mid Ulster and Fermanagh & South Tyrone (Fermanagh likely a genuine stand-aside). This also feeds the existing 2010→2015 transition. Investigate read-only against sources before any DB correction; any write needs Phil's go-ahead.
-
+- 2026-10-30: 2a-H2 committed as `88bfc2a0` and pushed. Phil gave the go-ahead for the H3 batch the same day.

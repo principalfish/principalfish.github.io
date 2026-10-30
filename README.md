@@ -95,6 +95,10 @@ records the fitting assumptions and gates. A failed or unidentified fit stops
 before engine integration. `--output /tmp/conversion-experiment.json` selects a
 scratch report; the default is
 `data/models/westminster/uncertainty_conversion_prototype_report.json`.
+`--contract six-transition` also trains every fold on the frozen 1997→2001 and
+2005n→2010 transitions and adds two report-only folds that hold them out; its
+default report is `data/models/westminster/uncertainty_conversion_historical_report.json`,
+and the console shows it at `/westminster/uncertainty/conversion-validation/six-transition`.
 Each completed fit and evaluation is saved atomically under the temporary
 directory's `westminster-conversion-checkpoints/`. Repeating the same command
 reuses verified stages with matching source, config, input and numerical

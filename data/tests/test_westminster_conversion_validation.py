@@ -23,7 +23,13 @@ from model_support.westminster_conversion_validation import (
     NU_GRID, VARIANTS, Variant, _summary_draws, experiment_contract,
     fit_stability, fit_variant,
 )
+from model_support.westminster_validation import fingerprint
 from tests.test_monte_carlo import WORLD, world_config
+
+# The committed four-transition report's statistical contract, and the
+# six-transition contract that adds the frozen 1997→2001 and 2005n→2010 pairs.
+FOUR_TRANSITION_CONTRACT_HASH = "ec72d608bec5c35b341390d41fba27910cb171de5b624416c44b29b285db7437"
+SIX_TRANSITION_CONTRACT_HASH = "0fbda040e90b9bef1a3960c260965b6c0dcd257ba06e9eb329d7f7a7e5c30b49"
 
 
 @pytest.fixture()
@@ -191,7 +197,7 @@ def test_recovery_rejects_a_plausible_fit_that_misses_a_known_better_point(
 ) -> None:
     def bad_fit(
         training: tuple[ConversionPair, ...], variant: Variant, *,
-        config: UncertaintyConfig, fit_draws: int,
+        config: UncertaintyConfig, fit_draws: int, identification_limitation: str,
     ) -> dict[str, object]:
         parameters = PrototypeParameters(
             1.5, 1.0 if variant.seat_tails else 0.0,
@@ -344,3 +350,58 @@ def test_full_fit_is_identical_with_and_without_profile_latent_cache(
                         lambda context, nu, lambda_df, count: context)
     uncached = fit_variant(training, variant, config=config, fit_draws=9)
     assert cached == uncached
+
+
+def test_contracts_are_pinned_and_six_transition_changes_only_declared_fields() -> None:
+    four, six = experiment_contract(), experiment_contract("six-transition")
+    assert fingerprint(four) == FOUR_TRANSITION_CONTRACT_HASH
+    assert fingerprint(six) == SIX_TRANSITION_CONTRACT_HASH
+    assert experiment_contract("four-transition") == four
+    changed = {key for key in six if six[key] != four.get(key)}
+    assert changed == {"schema", "lambda", "coverage_gate", "rms_gate", "recovery",
+                       "transitions"}
+    assert six["coverage_gate"]["covered"] == 17 and six["coverage_gate"]["count"] == 20
+    assert six["recovery"]["training_transitions"] == 5
+    assert four["recovery"]["training_transitions"] == 3
+    assert {**six["recovery"], "training_transitions": 3} == four["recovery"]
+    assert experiment.recovery_transitions() == 3
+    assert experiment.recovery_transitions("six-transition") == 5
+    with pytest.raises(ValueError, match="Unknown"):
+        experiment_contract("seven-transition")
+
+
+def test_five_training_transitions_give_five_lambda_df(
+    pair: ConversionPair, config: UncertaintyConfig,
+) -> None:
+    training = [replace(pair, label=f"training-{index}", input_hash=hashlib.sha256(str(index).encode()).hexdigest())
+                for index in range(5)]
+    fit = fit_variant(training, Variant("control", False, False, True), config=config,
+                      fit_draws=4, identification_limitation=experiment.SIX_TRANSITION_LIMITATION)
+    assert fit["parameters"]["lambda_df"] == 5
+    assert fit["diagnostics"]["identification_limitation"] == experiment.SIX_TRANSITION_LIMITATION
+    held = replace(pair, label="held", input_hash=hashlib.sha256(b"1").hexdigest())
+    with pytest.raises(ValueError, match="appears in training"):
+        experiment.evaluate_fold(held, fit, config=config, count=4)
+
+
+def test_longer_recovery_keeps_the_first_three_realizations(config: UncertaintyConfig) -> None:
+    known = PrototypeParameters(1.5, 1.0, 4.0, 0.3, 3)
+    three = experiment._recovery_pairs(known, config=config, seats_per_nation=8)
+    five = experiment._recovery_pairs(known, config=config, seats_per_nation=8, transitions=5)
+    assert len(five) == 5
+    assert [pair.input_hash for pair in five[:3]] == [pair.input_hash for pair in three]
+    assert len({pair.input_hash for pair in five}) == 5
+
+
+def test_six_transition_recovery_runs_end_to_end(config: UncertaintyConfig) -> None:
+    result = experiment.synthetic_recovery(
+        config=config, seats_per_nation=8, fit_draw_counts=(128, 256),
+        contract="six-transition",
+    )
+    assert result["contract"]["training_transitions"] == 5
+    joint = result["details"][1]
+    assert joint["training_pairs"] == 5
+    assert all(fit["parameters"]["lambda_df"] == 5 for fit in joint["fits"])
+    assert all(len(fit["training_pairs"]) == 5 for row in result["details"]
+               for fit in row["fits"])
+    assert result["passed"], [row["reasons"] for row in result["details"]]

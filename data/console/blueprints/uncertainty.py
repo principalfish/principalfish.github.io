@@ -49,6 +49,10 @@ from model_support.uncertainty import (
 )
 from model_support import westminster_validation
 from model_support import westminster_conversion_report
+from model_support.westminster_conversion_validation import (
+    FOUR_TRANSITION,
+    SIX_TRANSITION,
+)
 from model_support.monte_carlo import config_hash
 from models import Map
 
@@ -420,20 +424,36 @@ def uncertainty_validation() -> str:
     )
 
 
-@bp.route("/westminster/uncertainty/conversion-validation")
-def uncertainty_conversion_validation() -> str:
-    """Read saved joint-experiment evidence without running the experiment."""
+def _conversion_validation(contract: str) -> str:
     report = None
     error = None
     stale = False
+    missing = False
     try:
-        report = westminster_conversion_report.read_report()
-        stale = report["identity"]["config_hash"] != config_hash(
-            load_uncertainty_config(),
-        )
+        if (contract != FOUR_TRANSITION
+                and not westminster_conversion_report.report_path(contract).exists()):
+            missing = True
+        else:
+            report = westminster_conversion_report.read_report(contract=contract)
+            stale = report["identity"]["config_hash"] != config_hash(
+                load_uncertainty_config(),
+            )
     except (CalibrationError, UncertaintyConfigError) as exc:
         error = str(exc)
     return render_template(
         "uncertainty_conversion_validation.html",
         report=report, error=error, stale=stale, fmt=fmt,
+        contract=contract, missing=missing,
     )
+
+
+@bp.route("/westminster/uncertainty/conversion-validation")
+def uncertainty_conversion_validation() -> str:
+    """Read saved joint-experiment evidence without running the experiment."""
+    return _conversion_validation(FOUR_TRANSITION)
+
+
+@bp.route("/westminster/uncertainty/conversion-validation/six-transition")
+def uncertainty_conversion_validation_historical() -> str:
+    """The six-transition experiment's saved evidence, if it has been run."""
+    return _conversion_validation(SIX_TRANSITION)

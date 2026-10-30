@@ -75,8 +75,68 @@ VARIANTS = tuple(
 )
 
 
-def experiment_contract() -> dict[str, Any]:
-    """Return the numerical/statistical contract before evaluating held-out data."""
+FOUR_TRANSITION = "four-transition"
+SIX_TRANSITION = "six-transition"
+CONTRACTS = (FOUR_TRANSITION, SIX_TRANSITION)
+FOUR_TRANSITION_LIMITATION = (
+    "Four transitions; summary fit and bounded profiles do not identify every "
+    "component. Zero components/Gaussian endpoints are not failures by themselves."
+)
+SIX_TRANSITION_LIMITATION = (
+    "Six transitions (five per fold); summary fit and bounded profiles do not "
+    "identify every component. Zero components/Gaussian endpoints are not "
+    "failures by themselves."
+)
+
+
+def recovery_transitions(contract: str = FOUR_TRANSITION) -> int:
+    """Synthetic recovery trains on as many transitions as each historical fold."""
+    return {FOUR_TRANSITION: 3, SIX_TRANSITION: 5}[contract]
+
+
+def experiment_contract(contract: str = FOUR_TRANSITION) -> dict[str, Any]:
+    """Return the numerical/statistical contract before evaluating held-out data.
+
+    The four-transition contract is the committed 15/20 experiment's, unchanged.
+    The six-transition contract adds the frozen 1997→2001 and 2005n→2010
+    transitions to every fold's training, plus two report-only folds.
+    """
+    if contract not in CONTRACTS:
+        raise ValueError(f"Unknown conversion experiment contract: {contract!r}")
+    base = _four_transition_contract()
+    if contract == FOUR_TRANSITION:
+        return base
+    base["schema"] = "westminster-conversion-experiment-v2-six-transition"
+    base["lambda"] = (
+        "zero-centred; training lambda-estimate RMS; predictive df=training count "
+        "(five in every fold); no variance normalization/deconvolution"
+    )
+    base["coverage_gate"] = {
+        "covered": 17, "count": 20,
+        "cells": "top five parties by actual seats in each of the four original database folds",
+        "excluded": "report-only historical folds add no cells",
+    }
+    base["rms_gate"] = (
+        "each rank's actual four-original-fold RMS within 5th-95th predictive "
+        "reference; preserve leader/runner pairing within fold; report-only folds excluded"
+    )
+    base["recovery"]["training_transitions"] = recovery_transitions(contract)
+    base["transitions"] = {
+        "original": "the four database transitions (2010→2015, 2015→2017, 2017→2019, 2019n→2024)",
+        "historical": ["1997→2001", "2005n→2010"],
+        "historical_source": "frozen fixture historical-transitions-v1.json, read-only; 2010 from the database, read-only",
+        "weights": "all six transitions equal",
+        "gated_folds": "each original transition held out; training = its three other originals plus both historical (five)",
+        "report_only_folds": "each historical transition held out; training = the four originals plus the other historical (five)",
+        "report_only_scope": "no gate and no guard: coverage, standardized RMS, fit stability, fit identification, lambda attribution and vote-mean drift use gated folds only",
+        "unknown_other": "2005 notional unnamed minor-party votes keep their own additive column, like the database Others: never fitted, split or zeroed",
+        "speaker_votes": "joined to Others, as the database stores the Speaker under Other",
+        "database_others_coding": "Scottish 2005n Green votes join Others when the successor is the database 2010 result, which codes every Scottish minor party, Greens included, as Others",
+    }
+    return base
+
+
+def _four_transition_contract() -> dict[str, Any]:
     return {
         "schema": "westminster-conversion-experiment-v1",
         "estimator": "joint forward-summary minimum distance; not latent ML",
@@ -410,6 +470,7 @@ def _allocation(
 def fit_variant(
     training: Sequence[ConversionPair], variant: Variant, *,
     config: UncertaintyConfig, fit_draws: int = 128,
+    identification_limitation: str = FOUR_TRANSITION_LIMITATION,
 ) -> dict[str, Any]:
     """Fit only training designs, reporting the complete bounded discrete profile."""
     if fit_draws < 2:
@@ -471,7 +532,7 @@ def fit_variant(
             "integration_fit_issues": issues,
             "near_profile_variance_fraction_change": near_fraction_change,
             "near_profile_prediction_reference_sd": near_prediction_change,
-            "identification_limitation": "Four transitions; summary fit and bounded profiles do not identify every component. Zero components/Gaussian endpoints are not failures by themselves.",
+            "identification_limitation": identification_limitation,
         },
     }
 
@@ -626,12 +687,15 @@ def evaluate_fold(
 
 def _recovery_pairs(
     parameters: PrototypeParameters, *, config: UncertaintyConfig,
-    seats_per_nation: int = 96,
+    seats_per_nation: int = 96, transitions: int = 3,
 ) -> tuple[ConversionPair, ...]:
-    """Three declared synthetic realizations; source-scale guesses use their data."""
+    """Declared synthetic realizations; source-scale guesses use their data.
+
+    A larger count keeps the first realizations unchanged and appends more.
+    """
     pairs = []
     n, k = 4 * seats_per_nation, 4
-    for transition in range(3):
+    for transition in range(transitions):
         rng = np.random.default_rng(RECOVERY_SEED + transition)
         baseline = rng.dirichlet(np.array([9.0, 7.0, 4.0, 3.0]), size=n) * 100
         region = np.repeat(np.arange(4), seats_per_nation).astype(np.intp)
@@ -668,6 +732,7 @@ def _recovery_pairs(
 def synthetic_recovery(
     *, config: UncertaintyConfig, seats_per_nation: int = 96,
     fit_draw_counts: tuple[int, int] = (128, 256),
+    contract: str = FOUR_TRANSITION,
 ) -> dict[str, Any]:
     """Evaluate declared recovery guards before examining historical joint scores.
 
@@ -680,20 +745,26 @@ def synthetic_recovery(
         ("student_cluster_predictive_lambda", PrototypeParameters(1.5, 1.0, 4.0, 0.3, 3),
          Variant("recovery_joint", True, True, True)),
     )
+    transitions = recovery_transitions(contract)
+    limitation = (FOUR_TRANSITION_LIMITATION if contract == FOUR_TRANSITION
+                  else SIX_TRANSITION_LIMITATION)
     parity = kernel_parity(config=config)
     details = []
     for name, known, variant in scenarios:
-        pairs = _recovery_pairs(known, config=config, seats_per_nation=seats_per_nation)
-        fits = [fit_variant(pairs, variant, config=config, fit_draws=count)
+        pairs = _recovery_pairs(known, config=config, seats_per_nation=seats_per_nation,
+                                transitions=transitions)
+        fits = [fit_variant(pairs, variant, config=config, fit_draws=count,
+                            identification_limitation=limitation)
                 for count in fit_draw_counts]
         low, high = fits
         stability = fit_stability(low, high)
         context = _training_context(pairs, config)
-        # Lambda scale is inferred from the three synthetic realizations; its
-        # population value is not recoverable precisely from only three draws.
+        # Lambda scale is inferred from the few synthetic realizations; its
+        # population value is not recoverable precisely from so few draws. The
+        # predictive df is the training count, as in every fitted fold.
         truth_with_fitted_lambda = replace(
             known, sigma_lambda=context.lambda_scale,
-            lambda_df=3 if variant.predictive_lambda else None,
+            lambda_df=len(pairs) if variant.predictive_lambda else None,
         )
         truth_objective, _ = _objective(context, truth_with_fitted_lambda, fit_draw_counts[1])
         fitted = PrototypeParameters(**high["parameters"])
@@ -726,17 +797,27 @@ def synthetic_recovery(
             "optimizer_recovered": optimizer_recovered,
             "passed": not reasons, "reasons": reasons,
         })
+    recovery_contract: dict[str, Any] = {
+        "seed": RECOVERY_SEED, "seats_per_nation": seats_per_nation,
+        "seat_scale_guard": "max(0.25pt,40% of known scale)",
+        "cluster_scale_guard": "max(0.35pt,40% of known scale)",
+        "known_point_objective_delta": 5.0,
+        "known_point_support_is_diagnostic_not_gate": True,
+        "maximum_optimizer_regret_against_known_point": 5.0,
+        "limitations": "Two fixed three-transition realizations, heuristic recovery guards; no confidence-coverage claim; optimizer and Monte Carlo stability remain required",
+    }
+    if contract != FOUR_TRANSITION:
+        recovery_contract["training_transitions"] = transitions
+        recovery_contract["limitations"] = (
+            f"Two fixed {transitions}-transition realizations (the first three "
+            "are the four-transition contract's), heuristic recovery guards; no "
+            "confidence-coverage claim; optimizer and Monte Carlo stability "
+            "remain required"
+        )
     return {
         "passed": parity["passed"] and all(row["passed"] for row in details),
         "details": details, "kernel_parity": parity,
-        "contract": {"seed": RECOVERY_SEED, "seats_per_nation": seats_per_nation,
-                     "seat_scale_guard": "max(0.25pt,40% of known scale)",
-                     "cluster_scale_guard": "max(0.35pt,40% of known scale)",
-                     "known_point_objective_delta": 5.0,
-                     "known_point_support_is_diagnostic_not_gate": True,
-                     "maximum_optimizer_regret_against_known_point": 5.0,
-            "maximum_optimizer_regret_against_known_point": 5.0,
-                     "limitations": "Two fixed three-transition realizations, heuristic recovery guards; no confidence-coverage claim; optimizer and Monte Carlo stability remain required"},
+        "contract": recovery_contract,
     }
 
 

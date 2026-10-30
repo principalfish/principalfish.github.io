@@ -11,8 +11,9 @@ import hashlib
 import json
 import math
 import sqlite3
-from collections.abc import Iterator
-from dataclasses import dataclass
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from dataclasses import asdict, dataclass
+from types import MappingProxyType
 from typing import Any
 
 import numpy as np
@@ -25,8 +26,16 @@ from model_support.monte_carlo import (
     _python_sum,
     share_scale_array,
 )
+from model_support.calibration import CalibrationError, ElectionVotes
 from model_support.uncertainty import UncertaintyConfig
-from model_support.westminster_validation import load_pairs
+from model_support.westminster_historical_transitions import (
+    DATABASE_2010 as HISTORICAL_DATABASE_2010,
+    DATABASE_MAP as HISTORICAL_DATABASE_MAP,
+    HistoricalElection,
+    HistoricalTransitions,
+    load_historical_transitions,
+)
+from model_support.westminster_validation import HistoricalPair, historical_pair, load_pairs
 from scripts import calibrate_uncertainty as source_inputs
 
 FloatArray = NDArray[np.float64]
@@ -153,46 +162,227 @@ def pair_from_inputs(
     )
 
 
+def conversion_pair(
+    historical: HistoricalPair, earlier: ElectionVotes,
+    nation_of_region: Callable[[int], str],
+) -> ConversionPair:
+    """Arrange one fitted transition as seat × party arrays, whatever its source."""
+    seats = historical.cells.seats
+    parties = seats[0].party_ids
+    seat_ids = tuple(seat.seat_id for seat in seats)
+    regions = tuple(sorted({historical.later.seat_region[seat] for seat in seat_ids}))
+    nations = tuple(nation_of_region(region) for region in regions)
+    region_index = {region: index for index, region in enumerate(regions)}
+    seat_index = {seat: index for index, seat in enumerate(seat_ids)}
+    party_index = {party: index for index, party in enumerate(parties)}
+    actual = np.array([
+        [historical.later.seat_votes[seat].get(party, 0.0) for party in parties]
+        for seat in seat_ids
+    ])
+    actual_turnout = actual.sum(axis=1)
+    actual = actual / actual_turnout[:, None] * 100.0
+    turnout = np.array([sum(earlier.seat_votes[seat].values()) for seat in seat_ids])
+    return ConversionPair(
+        historical.fit.label, parties, seat_ids, regions,
+        np.array([region_index[historical.later.seat_region[seat]] for seat in seat_ids], dtype=np.intp),
+        nations, np.stack([seat.baseline for seat in seats]),
+        np.stack([seat.additive for seat in seats]),
+        np.stack([seat.proportional for seat in seats]), actual, turnout,
+        actual_turnout,
+        np.array([seat_index[cell.seat_id] for cell in historical.cells.cells], dtype=np.intp),
+        np.array([party_index[cell.party_id] for cell in historical.cells.cells], dtype=np.intp),
+        historical.input_hash, historical.fit.raw_spread.sd,
+        np.array(historical.fit.residuals.raw),
+    )
+
+
 def load_conversion_pairs(
     connection: sqlite3.Connection, config: UncertaintyConfig,
     *, nation_by_region: dict[int, str] | None = None,
 ) -> tuple[ConversionPair, ...]:
     """Read complete earlier turnout and explicit nations in the caller's RO txn."""
     names = dict(connection.execute("SELECT id, name FROM regions"))
-    pairs = []
-    for historical in load_pairs(connection, config):
-        earlier = source_inputs.load_election(connection, historical.fit.earlier)
-        seats = historical.cells.seats
-        parties = seats[0].party_ids
-        seat_ids = tuple(seat.seat_id for seat in seats)
-        regions = tuple(sorted({historical.later.seat_region[seat] for seat in seat_ids}))
-        nations = tuple(
-            nation_by_region[region] if nation_by_region is not None
-            else nation_for_region(names[region])
-            for region in regions
+
+    def nation(region: int) -> str:
+        if nation_by_region is not None:
+            return nation_by_region[region]
+        return nation_for_region(names[region])
+
+    return tuple(
+        conversion_pair(
+            historical,
+            source_inputs.load_election(connection, historical.fit.earlier).votes,
+            nation,
         )
-        region_index = {region: index for index, region in enumerate(regions)}
-        seat_index = {seat: index for index, seat in enumerate(seat_ids)}
-        party_index = {party: index for index, party in enumerate(parties)}
-        actual = np.array([
-            [historical.later.seat_votes[seat].get(party, 0.0) for party in parties]
-            for seat in seat_ids
-        ])
-        actual_turnout = actual.sum(axis=1)
-        actual = actual / actual_turnout[:, None] * 100.0
-        turnout = np.array([sum(earlier.votes.seat_votes[seat].values()) for seat in seat_ids])
-        pairs.append(ConversionPair(
-            historical.fit.label, parties, seat_ids, regions,
-            np.array([region_index[historical.later.seat_region[seat]] for seat in seat_ids], dtype=np.intp),
-            nations, np.stack([seat.baseline for seat in seats]),
-            np.stack([seat.additive for seat in seats]),
-            np.stack([seat.proportional for seat in seats]), actual, turnout,
-            actual_turnout,
-            np.array([seat_index[cell.seat_id] for cell in historical.cells.cells], dtype=np.intp),
-            np.array([party_index[cell.party_id] for cell in historical.cells.cells], dtype=np.intp),
-            historical.input_hash, historical.fit.raw_spread.sd,
-            np.array(historical.fit.residuals.raw),
-        ))
+        for historical in load_pairs(connection, config)
+    )
+
+
+# The 2005 notional results' unnamed minor-party remainder has no database
+# party. It keeps its own column, outside every named party and outside the
+# database's Others, and is additive like Others: never fitted, never split.
+HISTORICAL_OTHER = "other"
+UNKNOWN_OTHER_PARTY_ID = -1
+UNKNOWN_OTHER_PARTY_NAME = "Unnamed minor parties (2005 notional)"
+# Database successor election -> (nation, fixture party key) pairs that its
+# result codes as Others. The database's 2010 result stores every Scottish minor
+# party, the Scottish Greens included, under Others; the fixture names the
+# 2005 Scottish Greens. Their earlier votes join Others so both elections of
+# the pair code the party alike.
+DATABASE_OTHERS_CODING: Mapping[str, frozenset[tuple[str, str]]] = MappingProxyType({
+    HISTORICAL_DATABASE_2010: frozenset({("Scotland", "green")}),
+})
+# Seats of a transition that is entirely in the fixture (1997→2001) are not in
+# the database; they get ids from this base in constituency-code order.
+FIXTURE_SEAT_ID_BASE = 1_000_000
+
+
+def _fixture_votes(
+    election: HistoricalElection, seat_ids: Mapping[str, int],
+    region_ids: Mapping[str, int], party_ids: Mapping[str, int],
+    others_coding: frozenset[tuple[str, str]] = frozenset(),
+) -> ElectionVotes:
+    """Fixture seats as database-shaped votes: aliased party ids, region ids.
+
+    The Speaker's votes join Others, as the database stores the Speaker under
+    "Other", which ``PARTY_ID_ALIASES`` folds into Others. So do the votes of
+    each (nation, party key) in ``others_coding``.
+    """
+    seat_votes: dict[int, dict[int, float]] = {}
+    seat_region: dict[int, int] = {}
+    for code, seat in sorted(election.seats.items()):
+        votes: dict[int, float] = {}
+        entries = [*seat.votes.items(), (HISTORICAL_OTHER, seat.speaker_votes)]
+        for key, value in entries:
+            if value > 0:
+                if (seat.nation, key) in others_coding:
+                    key = HISTORICAL_OTHER
+                party = party_ids[key]
+                votes[party] = votes.get(party, 0.0) + float(value)
+        if seat.unknown_other > 0:
+            votes[UNKNOWN_OTHER_PARTY_ID] = float(seat.unknown_other)
+        seat_votes[seat_ids[code]] = votes
+        seat_region[seat_ids[code]] = region_ids[seat.region]
+    return ElectionVotes(name=election.label, seat_votes=seat_votes, seat_region=seat_region)
+
+
+def _unique_ids(rows: Sequence[tuple[Any, str]], what: str) -> dict[str, int]:
+    ids: dict[str, int] = {}
+    for row_id, name in rows:
+        if name in ids:
+            raise CalibrationError(f"{what} {name!r} is not unique")
+        ids[name] = int(row_id)
+    return ids
+
+
+def historical_fixture_pairs(
+    connection: sqlite3.Connection, config: UncertaintyConfig,
+    fixture: HistoricalTransitions,
+) -> list[tuple[HistoricalPair, ElectionVotes, dict[int, str]]]:
+    """Fit each fixture transition exactly as a database transition is fitted.
+
+    Party, region and (for a database successor) seat ids come from the
+    database, read in the caller's read-only transaction; seats are matched by
+    name and region on the successor's map. Returns each transition's fitted
+    pair, its earlier votes and its region-id → region-name mapping.
+    """
+    parties = _unique_ids(connection.execute("SELECT id, name FROM parties").fetchall(),
+                          "Party")
+    named = {key for election in fixture.elections.values()
+             for seat in election.seats.values() for key in seat.votes}
+    party_ids: dict[str, int] = {}
+    for key in sorted(named | {HISTORICAL_OTHER}):
+        if fixture.parties.get(key) not in parties:
+            raise CalibrationError(f"Historical party {key!r} has no database party")
+        party = parties[fixture.parties[key]]
+        party_ids[key] = source_inputs.PARTY_ID_ALIASES.get(party, party)
+    additive = {*source_inputs.PARTY_ID_ALIASES.values(), UNKNOWN_OTHER_PARTY_ID}
+    if party_ids[HISTORICAL_OTHER] not in additive:
+        raise CalibrationError("Historical 'other' is not the database's Others aggregate")
+    results = []
+    for transition in fixture.transitions:
+        map_name = transition.later_database_map or HISTORICAL_DATABASE_MAP
+        map_row = connection.execute(
+            "SELECT id FROM maps WHERE name = ?", (map_name,),
+        ).fetchall()
+        if len(map_row) != 1:
+            raise CalibrationError(f"Map {map_name!r} found {len(map_row)} times")
+        map_id = int(map_row[0][0])
+        regions = _unique_ids(connection.execute(
+            "SELECT id, name FROM regions WHERE map_id = ?", (map_id,),
+        ).fetchall(), "Region")
+        region_names = {region: name for name, region in regions.items()}
+        earlier_election = fixture.elections[transition.earlier]
+        if any(seat.region not in regions for seat in earlier_election.seats.values()):
+            raise CalibrationError(f"{transition.label}: a region is not on {map_name!r}")
+        if transition.later_fixture_election is not None:
+            later_election = fixture.elections[transition.later_fixture_election]
+            seat_ids = {code: FIXTURE_SEAT_ID_BASE + index
+                        for index, code in enumerate(sorted(earlier_election.seats))}
+            later = _fixture_votes(later_election, seat_ids, regions, party_ids)
+            later_source: dict[str, object] = {"fixture_election": later_election.key}
+        else:
+            if transition.later_database_election is None:
+                raise CalibrationError(
+                    f"{transition.label}: transition has no successor election",
+                )
+            loaded = source_inputs.load_election(
+                connection, transition.later_database_election,
+            )
+            if loaded.map_id != map_id:
+                raise CalibrationError(f"{transition.label}: successor is not on {map_name!r}")
+            by_name: dict[tuple[str, str | None], int] = {}
+            for seat_id, seat_name, region_id in connection.execute(
+                "SELECT id, seat_name, region_id FROM seats WHERE map_id = ?", (map_id,),
+            ):
+                seat_key = (str(seat_name), region_names.get(region_id))
+                if seat_key in by_name:
+                    raise CalibrationError(f"Seat {seat_key!r} is not unique on {map_name!r}")
+                by_name[seat_key] = int(seat_id)
+            try:
+                seat_ids = {code: by_name[(seat.name, seat.region)]
+                            for code, seat in earlier_election.seats.items()}
+            except KeyError as error:
+                raise CalibrationError(
+                    f"{transition.label}: fixture seat {error} is not on {map_name!r}",
+                ) from error
+            if (len(set(seat_ids.values())) != len(seat_ids)
+                    or set(seat_ids.values()) != set(loaded.votes.seat_votes)):
+                raise CalibrationError(
+                    f"{transition.label}: fixture seats do not match the successor's seats",
+                )
+            later = loaded.votes
+            later_source = {"database_election": later.name, "map_id": map_id}
+        earlier = _fixture_votes(
+            earlier_election, seat_ids, regions, party_ids,
+            DATABASE_OTHERS_CODING.get(transition.later_database_election or "", frozenset()),
+        )
+        excluded = {seat_ids[code] for code in transition.excluded_seat_codes}
+        historical = historical_pair(
+            transition.label, earlier, later, excluded_seats=excluded,
+            config=config, additive_party_ids=additive, identity={
+                "source": "frozen historical fixture",
+                "fixture_sha256": fixture.fixture_sha256,
+                "transition": transition.label,
+                "earlier": asdict(earlier), "later": asdict(later),
+                "later_source": later_source, "excluded_seats": sorted(excluded),
+            },
+        )
+        results.append((historical, earlier, region_names))
+    return results
+
+
+def load_historical_conversion_pairs(
+    connection: sqlite3.Connection, config: UncertaintyConfig,
+    fixture: HistoricalTransitions | None = None,
+) -> tuple[ConversionPair, ...]:
+    """The fixture's transitions as conversion designs, in fixture order."""
+    frozen = load_historical_transitions() if fixture is None else fixture
+    pairs = []
+    for historical, earlier, names in historical_fixture_pairs(connection, config, frozen):
+        def nation(region: int, names: Mapping[int, str] = names) -> str:
+            return nation_for_region(names[region])
+        pairs.append(conversion_pair(historical, earlier, nation))
     return tuple(pairs)
 
 

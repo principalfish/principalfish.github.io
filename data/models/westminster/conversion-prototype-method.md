@@ -13,6 +13,20 @@ scratch state, separate from the complete report. An exact cache of latent
 random draws within each profile avoids repeating random-number generation;
 the draw order, arithmetic and statistical contract are unchanged.
 
+## Contracts
+
+There are two experiment contracts, selected with
+`scripts/validate_westminster_conversion.py --contract`:
+
+- `four-transition` (the default) is the committed experiment over the four
+  database transitions. Its contract and its report,
+  `uncertainty_conversion_prototype_report.json`, are unchanged.
+- `six-transition` adds the frozen 1997→2001 and 2005n→2010 transitions from
+  `historical-transitions-v1.json`. It has its own contract, report schema and
+  report file, `uncertainty_conversion_historical_report.json`, so it can never
+  overwrite the four-transition report. Everything below applies to both
+  contracts unless the six-transition section says otherwise.
+
 ## Comparison and inputs
 
 Report all eight combinations of cluster off/on, Gaussian/Student-t independent
@@ -23,11 +37,80 @@ shares within each nation, keeping ties together. Map nations explicitly.
 
 Actual regional swings are central inputs. Simulated regional vote totals are
 not constrained to match those inputs. Report aggregate drift and noise-induced
-bias separately. Regional balancing, regime scaling, a cluster-scale prior and
-new historical transitions are outside this experiment.
+bias separately. Regional balancing, regime scaling and a cluster-scale prior are
+outside this experiment; the only added history is the six-transition
+contract's.
 
-All fitted quantities in a held-out fold use only its three training
-transitions. Preserve source/input identities and test holdout exclusion.
+All fitted quantities in a held-out fold use only its training transitions
+(three in the four-transition contract, five in the six-transition one).
+Preserve source/input identities and test holdout exclusion.
+
+## Six-transition contract
+
+All six transitions are weighted equally. The folds are:
+
+- **Gated folds.** Each of the four database transitions is held out in turn.
+  Its training is the other three database transitions plus both historical
+  transitions: five in all.
+- **Report-only folds.** Each historical transition is held out in turn. Its
+  training is the four database transitions plus the other historical
+  transition: also five. These folds are scored and reported in full, but they
+  feed no gate and no guard: coverage, the standardized RMS reference, fit
+  stability, fit identification, lambda attribution and vote-mean drift are
+  all judged on the gated folds only.
+
+The coverage gate is unchanged: at least 17 of the original 20 cells (the top
+five parties by actual seats in each gated fold). The report-only folds add no
+cells to it. Lambda's predictive degrees of freedom are the training count,
+five in every fold. Synthetic recovery trains on five synthetic transitions to
+match; the first three are the four-transition contract's realizations, and
+the known-point comparison uses the training count as its lambda degrees of
+freedom. The generating scenarios and every guard are unchanged.
+
+The historical transitions enter through the same cell builder and fit as the
+database transitions, so their cells have the same structure:
+
+- Party, region and seat ids come from the database, opened read-only. Fixture
+  party keys map to database party names and then through `PARTY_ID_ALIASES`;
+  regions are those of the "UK Constituencies pre 2019" map.
+- 2005n→2010 takes its 2010 result from the database and matches each fixture
+  seat to a 2010 seat by name and region; every seat must match. 1997→2001 is
+  entirely in the fixture; its seats get ids in constituency-code order.
+- The Speaker's seat at either election is excluded, as for the database
+  transitions. The Speaker's votes join Others, because the database stores the
+  Speaker under "Other", which `PARTY_ID_ALIASES` folds into Others. They still
+  count in their region's totals, as in the database.
+- The database's 2010 result codes every Scottish minor party, the Scottish
+  Greens included, as Others, while the fixture names the 2005 Scottish
+  Greens. For a transition whose successor is that database result, the 2005n
+  Scottish Green votes therefore join Others before cells are built, so both
+  elections code the party alike; otherwise their 19 seats would look like
+  stand-downs. The fixture file is unchanged. This is the only such recoding.
+- The 2005 notional results leave some minor parties unnamed. That remainder,
+  `unknown_other`, keeps its own party column. It is not split among named
+  parties, not merged into Others and never zeroed. The model treats it as it
+  treats the database's Others: additive in the projection and never a
+  calibration cell. It has no 2010 counterpart, so its additive swing removes
+  its regional share, and the named parties hidden inside it in 2005 appear in
+  2010 as absent parties or new candidacies, which the cell builder already
+  excludes.
+
+Known limitations of 2005n→2010, accepted as they are:
+
+- Northern Ireland's Alliance and Greens are unnamed in 2005n, so their 2010
+  cells are excluded as party absent.
+- The 2005n Northern Ireland results name no minor parties; all of them are in
+  `unknown_other`.
+- English Greens are named in only 176 2005n seats, so their 2010 cells in the
+  other seats are excluded as new candidacies.
+- The database's 2010 Northern Ireland rows have no Conservative row (UCUNF
+  appears to be stored as UUP), and no UUP votes in Belfast West, Mid Ulster or
+  Fermanagh and South Tyrone, giving three stood-down UUP cells. This is a
+  database data question, to be investigated separately; it also affects the
+  existing 2010→2015 transition.
+
+Kernel parity and the eight variants are unchanged. The six-transition report
+also records each variant's report-only coverage, labelled as a diagnostic.
 
 ## Training fit
 
@@ -94,7 +177,8 @@ are diagnostics, not proof that the variance components are identified.
 
 Use the approved zero-mean construction: the scale is the RMS of training lambda
 estimates; predictive degrees of freedom equal their count (three inside each
-four-transition holdout). Do not variance-normalize away the predictive widening.
+four-transition holdout, five inside each six-transition fold). Do not
+variance-normalize away the predictive widening.
 
 Seat and cluster errors also perturb fitted lambda. Report their analytic
 contribution to its estimation variance and its fraction of the observed mean

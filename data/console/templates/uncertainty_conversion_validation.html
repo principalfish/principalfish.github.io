@@ -1,13 +1,34 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h2>Offline Joint Conversion Experiment</h2>
-    <p><a href="{{ url_for('uncertainty.uncertainty_validation') }}">Audit validation baseline</a></p>
+    <h2>Offline Joint Conversion Experiment{% if contract == 'six-transition' %}: Six Transitions{% endif %}</h2>
+    <p>
+      <a href="{{ url_for('uncertainty.uncertainty_validation') }}">Audit validation baseline</a>
+      ·
+      {% if contract == 'six-transition' %}
+        <a href="{{ url_for('uncertainty.uncertainty_conversion_validation') }}">Four-transition experiment</a>
+      {% else %}
+        <a href="{{ url_for('uncertainty.uncertainty_conversion_validation_historical') }}">Six-transition experiment</a>
+      {% endif %}
+    </p>
     <p>
       Saved experimental evidence. Opening this page does not run simulations.
       The experiment does not change the active model.
     </p>
-    {% if error %}
+    {% if contract == 'six-transition' %}
+      <p>
+        Every original fold also trains on the frozen 1997→2001 and 2005n→2010
+        transitions (five training transitions, equally weighted). Two extra
+        folds hold out each of those transitions; they are report-only and feed
+        no gate or guard. The coverage gate stays 17 of the original 20 cells.
+      </p>
+    {% endif %}
+    {% if missing %}
+      <p class="alert">
+        The six-transition experiment has not been run yet. From <code>data/</code>:
+        <code>OPENBLAS_NUM_THREADS=1 ./election_data/bin/python scripts/validate_westminster_conversion.py --contract six-transition</code>
+      </p>
+    {% elif error %}
       <p class="alert">{{ error }}</p>
     {% elif report %}
       {% if stale %}
@@ -99,6 +120,53 @@
           <p>Standardized leader/runner RMS reference:</p>
           <pre>{{ variant.standardized_rms|tojson(indent=2) }}</pre>
         </details>
+        {% if variant.get('report_only_folds') %}
+          <p>
+            Report-only historical folds (no gate or guard):
+            <strong>{{ variant.report_only_coverage.covered }}/{{ variant.report_only_coverage.count }}</strong>
+            inside 90% intervals.
+          </p>
+          <details>
+            <summary>Report-only historical folds</summary>
+            {% for fold in variant.report_only_folds %}
+              <h4>{{ fold.label }} (report-only)</h4>
+              <p>
+                Training: {{ fold.fit.training_pairs|join(', ') }}.
+                Seat core scale {{ fmt(fold.fit.parameters.sigma_seat) }};
+                cluster scale {{ fmt(fold.fit.parameters.sigma_cluster) }};
+                seat degrees of freedom {{ fold.fit.parameters.nu if fold.fit.parameters.nu is not none else 'Gaussian' }};
+                lambda scale {{ fmt(fold.fit.parameters.sigma_lambda) }};
+                lambda degrees of freedom {{ fold.fit.parameters.lambda_df if fold.fit.parameters.lambda_df is not none else 'Gaussian' }}.
+                Fitting precision stable: {{ 'Yes' if fold.fit_stability.stable else 'No' }}.
+                Leader/runner standardized errors: {{ fold.evaluation.leader_runner_z|tojson }}.
+              </p>
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Party</th><th scope="col">Actual</th>
+                    <th scope="col">5% / median / 95%</th><th scope="col">Mean / SD</th>
+                    <th scope="col">Covered</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in fold.evaluation.seat_totals %}
+                    <tr>
+                      <th scope="row">{{ row.get('party', row.party_id) }}</th>
+                      <td>{{ row.actual }}</td>
+                      <td>{{ fmt(row.low, '.0f') }} / {{ fmt(row.median, '.0f') }} / {{ fmt(row.high, '.0f') }}</td>
+                      <td>{{ fmt(row.mean) }} / {{ fmt(row.sd) }}</td>
+                      <td>{{ 'Yes' if row.covered else 'No' }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <p>Aggregate drift and noise-induced bias:</p>
+              <pre>{{ fold.evaluation.aggregate_drift|tojson(indent=2) }}</pre>
+              <p>Fit diagnostics:</p>
+              <pre>{{ fold.fit.diagnostics|tojson(indent=2) }}</pre>
+            {% endfor %}
+          </details>
+        {% endif %}
       {% endfor %}
       <h3>Limitations</h3>
       <ul>{% for line in report.limitations %}<li>{{ line }}</li>{% endfor %}</ul>

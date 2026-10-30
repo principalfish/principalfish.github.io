@@ -74,6 +74,30 @@ class HistoricalPair:
     input_hash: str
 
 
+def historical_pair(
+    label: str, earlier: ElectionVotes, later: ElectionVotes, *,
+    excluded_seats: set[int], config: UncertaintyConfig, identity: dict[str, Any],
+    additive_party_ids: set[int] | None = None,
+) -> HistoricalPair:
+    """Build and fit one transition's cells, whatever source supplied its votes.
+
+    ``additive_party_ids`` defaults to the database's Others aggregate.
+    ``identity`` is the JSON-serialisable source description that is hashed.
+    """
+    cells = build_pair_cells(
+        earlier, later, excluded_seats=excluded_seats,
+        additive_party_ids=(
+            set(calibration_inputs.PARTY_ID_ALIASES.values())
+            if additive_party_ids is None else additive_party_ids
+        ),
+        min_regional_share=config.lambda_min_share,
+    )
+    return HistoricalPair(
+        fit_pair(label, earlier.name, later.name, cells, config), cells,
+        later, fingerprint(identity),
+    )
+
+
 def load_pairs(connection: sqlite3.Connection, config: UncertaintyConfig) -> list[HistoricalPair]:
     pairs = []
     for label, earlier_name, later_name in calibration_inputs.ELECTION_PAIRS:
@@ -85,17 +109,12 @@ def load_pairs(connection: sqlite3.Connection, config: UncertaintyConfig) -> lis
             calibration_inputs.speaker_seat_id(connection, name, earlier.map_id)
             for name in (earlier_name, later_name)
         }
-        cells = build_pair_cells(
-            earlier.votes, later.votes, excluded_seats=excluded,
-            additive_party_ids=set(calibration_inputs.PARTY_ID_ALIASES.values()),
-            min_regional_share=config.lambda_min_share,
-        )
-        pairs.append(HistoricalPair(
-            fit_pair(label, earlier_name, later_name, cells, config), cells,
-            later.votes, fingerprint({
+        pairs.append(historical_pair(
+            label, earlier.votes, later.votes, excluded_seats=excluded,
+            config=config, identity={
                 "earlier": asdict(earlier), "later": asdict(later),
                 "excluded_seats": sorted(excluded),
-            }),
+            },
         ))
     if len(pairs) < 2:
         raise CalibrationError("Leave-one-pair-out validation needs at least two pairs")

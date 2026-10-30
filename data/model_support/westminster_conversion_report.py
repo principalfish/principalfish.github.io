@@ -5,7 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from dataclasses import asdict
+from collections.abc import Sequence
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -16,8 +17,19 @@ from model_support.calibration import CalibrationError
 from model_support.monte_carlo import config_hash
 from model_support.uncertainty import UncertaintyConfig
 from model_support.westminster_conversion_checkpoint import ConversionCheckpoint
-from model_support.westminster_conversion_design import load_conversion_pairs
+from model_support.westminster_conversion_design import (
+    UNKNOWN_OTHER_PARTY_ID,
+    UNKNOWN_OTHER_PARTY_NAME,
+    ConversionPair,
+    load_conversion_pairs,
+    load_historical_conversion_pairs,
+)
 from model_support.westminster_conversion_validation import (
+    CONTRACTS,
+    FOUR_TRANSITION,
+    FOUR_TRANSITION_LIMITATION,
+    SIX_TRANSITION,
+    SIX_TRANSITION_LIMITATION,
     VARIANTS,
     evaluate_fold,
     experiment_contract,
@@ -48,6 +60,63 @@ SOURCE_FILES = (
     "scripts/validate_westminster_conversion.py",
     "models/westminster/conversion-prototype-method.md",
 )
+# The six-transition experiment: its own schema and report, so the committed
+# four-transition report stays as it is.
+HISTORICAL_REPORT_PATH = (
+    DATA_DIR / "models/westminster/uncertainty_conversion_historical_report.json"
+)
+HISTORICAL_REPORT_SCHEMA = "westminster-conversion-historical-v1"
+HISTORICAL_SOURCE_FILES = (
+    *SOURCE_FILES,
+    "model_support/westminster_historical_transitions.py",
+    "models/westminster/historical-transitions-v1.json",
+)
+REPORT_SCHEMAS = {FOUR_TRANSITION: REPORT_SCHEMA, SIX_TRANSITION: HISTORICAL_REPORT_SCHEMA}
+
+
+def report_path(contract: str = FOUR_TRANSITION) -> Path:
+    """The default report file of *contract* (read at call time, so tests can redirect it)."""
+    if contract not in CONTRACTS:
+        raise CalibrationError(f"Unknown conversion experiment contract: {contract!r}")
+    return REPORT_PATH if contract == FOUR_TRANSITION else HISTORICAL_REPORT_PATH
+
+
+@dataclass(frozen=True, slots=True, eq=False)
+class Fold:
+    """One held-out transition, its training transitions, and whether it is gated."""
+
+    held: ConversionPair
+    training: tuple[ConversionPair, ...]
+    report_only: bool
+
+
+def fold_plan(
+    original: Sequence[ConversionPair], historical: Sequence[ConversionPair] = (),
+) -> tuple[Fold, ...]:
+    """Gated leave-one-out folds over *original*, then report-only folds.
+
+    Every gated fold trains on its other originals plus every historical
+    transition; each report-only fold holds out one historical transition and
+    trains on all originals plus the other historical ones. A held-out
+    transition never appears in its own fold's training.
+    """
+    pairs = (*original, *historical)
+    if (len({pair.label for pair in pairs}) != len(pairs)
+            or len({pair.input_hash for pair in pairs}) != len(pairs)):
+        raise CalibrationError("Conversion transitions must be distinct")
+    folds = [
+        Fold(held, tuple(pair for pair in pairs if pair is not held), False)
+        for held in original
+    ]
+    folds += [
+        Fold(held, tuple(pair for pair in pairs if pair is not held), True)
+        for held in historical
+    ]
+    for fold in folds:
+        if any(pair.input_hash == fold.held.input_hash or pair.label == fold.held.label
+               for pair in fold.training):
+            raise CalibrationError("Held-out transition appears in its own training")
+    return tuple(folds)
 
 
 def _rms_reference(
@@ -80,17 +149,26 @@ def build_report(
     database: Path, config: UncertaintyConfig, *,
     count: int = 6000, fit_draws: int = 128,
     checkpoint_directory: Path | None = None,
+    contract_name: str = FOUR_TRANSITION,
 ) -> dict[str, Any]:
-    """Run recovery first, then all declared variants with fold-isolated fits."""
+    """Run recovery first, then all declared variants with fold-isolated fits.
+
+    ``contract_name`` selects the four-transition experiment (the committed
+    report) or the six-transition one, whose two historical folds are
+    reported but feed no gate or guard.
+    """
     if count < 2 or fit_draws < 2:
         raise CalibrationError("Conversion simulation counts must be at least two")
-    contract = experiment_contract()
+    if contract_name not in CONTRACTS:
+        raise CalibrationError(f"Unknown conversion experiment contract: {contract_name!r}")
+    six = contract_name == SIX_TRANSITION
+    contract = experiment_contract(contract_name)
     identity = {
         "config_hash": config_hash(config),
         "numpy_version": np.__version__,
         "source_sha256": {
             name: hashlib.sha256((DATA_DIR / name).read_bytes()).hexdigest()
-            for name in SOURCE_FILES
+            for name in (HISTORICAL_SOURCE_FILES if six else SOURCE_FILES)
         },
     }
     checkpoint = ConversionCheckpoint(checkpoint_directory, {
@@ -101,12 +179,12 @@ def build_report(
     LOGGER.info("Checking synthetic recovery and kernel parity")
     recovery = checkpoint.get("recovery", {})
     if recovery is None:
-        recovery = synthetic_recovery(config=config)
+        recovery = synthetic_recovery(config=config, contract=contract_name)
         checkpoint.put("recovery", {}, recovery)
     else:
         LOGGER.info("Reusing completed synthetic recovery")
     report: dict[str, Any] = {
-        "schema": REPORT_SCHEMA,
+        "schema": REPORT_SCHEMAS[contract_name],
         "identity": identity,
         "contract": contract,
         "simulations": count,
@@ -122,6 +200,14 @@ def build_report(
             "No runtime model, configuration, saved archive, release flag or database write is performed.",
         ],
     }
+    if six:
+        report["experiment"] = SIX_TRANSITION
+        report["limitations"].append(
+            "The 1997→2001 and 2005n→2010 folds are report-only diagnostics: they feed no gate or guard.",
+        )
+        report["limitations"].append(
+            "2005 notional results leave minor parties unnamed; that remainder is its own additive column, not a named party.",
+        )
     if not recovery["passed"]:
         report["stop_reason"] = "Synthetic recovery or kernel parity did not pass; historical scoring was not run."
         report["report_hash"] = fingerprint(report)
@@ -130,11 +216,18 @@ def build_report(
     # hold a SQLite reader lock for the duration of the experiment.
     with read_only_database(database) as connection:
         pairs = load_conversion_pairs(connection, config)
+        historical = load_historical_conversion_pairs(connection, config) if six else ()
         names = party_names(connection)
     if len(pairs) != 4:
         raise CalibrationError("The locked conversion experiment requires four transitions")
+    if six and len(historical) != 2:
+        raise CalibrationError("The six-transition experiment requires two fixture transitions")
+    if six:
+        names = {**names, UNKNOWN_OTHER_PARTY_ID: UNKNOWN_OTHER_PARTY_NAME}
+    folds_plan = fold_plan(pairs, historical)
+    limitation = SIX_TRANSITION_LIMITATION if six else FOUR_TRANSITION_LIMITATION
     report["identity"]["historical_inputs"] = {
-        pair.label: pair.input_hash for pair in pairs
+        pair.label: pair.input_hash for pair in (*pairs, *historical)
     }
     execution_order = sorted(
         VARIANTS,
@@ -144,9 +237,10 @@ def build_report(
     )
     for variant in execution_order:
         folds: list[dict[str, Any]] = []
+        report_only: list[dict[str, Any]] = []
         references: list[NDArray[np.float64]] = []
-        for index, held in enumerate(pairs):
-            training = tuple(pair for i, pair in enumerate(pairs) if i != index)
+        for plan in folds_plan:
+            held, training = plan.held, plan.training
             fits = []
             for precision in (fit_draws, 2 * fit_draws):
                 request = {
@@ -158,7 +252,8 @@ def build_report(
                     LOGGER.info("%s; holdout %s; fitting %d draws",
                                 variant.name, held.label, precision)
                     fit = fit_variant(training, variant, config=config,
-                                      fit_draws=precision)
+                                      fit_draws=precision,
+                                      identification_limitation=limitation)
                     checkpoint.put("fit", request, fit)
                 else:
                     LOGGER.info("%s; holdout %s; reusing %d-draw fit",
@@ -187,19 +282,25 @@ def build_report(
             else:
                 LOGGER.info("%s; holdout %s; reusing evaluated fold",
                             variant.name, held.label)
-            references.append(np.asarray(
+            reference = np.asarray(
                 evaluation.pop("_reference_rank_z_draws"), dtype=np.float64,
-            ))
+            )
             for row in evaluation["seat_totals"]:
                 row["party"] = names.get(row["party_id"], str(row["party_id"]))
-            folds.append({
+            fold: dict[str, Any] = {
                 "label": held.label,
                 "input_hash": held.input_hash,
                 "fit": higher,
                 "lower_precision_fit": lower,
                 "fit_stability": stability,
                 "evaluation": evaluation,
-            })
+            }
+            if plan.report_only:
+                fold["report_only"] = True
+                report_only.append(fold)
+            else:
+                references.append(reference)
+                folds.append(fold)
         covered = sum(fold["evaluation"]["coverage"]["covered"] for fold in folds)
         total = sum(fold["evaluation"]["coverage"]["count"] for fold in folds)
         rms = _rms_reference(folds, references)
@@ -222,6 +323,14 @@ def build_report(
             "standardized_rms": rms,
             "gate": {"checks": checks, "passed": all(checks.values())},
         }
+        if six:
+            # Diagnostics only: nothing here enters ``checks`` above.
+            result["report_only_folds"] = report_only
+            result["report_only_coverage"] = {
+                "covered": sum(fold["evaluation"]["coverage"]["covered"] for fold in report_only),
+                "count": sum(fold["evaluation"]["coverage"]["count"] for fold in report_only),
+                "scope": "Report-only historical folds; not part of the 20-cell gate or any guard",
+            }
         report["variants"].append(result)
         LOGGER.info("%s: %d/%d covered; offline gate %s",
                     variant.name, covered, total, result["gate"]["passed"])
@@ -236,12 +345,17 @@ def build_report(
     return report
 
 
-def read_report(path: Path | None = None) -> dict[str, Any]:
+def read_report(
+    path: Path | None = None, *, contract: str = FOUR_TRANSITION,
+) -> dict[str, Any]:
     """Read only a complete, content-verified saved experimental report."""
-    target = REPORT_PATH if path is None else path
+    # report_path rejects an unknown contract, with or without an explicit path.
+    default = report_path(contract)
+    target = default if path is None else path
     try:
         report = json.loads(target.read_text())
-        if not isinstance(report, dict) or report.get("schema") != REPORT_SCHEMA:
+        if (not isinstance(report, dict)
+                or report.get("schema") != REPORT_SCHEMAS[contract]):
             raise ValueError("Unknown conversion prototype report schema")
         if not all(isinstance(report.get(key), dict) for key in (
             "identity", "contract", "synthetic_recovery",

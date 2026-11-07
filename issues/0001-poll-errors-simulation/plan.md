@@ -122,8 +122,8 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 4 · Branch self-review done and chosen fixes committed (`eeee25d0`).
 - [x] 5 · Master merged in; checks green (`af4405fb`).
 - [x] 6a · Westminster weighting defaults: 15-day half-life, 60-day window (`a5cdf8e0`).
-- [ ] 6b · Main headline line leads with the simulation.
 - [ ] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation.
+- [ ] 6b · Main headline line leads with the simulation.
 - [ ] 7 · PR text drafted.
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.

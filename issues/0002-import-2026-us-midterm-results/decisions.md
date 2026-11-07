@@ -38,6 +38,8 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 - Derived Current Senate: `EXPECTED_SPECIALS_2026` (FL/OH Class 3) stays hard-coded; the runbook notes it needs editing at the next cycle with specials. (2026-11-07)
 - Derived Current Senate, mixed state (one called member, one uncalled): the state is coloured by its called member; both uncalled is neutral. The uncalled member stays uncalled (no party count, uncalled tally, "Uncalled" popup row). Changed before piece 10's commit. (2026-11-07)
 
+- Merge order revised: don't wait for #74. Merge current master in now, then `/review self`, then the live steps; #74's conflicts fall to whichever PR merges second. (2026-11-07)
+
 ## Open
 
 ## Assumed

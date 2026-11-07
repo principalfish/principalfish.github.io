@@ -11,9 +11,9 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Pieces 1–10 committed and pushed (piece 10 `cd7dbc43`); PR #80 ticked. Piece 11 docs committed `613ac558` and pushed (checkpoint 11 stays unticked; PR #80 notes it); its live steps wait until master is merged in after #74 lands, each with Phil's go-ahead. The plan merges master in after #74 lands (still open; `gh pr view 74 --json state`), before piece 11. A test merge with 0001 (`git merge-tree --write-tree --name-only origin/poll-errors-simulation origin/import-2026-us-midterm-results`) conflicts in README.md, data/models.py, export/payload.py, export_elections.py, test_export_manifest.py, test_export_payload.py, shell.html and the three bundles (regenerate those). The hatch look needs a real-browser check after the piece 11 export.
+Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Pieces 1–10 and the piece 11 docs (`613ac558`) committed and pushed; PR #80 ticked. Merge order revised by Phil: don't wait for #74. The builder is merging current master in now (no conflicts) and pauses for review before pushing. Then `/review self import-2026-us-midterm-results` in this chat, then the live steps (README section 12), each with Phil's go-ahead. The hatch look needs a real-browser check after the piece 11 export.
 
-Next step: checkpoint 11. See `plan.md`.
+Next step: approve the master merge, then `/review self`; checkpoint 11's live steps after. See `plan.md`.
 
 ## Don't
 - Run imports, migrations or exports against the live DB without Phil's explicit go-ahead at the time.

@@ -192,6 +192,160 @@ class TestSenateSpecialElections:
         assert result["23"]["senateSpecialElections"] == []
 
 
+class TestSenateBaselineOverrides:
+    """Per-seat baseline overrides pass through the export, cleaned but never expired."""
+
+    OVERRIDES = [
+        {"seat": "Florida", "class": 3, "baselineElectionId": "2026-us-senate"},
+        {"seat": "Ohio", "class": 3, "baselineElectionId": "2026-us-senate"},
+    ]
+    FEATURES_2028 = {"us_senate": {"nextElectionYear": 2028}}
+
+    @staticmethod
+    def _built(overrides: object, *, current_year: int = 2026, features: dict[str, Any] | None = None) -> Any:
+        result = build_map_modes_with_regions(
+            {"23": {"senateBaselineOverrides": overrides}},
+            {"23": []},
+            current_year=current_year,
+            parliament_features=TestSenateBaselineOverrides.FEATURES_2028 if features is None else features,
+        )
+        return result["23"]["senateBaselineOverrides"]
+
+    def test_valid_overrides_pass_through_unchanged(self) -> None:
+        assert self._built(self.OVERRIDES) == self.OVERRIDES
+
+    def test_they_are_not_year_gated(self) -> None:
+        # Unlike specials: no nextElectionYear, a passed one, or a distant one drops them.
+        assert self._built(self.OVERRIDES, features={}) == self.OVERRIDES
+        assert self._built(self.OVERRIDES, current_year=2031) == self.OVERRIDES
+        assert self._built(self.OVERRIDES, features={"us_senate": {"nextElectionYear": 2040}}) == self.OVERRIDES
+
+    def test_malformed_records_are_dropped(self) -> None:
+        malformed = [
+            {"class": 3, "baselineElectionId": "2026-us-senate"},  # no seat
+            {"seat": "  ", "class": 3, "baselineElectionId": "2026-us-senate"},
+            {"seat": 7, "class": 3, "baselineElectionId": "2026-us-senate"},
+            {"seat": "Texas", "class": 3},  # no baseline
+            {"seat": "Texas", "class": 3, "baselineElectionId": "   "},
+            {"seat": "Texas", "class": 3, "baselineElectionId": None},
+            {"seat": "Texas", "baselineElectionId": "2026-us-senate"},  # no class
+            {"seat": "Texas", "class": 0, "baselineElectionId": "2026-us-senate"},
+            {"seat": "Texas", "class": 4, "baselineElectionId": "2026-us-senate"},
+            {"seat": "Texas", "class": "3", "baselineElectionId": "2026-us-senate"},
+            {"seat": "Texas", "class": 3.0, "baselineElectionId": "2026-us-senate"},
+            {"seat": "Texas", "class": True, "baselineElectionId": "2026-us-senate"},
+            "Texas",
+            None,
+        ]
+        assert self._built([*malformed, *self.OVERRIDES]) == self.OVERRIDES
+
+    def test_a_later_record_for_a_named_seat_and_class_is_dropped(self) -> None:
+        again = {"seat": "Ohio", "class": 3, "baselineElectionId": "2022-us-senate"}
+        assert self._built([*self.OVERRIDES, again]) == self.OVERRIDES
+
+    def test_one_seat_may_be_overridden_for_two_classes(self) -> None:
+        class_one = {"seat": "Ohio", "class": 1, "baselineElectionId": "2030-us-senate"}
+        assert self._built([*self.OVERRIDES, class_one]) == [*self.OVERRIDES, class_one]
+
+    def test_extra_fields_ride_along(self) -> None:
+        entry = {"seat": "Ohio", "class": 3, "baselineElectionId": "2026-us-senate", "note": "special"}
+        assert self._built([entry]) == [entry]
+
+    def test_a_non_list_value_keeps_nothing(self) -> None:
+        assert self._built({"seat": "Ohio"}) == []
+
+    def test_key_is_absent_when_the_shell_has_none(self) -> None:
+        result = build_map_modes_with_regions(
+            {"23": {}}, {"23": []}, current_year=2026, parliament_features=self.FEATURES_2028
+        )
+        assert "senateBaselineOverrides" not in result["23"]
+
+    def test_the_shell_list_is_not_mutated(self) -> None:
+        shell = [dict(self.OVERRIDES[0]), {"seat": "", "class": 3, "baselineElectionId": "x"}]
+        modes = {"23": {"senateBaselineOverrides": shell}}
+        build_map_modes_with_regions(
+            modes, {"23": []}, current_year=2026, parliament_features=self.FEATURES_2028
+        )
+        assert len(modes["23"]["senateBaselineOverrides"]) == 2
+
+
+class TestShippedUsShell:
+    """The repo's real US shell after the 2028 rollover, built the way the export builds it."""
+
+    SHELL_PATH = Path(__file__).resolve().parents[2] / "uselectionmaps" / "data" / "map-modes-shell.json"
+
+    @classmethod
+    def _shell(cls) -> dict[str, Any]:
+        loaded: dict[str, Any] = json.loads(cls.SHELL_PATH.read_text(encoding="utf-8"))
+        return loaded
+
+    def _built(self, current_year: int = 2026) -> dict[str, Any]:
+        shell = self._shell()
+        return build_map_modes_with_regions(
+            shell["mapModes"], {}, current_year, parliament_features=shell["parliamentFeatures"]
+        )
+
+    def test_the_2026_senate_specials_have_expired(self) -> None:
+        senate = self._built()["23"]
+        assert senate.get("senateSpecialElections", []) == []
+
+    def test_florida_and_ohio_swing_from_the_2026_senate_result(self) -> None:
+        senate = self._built()["23"]
+        assert senate["senateBaselineOverrides"] == [
+            {"seat": "Florida", "class": 3, "baselineElectionId": "2026-us-senate"},
+            {"seat": "Ohio", "class": 3, "baselineElectionId": "2026-us-senate"},
+        ]
+
+    def test_class_3_is_next_up_in_2028(self) -> None:
+        assert self._built()["23"]["senateClassNextElection"]["3"] == 2028
+
+    def test_predict_rolls_over_to_2028_anchored_on_the_2026_results(self) -> None:
+        features = self._shell()["parliamentFeatures"]
+        house, senate = features["us_house"], features["us_senate"]
+        assert (house["predictBaselineElectionId"], house["predictAnchorElectionId"]) == (
+            "2026-us-house",
+            "2026-us-house",
+        )
+        assert (senate["predictBaselineElectionId"], senate["predictAnchorElectionId"]) == (
+            "2022-us-senate",
+            "2026-us-senate",
+        )
+        for parliament in (house, senate):
+            assert parliament["nextElectionYear"] == 2028
+            assert parliament["nextElectionDate"] == "2028-11-07T00:00:00-05:00"
+        assert {"key": "seatsup", "label": "Seats up (2028)"} in senate["predict"]["tabs"]
+
+    def test_the_archived_2026_forecasts_still_compare_against_their_own_baselines(self) -> None:
+        from scripts.export.manifest import US_MODEL_COMPARISON_IDS
+
+        assert US_MODEL_COMPARISON_IDS["us_house_model"] == "2024-us-house"
+        assert US_MODEL_COMPARISON_IDS["us_senate_model"] == "2020-us-senate"
+
+
+class TestSenateClassUpIn:
+    CYCLE = {"base": {"1": 2018, "2": 2020, "3": 2022}, "period": 6}
+
+    def test_each_class_is_up_on_its_cycle_years(self) -> None:
+        from scripts.export.manifest import senate_class_up_in
+
+        assert [senate_class_up_in(self.CYCLE, year) for year in (2026, 2028, 2030, 2032, 2034, 2036)] == [
+            2, 3, 1, 2, 3, 1,
+        ]
+
+    def test_a_year_no_class_lands_on_is_none(self) -> None:
+        from scripts.export.manifest import senate_class_up_in
+
+        assert senate_class_up_in(self.CYCLE, 2027) is None
+        assert senate_class_up_in({"base": {"1": 2018, "2": 2018}, "period": 6}, 2024) is None
+
+    def test_a_malformed_cycle_is_none(self) -> None:
+        from scripts.export.manifest import senate_class_up_in
+
+        bad_cycles: list[Any] = [None, [], {}, {"base": []}, {"base": {"1": "2018"}}, {"base": {"1": 2018}, "period": 0}]
+        for bad in bad_cycles:
+            assert senate_class_up_in(bad, 2024) is None
+
+
 class TestUsResultsExport:
     """A full US Senate page export: status fields, ``sourceNote``, folded specials.
 

@@ -156,6 +156,59 @@ describe("activateSenateForecastView", () => {
     expect(renderMap).toHaveBeenCalledTimes(6);
   });
 
+  describe("archived 2026 forecast after the 2028 rollover", () => {
+    /** The manifest as exported once Predict has rolled to 2028 on the 2026 Senate result. */
+    function rollOver({ keepSpecials }) {
+      const rolled = structuredClone(manifestData);
+      const senate = rolled.parliamentFeatures.us_senate;
+      senate.nextElectionYear = 2028;
+      senate.predictAnchorElectionId = "2026-us-senate";
+      senate.predictBaselineElectionId = "2022-us-senate";
+      senate.predict.tabs[0].label = "Seats up (2028)";
+      if (!keepSpecials) rolled.mapModes["23"].senateSpecialElections = [];
+      rolled.elections.push({ id: "2026-us-senate", name: "2026 Election", type: "us_senate", mapId: 23, parliament: "us_senate" });
+      manifest.init(rolled);
+      state.currentElection = { ...manifest.getElectionFromId("current-us-senate") };
+      state.setupMapData();
+    }
+
+    it("still gets its tabs, labelled with its own cycle, though it is no longer the predict anchor", async () => {
+      rollOver({ keepSpecials: false });
+      expect(state.currentElection.id).not.toBe(manifest.parliamentConfig("us_senate").predictAnchorElectionId);
+      await activateSenateForecastView();
+      expect(latestTabs().tabs).toEqual([
+        { key: "seatsup", label: "Seats up (2026)" },
+        { key: "chamber", label: "Full Senate" },
+      ]);
+    });
+
+    it("merges its winners into the Class-2 members, not the 2028 class", async () => {
+      rollOver({ keepSpecials: false });
+      await activateSenateForecastView();
+      latestTabs().onTabChange("chamber");
+      const alabama = state.electionData.currentSeats.find((seat) => seat.seat === "Alabama");
+      expect(alabama.members.find((member) => member.class === 2).name).toMatch(/\(projected\)$/);
+      expect(alabama.members.find((member) => member.class === 3).name).not.toMatch(/\(projected\)$/);
+    });
+
+    it("completes the Florida and Ohio comparison from 2026 specials declared for its own year", async () => {
+      rollOver({ keepSpecials: true });
+      await activateSenateForecastView();
+      expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: true });
+      expect(fetchJson.mock.calls.map(([url]) => url)).toContain("data/results/us-senate-2022.json");
+    });
+
+    it("leaves a non-forecast election alone", async () => {
+      rollOver({ keepSpecials: false });
+      state.currentElection = { ...manifest.getElectionFromId("2026-us-senate") };
+      renderSenateForecastTabs.mockClear();
+      fetchJson.mockClear();
+      await activateSenateForecastView();
+      expect(fetchJson).not.toHaveBeenCalled();
+      expect(latestTabs()).toBeUndefined();
+    });
+  });
+
   it("retains region and party filters while switching views", async () => {
     state.mapFilters.region = "newengland";
     state.setupMapData();

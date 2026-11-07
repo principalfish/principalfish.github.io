@@ -708,9 +708,10 @@ export class Seat {
   /**
    * The years a multi-member seat's member was last and is next contested, for the seat popup.
    * Both are stamped by AppState's cycle resolution: `up` for every member, `last` only for a
-   * special election's member, whose seat was last contested at the special's baseline election
-   * (Ohio's Class-3 seat is up in 2026 but was last contested in 2022, not 2020). Any other
-   * member was last contested one full term before it is next up.
+   * special election's member or a baseline-override member, whose seat was last contested at
+   * that special's or override's baseline election (Ohio's Class-3 seat is up in 2028 but was
+   * last contested at its 2026 special, not in 2022). Any other member was last contested one
+   * full term before it is next up.
    * @param {{up?: number, last?: number}} member
    * @returns {{last: number, up: number}|null} Null when no cycle year was resolved (member
    *   missing `class`, or no senateClassNextElection), so the popup shows just the name.
@@ -1534,12 +1535,27 @@ class AppState {
    * year and shows up in the "up in 2026" filter alongside the regular class. That member is
    * also stamped `last` with its baseline election's year (2022), since a special breaks the
    * "last = up − one term" rule the popup otherwise applies.
+   *
+   * `senateBaselineOverrides` names a seat and class whose last contest was a different
+   * election from the rest of its class (Florida and Ohio were filled at 2026 specials, so
+   * their Class-3 members are next up in 2028 but were last contested in 2026). The member of
+   * that state and class, when next up in the parliament's `nextElectionYear`, is stamped
+   * `last` with the override election's year; unlike a special it does not change `up`. The
+   * class test keeps a state's other-class seat from inheriting the override.
    * @returns {void}
    */
   #resolveMemberCycles() {
     const cycleMap = this.mapConfig?.senateClassNextElection;
     const specials = this.mapConfig?.senateSpecialElections || [];
+    const overrides = this.mapConfig?.senateBaselineOverrides || [];
     if (!cycleMap && !specials.length) return;
+    const nextYear = Number(manifest.parliamentConfig(this.currentParliament)?.nextElectionYear);
+    const overrideLastBySeat = new Map();
+    overrides.forEach((override) => {
+      const seatKey = seatLookupKey(override?.seat || '');
+      const lastYear = electionIdYear(override?.baselineElectionId);
+      if (seatKey && lastYear != null) overrideLastBySeat.set(`${seatKey}|${Number(override?.class)}`, lastYear);
+    });
     const specialBySeatClass = new Map();
     specials.forEach((special) => {
       const seatKey = seatLookupKey(special?.seat || '');
@@ -1552,7 +1568,8 @@ class AppState {
         const special = specialBySeatClass.get(`${seatKey}|${Number(member?.class)}`);
         const year = special?.year ?? cycleMap?.[member?.class];
         if (year != null) member.up = year;
-        const lastYear = electionIdYear(special?.baselineElectionId);
+        const lastYear = electionIdYear(special?.baselineElectionId)
+          ?? (year === nextYear ? overrideLastBySeat.get(`${seatKey}|${Number(member?.class)}`) : undefined);
         if (lastYear != null) member.last = lastYear;
       });
     });

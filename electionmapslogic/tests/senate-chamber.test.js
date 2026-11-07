@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { ElectionData, manifest, Seat } from '../state.js';
-import { buildSenateChamber } from '../features/senate-chamber.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { ElectionData, manifest, Seat, state } from '../state.js';
+import { buildSenateChamber, regularSenateClass } from '../features/senate-chamber.js';
 import { seatLookupKey } from '../utils.js';
 
 const readData = (file) => JSON.parse(readFileSync(new URL(`../../uselectionmaps/data/${file}`, import.meta.url), 'utf8'));
@@ -16,7 +16,7 @@ describe('buildSenateChamber', () => {
   it('merges the saved forecast into all 100 members, carrying over every uncontested class', () => {
     const chamber = new ElectionData(chamberData).currentSeats;
     const contested = new ElectionData(forecastData).currentSeats;
-    const result = buildSenateChamber(chamber, contested, specialClasses);
+    const result = buildSenateChamber(chamber, contested, specialClasses, 2);
     const forecastByState = new Map(contested.map((seat) => [seatLookupKey(seat.seat), seat.winner]));
 
     expect(contested).toHaveLength(35);
@@ -59,15 +59,33 @@ describe('buildSenateChamber', () => {
     );
   });
 
-  it('defaults to Class 2 and recomputes shared-party and split map colours', () => {
+  it('recomputes shared-party and split map colours for the regular class', () => {
     const chamber = new ElectionData(chamberData).currentSeats;
     const contested = [
       new Seat({ seat: 'Alabama', winner: 'democrat', votes: {} }),
       new Seat({ seat: 'Maine', winner: 'independent', votes: {} }),
     ];
-    const result = buildSenateChamber(chamber, contested);
+    const result = buildSenateChamber(chamber, contested, new Map(), 2);
     expect(result.find((seat) => seat.seat === 'Alabama').winner).toBe('split');
     expect(result.find((seat) => seat.seat === 'Maine').winner).toBe('independent');
+  });
+
+  it('carries every member over unchanged when the regular class is unknown', () => {
+    const chamber = new ElectionData(chamberData).currentSeats;
+    const contested = [
+      new Seat({ seat: 'Alabama', winner: 'democrat', votes: {} }),
+      new Seat({ seat: 'Ohio', winner: 'democrat', votes: {} }),
+    ];
+    const result = buildSenateChamber(chamber, contested, specialClasses);
+    // No regular class: Alabama is untouched, while Ohio's special Class-3 seat still applies.
+    expect(result.find((seat) => seat.seat === 'Alabama').members).toEqual(
+      chamber.find((seat) => seat.seat === 'Alabama').members,
+    );
+    const ohio = result.find((seat) => seat.seat === 'Ohio');
+    expect(ohio.members.find((member) => member.class === 3).party).toBe('democrat');
+    expect(ohio.members.find((member) => member.class === 2)).toBeUndefined();
+    const plain = buildSenateChamber(chamber, contested);
+    expect(plain.map((seat) => seat.members)).toEqual(chamber.map((seat) => seat.members));
   });
 
   it('creates independent members without mutating the chamber or contested seats', () => {
@@ -86,5 +104,29 @@ describe('buildSenateChamber', () => {
   it('falls back to the contested seats when the chamber snapshot is unavailable', () => {
     const contested = new ElectionData(forecastData).currentSeats;
     expect(buildSenateChamber([], contested, specialClasses)).toBe(contested);
+  });
+});
+
+describe('regularSenateClass', () => {
+  const withCycle = (cycle) => manifest.init({
+    mapModes: { 23: { name: 'us-senate-2024', regions: [], ...(cycle ? { senateClassNextElection: cycle } : {}) } },
+  });
+  beforeEach(() => { state.currentElection = { id: 'x', mapId: 23 }; });
+  afterEach(() => { state.currentElection = null; });
+
+  it('is the class whose cycle lands on the year, for next and past cycles alike', () => {
+    withCycle({ 1: 2030, 2: 2026, 3: 2028 });
+    expect([2026, 2028, 2030, 2032, 2034, 2036].map(regularSenateClass)).toEqual([2, 3, 1, 2, 3, 1]);
+    // An export made after 2026 has rolled Class 2 on, but still resolves a past 2026 cycle.
+    withCycle({ 1: 2030, 2: 2032, 3: 2028 });
+    expect(regularSenateClass(2026)).toBe(2);
+  });
+
+  it('is null when no class votes that year or the map has no cycle', () => {
+    withCycle({ 1: 2030, 2: 2026, 3: 2028 });
+    expect(regularSenateClass(2027)).toBeNull();
+    expect(regularSenateClass('soon')).toBeNull();
+    withCycle(null);
+    expect(regularSenateClass(2026)).toBeNull();
   });
 });

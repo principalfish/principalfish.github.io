@@ -1160,8 +1160,8 @@ Each runner also takes `--dry-run`, `--as-of-date`, `--half-life-days`, and
 (within the poll window, using the daily run's window rather than
 `--lookback-days`), then does the normal run. Use it after anything that moves
 the whole history: a new tracked matchup, a baseline override, or new Senate
-seats. **Run it once for the Senate**, so its trend series moves from 33 to 35
-seats. It picks its own range and its own as-of date, so combining it with
+seats. **Run it once for the Senate** after the cycle rolls, so its trend series
+rebuilds onto the new field (the 34 Class-3 seats for 2028). It picks its own range and its own as-of date, so combining it with
 `--start-date`/`--end-date` or `--as-of-date`/`--as-of-days-back` is a usage
 error (exit 2): a past as-of would delete every trend point above it and rebuild
 only up to it. If the whole series lies outside the poll window, the points are
@@ -1169,28 +1169,52 @@ replaced by the poll window `[first poll, as-of]`. Points outside the new scope
 are dropped only after all required replacement dates succeed. A partial failure
 retains those points and reports failure, so the console does not export the run.
 
-### Senate specials (Ohio, Florida)
+### Senate specials and per-seat baselines (Ohio, Florida)
 
-Specials are listed in `uselectionmaps/data/map-modes-shell.json`, map mode `"23"`,
-under `senateSpecialElections`:
+Two keys in `uselectionmaps/data/map-modes-shell.json`, map mode `"23"`, move
+individual seats off the field's baseline.
+
+`senateSpecialElections` lists off-cycle races held alongside the regular class:
 
 ```json
 { "seat": "Ohio", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate" }
 ```
 
 Entries whose `year` matches `parliamentFeatures.us_senate.nextElectionYear` join
-the Senate model (35 seats instead of the 33 class-2 seats), using that baseline
-election's votes for that seat only. The export copies the key into
-`map-modes.json` (dropping past years), and the Senate Predict "Full Senate"
-replaces that state's class-3 member. Edit the shell and re-export when the cycle
-changes. A state with both a regular and a special race in one cycle cannot be
+the Senate model (and Predict) as extra seats, using that baseline election's
+votes for that seat only. The export copies the key into `map-modes.json`
+(dropping other years), and the Senate Predict "Full Senate" replaces that
+state's member of the named class. It is empty after the 2026 specials were held.
+A state with both a regular and a special race in one cycle cannot be
 represented; the queue reports it as a page failure.
 
-The saved Senate forecast's **Seats up** view compares each seat with its previous
-election: for 2026, the regular seats use 2020 results and Ohio and Florida use
-their declared 2022 baselines. These combined results drive seat and vote-share
-changes, gains and seat popups. If a required baseline is unavailable, the forecast
-still displays but its comparison is hidden and labelled "Comparison unavailable".
+`senateBaselineOverrides` lists seats of the regular class whose last contest was a
+special since the class voted, so they swing from that result instead:
+
+```json
+{ "seat": "Ohio", "class": 3, "baselineElectionId": "2026-us-senate" }
+```
+
+The `class` (1 to 3, required) is the class of the overridden seat: a state also holds
+seats of other classes, so the override applies only while that class is the one being
+contested (Florida's and Ohio's Class-1 seats in 2030 are not rebased). It has no year
+and is not expired by the export, so remove the record once its class has voted again. For 2028 the Senate swings Class 3
+from `2022-us-senate`, except Florida and Ohio, which swing from
+`2026-us-senate`. The Senate model reads the same key, so the model and Predict
+agree on each seat's baseline.
+
+A saved Senate forecast (the current one, or an archived one from an earlier cycle)
+gets **Seats up** and **Full Senate** tabs. It is recognised as a Senate model
+election, not by the predict anchor, and the seats-up tab is labelled with the cycle
+the forecast projects (the leading year of its name, "2026 Prediction"). **Seats up**
+compares each seat with its previous election: for the 2026 forecast, the regular
+seats use 2020 results and Ohio and Florida use the baselines their
+`senateSpecialElections` entries declare for that year. These combined results drive
+seat and vote-share changes, gains and seat popups. If a required baseline is
+unavailable, the forecast still displays but its comparison is hidden and labelled
+"Comparison unavailable". The export keeps only the specials of the shell's next
+election year, so once Predict rolls to 2028 the archived 2026 forecast has no
+Ohio and Florida baselines in the manifest and shows "Comparison unavailable".
 **Full Senate** compares the projected chamber with current Senate membership;
 returning to **Seats up** restores the per-seat election comparison.
 
@@ -1246,7 +1270,7 @@ that database.
    ./election_data/bin/python models/us/run_us_senate_model.py --since-days-back 60 --rebuild-history
    ./election_data/bin/python scripts/export_elections.py
    ```
-   Then `uselectionmaps/data/results/us-senate-forecast.json` should have 35 seats,
-   including Ohio and Florida.
+   Then `uselectionmaps/data/results/us-senate-forecast.json` should have 34 seats
+   (the 2028 Class 3 field, including Ohio and Florida).
 
 ---

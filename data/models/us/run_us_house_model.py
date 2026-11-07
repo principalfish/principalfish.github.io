@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """US House forecast runner: national generic-ballot uniform swing over 435 districts.
 
-Swings the 2024 US House result by the national two-party generic-ballot average
+Swings the 2026 US House result by the national two-party generic-ballot average
 (imported as national ``PollRow`` rows) and picks an FPTP winner per district.
 Persists a ``us_house_model`` election and appends a poll-tracker trend entry.
 
@@ -25,12 +25,15 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 RESULTS_DIR = REPO_ROOT / "uselectionmaps" / "data" / "results"
 
 SPEC = UsModelSpec(
-    map_name="US House Districts 2024",
-    baseline_election_name="2024 US House Election",
+    # The 2026 election sits on the 2026 district map; the baseline must share the spec's map.
+    map_name="US House Districts 2026",
+    baseline_election_name="2026 US House Election",
     election_type="us_house_model",
     election_name_prefix="US House UNS",
     trend_cache_json=default_trend_path("us-house"),
     trend_cache_meta_json=RESULTS_DIR / "us-house-trends_meta.json",
+    # The generic-ballot series is polled once and stored on the 2024 House map.
+    national_poll_map_name="US House Districts 2024",
 )
 
 

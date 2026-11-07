@@ -25,11 +25,11 @@ NO_AUTO_COMPARISON_TYPES: frozenset[str] = frozenset({ElectionType.us_senate.val
 # comparing a redrawn district against its old namesake. See ``assign_comparison_elections``.
 CROSS_MAP_COMPARISON_TYPES: frozenset[str] = frozenset({ElectionType.us_house.value})
 
-# Each US forecast entry compares against the same baseline its model swings from
-# (``models/us/run_us_*_model.py``), so gains / comparison columns read against the
-# result the projection actually moved. The Senate forecast projects the 2026
-# Class-2 field, last contested in 2020 — hence 2020, not the latest Senate cycle.
-# Bump alongside the model baselines when the cycles roll.
+# Each US forecast entry compares against the same baseline its model swings from, so
+# gains / comparison columns read against the result the projection actually moved. These
+# are the baselines of the archived 2026 forecasts, which stay listed after the model
+# runners (``models/us/run_us_*_model.py``) roll on to 2028. The Senate forecast projected
+# the 2026 Class-2 field, last contested in 2020 — hence 2020, not the latest Senate cycle.
 US_MODEL_COMPARISON_IDS: dict[str, str] = {
     ElectionType.us_house_model.value: "2024-us-house",
     ElectionType.us_presidential_model.value: "2024-us-president",
@@ -155,6 +155,13 @@ def build_map_modes_with_regions(
             entry["senateSpecialElections"] = _live_senate_specials(
                 entry["senateSpecialElections"], special_year, current_year
             )
+        # Per-seat Senate baseline overrides (a seat that swings from a different election
+        # than the rest of the field, e.g. a seat filled at an off-cycle special since the
+        # regular class last voted) are valid whatever the cycle, so they are only cleaned.
+        if "senateBaselineOverrides" in entry:
+            entry["senateBaselineOverrides"] = senate_baseline_overrides(
+                entry["senateBaselineOverrides"]
+            )
         merged[map_id_str] = entry
     return merged
 
@@ -214,6 +221,75 @@ def senate_specials_for_year(entries: object, year: int) -> list[dict[str, Any]]
             continue
         kept.append(dict(entry))
     return kept
+
+
+def senate_baseline_overrides(entries: object) -> list[dict[str, Any]]:
+    """Keep the well-formed ``senateBaselineOverrides`` entries.
+
+    An override names a seat of one Senate ``class`` whose last contest was a different
+    election from the rest of its class (``baselineElectionId``): it was filled at an
+    off-cycle special, so the class's next cycle swings from that result rather than from
+    the class's regular one. The class matters because a state holds seats of more than
+    one class, and the override only applies when that class is the one being contested.
+    Unlike ``senateSpecialElections`` it carries no ``year`` and is never expired. The
+    shared parser for the export and the Senate model.
+
+    An entry is skipped when it is not an object, lacks a non-blank string ``seat`` or
+    ``baselineElectionId``, or lacks an integer ``class`` of 1 to 3; a later entry for an
+    already-named (seat, class) is skipped too, so a seat has one baseline per class.
+
+    Args:
+        entries: The shell's ``senateBaselineOverrides`` value; anything but a list
+            keeps nothing.
+
+    Returns:
+        Copies of the valid entries, in shell order.
+    """
+    if not isinstance(entries, list):
+        return []
+    kept: list[dict[str, Any]] = []
+    seen: set[tuple[str, int]] = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if not all(
+            isinstance(entry.get(key), str) and entry[key].strip()
+            for key in ("seat", "baselineElectionId")
+        ):
+            continue
+        seat_class: Any = entry.get("class")
+        if not _is_int(seat_class) or not 1 <= seat_class <= 3:
+            continue
+        key: tuple[str, int] = (entry["seat"], int(seat_class))
+        if key in seen:
+            continue
+        seen.add(key)
+        kept.append(dict(entry))
+    return kept
+
+
+def senate_class_up_in(cycle: object, year: int) -> int | None:
+    """The Senate class a regular election in ``year`` contests, or ``None``.
+
+    Resolves the shell's durable ``senateClassCycle`` (``{"base": {class: year}, "period": n}``)
+    with :func:`_senate_class_next_election`, so the model and the export read the cycle
+    through one resolver. ``None`` when ``cycle`` is malformed or no class (or more than
+    one) is up in exactly ``year``.
+    """
+    if not isinstance(cycle, dict) or not isinstance(cycle.get("base"), dict):
+        return None
+    period = cycle.get("period", 6)
+    if not _is_int(period) or period <= 0:
+        return None
+    base = cycle["base"]
+    if not all(_is_int(value) and str(key).isdigit() for key, value in base.items()):
+        return None
+    up = [
+        int(seat_class)
+        for seat_class, next_year in _senate_class_next_election(cycle, year).items()
+        if next_year == year
+    ]
+    return up[0] if len(up) == 1 else None
 
 
 def _live_senate_specials(

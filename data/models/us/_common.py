@@ -154,7 +154,7 @@ class UsModelSpec:
         trend_cache_meta_json: Absolute path to the trend metadata JSON for this type.
         seat_name_allowlist: When set, only seats whose ``seat_name`` is in this set are
             loaded and projected. Used by the Senate runner to restrict the field to the
-            2026 Class-2 states; ``None`` projects every seat that has baseline votes.
+            next cycle's class states; ``None`` projects every seat that has baseline votes.
         national_poll_map_name: Map holding the **national** poll series, when it is not
             this spec's own map. The Senate reads the generic ballot from
             ``"US House Districts 2024"``; ``None`` means "this spec's map".
@@ -167,11 +167,12 @@ class UsModelSpec:
             step; the national series never uses it.
         seat_baseline_overrides: Seat name → the **manifest id** of the election that
             seat's baseline comes from, for seats whose baseline is not
-            ``baseline_election_name`` (the 2026 Senate specials, which swing from 2022
-            rather than 2020). Manifest ids rather than election names, because the
-            source of truth is ``map-modes-shell.json``, which names elections the way
-            the exported manifest does; :func:`resolve_special_baselines` turns them
-            into rows. Consumed by the baseline loader.
+            ``baseline_election_name`` (seats last filled at an off-cycle special, which swing
+            from that result rather than the field's baseline). Manifest ids rather than
+            election names, because the source of truth is ``map-modes-shell.json``, which
+            names elections the way the exported manifest does;
+            :func:`resolve_special_baselines` turns them into rows. Consumed by the
+            baseline loader.
         target_election_year: Presidential allocation year; other chambers leave it
             unset.
     """
@@ -567,14 +568,14 @@ def build_baseline_vote_state(
 
     Aggregates the baseline election's ``Vote`` rows into the structures used to
     derive swings. When ``seat_id_filter`` is supplied, votes for seats outside it
-    are ignored (the Senate Class-2 restriction).
+    are ignored (the Senate's restriction to the class being contested).
 
     ``seat_baseline_election_ids`` moves individual seats onto a different election:
-    a 2026 Senate special fills a Class-3 seat last contested in **2022**, so Ohio
-    and Florida swing from the 2022 race while the rest of the field swings from
-    2020. Each override election contributes *only* the seats pointed at it, and
-    those seats are dropped from the spec's own baseline — so a state that appears
-    in both elections is counted once, on the override.
+    a seat last filled at an off-cycle special swings from that race, not the field's
+    (for 2028, Ohio and Florida swing from their 2026 specials while the rest of the
+    Class-3 field swings from 2022). Each override election contributes *only* the
+    seats pointed at it, and those seats are dropped from the spec's own baseline — so
+    a state that appears in both elections is counted once, on the override.
 
     ``popular_vote_seat_ids`` restricts national and regional aggregate votes
     without discarding per-seat baselines or their parties. Presidential callers

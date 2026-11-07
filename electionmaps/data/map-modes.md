@@ -189,6 +189,7 @@ the current shells show which each map uses.
 | `hideMajority` | Suppresses the subtitle's majority summary for single-winner elections; multi-member chamber summaries are handled separately. |
 | `senateClassNextElection` | Generated class → next-election-year object. Sets each chamber member's next-up year from their class for cycle filtering and popups. |
 | `senateSpecialElections` | Array of `{ seat, class, year, baselineElectionId }` records for live off-cycle races. Overrides the named member's cycle and provides the baseline for Senate prediction. |
+| `senateBaselineOverrides` | Array of `{ seat, class, baselineElectionId }` records for seats of the regular class that swing from a different election than the rest of the class. Applies only while `class` is the class being contested (a state's seats of other classes are untouched). Senate Predict replaces the named seats of its baseline with their rows from that election; the member of that class up next also shows that election's year as the year last contested. Does not change any member's next-up year. |
 
 `postcode` has `endpoint` (the URL prefix to which the encoded postcode is
 appended) and `resultProperty` (the constituency field under the response's
@@ -212,9 +213,12 @@ These are configuration inputs, rather than keys to add to a generated manifest:
 | `mapModes[mapId].regionNameOverride` | Database region name → display name overrides for generated `regions`. The override object is removed. Existing explicit shell `regions` are retained for compatibility. |
 | `mapModes[mapId].senateClassCycle` | Durable `{ "base": { "1": 2018, "2": 2020, "3": 2022 }, "period": 6 }` cycle becomes `senateClassNextElection`, resolved against the export year. The cycle input is removed. |
 | `mapModes[mapId].senateSpecialElections` | Only valid records for `parliamentFeatures.us_senate.nextElectionYear` survive. A target year earlier than the export year produces no live specials. Each record needs integer `class`/`year` and non-blank `seat`/`baselineElectionId`. |
+| `mapModes[mapId].senateBaselineOverrides` | Valid records pass through, with no year test: each needs a non-blank string `seat` and `baselineElectionId` and an integer `class` of 1 to 3, and a later record for an already-named (seat, class) is dropped. Malformed records are dropped; extra fields are kept. A non-list value yields an empty list. |
 
 The generated Senate manifest currently has next-up years `1: 2030`, `2: 2026`,
-and `3: 2028`, with Florida and Ohio Class 3 specials in 2026 using
-`2022-us-senate` as their baseline. Regeneration resolves this time-dependent
+and `3: 2028`. No specials are live (the 2026 Florida and Ohio specials were held),
+and Florida and Ohio are overridden to `2026-us-senate`: their Class 3 seats were
+filled at those specials, so 2028 swings from that result while the rest of Class 3
+swings from `2022-us-senate`. Regeneration resolves this time-dependent
 configuration afresh; edit the shell's durable inputs rather than the generated
 years.

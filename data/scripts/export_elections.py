@@ -110,10 +110,15 @@ PAGE_PARLIAMENTS = {
 
 # mapMode keys that the shell doesn't hold verbatim: ``build_map_modes_with_regions`` derives
 # each one at export time (the Senate class cycle resolved to concrete years; the special
-# elections filtered to the ones the next Senate election holds). A ``--metadata-only`` refresh therefore has to
+# elections filtered to the ones the next Senate election holds; the per-seat baseline
+# overrides cleaned of malformed records). A ``--metadata-only`` refresh therefore has to
 # re-copy them from the rebuilt mode — and drop the key when the rebuild no longer produces it,
 # so a removed shell entry (or a special whose cycle has passed) disappears from the manifest.
-DERIVED_MODE_KEYS: tuple[str, ...] = ("senateClassNextElection", "senateSpecialElections")
+DERIVED_MODE_KEYS: tuple[str, ...] = (
+    "senateClassNextElection",
+    "senateSpecialElections",
+    "senateBaselineOverrides",
+)
 
 
 def refresh_manifest_modes(

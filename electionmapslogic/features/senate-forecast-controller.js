@@ -9,13 +9,29 @@ import {
   renderMapControlOptions,
   syncRightPanelHeight,
 } from "../dom.js";
-import { buildSenateChamber } from "./senate-chamber.js";
+import { buildSenateChamber, regularSenateClass } from "./senate-chamber.js";
 import { loadSenateSpecialBaseline } from "./senate-baseline.js";
 import { renderSenateForecastComparison, renderSenateForecastTabs } from "./senate-forecast-view.js";
 
 /**
- * Adds the seats-up / full-chamber output switch to the current saved Senate forecast.
- * Its input is the loaded forecast, so switching never recalculates the model's winners.
+ * The election year a saved Senate forecast projects. The export labels each forecast by the
+ * cycle it projects ("2026 Prediction"), so the leading year of its name is that cycle, which
+ * stays fixed when the parliament's `nextElectionYear` rolls on and the forecast is archived.
+ * Falls back to `nextElectionYear` for a forecast whose name carries no year.
+ * @param {{name?: string}} election - The forecast's manifest entry.
+ * @param {{nextElectionYear?: number}} config - The parliament config.
+ * @returns {number}
+ */
+function forecastCycleYear(election, config) {
+  const named = /^(\d{4})\b/.exec(String(election?.name || ""));
+  return named ? Number(named[1]) : Number(config.nextElectionYear);
+}
+
+/**
+ * Adds the seats-up / full-chamber output switch to a saved Senate forecast: the current one
+ * or an archived one from an earlier cycle. Its input is the loaded forecast, so switching
+ * never recalculates the model's winners. The forecast is identified by being a Senate model
+ * election, not by the predict anchor, which is now an actual result.
  * @returns {Promise<void>}
  */
 export async function activateSenateForecastView() {
@@ -23,8 +39,8 @@ export async function activateSenateForecastView() {
   renderSenateForecastComparison();
   const config = manifest.parliamentConfig(state.currentParliament);
   if (state.view !== "election" || config.predict?.model !== "senate"
-      || !state.currentElection?.model
-      || state.currentElection.id !== config.predictAnchorElectionId) return;
+      || !state.currentElection?.model) return;
+  const forecastYear = forecastCycleYear(state.currentElection, config);
 
   const forecastData = state.electionData;
   let regularComparison = state.comparisonElectionData;
@@ -35,7 +51,7 @@ export async function activateSenateForecastView() {
     && state.currentParliament === parliament && state.electionData === displayedData;
   const forecastKeys = new Set(forecastData.currentSeats.map((seat) => seatLookupKey(seat.seat)));
   const specials = (activeMapMode().senateSpecialElections || [])
-    .filter((special) => Number(special.year) === Number(config.nextElectionYear)
+    .filter((special) => Number(special.year) === forecastYear
       && forecastKeys.has(seatLookupKey(special.seat)));
 
   // Suppress partial deltas while additional per-seat results are still loading.
@@ -82,10 +98,11 @@ export async function activateSenateForecastView() {
     specials
       .map((special) => [seatLookupKey(special.seat), Number(special.class) || 2]),
   );
-  const tabs = config.predict.tabs || [
-    { key: "seatsup", label: `Seats up (${config.nextElectionYear})` },
-    { key: "chamber", label: "Full Senate" },
-  ];
+  // The seats-up tab names the forecast's own cycle, not the parliament's next election.
+  const seatsUpTab = { key: "seatsup", label: `Seats up (${forecastYear})` };
+  const tabs = (config.predict.tabs || [seatsUpTab, { key: "chamber", label: "Full Senate" }])
+    .map((tab) => (tab.key === "seatsup" ? { ...tab, label: seatsUpTab.label } : tab));
+  const regularClass = regularSenateClass(forecastYear);
   let activeTab = "seatsup";
 
   function renderTabs() {
@@ -98,7 +115,7 @@ export async function activateSenateForecastView() {
     const fullChamber = key === "chamber";
     election.multiMember = fullChamber;
     if (fullChamber) {
-      const seats = buildSenateChamber(chamberSeats, forecastData.currentSeats, specialClassBySeat);
+      const seats = buildSenateChamber(chamberSeats, forecastData.currentSeats, specialClassBySeat, regularClass);
       state.setElectionDataFromSeats(seats, forecastData.electionName);
       state.comparisonElectionData = ElectionData.fromSeats(chamberSeats);
     } else {

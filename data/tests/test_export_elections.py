@@ -388,6 +388,17 @@ class TestRefreshManifestModes:
         refresh_manifest_modes(manifest, rebuilt, {"23": []})
         assert manifest["mapModes"]["23"]["senateSpecialElections"] == valid
 
+    def test_refreshes_baseline_overrides_and_drops_them_when_the_shell_does(self) -> None:
+        overrides = [{"seat": "Ohio", "class": 3, "baselineElectionId": "2026-us-senate"}]
+        manifest = self._manifest()
+        manifest["mapModes"]["23"]["senateBaselineOverrides"] = [{"seat": "Stale", "class": 3, "baselineElectionId": "x"}]
+        refresh_manifest_modes(
+            manifest, {"23": {"regions": [], "senateBaselineOverrides": overrides}}, {}
+        )
+        assert manifest["mapModes"]["23"]["senateBaselineOverrides"] == overrides
+        refresh_manifest_modes(manifest, {"23": {"regions": []}}, {})
+        assert "senateBaselineOverrides" not in manifest["mapModes"]["23"]
+
     def test_falls_back_to_raw_db_regions_without_a_rebuilt_mode(self) -> None:
         manifest = self._manifest()
         refresh_manifest_modes(manifest, {}, {"23": [{"id": 9, "name": "Pacific"}]})

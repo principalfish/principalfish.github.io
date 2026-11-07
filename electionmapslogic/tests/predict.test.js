@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   buildBaselineShares,
   projectSeatUniformSwing,
@@ -6,8 +6,9 @@ import {
   FPTPPredict,
   AMSPredict,
   SenatePredict,
+  cloneBaselineSeat,
 } from '../features/predict.js';
-import { state, Seat } from '../state.js';
+import { state, Seat, manifest } from '../state.js';
 import { base64urlEncode, roundShare } from '../utils.js';
 
 // A bare aggregate config matching the shape #buildAggregateConfig produces: a key plus
@@ -557,7 +558,12 @@ describe('SenatePredict (seats-up projection + full-chamber composition)', () =>
   beforeEach(() => {
     state.comparisonElectionData = { currentSeats: buildBaseSeats() };
     state.currentRegionLabelsByKey = new Map([['east', 'East']]);
+    // Class 2 votes in 2026, which is what the chamber merge replaces.
+    manifest.init({ mapModes: { 23: { name: 'us-senate-2024', regions: [], senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 } } } });
+    state.currentElection = { id: '2020-us-senate', mapId: 23 };
   });
+
+  afterEach(() => { manifest.init({ mapModes: {} }); state.currentElection = null; });
 
   it('isMultiMemberView tracks the active output tab', () => {
     const model = new SenatePredict(2026, config);
@@ -710,5 +716,240 @@ describe('SenatePredict special elections', () => {
     expect(model.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
     const ohio = model.project().find((s) => s.seat === 'Ohio');
     expect(ohio.members.map((m) => m.name)).toEqual(['Ohio R3', 'Ohio R1']);
+  });
+});
+
+describe('uncalled baseline seats', () => {
+  // A seat still counting when the baseline was published: the leader is carried as the winner,
+  // and the percent counted rides along. Votes so far stand in for the final result.
+  const uncalled = (extra = {}) => new Seat({
+    seat: 'TX-07', region: 'south', winner: 'republican', called: false, pctCounted: 62.5,
+    votes: { republican: 540, democrat: 460 }, ...extra,
+  });
+  // No votes at all: nothing to project from, so no leader and no winner.
+  const noVotes = () => new Seat({ seat: 'TX-08', region: 'south', called: false, pctCounted: 0, votes: {} });
+  const dropDem = new Map([['south', new Map([['democrat', -20], ['republican', 20]])]]);
+  const flipDem = new Map([['south', new Map([['democrat', 20], ['republican', -20]])]]);
+  const models = ['democrat', 'republican'];
+
+  it('projects from the votes counted so far and comes out called', () => {
+    const projected = projectSeatUniformSwing(uncalled(), flipDem, models);
+    expect(projected.called).toBe(true);
+    expect(projected.pctCounted).toBeNull();
+    // 46% + 20 = 66% Democrat: the swing runs off the partial count's shares.
+    expect(projected.winner).toBe('democrat');
+    expect(projected.turnout).toBeCloseTo(1000, 6);
+  });
+
+  it('keeps the leader when the swing does not overturn it', () => {
+    const projected = projectSeatUniformSwing(uncalled(), dropDem, models);
+    expect(projected.called).toBe(true);
+    expect(projected.winner).toBe('republican');
+  });
+
+  it('a zero-swing clone of an uncalled seat is called, with its leader as winner', () => {
+    const clone = cloneBaselineSeat(uncalled());
+    expect(clone.called).toBe(true);
+    expect(clone.pctCounted).toBeNull();
+    expect(clone.winner).toBe('republican');
+    expect(clone.votes).toEqual({ republican: 540, democrat: 460 });
+  });
+
+  it('an uncalled seat tied for the lead takes the first-listed vote row, never "others"', () => {
+    const tied = uncalled({ winner: null, votes: { democrat: 500, republican: 500 } });
+    expect(tied.winner).toBeNull();
+    const clone = cloneBaselineSeat(tied);
+    expect(clone.called).toBe(true);
+    expect(clone.winner).toBe('democrat');
+  });
+
+  it('a seat with no votes stays unprojected, uncalled and without a winner', () => {
+    const swung = projectSeatUniformSwing(noVotes(), flipDem, models);
+    expect(swung.called).toBe(false);
+    expect(swung.winner).toBeNull();
+    expect(swung.winner).not.toBe('others');
+    expect(swung.turnout).toBe(0);
+    expect(swung.pctCounted).toBe(0);
+    const clone = cloneBaselineSeat(noVotes());
+    expect(clone.called).toBe(false);
+    expect(clone.winner).toBeNull();
+  });
+
+  it('leaves a called seat exactly as published', () => {
+    const calledSeat = new Seat({ seat: 'A', region: 'south', winner: 'democrat', votes: { democrat: 600, republican: 400 } });
+    const clone = cloneBaselineSeat(calledSeat);
+    expect(clone.called).toBe(true);
+    expect(clone.winner).toBe('democrat');
+    expect(clone).not.toBe(calledSeat);
+  });
+
+  it('does not touch the baseline seat itself (the anchor keeps its called:false flags)', () => {
+    const base = uncalled();
+    projectSeatUniformSwing(base, flipDem, models);
+    cloneBaselineSeat(base);
+    expect(base.called).toBe(false);
+    expect(base.pctCounted).toBe(62.5);
+    expect(base.winner).toBe('republican');
+  });
+
+  describe('through a predict model', () => {
+    const config = {
+      modelledPartyKeys: models,
+      aggregate: { key: 'national', label: 'National', excludeRegions: [] },
+      gridSections: [{ id: 'us', columnKeys: models, containsAggregate: true }],
+    };
+    let baseline;
+
+    beforeEach(() => {
+      baseline = [
+        uncalled(),
+        noVotes(),
+        new Seat({ seat: 'TX-09', region: 'south', winner: 'democrat', votes: { democrat: 700, republican: 300 } }),
+      ];
+      state.comparisonElectionData = { currentSeats: baseline };
+      state.currentRegionLabelsByKey = new Map([['south', 'South']]);
+    });
+
+    it('with no swing, an FPTP projection calls the uncalled seat and leaves the empty one alone', () => {
+      const projected = new FPTPPredict(2028, config).project();
+      const byName = Object.fromEntries(projected.map((seat) => [seat.seat, seat]));
+      expect(byName['TX-07'].called).toBe(true);
+      expect(byName['TX-07'].winner).toBe('republican');
+      expect(byName['TX-08'].called).toBe(false);
+      expect(byName['TX-08'].winner).toBeNull();
+      expect(byName['TX-09'].called).toBe(true);
+      // Copies, so the projection never aliases the baseline the comparison column reads.
+      expect(baseline[0].called).toBe(false);
+    });
+
+    it('with a swing, the uncalled seat is projected and called; the empty one stays neutral', () => {
+      const model = new FPTPPredict(2028, config);
+      model.setShare('national', 'democrat', 80);
+      model.setShare('national', 'republican', 20);
+      const byName = Object.fromEntries(model.project().map((seat) => [seat.seat, seat]));
+      expect(byName['TX-07'].called).toBe(true);
+      expect(byName['TX-07'].pctCounted).toBeNull();
+      expect(byName['TX-07'].winner).toBe('democrat');
+      expect(byName['TX-08'].called).toBe(false);
+      expect(byName['TX-08'].winner).toBeNull();
+    });
+
+    it('a Senate projection with no swing calls its uncalled seat too', () => {
+      const senateConfig = { ...config, tabs: [{ key: 'seatsup', label: 'Seats up' }] };
+      state.comparisonElectionData = { currentSeats: [uncalled(), noVotes()] };
+      const projected = new SenatePredict(2028, senateConfig).project();
+      expect(projected.map((seat) => [seat.called, seat.winner])).toEqual([[true, 'republican'], [false, null]]);
+    });
+  });
+});
+
+describe('SenatePredict 2028 baselines (regular class and per-seat overrides)', () => {
+  const config = {
+    modelledPartyKeys: ['democrat', 'republican'],
+    aggregate: { key: 'national', label: 'National', excludeRegions: [] },
+    gridSections: [{ id: 'us', columnKeys: ['democrat', 'republican'], containsAggregate: true }],
+    tabs: [{ key: 'seatsup', label: 'Seats up' }, { key: 'chamber', label: 'Full Senate' }],
+  };
+
+  // Class 3 as of 2022: Florida and Ohio both leaned Republican then.
+  const classBaseline = () => [
+    new Seat({ seat: 'Georgia', region: 'south', winner: 'democrat', votes: { democrat: 510, republican: 490 } }),
+    new Seat({ seat: 'Florida', region: 'south', winner: 'republican', votes: { republican: 570, democrat: 430 } }),
+    new Seat({ seat: 'Ohio', region: 'midwest', winner: 'republican', votes: { republican: 540, democrat: 460 } }),
+  ];
+  // The 2026 specials, with different splits (and Georgia, which must not be taken from here).
+  const overrideSeats = () => [
+    new Seat({ seat: 'Florida', region: 'south', winner: 'republican', votes: { republican: 600, democrat: 400 } }),
+    new Seat({ seat: 'Ohio', region: 'midwest', winner: 'republican', votes: { republican: 520, democrat: 480 } }),
+  ];
+
+  beforeEach(() => {
+    state.comparisonElectionData = { currentSeats: classBaseline() };
+    state.currentRegionLabelsByKey = new Map([['south', 'South'], ['midwest', 'Midwest']]);
+  });
+
+  it('replaces only the named seats of the class baseline', () => {
+    const model = new SenatePredict(2028, config);
+    model.setBaselineOverrides(overrideSeats());
+    const votesOf = (name) => model.projectionBase.find((seat) => seat.seat === name).votes;
+    expect(model.projectionBase.map((seat) => seat.seat)).toEqual(['Georgia', 'Florida', 'Ohio']);
+    expect(votesOf('Georgia')).toEqual({ democrat: 510, republican: 490 });
+    expect(votesOf('Florida')).toEqual({ republican: 600, democrat: 400 });
+    expect(votesOf('Ohio')).toEqual({ republican: 520, democrat: 480 });
+  });
+
+  it('recomputes the ballot baseline from the replaced seats', () => {
+    const model = new SenatePredict(2028, config);
+    // South before: Georgia 1000 + Florida 1000 -> R 53 (490+570 of 2000).
+    expect(model.currentBaselineMap().get('south').get('republican')).toBe(53);
+    model.setBaselineOverrides(overrideSeats());
+    // After: Georgia + Florida(2026) -> R 55 (490+600 of 2000, rounded).
+    expect(model.currentBaselineMap().get('south').get('republican')).toBe(55);
+    expect(model.currentBaselineMap().get('midwest').get('republican')).toBe(52);
+  });
+
+  it('ignores an override seat that is not in the contested class', () => {
+    const model = new SenatePredict(2028, config);
+    model.setBaselineOverrides([
+      new Seat({ seat: 'Texas', region: 'south', winner: 'republican', votes: { republican: 900, democrat: 100 } }),
+    ]);
+    expect(model.projectionBase.map((seat) => seat.seat)).toEqual(['Georgia', 'Florida', 'Ohio']);
+  });
+
+  it('is a no-op when nothing loaded', () => {
+    const model = new SenatePredict(2028, config);
+    const before = model.projectionBase;
+    model.setBaselineOverrides([]);
+    expect(model.projectionBase).toBe(before);
+  });
+
+  it('projects the overridden seats off their 2026 result and the rest off 2022', () => {
+    const model = new SenatePredict(2028, config);
+    model.setBaselineOverrides(overrideSeats());
+    const projected = model.project();
+    const ohio = projected.find((seat) => seat.seat === 'Ohio');
+    const georgia = projected.find((seat) => seat.seat === 'Georgia');
+    // Zero swing reproduces the baselines exactly.
+    expect(ohio.votes).toEqual({ republican: 520, democrat: 480 });
+    expect(georgia.votes).toEqual({ democrat: 510, republican: 490 });
+  });
+
+  describe('regular class in the chamber view', () => {
+    const chamberSeats = () => [
+      new Seat({ seat: 'Georgia', region: 'south', winner: 'split', members: [
+        { party: 'democrat', name: 'GA D2', class: 2 },
+        { party: 'democrat', name: 'GA D3', class: 3 },
+      ] }),
+    ];
+
+    afterEach(() => { manifest.init({ mapModes: {} }); state.currentElection = null; });
+
+    it('replaces the member of the class up in the next election year, not Class 2', () => {
+      manifest.init({ mapModes: { 23: { name: 'us-senate-2024', regions: [], senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 } } } });
+      state.currentElection = { id: '2022-us-senate', mapId: 23 };
+      const model = new SenatePredict(2028, config);
+      expect(model.regularClass).toBe(3);
+      model.setChamberSeats(chamberSeats());
+      model.setActiveTab('chamber');
+      // Georgia's baseline is D 51%: zero swing keeps the Democrat as projected winner.
+      model.setShare('national', 'democrat', 30);
+      model.setShare('national', 'republican', 70);
+      const georgia = model.project().find((seat) => seat.seat === 'Georgia');
+      expect(georgia.members.find((member) => member.class === 3).party).toBe('republican');
+      expect(georgia.members.find((member) => member.class === 2).name).toBe('GA D2');
+    });
+
+    it('has no regular class without a class cycle, so the chamber view replaces no regular member', () => {
+      manifest.init({ mapModes: { 23: { name: 'us-senate-2024', regions: [] } } });
+      state.currentElection = { id: '2022-us-senate', mapId: 23 };
+      const model = new SenatePredict(2028, config);
+      expect(model.regularClass).toBeNull();
+      model.setChamberSeats(chamberSeats());
+      model.setActiveTab('chamber');
+      model.setShare('national', 'democrat', 30);
+      model.setShare('national', 'republican', 70);
+      const georgia = model.project().find((seat) => seat.seat === 'Georgia');
+      expect(georgia.members.map((member) => member.name)).toEqual(['GA D2', 'GA D3']);
+    });
   });
 });

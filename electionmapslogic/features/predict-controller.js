@@ -107,9 +107,10 @@ export async function activatePredictView() {
     await loadPredictChamberSeats(parliamentConfig, state.predictModel);
   }
 
-  // Senate specials (Ohio / Florida 2026) are contested off the regular class, so their baseline
-  // rows live in a different election file than the one activateElection fetched. Load them once,
-  // before the first projection, for the same reason: the engine does no I/O.
+  // Senate specials and per-seat baseline overrides (Ohio / Florida) swing from a different
+  // election than the regular class, so their baseline rows live in a different election file
+  // than the one activateElection fetched. Load them once, before the first projection, for
+  // the same reason: the engine does no I/O.
   if (typeof state.predictModel.setSpecialSeats === 'function') {
     await loadPredictSpecialSeats(state.predictModel);
   }
@@ -146,7 +147,7 @@ export async function activatePredictView() {
   // from the outset (zero swing reproduces the baseline). This also reconciles state the
   // baseline election alone leaves inconsistent — notably the multi-member flag for Senate's
   // seats-up view, whose default currentElection (the current-senate chamber) is multi-member
-  // while the loaded 2020 baseline is single-winner, which otherwise leaves the totals empty.
+  // while the loaded baseline is single-winner, which otherwise leaves the totals empty.
   runPredictProjection();
 }
 
@@ -178,8 +179,8 @@ function runPredictProjection() {
 
   // Point the display comparison (the vote-totals ± / gains column) at the right baseline for the
   // active view. Senate's full-chamber view compares against the current Senate, so ± reads as the
-  // net change from today's chamber rather than a nonsensical delta against the single-winner 2020
-  // seats; the seats-up view keeps its 2020 gains baseline. Models without this method leave
+  // net change from today's chamber rather than a nonsensical delta against the single-winner
+  // baseline seats; the seats-up view keeps its baseline gains. Models without this method leave
   // comparisonElectionData as activateElection set it.
   if (typeof model.comparisonSeatsForView === 'function') {
     state.comparisonElectionData = ElectionData.fromSeats(model.comparisonSeatsForView(), predictLabel);
@@ -363,24 +364,37 @@ async function loadPredictChamberSeats(parliamentConfig, model) {
 }
 
 /**
- * Loads the baseline seats for the special elections the active map declares
- * (`mapMode.senateSpecialElections`, exported from the page shell) and hands them to the model
- * via `setSpecialSeats`. Each entry names the manifest election its seat was last contested at
- * (Ohio / Florida 2026 → the 2022 cycle, not the Class-2 baseline the page already loaded), so
- * entries are grouped by that id and each file is fetched exactly once; only the named seats are
- * taken from it.
+ * Loads the baseline seats for the two per-seat Senate baseline lists the active map declares
+ * (exported from the page shell) and hands them to the model:
+ *   - `mapMode.senateSpecialElections` → `setSpecialSeats`: special elections held off the
+ *     regular class, whose seats join the contested field. Each names the manifest election its
+ *     seat was last contested at, not the baseline the page already loaded.
+ *   - `mapMode.senateBaselineOverrides` → `setBaselineOverrides`: seats of the regular class
+ *     that swing from a different election than the rest of the class (Florida and Ohio swing
+ *     from their 2026 specials in 2028, the rest of Class 3 from 2022). They replace the
+ *     matching seats of the baseline the page already loaded. An override names the class it
+ *     applies to and is used only while that is the class being contested, because a state
+ *     also holds seats of other classes that swing from their own last contest.
+ * Entries are grouped by the election they name so each file is fetched exactly once, and only
+ * the named seats are taken from it.
  *
- * Every failure mode is a silent no-op — no specials declared, an id that doesn't resolve, a
- * failed fetch — leaving the page projecting the regular class alone rather than breaking.
- * @param {object} model - The predict model exposing `setSpecialSeats`.
+ * Every failure mode is a silent no-op — nothing declared, an id that doesn't resolve, a
+ * failed fetch — leaving the page projecting the regular class from its own baseline rather
+ * than breaking.
+ * @param {object} model - The predict model exposing `setSpecialSeats` / `setBaselineOverrides`.
  * @returns {Promise<void>}
  */
 async function loadPredictSpecialSeats(model) {
-  const specials = activeMapMode().senateSpecialElections || [];
-  if (!specials.length) return;
-
-  const seats = await loadSenateSpecialBaseline(specials);
-  model.setSpecialSeats(seats, specials);
+  const mapMode = activeMapMode();
+  const specials = mapMode.senateSpecialElections || [];
+  const overrides = (mapMode.senateBaselineOverrides || [])
+    .filter((override) => model.regularClass != null && Number(override?.class) === model.regularClass);
+  if (specials.length) {
+    model.setSpecialSeats(await loadSenateSpecialBaseline(specials), specials);
+  }
+  if (overrides.length && typeof model.setBaselineOverrides === 'function') {
+    model.setBaselineOverrides(await loadSenateSpecialBaseline(overrides));
+  }
 }
 
 /**

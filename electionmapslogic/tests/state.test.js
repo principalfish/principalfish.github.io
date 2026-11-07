@@ -709,18 +709,21 @@ describe('AppState member cycle resolution (senate classes + specials)', () => {
     ] }),
   ];
 
-  function configure(specials) {
+  function configure(specials, { overrides, nextElectionYear } = {}) {
     manifest.init({
-      parties: [], elections: [], files: {}, parliamentFeatures: {},
+      parties: [], elections: [], files: {},
+      parliamentFeatures: nextElectionYear ? { us_senate_test: { nextElectionYear } } : {},
       mapModes: {
         23: {
           name: 'us-senate-2024',
           regions: [],
           senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 },
           ...(specials ? { senateSpecialElections: specials } : {}),
+          ...(overrides ? { senateBaselineOverrides: overrides } : {}),
         },
       },
     });
+    state.currentParliament = 'us_senate_test';
     state.currentElection = { id: 'current-senate', mapId: 23, multiMember: true };
     state.electionData = { currentSeats: buildSeats() };
     state.comparisonElectionData = null;
@@ -733,10 +736,14 @@ describe('AppState member cycle resolution (senate classes + specials)', () => {
     seats.find((s) => s.seat === seatName).members.find((m) => m.name === memberName).up;
 
   beforeEach(() => {
-    saved = { election: state.currentElection, data: state.electionData, comparison: state.comparisonElectionData };
+    saved = {
+      election: state.currentElection, data: state.electionData,
+      comparison: state.comparisonElectionData, parliament: state.currentParliament,
+    };
   });
 
   afterEach(() => {
+    state.currentParliament = saved.parliament;
     state.currentElection = saved.election;
     state.electionData = saved.data;
     state.comparisonElectionData = saved.comparison;
@@ -790,6 +797,38 @@ describe('AppState member cycle resolution (senate classes + specials)', () => {
     expect(moreno.last).toBeUndefined();
     expect(termYears(seats, 'Ohio', 'Moreno')).toEqual({ last: 2024, up: 2030 });
     expect(termYears(seats, 'Alabama', 'Britt')).toEqual({ last: 2022, up: 2028 });
+  });
+
+  it("a baseline override stamps `last` on the member up next, leaving `up` on the class cycle", () => {
+    const seats = configure(null, {
+      overrides: [{ seat: 'Ohio', class: 3, baselineElectionId: '2026-us-senate' }],
+      nextElectionYear: 2028,
+    });
+    // Husted (Class 3) was filled at the 2026 special: next up 2028, last contested 2026.
+    expect(upYear(seats, 'Ohio', 'Husted')).toBe(2028);
+    expect(termYears(seats, 'Ohio', 'Husted')).toEqual({ last: 2026, up: 2028 });
+    // Ohio's other member and other states keep the six-year-term rule.
+    expect(termYears(seats, 'Ohio', 'Moreno')).toEqual({ last: 2024, up: 2030 });
+    expect(termYears(seats, 'Alabama', 'Britt')).toEqual({ last: 2022, up: 2028 });
+  });
+
+  it("a baseline override does not stamp the same state's member of another class", () => {
+    const seats = configure(null, {
+      overrides: [{ seat: 'Ohio', class: 1, baselineElectionId: '2026-us-senate' }],
+      nextElectionYear: 2028,
+    });
+    // Moreno is Class 1 (next up 2030, not the 2028 cycle) and Husted is Class 3: neither matches.
+    const ohio = seats.find((s) => s.seat === 'Ohio');
+    expect(ohio.members.find((m) => m.name === 'Husted').last).toBeUndefined();
+    expect(ohio.members.find((m) => m.name === 'Moreno').last).toBeUndefined();
+  });
+
+  it('a baseline override does not stamp a member who is not up in the next election year', () => {
+    const seats = configure(null, {
+      overrides: [{ seat: 'Ohio', class: 3, baselineElectionId: '2026-us-senate' }],
+      nextElectionYear: 2026,
+    });
+    expect(seats.find((s) => s.seat === 'Ohio').members.find((m) => m.name === 'Husted').last).toBeUndefined();
   });
 
   it('a special whose baseline id has no year falls back to up − 6', () => {

@@ -1,6 +1,6 @@
 # Resume point: read this first
 
-Updated 2026-11-07 (planner, at creation). Issue state: `planned`.
+Updated 2026-11-07 (planner, Piece 1 in progress). Issue state: `planned`.
 
 ## Where we are
 
@@ -13,12 +13,11 @@ State checks:
 
 ## Pending decision (Phil)
 
-**Piece 1: 2a's direction after the failed gate.** See `plan.md` Context for the three attempts. Options:
-1. A pre-registered landslide or Labour-lead efficiency/regime term (recommended if 2a is pursued). Risk: with two landslide transitions, LOO is weak evidence.
-2. 1983–92 history first (shared boundaries and source coverage unverified; both moderate, Con-led elections, which made the scales tighter last time).
-3. Set 2a aside; do 2d and 2e first, since they don't depend on it.
+**Piece 1, second half: the form of 2a's landslide term.** Phil chose route (a) on 2026-11-07: a pre-registered landslide/efficiency term (see `decisions.md` Settled). Asked next which form: (1) a fit-free decomposition diagnostic first, then choose (recommended); (2) a directional term that shifts expected seats, which changes the central projection; (3) a lead-dependent spread term that leaves the centre unchanged. Phil answered "something else" with no detail. Ask what he has in mind (a combination? a different driver, such as the incumbent's vote drop? a projection change, such as MRP or seat type?).
 
-Open after that: US piece order relative to Westminster; 4d's data source.
+Why it matters: the central projection is uniform regional swing, with λ pushing towards proportional (`data/model_support/monte_carlo.py:61`, `:1038`). Even at λ=1 it gives Labour 354 against 411 in 2024, so the miss is mostly projection bias, not spread.
+
+Once the form is settled: write the 2a pieces into `plan.md` (replacing the single 2a entry), tick Piece 1, then the remaining Open items (US piece order; 4d's data source).
 
 ## Don't
 

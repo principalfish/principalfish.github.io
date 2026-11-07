@@ -90,7 +90,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 1c · Westminster validation report regenerated and committed (`2618c0dd`).
 - [x] 2 · T4 Piece 3a: Westminster display changes (`860b0d85`).
 - [x] 3 · T4 Phase 6: Style cleanup (`000fbd9f`).
-- [ ] 4 · Branch self-review done and chosen fixes committed.
+- [x] 4 · Branch self-review done and chosen fixes committed (`eeee25d0`).
 - [ ] 5 · Master merged in; checks green.
 - [ ] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation.
 - [ ] 7 · PR text drafted.
@@ -170,3 +170,15 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
   - **Checks:** mypy 246 clean; pytest 5670 (unchanged); Vitest 621 / 3 skipped (unchanged); export dry-run and console smoke OK; `git diff --check` clean.
   - **Analysis loop:** all clean except two template-indentation nits, both fixed.
 - 2026-11-07: Piece 3 committed as `000fbd9f` and pushed. Next: Piece 4, `/review self poll-errors-simulation` in the planner chat.
+- 2026-11-07 (builder, Piece 4 review fixes): all seven are implemented and paused for Phil's review (uncommitted). 15 files, +606/−105, plus the new `electionmapslogic/tests/election-load-view.test.js`.
+  - **Fix 1:** the same boundary rule now holds in `polltracker.js` and `trends.py`. A line breaks on an uncertainty-presence change, or when a known id differs from the last *kept* known id; unknown→unknown is continuous, and null→"a" is kept without a break. A cross-check test (`test_kept_runs_carry_every_tracker_break`, 64+3 sequences) pins Python's kept output to the JS rule. On the committed trends file the tracker now draws 0 boundaries and bands on 804/804 days.
+  - **Fixes 2–3:** jsdom tests drive the real `startApp()`: the popup band and its escaping, the MC headline, and stale-response guards.
+  - **Fix 4:** 33 frozen-input raise tests, plus cause assertions.
+  - **Fix 5:** `poll_list` catches `UncertaintyConfigError`. `poll_list.html` gets an alert.
+  - **Fix 6:** a shared `outcome_tail()` in `services/uncertainty_explorer.py`.
+  - **Fix 7:** the wording names `swing.pooled.sigma_seat_raw` / `sigma_lambda` (fitted 4.9029 / 0.3818 to 4 dp; 2 dp in the config).
+  - **Validation report regenerated:** only `limitations[2]`, `limitations[3]`, 8 `source_sha256` entries and `report_hash` moved, and no numbers. Seven of those hashes had been stale since the ruff commit `000fbd9f`; I missed that at Piece 3. A rerun is byte-identical.
+  - **Checks:** mypy 246 clean; pytest 5793; Vitest 638 / 3 skipped (with jsdom); bundle up to date (the US bundle is unchanged); export dry-run and console smoke OK; `git diff --check` clean.
+  - **Re-checks:** correctness, coverage, style and common-mistakes were re-run on the fixes. Their follow-ups are fixed: the Python and JS kept-run mismatch, the wording keys, the stored-interval tail test, and two comments.
+  - **Noted, not fixed (outside the chosen findings):** `poll_detail` for a Westminster poll still fails on a malformed uncertainty config. The review's premise that it catches the error was wrong.
+- 2026-11-07: Review fixes committed as `eeee25d0` and pushed. Next: Piece 5, merge master in, which needs Phil's go-ahead to push.

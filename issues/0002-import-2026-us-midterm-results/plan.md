@@ -238,7 +238,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [x] 1. Seat status/source schema + migration (ec682969)
 - [x] 2. NYT fetch + cache (2a8f90e5)
 - [x] 3. Schema adapters A/B/C + race model (9f17c51d)
-- [ ] 4. Converter, importer extensions, CLI, diff report
+- [x] 4. Converter, importer extensions, CLI, diff report (0a9007e5)
 - [ ] 5. Console results tool
 - [ ] 6. House maps 24 (2026) and 25 (2012 cycle)
 - [ ] 7. Export: status, sourceNote, specials, naming
@@ -323,3 +323,11 @@ No test touches the live DB (conftest guard).
   - the House `all` no longer checks the Senate special;
   - extra error-path tests; explicit raises instead of asserts.
 - Note for piece 8: render `sourceNote` (and candidate names and party codes) with textContent or the escape helper, never innerHTML.
+- 2026-11-07 (piece 4) review rounds 2–3:
+  - Fixed: malformed files map to `error:` + exit 1 before the report runs. A failed first import leaves no Map row.
+  - Rebuild refuses up front (`RebuildError`) when `meta.special_file` doesn't match.
+  - `convert` refuses a leftover specials file; a dry run only warns.
+  - One database-free validator, `check_us_election_file` (the importer's own checks), replaces the CLI's parallel one. `import_files` plans every file before importing any, so a bad specials file can't half-import a year.
+  - A warning flags a Senate special still in the DB that no file names.
+  - Final: mypy clean, 4936 passed. The all-years trial converts and imports all 14 elections, with zero diffs on a `--refresh` pass and 0 winner changes vs 538.
+- 2026-11-07: piece 4 committed (0a9007e5) and pushed. Before piece 11: confirm map ids 24/25 are free in the live DB.

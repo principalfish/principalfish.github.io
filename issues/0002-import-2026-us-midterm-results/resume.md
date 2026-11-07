@@ -11,9 +11,9 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Piece 9 committed `2f87352b`. Piece 10 started on Phil's go-ahead ("Go ahead"). Pending: piece 10 approved ("Approve, commit") subject to one change first: a mixed state is coloured by its called member ("Use the called member"). The change is built (mixed state: `w` = called member's party, no state `c`) and approved ("Approve"); relayed to the builder to commit and push. Once pushed, tick piece 10 in pr.md and `gh pr edit 80`. `EXPECTED_SPECIALS_2026` stays hard-coded (runbook note added to piece 11). The hatch look needs a real-browser check after the piece 11 export.
+Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Pieces 1–10 committed and pushed (piece 10 `cd7dbc43`); PR #80 ticked. Pending for Phil: piece 11 timing. The plan merges master in after #74 lands (still open; `gh pr view 74 --json state`), before piece 11. A test merge with 0001 (`git merge-tree --write-tree --name-only origin/poll-errors-simulation origin/import-2026-us-midterm-results`) conflicts in README.md, data/models.py, export/payload.py, export_elections.py, test_export_manifest.py, test_export_payload.py, shell.html and the three bundles (regenerate those). The hatch look needs a real-browser check after the piece 11 export.
 
-Next step: checkpoint 10 (in progress). See `plan.md`.
+Next step: checkpoint 11. See `plan.md`.
 
 ## Don't
 - Run imports, migrations or exports against the live DB without Phil's explicit go-ahead at the time.

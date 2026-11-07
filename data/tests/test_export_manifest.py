@@ -105,6 +105,44 @@ class TestBuildMapModesWithRegions:
         assert "senateClassNextElection" not in modes["23"]
 
 
+class TestSenateClassFloor:
+    """A class that has just voted must not read as "up this year"."""
+
+    CYCLE = {"base": {"1": 2018, "2": 2020, "3": 2022}, "period": 6}
+
+    @staticmethod
+    def _next_up(features: dict[str, Any], *, current_year: int | None = None) -> Any:
+        modes = {"23": {"senateClassCycle": TestSenateClassFloor.CYCLE}}
+        return build_map_modes_with_regions(
+            modes, {"23": []}, current_year, parliament_features=features
+        )["23"]["senateClassNextElection"]
+
+    def test_the_2026_export_rolls_class_2_on_to_2032(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import scripts.export.manifest as manifest_module
+
+        class FakeDate:
+            @staticmethod
+            def today() -> Any:
+                return SimpleNamespace(year=2026)
+
+        monkeypatch.setattr(manifest_module, "date", FakeDate)
+        # Wall-clock year 2026 with the Senate's next election in 2028: Class 2 voted in 2026.
+        assert self._next_up({"us_senate": {"nextElectionYear": 2028}}) == {"1": 2030, "2": 2032, "3": 2028}
+
+    def test_before_the_election_class_2_is_still_up_in_2026(self) -> None:
+        assert self._next_up({"us_senate": {"nextElectionYear": 2026}}, current_year=2025) == {
+            "1": 2030, "2": 2026, "3": 2028,
+        }
+
+    def test_a_stale_next_election_year_still_rolls_forward(self) -> None:
+        assert self._next_up({"us_senate": {"nextElectionYear": 2026}}, current_year=2027) == {
+            "1": 2030, "2": 2032, "3": 2028,
+        }
+
+    def test_no_next_election_year_uses_the_export_year(self) -> None:
+        assert self._next_up({}, current_year=2026) == {"1": 2030, "2": 2026, "3": 2028}
+
+
 class TestSenateSpecialElections:
     """Specials are filtered once, at export, to the ones the next Senate election holds."""
 

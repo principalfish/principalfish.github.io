@@ -190,3 +190,122 @@ describe('renderSeatPopup: Current Senate uncalled members', () => {
     expect(row.textContent).not.toContain('counted');
   });
 });
+
+// renderMap draws the vote totals and the seat list before the topology; with no topology
+// object it then throws, which lets these tests exercise the two panels without a map renderer.
+const renderPanels = () => {
+  expect(() => dom.renderMap()).toThrow('TopoJSON missing objects');
+};
+
+describe('vote totals uncalled line', () => {
+  const line = () => document.getElementById('mapsVoteTotalsUncalled');
+  const render = (uncalled, mapConfig = {}) => {
+    const { state } = stateModule;
+    state.mapConfig = mapConfig;
+    state.mapData = { objects: {} };
+    state.filteredSeatsSummary = { parties: [], totalVotes: 0, totalSeats: 10, uncalled };
+    state.filteredSeatsComparisonSummary = null;
+    state.listFilteredSeats = [];
+    renderPanels();
+  };
+
+  it('is hidden and empty when nothing is uncalled', () => {
+    render(0);
+    expect(line().hidden).toBe(true);
+    expect(line().textContent).toBe('');
+  });
+
+  it('says "1 seat uncalled" in the singular', () => {
+    render(1);
+    expect(line().hidden).toBe(false);
+    expect(line().textContent).toBe('1 seat uncalled');
+  });
+
+  it('says "3 seats uncalled" in the plural', () => {
+    render(3);
+    expect(line().hidden).toBe(false);
+    expect(line().textContent).toBe('3 seats uncalled');
+  });
+
+  it('counts electoral votes on an electoral-votes map, whatever the number', () => {
+    render(1, { tally: 'electoralVotes' });
+    expect(line().textContent).toBe('1 EV uncalled');
+    render(38, { tally: 'electoralVotes' });
+    expect(line().hidden).toBe(false);
+    expect(line().textContent).toBe('38 EV uncalled');
+  });
+
+  it('hides again when a later render has nothing uncalled', () => {
+    render(3);
+    render(0);
+    expect(line().hidden).toBe(true);
+    expect(line().textContent).toBe('');
+  });
+});
+
+describe('seat list swatches', () => {
+  const render = (current, comparison) => {
+    const { state, ElectionData } = stateModule;
+    state.mapConfig = {};
+    state.mapData = { objects: {} };
+    state.filteredSeatsSummary = { parties: [], totalVotes: 0, totalSeats: 0, uncalled: 0 };
+    state.filteredSeatsComparisonSummary = null;
+    state.electionData = new ElectionData({ seats: current });
+    state.comparisonElectionData = new ElectionData({ seats: comparison });
+    state.listFilteredSeats = state.electionData.currentSeats;
+    renderPanels();
+  };
+  const row = (name) => document.querySelector(`#mapsSeatList .maps-seat-row[data-seat-key="${name.toLowerCase()}"]`);
+  const icon = (name) => row(name).querySelector('.maps-seat-owner-icon');
+
+  beforeEach(() => {
+    render(
+      [
+        // Called, and changed hands from the comparison election.
+        rawSeat('Held', 'republican', { republican: 60, democrat: 40 }),
+        rawSeat('Flipped', 'republican', { republican: 60, democrat: 40 }),
+        // Uncalled with a leader: its leader differs from the comparison winner, yet no gain.
+        rawSeat('Leading', 'republican', { republican: 51, democrat: 49 }, { c: false, pc: 50 }),
+        // Uncalled and nobody leads (a tied count has no winner).
+        { n: 'Tied', r: 'region', c: false, p: [['republican', 5], ['democrat', 5]] },
+      ],
+      [
+        rawSeat('Held', 'republican', { republican: 55, democrat: 45 }),
+        rawSeat('Flipped', 'democrat', { republican: 45, democrat: 55 }),
+        rawSeat('Leading', 'democrat', { republican: 45, democrat: 55 }),
+        rawSeat('Tied', 'democrat', { republican: 45, democrat: 55 }),
+      ],
+    );
+  });
+
+  it('draws a called seat solid, labelled with its winner', () => {
+    expect(row('Held')).not.toBeNull();
+    expect(icon('Held').classList.contains('maps-seat-icon--provisional')).toBe(false);
+    expect(icon('Held').title).toBe('republican');
+    expect(row('Held').querySelector('.maps-uncalled-tag')).toBeNull();
+  });
+
+  it('draws an uncalled seat with a leader in the leader\'s colour as provisional', () => {
+    expect(icon('Leading').classList.contains('maps-seat-icon--provisional')).toBe(true);
+    expect(icon('Leading').title).toBe('republican');
+    expect(row('Leading').querySelector('.maps-uncalled-tag').textContent).toBe('UNCALLED');
+  });
+
+  it('draws an uncalled seat with no leader neutral, labelled "No leader", never Others', () => {
+    expect(icon('Tied').classList.contains('maps-seat-icon--provisional')).toBe(true);
+    expect(icon('Tied').title).toBe('No leader');
+    expect(icon('Tied').style.background).toMatch(/#d1d5db|rgb\(209, 213, 219\)/);
+    expect(row('Tied').querySelector('.maps-uncalled-tag')).not.toBeNull();
+  });
+
+  it('shows a gain indicator only for a called seat that changed hands', () => {
+    const gain = (name) => row(name).querySelector('.maps-seat-gain');
+    expect(gain('Held')).toBeNull();
+    expect(gain('Flipped')).not.toBeNull();
+    expect(gain('Flipped').textContent).toContain('GAIN FROM');
+    // Uncalled seats differ from the comparison winner but have no settled winner to gain.
+    expect(gain('Leading')).toBeNull();
+    expect(gain('Tied')).toBeNull();
+    expect(row('Leading').querySelector('.maps-seat-gain-placeholder')).not.toBeNull();
+  });
+});

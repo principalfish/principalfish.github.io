@@ -118,13 +118,15 @@ def build_map_modes_with_regions(
         map_modes: Per-map config keyed by string map id.
         regions_by_map_id: Region lists keyed by string map id, as built by
             :func:`build_manifest_regions_by_map_id`.
-        current_year: Year to resolve Senate ``senateClassCycle`` "next up" years against, and
-            to expire past ``senateSpecialElections`` entries at; defaults to the current
-            calendar year. Injectable so exports (and tests) can pin a year rather than
-            depend on the wall clock.
+        current_year: The export year, which expires past ``senateSpecialElections`` entries
+            and floors the Senate ``senateClassCycle`` "next up" years; defaults to the
+            current calendar year. Injectable so exports (and tests) can pin a year rather
+            than depend on the wall clock.
         parliament_features: The page's ``parliamentFeatures`` block. Its
             ``us_senate.nextElectionYear`` picks the ``senateSpecialElections`` entries
-            that are live (see :func:`_live_senate_specials`).
+            that are live (see :func:`_live_senate_specials`) and, when later than
+            ``current_year``, floors each class's next-up year so a class that has just
+            voted rolls on to its following term.
 
     Returns:
         A new dict keyed by string map id, each value being the mapMode config with a
@@ -133,6 +135,11 @@ def build_map_modes_with_regions(
     if current_year is None:
         current_year = date.today().year
     special_year = senate_next_election_year(parliament_features)
+    # No class is next up before the Senate's own next election: a class that voted in the
+    # cycle already held (2026's Class 2, exported late in 2026) must roll on to its following
+    # term, not read as "up this year". The floor is the shell's ``nextElectionYear`` (or the
+    # export year, if later, so a stale shell still rolls forward).
+    cycle_floor = current_year if special_year is None else max(current_year, special_year)
     merged: dict[str, Any] = {}
     for map_id_str, mode in map_modes.items():
         entry = dict(mode)
@@ -147,7 +154,7 @@ def build_map_modes_with_regions(
         # lookup and the cycle rolls forward on its own without editing the shell.
         cycle = entry.pop("senateClassCycle", None)
         if cycle:
-            entry["senateClassNextElection"] = _senate_class_next_election(cycle, current_year)
+            entry["senateClassNextElection"] = _senate_class_next_election(cycle, cycle_floor)
         # Senate special elections (an off-cycle vacancy contested alongside the regular class,
         # e.g. Ohio and Florida's Class-3 seats in 2026) are filtered here, once, to the ones the
         # next Senate election holds; the front end then uses the list as-is.

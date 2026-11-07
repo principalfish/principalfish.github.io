@@ -360,6 +360,141 @@ class TestRedistrictingCheck:
         assert check.redrawn_states({"01": (0.5, 5)}, {}) == set()
 
 
+# State FIPS prefix -> postal code for the main() tests below. AA's districts were redrawn,
+# BB is noisy on both maps, CC matches on both, DD has too few counties to score.
+_MAIN_STATES = {"01": "AA", "02": "BB", "03": "CC", "04": "DD"}
+
+
+def _main_nyt() -> dict[str, Any]:
+    """A NYT snapshot with 4 counties for AA, BB and CC, and 2 for DD; all report district 01."""
+    races = []
+    for fips, postal in _MAIN_STATES.items():
+        units: list[dict[str, Any]] = [{"level": "state", "state_postal": postal}]
+        for index in range(2 if postal == "DD" else 4):
+            units.append({
+                "level": "county", "fips_state": fips,
+                "fips_county": f"{index + 1:03d}", "total_votes": 10,
+            })  # fmt: skip
+        races.append({"office_id": "H", "seat_number": "1", "reporting_units": units})
+    return {"races": races}
+
+
+def _main_counties() -> list[dict[str, Any]]:
+    return [
+        {
+            "properties": {"GEOID": f"{fips}{index + 1:03d}"},
+            "geometry": square(int(fips) * 10 + index, 0),
+        }
+        for fips in _MAIN_STATES
+        for index in range(2 if fips == "04" else 4)
+    ]
+
+
+def _main_districts(*, redrawn: bool) -> list[dict[str, Any]]:
+    """The old map (``redrawn=False``) puts AA in a district NYT never reported."""
+    def district(name: str, state: str, first: int, width: int) -> dict[str, Any]:
+        return {
+            "properties": {"name": name},
+            "geometry": square(int(state) * 10 + first, 0, width, 1),
+        }
+
+    return [
+        district("AA-01" if redrawn else "AA-99", "01", 0, 4),
+        # BB: counties 3 and 4 sit in a district NYT never reported, on both maps.
+        district("BB-01", "02", 0, 2),
+        district("BB-02", "02", 2, 2),
+        district("CC-01", "03", 0, 4),
+        district("DD-01", "04", 0, 2),
+    ]
+
+
+class TestRedistrictingMain:
+    @pytest.fixture()
+    def inputs(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
+        paths = {
+            "nyt": tmp_path / "house.json",
+            "new": tmp_path / "new.topo.json",
+            "old": tmp_path / "old.topo.json",
+            "counties": tmp_path / "counties.shp",
+        }
+        paths["nyt"].write_text(json.dumps(_main_nyt()), encoding="utf-8")
+        features = {
+            paths["counties"]: _main_counties(),
+            paths["new"]: _main_districts(redrawn=True),
+            paths["old"]: _main_districts(redrawn=False),
+        }
+
+        def read_geojson(path: Path, _tmp: Path, _name: str) -> list[dict[str, Any]]:
+            return features[path]
+
+        # The real reader shells out to ogr2ogr; the fixtures stand in for its output.
+        monkeypatch.setattr(check, "_read_geojson", read_geojson)
+        return paths
+
+    def _run(
+        self,
+        paths: dict[str, Path],
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+        *extra: str,
+    ) -> list[list[str]]:
+        argv = [
+            "check_redistricting.py",
+            "--nyt", str(paths["nyt"]),
+            "--districts", str(paths["new"]),
+            "--counties", str(paths["counties"]),
+            *extra,
+        ]  # fmt: skip
+        monkeypatch.setattr(sys, "argv", argv)
+        check.main()
+        return [line.split() for line in capsys.readouterr().out.splitlines()]
+
+    def test_old_and_new_map_rank_by_the_old_score_and_flag_redrawn_states(
+        self,
+        inputs: dict[str, Path],
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        lines = self._run(inputs, capsys, monkeypatch, "--old", str(inputs["old"]))
+
+        assert lines == [
+            ["state", "counties", "old", "new"],
+            ["AA", "4", "1.00", "0.00", "<-", "redrawn"],  # worst on the old map
+            ["BB", "4", "0.50", "0.50"],  # noisy on both: not redrawn
+            ["CC", "4", "0.00", "0.00"],
+            ["DD", "2", "n/a", "n/a"],  # unscored states come last
+            ["redrawn:", "AA"],
+        ]
+
+    def test_no_state_redrawn_gives_an_empty_redrawn_line(
+        self,
+        inputs: dict[str, Path],
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # The "old" map is the new one: nothing changed anywhere.
+        lines = self._run(inputs, capsys, monkeypatch, "--old", str(inputs["new"]))
+
+        assert all("<-" not in line for line in lines)
+        assert lines[-1] == ["redrawn:"]
+
+    def test_single_map_layout_ranks_by_its_own_score_without_flags(
+        self,
+        inputs: dict[str, Path],
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        lines = self._run(inputs, capsys, monkeypatch)
+
+        assert lines == [
+            ["state", "counties", "mismatch"],
+            ["BB", "4", "0.50"],
+            ["AA", "4", "0.00"],
+            ["CC", "4", "0.00"],
+            ["DD", "2", "n/a"],
+        ]
+
+
 class TestStateTables:
     """Spot-check the FIPS and name tables against known values."""
 

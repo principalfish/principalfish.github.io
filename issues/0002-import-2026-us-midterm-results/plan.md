@@ -237,7 +237,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 ## Checkpoints
 - [x] 1. Seat status/source schema + migration (ec682969)
 - [x] 2. NYT fetch + cache (2a8f90e5)
-- [ ] 3. Schema adapters A/B/C + race model
+- [x] 3. Schema adapters A/B/C + race model (9f17c51d)
 - [ ] 4. Converter, importer extensions, CLI, diff report
 - [ ] 5. Console results tool
 - [ ] 6. House maps 24 (2026) and 25 (2012 cycle)
@@ -292,3 +292,9 @@ No test touches the live DB (conftest guard).
   - State Green affiliates (e.g. Pacific Green) map to usgreen.
   - Also noted: the 2026 RCV races (AK, ME) have no NYT `rounds` yet, so they store the first round until NYT publishes the final round. Already-decided runoffs sit inside the 2020 (B) and 2022 (A2 Senate) general files, so those races carry `decisive_round="runoff"` even with kind "general".
 - 2026-11-07 (piece 3) real-sample counts: House 435 every year. Senate 35/34/35/35/35 (2026→2018; 2024 is 34 because of the CA gap). 2026 has 22 House and 2 Senate races uncalled. NC-09 2018 is uncalled, which is correct: it was never certified.
+- 2026-11-07 (piece 3) review round 1:
+  - Correctness spot-checks passed. ME-02 2018/22/24 and AK-01 2022/24 RCV final rounds are right; so are the GA 2020/2022, MS 2018 and LA-05 2020 runoff swaps, and the CA same-party flags.
+  - Fixes routed: add a `certified` field; fall back to precincts for B's pct when eevp is missing; a Senate-class table for B/C specials (2018 MN/MS → 2, 2020 AZ/GA → 3); bounds checks against overflow; `isdecimal`; duplicate candidate ids refused; extra tests.
+- Note for piece 8: candidate names and party codes are stored as NYT sends them. Render them through the front end's existing escape helper, never raw `innerHTML`.
+- 2026-11-07: piece 3 committed (9f17c51d) and pushed. Round 2 closed `certified` (A/A2 only; B's `edison_certified` doesn't mean certification), the B pct fallback, the B/C special-class table, bounds checks, ASCII-only ints and duplicate-id refusal. Checks: mypy clean, 4796 passed.
+- Piece 3 Green-affiliate mapping: PAG / `pacific-green` (OR) and `mountain` (WV, 2018) → usgreen. GPJ, GRP/Grp, PRG/progressive and liberty-union stay others. Mountain Party's 2018 Green affiliation is unverified.

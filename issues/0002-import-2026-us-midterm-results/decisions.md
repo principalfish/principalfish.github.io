@@ -24,6 +24,8 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 - Local data console gets a US results tool to fetch the latest NYT files, convert them, preview the changes and import them (refresh in place), for any supported year and chamber. It follows the console's form → preview → confirm pattern (`console/blueprints/by_elections.py:22`, `:43`, `:83`) and shells out through `console/services/runner.py`. Per the console-transparency rule, the preview shows the intermediate numbers: seats changed, newly called, % counted per race, party mapping and warnings. (2026-11-07)
 - Same-party races (CA/WA top-two, LA jungle) keep today's merge: one vote row per party per seat, totals summed, top candidate named. A per-seat `sameParty` flag lets the popup say so. No vote-schema or payload-format change. (2026-11-07)
 
+- US House comparison: each House election compares against the previous House election regardless of map, full per-seat by district key (redrawn states included). Party totals ± are valid at any level; the user accepts same-number comparisons in redrawn states. (2026-11-07)
+
 ## Open
 
 ## Assumed

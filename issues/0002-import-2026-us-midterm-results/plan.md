@@ -113,7 +113,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 ## Pieces
 
 1. **Seat status and source schema**
-   - Files: `data/models.py`, `data/db.py`, `data/scripts/migrate_add_us_result_status.py` (new), `data/tests/test_migrate_us_result_status.py` (new)
+   - Files: `data/models.py`, `data/db.py`, `data/scripts/migrate_add_us_result_status.py` (new), `data/tests/test_migrate_us_result_status.py` (new), `data/tests/test_migrate_us_electoral_votes.py` (column lookup by name)
    - What: add an `ElectionSeatStatus` model (election_id, seat_id, called bool, pct_counted float nullable, same_party bool, decisive_round text nullable, unique (election_id, seat_id), cascade on election delete). Add `Election.source_note` (nullable text) and mirror it in `ensure_elections_sqlite_schema`. Add a `Database` helper to upsert/clear status for an election. Write an idempotent migration with `--dry-run` following `migrate_add_us_poll_scope.py`.
    - Functions: `ElectionSeatStatus`, `Database.set_seat_statuses`, `Database.get_seat_statuses`, migration `main`
    - Depends on: none
@@ -198,6 +198,8 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
      - Uncalled seats are filled with the leader's colour hatched or lightened (`dom.js:1986-2004`); the popup gets an UNCALLED · n% counted tag (pattern `dom.js:1415`), a same-party note and the decisive-round label.
      - A source line under the map (new element in `shell.html:113-125`) shows the entry's `sourceNote` when present.
      - The Senate popup shows a state's special result, and the chamber tally counts specials.
+     - Uncalled seats with no `w` (no positive votes, or a tied lead) render neutral, not as Others.
+     - Cross-map comparisons (US House always compares with the previous House election): with no filter active, the totals-table ± must total the WHOLE comparison election, not just districts whose keys match. Otherwise reapportionment years misreport (2022 vs 2020 compares 435 seats with 428: R +13/D −6 instead of +9/−9). Per-seat gain/hold stays key-matched; a key absent from the comparison shows no gain.
    - Functions: `Seat`, `Seat.fromRaw`, fill function, `renderSeatPopup`, source-line render, `summarize`
    - Depends on: 7
    - Acceptance: vitest covers parsing, fill choice, popup tags, source line and tally; jsdom harness run (AGENTS.md recipe) on a US House and a Westminster page shows no regressions; bundles rebuilt.
@@ -241,7 +243,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [x] 4. Converter, importer extensions, CLI, diff report (0a9007e5)
 - [x] 5. Console results tool (147ad9d4)
 - [ ] 6. House maps 24 (2026) and 25 (2012 cycle)
-- [ ] 7. Export: status, sourceNote, specials, naming
+- [x] 7. Export: status, sourceNote, specials, naming (f90f26d3)
 - [ ] 8. Front end: uncalled, source line, specials
 - [ ] 9. Predict rollover + per-seat Senate baselines
 - [ ] 10. Derived Current Senate
@@ -276,6 +278,8 @@ No test touches the live DB (conftest guard).
 ## Notes
 - 2026-11-07 (builder): branch `import-2026-us-midterm-results` cut from origin/master; baseline `./run_tests.sh` green (4556 passed). The build worktree links the main checkout's venv as `data/.venv` and `node_modules` (both git-excluded via the common `info/exclude`).
 - 2026-11-07: pieces 1 and 2 built in parallel (user opted in), each in its own worktree, integrated here and reviewed/committed separately.
+- 2026-11-07 (piece 1): `test_migrate_us_electoral_votes.py` compared the last `elections` column (`[-1]`) to check `target_election_year`; adding `source_note` broke that. Changed it to look the column up by name, and added the file to piece 1's Files.
+- 2026-11-07 (piece 1): the raw-SQL election deletes (`model_support/persistence.py` `_delete_range`, `console/services/model_outputs.py:646`) don't remove status rows. Harmless today, because only model elections go through those paths and they never have status rows. Revisit if a results election ever does.
 - 2026-11-07: piece 6 is blocked on tooling: neither `ogr2ogr` nor `mapshaper` is installed on this machine. Raise it with the user before starting piece 6.
 - 2026-11-07 (piece 2): runoff sources found and added to `sources.py` (kind "runoff"):
   - 2018 Senate (MS special runoff, 2018-11-27, schema C): `https://int.nyt.com/applications/elections/2018/api/1/races/2018-11-27.json`. MS only.
@@ -364,3 +368,12 @@ No test touches the live DB (conftest guard).
   - `resolve_special_baselines` skips folded specials;
   - more tests;
   - the schema docs in README and map-modes.md.
+- 2026-11-07 (piece 7) decision REVISED by the user. US House always compares against the previous US House election, whatever the map (2020→2018, 2022→2020, 2024→2022, 2026→2024), as a full per-seat comparison by district key.
+  - In redrawn states, a district compares against the same-numbered old district, and the user accepts that.
+  - This gives 2026 House seat and vote ± in the totals table, plus gain/hold labels.
+  - It replaces the earlier "no comparison for 2026 House" decision.
+  - Implemented in `assign_comparison_elections` (us_house ignores mapId; every other type keeps the boundary rule).
+- 2026-11-07 (piece 7) note for piece 8: an uncalled seat with no positive votes or a tied lead is exported with no `w`. Today's front end then draws it as Others (colour and count); piece 8 must render `c:false` with no `w` as neutral. A district missing from a cross-map comparison gets no gain and is left out of the comparison totals (no crash).
+- 2026-11-07 (piece 7) round 2: all fixes verified. The front-end totals bug with cross-map comparisons (keys matched only) is added to piece 8's What. Last small batch routed: comparisons to earlier years only, preflight branch tests, docs.
+- 2026-11-07: piece 7 committed (f90f26d3) and pushed. Next is piece 6 (tools now installed).
+- 2026-11-07: issue handed over to the new-style planner chat `planner: import-2026-us-midterm-results` (main checkout), which starts the builder. The old worktree `planner-us-midterm-import-eee87c` was switched back to its own branch, freeing `import-2026-us-midterm-results`.

@@ -349,3 +349,15 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (planner): Phil wants the table to add up to 650. Asked which seats figure, he chose the mean with largest-remainder rounding (not one decimal, not seats-by-favourite, which is about the uniform-swing count). He had no preference on a map-colours label, so none is added. The uniform-swing number stays unnamed: it's the map colours, the tracker seat line, and filtered-view Seats.
 - 2026-11-07 (builder, Piece 6f): `polltracker-view.js`: the grid is drawn from the left on the active y scale, so lines run 0 → innerWidth in every mode. `margin.left` is 70 with Seats ticked and 16 otherwise. In Chances, the window start is max(range start, `firstChanceIndex`), with every series sliced from it. With the 16px gutter, the x-axis drops ticks whose rotated label would run off the left edge (kept when margin.left + x ≥ 56). The 70px path keeps its original tick call. `firstChanceIndex` is exported from `polltracker-uncertainty.js` and also drives capabilities' `chances`. Real data, Chances: 815 points from 2024-08-07, translate(16,14), gridline 0→660. An end-date sweep over 2026 shows 0 clipped labels after the fix, against up to 365/365 before. Analysis loop: round 1 had 3 verified findings (clipped labels, a duplicated presence check, a missing pLargest-only test), all fixed, and 2 dropped. Round 2 was clean on all five checks.
 - 2026-11-07: Piece 6f committed as `8d7c9d42` and pushed with Phil's approval ("Approve, commit and push"). Next: 6g look-ahead, then 6g on its go-ahead.
+- 2026-11-07 (builder, Piece 6g code):
+  - `monte_carlo.py` stores `mean` (2 dp) per party, national and regional.
+  - `public_uncertainty.py` exports `mean` and `m`: whole seats by largest remainder, computed in exact hundredths. Ties go to the larger mean, then the DB `Party.name`. The national total comes from the histograms; a region's total is its rounded sum of means, and the regions must add up to the national total. A run with no stored mean makes the export raise.
+  - `trends.py` adds `sm` (1 dp, from the stored hist) and always keeps the latest keepable run (the last polled run once any is polled).
+  - Front end: the table, headline and tracker use `m`/`sm`. The tracker tooltip reads "Seats (simulated mean): N". The "needn't add up" note is replaced by `#mapsMapColourNote`.
+  - The validation report moved only `source_sha256["model_support/monte_carlo.py"]` and `report_hash`.
+  - Analysis loop:
+    - Round 1: 5 verified findings. Two were decided by Phil (per-block rounding accepted; always keep the latest run) and three fixed, and he chose to keep the map-colour sentence.
+    - Round 2: 2 verified findings, fixed (latest = last keepable run; bool mean rejected).
+    - Round 3: 2 verified findings, fixed (a rigged bool test; comments).
+    - Round 4 re-checked only those test and comment edits, with coverage, style and common-mistakes: clean.
+  - Changed-lines coverage 99%: one line, an accepted type guard.

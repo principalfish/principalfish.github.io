@@ -274,3 +274,6 @@ Test strategy:
 No test touches the live DB (conftest guard).
 
 ## Notes
+- 2026-11-07 (builder): branch `import-2026-us-midterm-results` cut from origin/master; baseline `./run_tests.sh` green (4556 passed). The build worktree links the main checkout's venv as `data/.venv` and `node_modules` (both git-excluded via the common `info/exclude`).
+- 2026-11-07: pieces 1 and 2 built in parallel (user opted in), each in its own worktree, integrated here and reviewed/committed separately.
+- 2026-11-07: piece 6 is blocked on tooling: neither `ogr2ogr` nor `mapshaper` is installed on this machine. Raise it with the user before starting piece 6.

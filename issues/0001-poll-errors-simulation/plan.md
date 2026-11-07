@@ -52,7 +52,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
      - The file map is in 0004's `us-file-commit-map.txt`.
    - Acceptance:
      - `git diff master...HEAD` shows no US files and no US hunks;
-     - `uselectionmaps/` is identical to the merge base;
+     - `uselectionmaps/` sources and data are identical to the merge base, and `uselectionmaps.min.js` differs only by the shared engine's UK code, which stays inert on the US page (no `uncertaintyDataPath`; the jsdom US run is the evidence);
      - full checks are green: mypy, pytest, `npm test`, minify, export dry-run, console smoke, and the jsdom harness on both pages, with the US page behaving as master.
 2. **3a: Westminster display** (thread 4, Piece 3a). W-4: the MC median seat count as the headline or alongside it (Phil picks at the brief), with the deterministic count labelled "uniform-swing projection" and flagged when it falls outside its own 90% range. S-1: integer percentages, "<1%" and ">99%", stored to 3 dp. Westminster views only now.
    - Acceptance: `npm test`, `npm run minify:electionmaps`, the jsdom harness on both pages; screenshots or text dumps presented.

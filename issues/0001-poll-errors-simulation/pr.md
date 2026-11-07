@@ -21,4 +21,5 @@ Westminster only. The US uncertainty work moved to its own branch, and the model
 - [x] Header: nowcast note below the latest poll (`950b22a2`)
 - [x] Vote-totals table: one Seats column from the simulated median (`b788ae28`)
 - [ ] Poll tracker Chances view: no blank space on the left
+- [ ] Seats as the simulated mean in the table and headline
 - [ ] Final PR description

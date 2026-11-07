@@ -26,6 +26,9 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 
 - US House comparison: each House election compares against the previous House election regardless of map, full per-seat by district key (redrawn states included). Party totals ± are valid at any level; the user accepts same-number comparisons in redrawn states. (2026-11-07)
 
+- Mid-count seat ± (totals table): uncalled current seats and their same-key comparison seats are left out of the seat delta, so it compares called seats only; comparison seats with no current key still count (reapportionment). Vote totals and vote ± unchanged. Added to piece 8 before its commit. (2026-11-07)
+- Piece 9 must settle with the user how predict treats uncalled seats in the 2026 baseline before building it. (2026-11-07)
+
 ## Open
 
 ## Assumed

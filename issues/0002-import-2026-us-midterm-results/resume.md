@@ -11,7 +11,7 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Pending: piece 8 built, uncommitted, in `.claude/worktrees/great-nightingale-9085bc` (`git -C <that> status --short`), waiting on Phil's review. Open for Phil: (1) mid-count ± in the totals table (leave / label provisional / credit leaders; builder recommends leave); (3) whether piece 9's brief should decide how a predict baseline treats uncalled seats (builder suggests adding it). The hatch look needs a real-browser check once 2026 data is exported (piece 11).
+Pending: piece 8 built, uncommitted, in `.claude/worktrees/great-nightingale-9085bc`. Phil approved it ("Approve, commit") subject to one change first: leave uncalled seats out of the seat ± (seat ± only). The builder is making the change and will pause again for a short re-review, and only then commit. The hatch look needs a real-browser check after the piece 11 export.
 
 Next step: checkpoint 8 (in progress). See `plan.md`.
 

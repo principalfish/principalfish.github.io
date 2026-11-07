@@ -118,10 +118,11 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
        - `README.md:745-747` says the 60-day lookback matches the single-date `--since-days-back` default.
        - Rebuild the bundles.
      - Election-day point: master's `model_output_trends.json` starts on 2024-07-05 with the unpolled election-result point (Lab 411 seats, 33.7%); the branch's starts on 2024-08-07, because `data/model_support/trends.py` drops runs with no national polls. Keep the history's first (election-day) run even when unpolled, with no uncertainty, so the tracker starts on 2024-07-05 as it does now. Later unpolled runs stay dropped.
-   - Open, for the builder's look-ahead and Phil's decision before building:
-     - (a) the tracker's break rule breaks a line where uncertainty appears, so the election point would sit alone before 2024-08-07. Should the election point join the first polled point, as master's tracker draws it, with bands starting on 2024-08-07?
-     - (b) the exact rule in `trends.py`: is it "first run of the history" or "the baseline election's own date"?
-     - (c) which live steps are needed: the trends rebuild (`rebuild_model_trends.py --model westminster --map-id 2`, writing only the tracked trends file), and whether a re-export is needed too.
+   - **Decisions (Phil, 2026-11-07, at the 6c briefing):**
+     - (a) "Separate, no bands": 2024-07-05 is the election result (Lab 411, 33.7%) without uncertainty, and the existing rule breaks the line at 2024-08-07, where uncertainty starts. Only `trends.py`'s keep rule changes; no JS segment-rule change.
+     - (b) "Leading unpolled runs": keep unpolled runs before the history's first polled run, without their uncertainty; identical ones collapse to 2024-07-05. Unpolled runs after the first polled run stay dropped. Update the `trends.py` module docstring.
+     - (c) live steps: the trends rebuild only (`rebuild_model_trends.py --model westminster --map-id 2`, reads the DB, writes the tracked trends file). No re-export, DB write or backup. Expected 384 points, 2024-07-05 → 2026-10-30, with one break at 2024-08-07.
+     - Commits: code (review fixes 1–3, the `trends.py` rule, tests, bundles), then data (the trends file).
    - Tests: `trends.py` keeps the unpolled election-day run and still drops later unpolled runs; the tracker parse of the rebuilt file shows the chosen behaviour at 2024-07-05 → 2024-08-07, with no other breaks.
    - Acceptance: `./run_tests.sh` (then restore any test-written trends file), `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, and the tracker parse of the rebuilt file. The live steps each need Phil's go-ahead, relayed through the planner chat. The code and data commits are separate.
 7. **PR text.** `/publish poll-errors-simulation`, run from the planner chat: it drafts the final description into `pr.md` and, once Phil approves, puts it on PR #74 (opened by Phil 2026-10-13). Merging is Phil's.

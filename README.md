@@ -743,7 +743,7 @@ Useful options:
 - `--start-date YYYY-MM-DD`
 - `--end-date YYYY-MM-DD`
 - `--lookback-days 60` (default: the poll window per date, the same 60 days as
-  the console's daily run)
+  the single-date `--since-days-back` default)
 - `--half-life-days 15` (default, also the console's)
 - `--dry-run`
 - `--reset-existing` / `--no-reset-existing` (retained compatibility flags; both recompute every requested date and retain its previous result until replacement succeeds)

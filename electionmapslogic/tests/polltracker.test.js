@@ -97,6 +97,23 @@ describe('parsePollTrackerData', () => {
     expect(parsed.hung).toEqual([null, null, 0.5, 0.5, 0.5, null, null]);
   });
 
+  it("breaks once after a central-only election-day point, then keeps the uncertain runs continuous", () => {
+    // trends.py's shape: the unpolled election result has no hung or segment_id key.
+    const uncertain = (date, s) => ({
+      as_of_date: date, segment_id: "a", hung: 0.5, parties: { 1: { s, v: 40, sl: s - 100, sh: s + 100 } },
+    });
+    const parsed = parsePollTrackerData([
+      { as_of_date: "2024-07-05", parties: { 1: { s: 411, v: 34 } } },
+      uncertain("2024-07-08", 300),
+      uncertain("2024-07-10", 310),
+    ]);
+    expect(parsed.timeline.filter((entry) => entry.boundary).map((entry) => entry.dateKey))
+      .toEqual(["2024-07-08"]);
+    expect(parsed.seriesByParty.get("1").seats).toEqual([411, 411, 411, null, 300, 300, 310]);
+    expect(parsed.seriesByParty.get("1").seatLo).toEqual([null, null, null, null, 200, 200, 210]);
+    expect(parsed.hung).toEqual([null, null, null, null, 0.5, 0.5, 0.5]);
+  });
+
   it("keeps central-only Westminster history continuous without any segment metadata", () => {
     const parsed = parsePollTrackerData([
       { as_of_date: "2026-06-01", parties: { 1: { s: 300, v: 40 } } },

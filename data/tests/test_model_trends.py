@@ -733,6 +733,7 @@ def _tracker_breaks(runs: list[tuple[str, bool, str | None]]) -> list[str]:
 
 
 # Per run: no summary, a summary without identity, or a summary with identity a/b.
+# "unpolled" (a summary whose budget shows no polls) appears only in the listed cases.
 _RUN_KINDS = ("none", "unknown", "a", "b")
 
 
@@ -743,25 +744,42 @@ _RUN_KINDS = ("none", "unknown", "a", "b")
         ("unknown", "a", "unknown", "b"),
         ("a", "unknown", "unknown", "a"),
         ("none", "unknown", "a", "none"),
+        ("unpolled", "unpolled", "a", "a"),
+        ("unpolled", "a", "unpolled", "b"),
+        ("unpolled", "none", "unknown", "a"),
+        ("unpolled", "unknown", "unpolled", "a"),
     ],
 )
 def test_kept_runs_carry_every_tracker_break(
     db: Database, only_the_test_database: Path, kinds: tuple[str, ...]
 ) -> None:
-    """The tracker reads only kept runs; it must draw the breaks all runs would."""
+    """The tracker reads only kept runs; it must draw the breaks all runs would.
+
+    A leading unpolled run counts as one without a summary; a later one is not
+    part of the history at all.
+    """
     scope, seats, parties = setup_scope(db, "westminster")
     stored: list[tuple[str, bool, str | None]] = []
+    seen_polled = False
     for day, kind in enumerate(kinds, start=1):
-        block = (
-            None
-            if kind == "none"
-            else _identity_block(parties, None if kind == "unknown" else kind)
-        )
+        block: dict[str, object] | None
+        if kind == "none":
+            block = None
+        elif kind == "unpolled":
+            block = polled_block(parties, (0, 0))
+        else:
+            block = _identity_block(parties, None if kind == "unknown" else kind)
         store_with_summary(
             only_the_test_database, scope, day, seats[0], parties, 60, block,
         )
+        as_of_date = f"2026-06-0{day}"
+        if kind == "unpolled":
+            if not seen_polled:
+                stored.append((as_of_date, False, None))
+            continue
+        seen_polled = True
         segment = None if block is None or kind == "unknown" else kind
-        stored.append((f"2026-06-0{day}", block is not None, segment))
+        stored.append((as_of_date, block is not None, segment))
     entries = reconstruct_trends(only_the_test_database, scope)
     exported = [
         (e["as_of_date"], "hung" in e, e.get("segment_id")) for e in entries
@@ -846,6 +864,112 @@ def test_run_with_no_polls_is_left_out(
         )
     entries = reconstruct_trends(only_the_test_database, scope)
     assert [e["as_of_date"] for e in entries] == ["2026-06-01", "2026-06-03"]
+
+
+def test_leading_unpolled_runs_are_kept_central_only_and_collapse(
+    db: Database, only_the_test_database: Path
+) -> None:
+    """Before any poll the run is the election result: kept, but without bands."""
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day, share, counts in ((1, 75, (0, 0)), (2, 75, (0, 0)), (3, 60, (2, 2))):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, share,
+            polled_block(parties, counts),
+        )
+    first, polled = reconstruct_trends(only_the_test_database, scope)
+    assert first == {
+        "election_id": first["election_id"],
+        "election_name": "UNS 2026-06-01",
+        "as_of_date": "2026-06-01",
+        "parties": {
+            str(parties[0]): {"s": 1, "v": 75.0},
+            str(parties[1]): {"s": 0, "v": 25.0},
+        },
+    }
+    assert polled["as_of_date"] == "2026-06-03"
+    assert polled["hung"] == 0.269
+    assert polled["segment_id"] == DEFAULT_SEGMENT_ID
+    leader = polled["parties"][str(parties[0])]
+    assert {"vl", "vh", "sl", "sh", "pm", "pl"} <= set(leader)
+
+
+def test_leading_unpolled_runs_with_different_centrals_are_each_kept(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day, share, counts in ((1, 75, (0, 0)), (2, 70, (0, 0)), (3, 60, (2, 2))):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, share,
+            polled_block(parties, counts),
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [
+        (e["as_of_date"], e["parties"][str(parties[0])]["v"], "hung" in e)
+        for e in entries
+    ] == [
+        ("2026-06-01", 75.0, False),
+        ("2026-06-02", 70.0, False),
+        ("2026-06-03", 60.0, True),
+    ]
+    assert all(
+        set(fields) == {"s", "v"}
+        for entry in entries[:2]
+        for fields in entry["parties"].values()
+    )
+
+
+def test_history_of_only_unpolled_runs_is_one_central_only_entry(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day in (1, 2, 3):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, 75,
+            polled_block(parties, (0, 0)),
+        )
+    (entry,) = reconstruct_trends(only_the_test_database, scope)
+    assert entry["as_of_date"] == "2026-06-01"
+    assert "hung" not in entry
+    assert "segment_id" not in entry
+    assert entry["parties"] == {
+        str(parties[0]): {"s": 1, "v": 75.0},
+        str(parties[1]): {"s": 0, "v": 25.0},
+    }
+
+
+def test_first_polled_run_keeps_its_uncertainty_after_equal_unpolled_runs(
+    db: Database, only_the_test_database: Path
+) -> None:
+    """Equal central values, but uncertainty appears: a tracker break, so kept."""
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day, counts in ((1, (0, 0)), (2, (0, 0)), (3, (1, 1)), (4, (1, 1))):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, 60,
+            polled_block(parties, counts),
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [(e["as_of_date"], "hung" in e) for e in entries] == [
+        ("2026-06-01", False), ("2026-06-03", True),
+    ]
+    assert "segment_id" not in entries[0]
+    assert entries[1]["segment_id"] == DEFAULT_SEGMENT_ID
+
+
+def test_unpolled_run_after_the_first_polled_one_is_still_left_out(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day, share, counts in (
+        (1, 75, (0, 0)), (2, 60, (2, 2)), (3, 75, (0, 0)), (4, 65, (1, 1)),
+    ):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, share,
+            polled_block(parties, counts),
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [(e["as_of_date"], "hung" in e) for e in entries] == [
+        ("2026-06-01", False), ("2026-06-02", True), ("2026-06-04", True),
+    ]
 
 
 def test_run_after_a_skipped_one_still_collapses_onto_the_last_entry(

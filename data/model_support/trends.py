@@ -24,7 +24,12 @@ rule is exactly the old one.
 
 A run whose stored error budget shows no national polls for any party is
 left out: with nothing polled it projects the baseline with no error, which
-would plot as a spike. The previous entry carries across the gap.
+would plot as a spike. The previous entry carries across the gap. The
+exception is the unpolled runs before the scope's first polled run (the
+election result, before any poll exists): each is kept as a run without a
+summary, central values only, so identical ones collapse to the first and the
+first uncertain run after them is an availability change. A run with no stored
+block, or one whose budget is not Westminster's, counts as polled here.
 """
 
 from __future__ import annotations
@@ -278,6 +283,8 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
         # The last known identity among the runs kept so far. The tracker sees
         # only kept runs, so this must not advance on a collapsed one.
         last_segment: str | None = None
+        # Unpolled runs before this are the leading baseline, kept central-only.
+        seen_polled = False
         for eid, (name, as_of) in sorted(
             elections.items(), key=lambda item: (item[1][1], item[0])
         ):
@@ -290,10 +297,15 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             total = sum(party["v"] for party in parties.values())
             for party in parties.values():
                 party["v"] = round(party["v"] / total * 100.0, 1) if total > 0 else 0.0
-            if eid in unpolled:
+            summary: TrendUncertainty | None
+            if eid not in unpolled:
+                seen_polled = True
+                summary = uncertainty.get(eid)
+                segment = segments.get(eid)
+            elif seen_polled:
                 continue
-            summary = uncertainty.get(eid)
-            segment = segments.get(eid)
+            else:
+                summary, segment = None, None
             has_summary = summary is not None
             # Kept even with equal central values: an availability change (a
             # tracker break), or a known identity new to the kept runs. The
@@ -347,8 +359,10 @@ def _trend_uncertainty(
         election_ids: The scope's dated runs.
 
     Returns:
-        Election id -> its additions, for the runs with a summary; and the
-        runs whose budget shows no national polls (:func:`_unpolled`); and
+        Election id -> its additions, for the runs with a summary (an
+        unpolled run's included, though the caller drops it or publishes it
+        without them); and the runs whose budget shows no national polls
+        (:func:`_unpolled`); and
         config/kernel segment identities (unknown for older stored summaries).
 
     Raises:

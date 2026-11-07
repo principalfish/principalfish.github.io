@@ -57,7 +57,8 @@ export function renderPageTitle() {
 // Page H1 — set to "UK Election Maps · <Parliament>" by renderTitle.
 const mapsTitle = document.querySelector('.maps-title');
 // Subtitle line below the H1 — election name (or "Poll tracker..." in tracker view),
-// optionally suffixed with the poll snippet for prediction elections.
+// optionally suffixed with the poll snippet for prediction elections. A saved run with
+// uncertainty leads with `simulatedSubtitle` (uncertainty.js) instead.
 const subtitle = document.getElementById('mapsSubtitle');
 // Countdown badge in the header — visible only on a parliament's prediction / predict view
 // when that parliament has an upcoming election date; ticks every second until it passes.
@@ -67,7 +68,8 @@ const electionCountdown = document.getElementById('mapsElectionCountdown');
  * Updates the title area: the page h1, subtitle, and election countdown.
  * Called early in init (text omitted — subtitle falls back to election name) and again
  * after results load with the full summary string. Pass error=true on load failure.
- * @param {string} [text=''] - Full subtitle string (e.g. "2024 Election · Labour majority: 174").
+ * @param {string} [text=''] - Full subtitle string (e.g. "2024 Election · Labour majority: 174")
+ *   (replaced by the simulated line when the run has uncertainty).
  * @param {boolean} [error=false] - When true, subtitle shows a load-failure message.
  * @returns {void}
  */

@@ -1061,6 +1061,7 @@ a {
 .maps-vote-totals--collapsed .maps-predict-tabs,
 .maps-vote-totals--collapsed .maps-senate-forecast-comparison,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-table,
+#mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-vote-totals-uncalled,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed #mapsVoteTotalsToggle {
   display: none;
 }
@@ -1434,6 +1435,47 @@ a {
    .maps-seat-gain-label and the popup chip from .maps-seat-popup-meta. */
 .maps-by-election-tag {
   color: #92400e;
+}
+
+/* UNCALLED marker: the seat list chip takes its font from .maps-seat-gain-label and the
+   popup chip from .maps-seat-popup-meta, so this is only the accent colour. */
+.maps-uncalled-tag {
+  color: #1d4ed8;
+}
+
+/* Swatch of an uncalled seat: the leader's colour faded to match the hatched map fill. */
+.maps-seat-icon--provisional {
+  opacity: 0.6;
+}
+
+/* Per-seat status notes in the popup (same-party contest, decisive round). */
+.maps-popup-status-note {
+  color: #475569;
+  font-style: italic;
+}
+
+/* Same-day special election block in a Senate state popup. */
+.maps-popup-special {
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.18);
+}
+
+.maps-popup-special-title {
+  margin: 0 0 0.3rem;
+  color: #0f172a;
+  font: 700 0.86rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+}
+
+.maps-popup-special .maps-seat-popup-meta {
+  margin: 0 0 0.35rem;
+}
+
+/* Results credit line under the map. */
+.maps-source-note {
+  margin: 0.4rem 0 0;
+  color: #475569;
+  font: 600 0.74rem/1.3 "Source Sans 3", "Segoe UI", sans-serif;
 }
 
 .maps-controls-grid {

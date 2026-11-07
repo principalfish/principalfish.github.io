@@ -185,7 +185,7 @@ the current shells show which each map uses.
 | `postcode` | Optional postcode lookup configuration, described below. A map without it has no postcode search. |
 | `projection` | `albersUsa` selects D3's US projection; otherwise the renderer uses Mercator. |
 | `tally` | `electoralVotes` weights presidential winner totals by electoral votes and labels the tally column “EV”; otherwise winners are tallied as seats (or members for a composition snapshot). |
-| `neutralFill` | Fill colour for topology areas with no active result, used for uncontested Senate states. Falls back to the `others` party colour. |
+| `neutralFill` | Fill colour for topology areas with no active result, used for uncontested Senate states (falls back to the `others` party colour). Also the fill and list swatch of an uncalled seat with no leading party (no votes, or a tied lead), where it falls back to light grey `#d1d5db`. |
 | `hideMajority` | Suppresses the subtitle's majority summary for single-winner elections; multi-member chamber summaries are handled separately. |
 | `senateClassNextElection` | Generated class → next-election-year object. Sets each chamber member's next-up year from their class for cycle filtering and popups. |
 | `senateSpecialElections` | Array of `{ seat, class, year, baselineElectionId }` records for live off-cycle races. Overrides the named member's cycle and provides the baseline for Senate prediction. |

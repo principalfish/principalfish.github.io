@@ -314,6 +314,13 @@ function listSeatRegexFor(pattern) {
   return regex;
 }
 
+// Popup wording for the per-seat status notes (see Seat#statusNotes).
+const SAME_PARTY_NOTE = 'Same-party contest: votes combined';
+const DECISIVE_ROUND_LABELS = {
+  'rcv-final': 'Decided by ranked-choice final round',
+  runoff: 'Decided in a runoff',
+};
+
 /**
  * A normalised seat record. The constructor takes a seat-shaped object (used for cloning);
  * use {@link Seat.fromRaw} to build from a raw pf-results-v4 seat (compact `{n, r, w, p}`
@@ -322,13 +329,33 @@ function listSeatRegexFor(pattern) {
  */
 export class Seat {
   /**
-   * @param {{seat: string, region: string, winner: (string|number), votes: object}} input
+   * @param {{seat: string, region: string, winner: (string|number), votes: object,
+   *   called?: boolean, pctCounted?: (number|null), sameParty?: boolean, round?: (string|null),
+   *   senateClass?: (number|null)}} input
    *   Normalised seat-shaped object. For raw JSON input, use {@link Seat.fromRaw} instead.
+   *   The status fields are optional; a seat built without them is a called, ordinary result.
    */
   constructor(input) {
     this.seat = input?.seat || 'Unknown seat';
     this.region = String(input?.region || 'unknown');
-    this.winner = manifest.resolvePartyRef(input?.winner ?? 'others');
+    // False only for a seat explicitly marked uncalled (results still coming in); called by default.
+    this.called = input?.called !== false;
+    // An uncalled seat's winner is the party leading on votes. When no party leads (no
+    // positive votes, or a tie for the lead) the data omits it, and the seat must stay
+    // unresolved (null) rather than defaulting to 'others' — the fill goes neutral and the
+    // tallies skip it. Called seats keep the 'others' default for a missing winner.
+    const rawWinner = input?.winner;
+    const hasWinner = rawWinner !== undefined && rawWinner !== null && rawWinner !== '';
+    this.winner = (!this.called && !hasWinner) ? null : manifest.resolvePartyRef(rawWinner ?? 'others');
+    // Percent (0-100) of the expected vote counted so far; uncalled seats only, null when unknown.
+    const pct = input?.pctCounted;
+    this.pctCounted = pct === null || pct === undefined || pct === '' || !Number.isFinite(Number(pct)) ? null : Number(pct);
+    // True when the top candidates share a party (top-two / jungle races) and were merged into one row.
+    this.sameParty = input?.sameParty === true;
+    // Decisive round when the first round did not decide the seat: 'rcv-final' | 'runoff' | null.
+    this.round = typeof input?.round === 'string' && input.round ? input.round : null;
+    // Senate class (1-3) of a same-day special election; null for every ordinary seat.
+    this.senateClass = Number(input?.senateClass) || null;
     this.votes = Seat.#normalizeVotes(input?.votes);
     this.turnout = Object.values(this.votes).reduce((sum, v) => sum + Number(v || 0), 0);
     // Optional candidate names by party key; absent for projections / older data,
@@ -343,7 +370,10 @@ export class Seat {
 
   /**
    * Builds a Seat from a raw pf-results-v4 compact seat record.
-   * @param {{n: string, r: (number|string), w: (number|string), p: Array<[number|string, number]>}} rawSeat
+   * @param {{n: string, r: (number|string), w: (number|string), p: Array<[number|string, number]>,
+   *   c?: boolean, pc?: number, sp?: boolean, rd?: string, cl?: number}} rawSeat - Optional keys
+   *   `c` (false = uncalled), `pc` (percent counted), `sp` (same-party top candidates), `rd`
+   *   (decisive round) and `cl` (Senate class, specials only) are absent on older payloads.
    * @returns {Seat}
    */
   static fromRaw(rawSeat) {
@@ -355,6 +385,11 @@ export class Seat {
       candidates: Seat.#decodeCandidates(rawSeat?.p),
       ev: rawSeat?.ev,
       members: rawSeat?.members,
+      called: rawSeat?.c !== false,
+      pctCounted: rawSeat?.pc,
+      sameParty: rawSeat?.sp === true,
+      round: rawSeat?.rd,
+      senateClass: rawSeat?.cl,
     });
   }
 
@@ -513,10 +548,66 @@ export class Seat {
    * @returns {string|null}
    */
   gainFromParty(comparisonSeatWinner) {
+    // An uncalled seat has no settled winner yet, so it can be neither a gain nor a hold.
+    if (!this.called) return null;
     const winner = this.winner || 'others';
     const previousWinner = comparisonSeatWinner || null;
     if (!previousWinner || previousWinner === winner) return null;
     return previousWinner;
+  }
+
+  /**
+   * How the map should paint this seat's winner fill:
+   *   - `'called'` — a settled result, drawn in the winner's colour (every older payload);
+   *   - `'provisional'` — uncalled with a leading party, drawn in that party's colour marked
+   *     as provisional (hatched);
+   *   - `'neutral'` — uncalled with no leader (no positive votes, or a tie for the lead),
+   *     drawn in the neutral no-result colour, never as "Others".
+   * @returns {('called'|'provisional'|'neutral')}
+   */
+  fillKind() {
+    if (this.called) return 'called';
+    return this.winner ? 'provisional' : 'neutral';
+  }
+
+  /**
+   * The per-seat status notes shown in the seat popup, as plain text (callers escape it).
+   * Each is an empty string when it does not apply, so a called ordinary seat has none.
+   *   - `uncalledTag`: "UNCALLED · 62.5% counted", or just "UNCALLED" when the counted share
+   *     is unknown;
+   *   - `samePartyNote`: set when the top candidates shared a party and their votes were merged;
+   *   - `roundNote`: set when a ranked-choice final round or a runoff decided the seat.
+   * @returns {{uncalledTag: string, samePartyNote: string, roundNote: string}}
+   */
+  statusNotes() {
+    let uncalledTag = '';
+    if (!this.called) {
+      uncalledTag = this.pctCounted === null
+        ? 'UNCALLED'
+        : `UNCALLED · ${Number(this.pctCounted.toFixed(1))}% counted`;
+    }
+    return {
+      uncalledTag,
+      samePartyNote: this.sameParty ? SAME_PARTY_NOTE : '',
+      roundNote: Object.prototype.hasOwnProperty.call(DECISIVE_ROUND_LABELS, this.round) ? DECISIVE_ROUND_LABELS[this.round] : '',
+    };
+  }
+
+  /**
+   * This seat's vote-share rows for a popup, largest first: each party's share of the seat
+   * turnout, with the candidate name as `label` where the data carries one.
+   * @param {number} [limit=8] - Maximum rows returned.
+   * @returns {Array<{party: string, pct: number, label: (string|undefined)}>}
+   */
+  voteShareRows(limit = 8) {
+    return Object.entries(this.votes || {})
+      .map(([party, votes]) => ({
+        party,
+        pct: this.turnout > 0 ? (Number(votes || 0) / this.turnout) * 100 : 0,
+        label: this.candidates?.[party],
+      }))
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, limit);
   }
 
   /**
@@ -652,14 +743,15 @@ export class ElectionSummary {
    * @param {Seat[]} seats - Seats to aggregate.
    * @param {string|null} electionName - Display label for the election; when null, `text` is null.
    * @param {('all'|'constituency'|'list')} [mode='all'] - Aggregation mode forwarded to {@link ElectionSummary.summarize}; see class jsdoc for the per-mode behaviour.
+   * @param {Seat[]} [specials=[]] - Same-day special-election seats tallied alongside `seats`; see {@link ElectionSummary.summarize}.
    */
-  constructor(seats, electionName, mode = 'all') {
+  constructor(seats, electionName, mode = 'all', specials = []) {
     /** Aggregation mode used to build {@link ElectionSummary#data}. See class jsdoc for per-mode behaviour. */
     this.mode = mode;
 
-    /** Structured aggregate: `{parties, totalVotes, turnout, totalSeats}`. Parties are
+    /** Structured aggregate: `{parties, totalVotes, totalSeats, uncalled}`. Parties are
      * sorted by seats desc, then votes desc, so `parties[0]` is the leading party. */
-    this.data = ElectionSummary.summarize(seats, mode);
+    this.data = ElectionSummary.summarize(seats, mode, { party: 'all', upcoming: 'all' }, specials);
 
     /** Pre-rendered subtitle string (e.g. "2024 General Election · Labour majority: 174"),
      * or null when no electionName was provided (comparison/predict-baseline summaries). */
@@ -691,14 +783,27 @@ export class ElectionSummary {
    * the size of the chamber being summarised, not the number of seats that contributed to
    * stats.
    *
+   * Uncalled seats (results still coming in) are not credited to any party's seat count, not
+   * even the party currently leading them; they are counted separately in `uncalled` (in
+   * electoral votes on EV-tally maps). Their votes still count towards vote totals. They stay
+   * in `totalSeats`, since the chamber size, and so the majority line, does not depend on
+   * which seats have been called.
+   *
+   * `specials` are same-day special-election seats held alongside a regular race (the US
+   * Senate payload carries them separately). Each is tallied as one more seat, so a state
+   * with a regular and a special race contributes both to the seat and vote totals.
+   *
    * @param {Seat[]} seats - Seats to aggregate. Each seat must carry the normalised shape
    *   produced by {@link Seat} (i.e. `winner`, `votes`, `region`); raw pf-results-v4
    *   objects must be converted via `Seat.fromRaw` first.
    * @param {('all'|'constituency'|'list')} [mode='all'] - Vote-totals tab to summarise for; see Mode behaviour above.
+   * @param {{party?: string, upcoming?: string}} [memberFilter] - Member-level filters, applied to multi-member chambers only.
+   * @param {Seat[]} [specials=[]] - Same-day special-election seats tallied as additional seats.
    * @returns {{
    *   parties: Array<{party: string, seats: number, votes: number}>,
    *   totalVotes: number,
-   *   totalSeats: number
+   *   totalSeats: number,
+   *   uncalled: number
    * }} Aggregated summary:
    *   - `parties` — one row per party that won at least one seat or received any votes,
    *     sorted by seats desc then votes desc. `party` is the canonical key (e.g. `'lab'`),
@@ -707,10 +812,12 @@ export class ElectionSummary {
    *     skipped ballot type).
    *   - `totalVotes` — sum of `votes` across all party rows; the denominator for vote-share
    *     percentages in the totals panel.
-   *   - `totalSeats` — `seats.length` of the input array (chamber size), independent of
+   *   - `totalSeats` — `seats.length` plus `specials.length` (chamber size), independent of
    *     mode filtering.
+   *   - `uncalled` — number of uncalled seats (electoral votes on EV-tally maps) among those
+   *     summarised under the active mode; they appear in no party's `seats`.
    */
-  static summarize(seats, mode = 'all', memberFilter = { party: 'all', upcoming: 'all' }) {
+  static summarize(seats, mode = 'all', memberFilter = { party: 'all', upcoming: 'all' }, specials = []) {
     // Multi-member chambers (each map seat returns more than one member, held in the seat's
     // `members` array): tally the individual members, since the chamber size differs from the
     // seat count. Such views carry no vote tallies, so totalVotes is 0.
@@ -730,7 +837,7 @@ export class ElectionSummary {
       const parties = Array.from(memberStats.entries())
         .map(([party, stats]) => ({ party, ...stats }))
         .sort((a, b) => b.seats - a.seats);
-      return { parties, totalVotes: 0, totalSeats: total };
+      return { parties, totalVotes: 0, totalSeats: total, uncalled: 0 };
     }
 
     // partyStats accumulates per-party seat and vote counts in a single pass over `seats`.
@@ -747,8 +854,12 @@ export class ElectionSummary {
     // this guard a region with N list seats for one party would count its votes N times.
     // Only populated in list mode; an empty Set in other modes costs nothing.
     const listRegionPartyCountSeen = new Set();
+    // Specials are tallied as extra seats of the same chamber.
+    const allSeats = specials.length ? seats.concat(specials) : seats;
+    // Uncalled seats seen under the active mode (electoral votes on EV-tally maps).
+    let uncalled = 0;
 
-    seats.forEach((seat) => {
+    allSeats.forEach((seat) => {
       const isList = Seat.isList(seat);
 
       // Mode filtering: constituency mode hides the regional list ballot, list mode hides
@@ -761,9 +872,15 @@ export class ElectionSummary {
       // Fold the legacy 'other' key into 'others' (older results files used 'other'),
       // and missing/falsy winners fall back to 'others' rather than being dropped — the
       // synthetic key matches how the rest of the app treats unattributed seats.
-      const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
-      if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
-      partyStats.get(winner).seats += weightOf(seat);
+      // An uncalled seat is credited to no party (not even its current leader): it is
+      // counted separately instead, so the seat tally and majority only reflect called seats.
+      if (seat.called === false) {
+        uncalled += weightOf(seat);
+      } else {
+        const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
+        if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
+        partyStats.get(winner).seats += weightOf(seat);
+      }
 
       // Presidential Maine/Nebraska congressional-district units ("Maine CD-1", "Nebraska
       // CD-2") repeat their statewide unit's popular vote — the statewide row already carries
@@ -811,9 +928,9 @@ export class ElectionSummary {
     // totalSeats is the *input* length (the chamber), not the number of seats that survived
     // mode filtering. In EV-tally mode it is the total electoral votes available (e.g. 538).
     const totalSeats = evTally
-      ? seats.reduce((sum, seat) => sum + Number(seat.ev || 0), 0)
-      : seats.length;
-    return { parties, totalVotes, totalSeats };
+      ? allSeats.reduce((sum, seat) => sum + Number(seat.ev || 0), 0)
+      : allSeats.length;
+    return { parties, totalVotes, totalSeats, uncalled };
   }
 
   /**
@@ -846,7 +963,12 @@ export class ElectionSummary {
    * render as their human display names. A missing winner falls back to the `'others'`
    * label rather than throwing or producing an empty string.
    *
-   * @param {{parties: Array<{party: string, seats: number}>, totalSeats: number}} data - Structured summary aggregate.
+   * While seats are still uncalled (`data.uncalled > 0`) the line gains a trailing
+   * `· N uncalled` and no longer claims a hung parliament when the uncalled seats could still
+   * hand the leader a majority: it reads `Majority undecided - largest party <Party> with <N>
+   * seats` instead. A majority already secured by called seats is stated as usual.
+   *
+   * @param {{parties: Array<{party: string, seats: number}>, totalSeats: number, uncalled?: number}} data - Structured summary aggregate.
    * @param {string} electionName - Display label prefix for the subtitle.
    * @returns {string} Pre-formatted subtitle string ready to pass to `renderHeader`.
    */
@@ -856,12 +978,17 @@ export class ElectionSummary {
     const totalSeats = Number(data.totalSeats || 0);
     const topLabel = manifest.labelParty(top?.party || 'others');
     const mapMode = activeMapMode();
+    const uncalled = Number(data.uncalled || 0);
+    const uncalledSuffix = uncalled > 0 ? ` · ${formatInt(uncalled)} uncalled` : '';
+
+    // Nothing counted yet: no party leads anywhere, so there is nobody to name.
+    if (!top && uncalled > 0) return `${electionName}${uncalledSuffix}`;
 
     // Seats-up views (only the seats contested this cycle) have no meaningful chamber
     // majority — show just the election name. A full multi-member chamber overrides this
     // and shows the majority.
     if (mapMode.hideMajority && !state.currentElection?.multiMember) {
-      return electionName;
+      return `${electionName}${uncalledSuffix}`;
     }
 
     // Electoral-vote tally (presidential): show the winner's margin of victory — the
@@ -869,7 +996,7 @@ export class ElectionSummary {
     if (mapMode.tally === 'electoralVotes') {
       const runnerUp = Number(data.parties[1]?.seats || 0);
       const margin = leadSeats - runnerUp;
-      return `${electionName} · ${topLabel} margin of victory: ${formatInt(margin)}`;
+      return `${electionName} · ${topLabel} margin of victory: ${formatInt(margin)}${uncalledSuffix}`;
     }
 
     // Working majority: the lead over half the chamber, doubled (the standard "majority of N").
@@ -878,9 +1005,11 @@ export class ElectionSummary {
     const hasMajority = leadSeats > majorityThreshold;
     const majority = hasMajority ? Math.round(2 * (leadSeats - majorityThreshold)) : 0;
 
-    return hasMajority
-      ? `${electionName} · ${topLabel} majority: ${majority}`
-      : `${electionName} · Hung parliament - largest party ${topLabel} with ${formatInt(leadSeats)} seats`;
+    if (hasMajority) return `${electionName} · ${topLabel} majority: ${majority}${uncalledSuffix}`;
+    // Uncalled seats that could still carry the leader past the half-line leave the outcome open.
+    const undecided = uncalled > 0 && leadSeats + uncalled > majorityThreshold;
+    const outcome = undecided ? 'Majority undecided' : 'Hung parliament';
+    return `${electionName} · ${outcome} - largest party ${topLabel} with ${formatInt(leadSeats)} seats${uncalledSuffix}`;
   }
 
   /**
@@ -938,8 +1067,11 @@ export class ElectionSummary {
       // Increment the seat count for the winning party. Missing winners fall back to
       // `'others'` so the row still appears in the region table rather than being
       // dropped — same reasoning as the region fallback above.
-      const winner = seat.winner || 'others';
-      r.seatsByParty[winner] = (r.seatsByParty[winner] || 0) + 1;
+      // Uncalled seats are credited to no party; only their votes below count.
+      if (seat.called !== false) {
+        const winner = seat.winner || 'others';
+        r.seatsByParty[winner] = (r.seatsByParty[winner] || 0) + 1;
+      }
 
       // Sum votes per party. See jsdoc for the list-seat duplication caveat: this
       // accumulator is only safe to read as ratios (vote shares), not absolute totals.
@@ -975,9 +1107,39 @@ export class ElectionData {
     /** Map from seat lookup key to currentSeats entry, rebuilt whenever currentSeats is replaced. */
     this.seatsByKey = ElectionData.buildSeatIndex(this.currentSeats);
 
-    /** Aggregated summary of currentSeats: `{data, text}`. Rebuild by reassigning to a new
-     * `ElectionSummary` instance whenever currentSeats changes (e.g. after predict-mode projection). */
-    this.summary = new ElectionSummary(this.currentSeats, electionName);
+    /** Same-day special elections held alongside a state's regular race (US Senate payloads),
+     * keyed by the state's seat lookup key. Each value is a {@link Seat} carrying the special's
+     * `senateClass`, with the regular seat's region. Empty for every other election. */
+    this.specials = ElectionData.normalizeSpecials(resultsData, this.seatsByKey);
+
+    /** Aggregated summary of currentSeats (plus any specials): `{data, text}`. Rebuild by
+     * reassigning to a new `ElectionSummary` instance whenever currentSeats changes (e.g. after
+     * predict-mode projection). */
+    this.summary = new ElectionSummary(this.currentSeats, electionName, 'all', Array.from(this.specials.values()));
+  }
+
+  /**
+   * Normalizes the optional top-level `specials` array of a raw results payload into a Map of
+   * {@link Seat} records keyed by the state's seat lookup key. A special has no region of its
+   * own, so it takes the region of the regular seat of the same name (or 'unknown' when the
+   * state has none). Entries without a name are skipped; with two specials for one state the
+   * first wins. Returns an empty Map when the payload carries no specials.
+   * @param {object} resultsData - Parsed results JSON; `specials` is an optional array of raw seats.
+   * @param {Map<string, Seat>} seatsByKey - The payload's regular seats by lookup key.
+   * @returns {Map<string, Seat>}
+   */
+  static normalizeSpecials(resultsData, seatsByKey) {
+    const specials = new Map();
+    if (!Array.isArray(resultsData?.specials)) return specials;
+    resultsData.specials.forEach((raw) => {
+      if (!raw?.n) return;
+      const key = seatLookupKey(raw.n);
+      if (specials.has(key)) return;
+      const special = Seat.fromRaw(raw);
+      special.region = seatsByKey?.get(key)?.region ?? special.region;
+      specials.set(key, special);
+    });
+    return specials;
   }
 
   /**
@@ -1008,6 +1170,7 @@ export class ElectionData {
     instance.baseSeats = seats;
     instance.currentSeats = seats;
     instance.seatsByKey = ElectionData.buildSeatIndex(seats);
+    instance.specials = new Map();
     instance.summary = new ElectionSummary(seats, electionName);
     return instance;
   }
@@ -1485,11 +1648,90 @@ class AppState {
     this.voteTotals.columns.votes = tabAllowsVotes && electionAllowsVoteCounts;
 
     const memberFilter = { party: this.mapFilters.party, upcoming: this.mapFilters.upcoming };
-    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode, memberFilter);
+    const visibleSpecials = this.visibleSpecials();
+    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode, memberFilter, visibleSpecials);
     this.filteredSeatsComparisonSummary = this.comparisonElectionData?.currentSeats.length
-      ? ElectionSummary.summarize(this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode, memberFilter)
+      ? this.#comparisonSummary(visibleSpecials, memberFilter)
       : null;
+  }
 
+  /**
+   * The comparison summary behind the totals table's deltas. Votes cover everything
+   * {@link AppState#comparisonTotalsInputs} selects, but the SEAT counts leave out each
+   * comparison seat whose district is uncalled in the current election, so the seat change
+   * compares called seats only (an uncalled seat has no settled winner to be a gain or a loss;
+   * it is reported on the "uncalled" line instead). Comparison seats whose key does not exist in
+   * the current election still count in full. Without uncalled seats it is the plain summary.
+   * @param {Seat[]} visibleSpecials - Current specials passing the filters.
+   * @param {{party?: string, upcoming?: string}} memberFilter
+   * @returns {object} An {@link ElectionSummary.summarize} result.
+   */
+  #comparisonSummary(visibleSpecials, memberFilter) {
+    const inputs = this.comparisonTotalsInputs(visibleSpecials, memberFilter);
+    const summary = ElectionSummary.summarize(...inputs);
+    const uncalledKeys = (seats) => new Set(seats.filter((seat) => seat.called === false).map((seat) => seatLookupKey(seat.seat)));
+    const skipSeats = uncalledKeys(this.mapSeatsVisible.seats);
+    const skipSpecials = uncalledKeys(visibleSpecials);
+    if (!skipSeats.size && !skipSpecials.size) return summary;
+    const [seats, mode, filter, specials] = inputs;
+    const calledOnly = ElectionSummary.summarize(
+      seats.filter((seat) => !skipSeats.has(seatLookupKey(seat.seat))),
+      mode,
+      filter,
+      specials.filter((special) => !skipSpecials.has(seatLookupKey(special.seat))),
+    );
+    const calledSeats = new Map(calledOnly.parties.map((row) => [row.party, row.seats]));
+    summary.parties.forEach((row) => { row.seats = calledSeats.get(row.party) ?? 0; });
+    return summary;
+  }
+
+  /**
+   * Returns true when any primary map filter differs from its default, i.e. the visible seat
+   * set may be a subset of the chamber.
+   * @returns {boolean}
+   */
+  hasActiveFilters() {
+    const f = this.mapFilters;
+    return f.party !== 'all' || f.region !== 'all' || f.secondParty !== 'all'
+      || f.majorityMin !== 0 || f.majorityMax !== 100 || f.gainsOnly || f.upcoming !== 'all';
+  }
+
+  /**
+   * The current election's special-election seats that pass the active filters. Each special is
+   * tested on its own result (party, region, majority), not on its state's regular seat, so a
+   * party filter counts a party's special win even where the regular race went the other way.
+   * Gains-only never matches a special, since it has no comparison seat.
+   * @returns {Seat[]}
+   */
+  visibleSpecials() {
+    const specials = Array.from(this.electionData?.specials?.values() ?? []);
+    if (!specials.length || !this.hasActiveFilters()) return specials;
+    return specials.filter((special) =>
+      Seat.matchesPrimaryFilters(special, null, this.mapFilters, this.currentElection.byElectionSeats));
+  }
+
+  /**
+   * Arguments for the comparison column's {@link ElectionSummary.summarize} call.
+   *
+   * With no filter active the comparison covers the WHOLE comparison election, not only the
+   * seats whose key also exists in the current election. A comparison on a different seat set
+   * (US House after reapportionment: 435 districts against the previous cycle's 428 matching
+   * keys) would otherwise drop the unmatched comparison seats and misreport the seat change.
+   * Per-seat gain/hold labels stay key-matched either way. With a filter active it is the
+   * comparison counterparts of the visible seats, as the filter intends.
+   * @param {Seat[]} visibleSpecials - Current specials passing the filters (see {@link AppState#visibleSpecials}).
+   * @param {{party?: string, upcoming?: string}} memberFilter
+   * @returns {[Seat[], string, object, Seat[]]} Arguments for `ElectionSummary.summarize`.
+   */
+  comparisonTotalsInputs(visibleSpecials, memberFilter) {
+    const comparison = this.comparisonElectionData;
+    if (!this.hasActiveFilters()) {
+      return [comparison.currentSeats, this.voteTotals.mode, memberFilter, Array.from(comparison.specials?.values() ?? [])];
+    }
+    const comparisonSpecials = visibleSpecials
+      .map((special) => comparison.specials?.get(seatLookupKey(special.seat)))
+      .filter(Boolean);
+    return [this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode, memberFilter, comparisonSpecials];
   }
 
   /**
@@ -1542,12 +1784,15 @@ class AppState {
     // The optional chain handles a null comparisonElectionData (election with no comparison).
     const addFromSeats = (seats) => {
       seats?.forEach((seat) => {
-        keys.add(mergeKey(seat.winner || 'others'));
+        // An uncalled seat with no leader has no winner key; don't invent an 'others' entry.
+        if (seat.winner || seat.called !== false) keys.add(mergeKey(seat.winner || 'others'));
         Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(mergeKey(partyKey)));
       });
     };
     addFromSeats(this.electionData?.currentSeats);
     addFromSeats(this.comparisonElectionData?.currentSeats);
+    // Specials can carry a party the regular races don't, and the party filter applies to them.
+    addFromSeats(Array.from(this.electionData?.specials?.values() ?? []));
 
     const sorted = Array.from(keys)
       .sort((a, b) => manifest.labelParty(a).localeCompare(manifest.labelParty(b)));

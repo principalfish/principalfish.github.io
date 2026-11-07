@@ -253,7 +253,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [x] 7. Export: status, sourceNote, specials, naming (f90f26d3)
 - [x] 8. Front end: uncalled, source line, specials (9ec98204)
 - [x] 9. Predict rollover + per-seat Senate baselines (2f87352b)
-- [ ] 10. Derived Current Senate
+- [x] 10. Derived Current Senate (cd7dbc43)
 - [ ] 11. Docs + live-data runbook (live steps on go-ahead)
 
 ## Verification
@@ -433,3 +433,4 @@ No test touches the live DB (conftest guard).
   - CLI: `cli.py current-senate [--snapshot --election-file --out --dry-run]` (never opens the DB; a dry run writes nothing and prints the counts; reads `senate-2026-special.json` when the election's `meta.special_file` names it). Console: separate POST `/us/results/current-senate` ("Rebuild Current Senate" button), paths from app config, under the model-run slot, never run by an import.
   - Front end (minimal): an uncalled member is not 'others'; tallied in the uncalled line, matches no party filter, the state is neutral; the popup shows an "Uncalled" row with the counted percent; `buildSenateChamber` stays consistent and a projection replaces an uncalled member like any other. `run_us_senate_model.py` reads only each member's class (`class_state_allowlist`), so uncalled members don't change it (tested through the real loader).
   - Checks: `./run_tests.sh` mypy clean, 5204 passed; vitest 1415 passed, 3 skipped; jsdom harness: Current Senate with 2 uncalled members renders them neutral, "2 seats uncalled" shown, no console errors; US President, US House, Westminster predict and Holyrood unaffected. current_senate.py changed-line coverage 96% (untracked, measured directly; the uncovered lines are defensive); `senate-current.json` and the committed election files untouched, no live step run.
+- 2026-11-07: piece 10 committed (cd7dbc43) and pushed. User decisions: mixed states take the called member's colour; `EXPECTED_SPECIALS_2026` stays hard-coded (edit it at the next cycle with specials; noted in piece 11's runbook). Master is merged in before piece 11, once #74 lands.

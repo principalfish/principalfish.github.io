@@ -272,7 +272,7 @@ def parse_args() -> argparse.Namespace:
     - ``--as-of-date`` (ISO date, optional): upper-bound date for poll inclusion.
     - ``--as-of-days-back`` (int ≥ 0, default 0): fallback when ``--as-of-date`` absent.
     - ``--since-date`` (ISO date, optional): lower-bound date for poll inclusion.
-    - ``--since-days-back`` (int ≥ 0, default 30): fallback when ``--since-date`` absent.
+    - ``--since-days-back`` (int ≥ 0, default 60): fallback when ``--since-date`` absent.
     - ``--output-csv`` (str, optional): path for projected seat output CSV.
     - ``--no-archive`` (flag): skip auto-archiving after simulation.
 
@@ -280,14 +280,16 @@ def parse_args() -> argparse.Namespace:
 
     - ``--start-date`` (ISO date): first date to simulate.
     - ``--end-date`` (ISO date): last date to simulate.
-    - ``--lookback-days`` (int ≥ 0, default 365): poll history window per date.
+    - ``--lookback-days`` (int ≥ 0, default 60): poll history window per date,
+      the same as the single-date ``--since-days-back`` default.
     - ``--reset-existing`` / ``--no-reset-existing``: recompute dates while retaining previous results until replacement succeeds (default: enabled).
     - ``--continue-on-error`` (flag): finish other dates, then report failures with a non-success outcome.
     - ``--progress-every`` (int, default 25): print progress every N successes.
 
     Shared flags:
 
-    - ``--map-name``, ``--baseline-election-name``, ``--half-life-days``, ``--dry-run``.
+    - ``--map-name``, ``--baseline-election-name``, ``--dry-run``.
+    - ``--half-life-days`` (float > 0, default 15): poll-weighting half-life.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--map-name", default="UK Constituencies post 2022")
@@ -296,7 +298,7 @@ def parse_args() -> argparse.Namespace:
         default=BASELINE_ELECTION_NAME,
         help=f"Baseline election the projection swings from (default: {BASELINE_ELECTION_NAME!r})",
     )
-    parser.add_argument("--half-life-days", type=float, default=30.0)
+    parser.add_argument("--half-life-days", type=float, default=15.0)
     parser.add_argument(
         "--simulations", type=int, default=None,
         help="Monte Carlo elections per date (default: calibrated configuration)",
@@ -316,7 +318,7 @@ def parse_args() -> argparse.Namespace:
     )
     # Single-date flags
     parser.add_argument("--as-of-days-back", type=int, default=0)
-    parser.add_argument("--since-days-back", type=int, default=30)
+    parser.add_argument("--since-days-back", type=int, default=60)
     parser.add_argument("--as-of-date", default=None)
     parser.add_argument("--since-date", default=None)
     parser.add_argument(
@@ -335,7 +337,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Last date for retrospective backfill (YYYY-MM-DD)",
     )
-    parser.add_argument("--lookback-days", type=int, default=365)
+    parser.add_argument("--lookback-days", type=int, default=60)
     parser.add_argument(
         "--reset-existing",
         action=argparse.BooleanOptionalAction,

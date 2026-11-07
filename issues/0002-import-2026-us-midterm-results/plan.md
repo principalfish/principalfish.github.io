@@ -277,3 +277,11 @@ No test touches the live DB (conftest guard).
 - 2026-11-07 (builder): branch `import-2026-us-midterm-results` cut from origin/master; baseline `./run_tests.sh` green (4556 passed). The build worktree links the main checkout's venv as `data/.venv` and `node_modules` (both git-excluded via the common `info/exclude`).
 - 2026-11-07: pieces 1 and 2 built in parallel (user opted in), each in its own worktree, integrated here and reviewed/committed separately.
 - 2026-11-07: piece 6 is blocked on tooling: neither `ogr2ogr` nor `mapshaper` is installed on this machine. Raise it with the user before starting piece 6.
+- 2026-11-07 (piece 2): runoff sources found and added to `sources.py` (kind "runoff"):
+  - 2018 Senate (MS special runoff, 2018-11-27, schema C): `https://int.nyt.com/applications/elections/2018/api/1/races/2018-11-27.json`. MS only.
+  - 2020 Senate (GA, both seats, 2021-01-05, schema B): `https://static01.nyt.com/elections-assets/2020/data/api/2021-01-05/state-page/georgia.json`. Also holds a Public Service Commission runoff, which the importer must skip.
+  - 2020 House (LA-05, 2020-12-05, schema B): `https://static01.nyt.com/elections-assets/2020/data/api/2020-12-05/state-page/louisiana.json`. Also holds a ballot measure and a PSC runoff, to skip.
+  - 2022 Senate (GA, 2022-12-06, schema A2): `https://static01.nyt.com/elections-assets/2022/data/2022-12-06/results-georgia-us-senate-runoff.json`. The 2022-11-08 results-senate.json also carries race `GA-G-S-2022-12-06`.
+  - 2026 House (LA-05): pending, no URL yet (December 2026 runoff).
+  - No LA December House runoffs were found for 2018, 2022 or 2024. The 2024-12-07 Louisiana file holds only constitutional amendments.
+- 2026-11-07 (pieces 1+2): one analysis pass ran over the combined diff, with findings routed per piece. Piece 1: only a missing CLI test. Piece 2: a batch of network-error, redirect-allowlist, pointer-validation and test fixes. `.env_example` gained `NYT_CACHE_DIR` (added to piece 2's files). The README migration step is left to piece 11.

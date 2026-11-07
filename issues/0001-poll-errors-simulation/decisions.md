@@ -23,8 +23,10 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - Carried to 0004: US-5 = document the shrinkage; US-4 district term = new `district_scale`, default 0; A-1 waits for 2020 House results by district. (2026-11-07)
 - 2a-H2 contract: equal weights across six transitions, new folds report-only (decided 2026-10-30; built in `88bfc2a0`).
 
+- Move the offline conversion experiment (2a, H1–H3: `ab3fc62e`, `eaa73607`, `88bfc2a0`, `44dd8336`) off this branch to issue 0003. The boundary covers everything those commits added or changed, including the `historical_pair` and `content_hash` refactors. The shipped-model validation harness stays. Removed with one commit, not a history rewrite (Phil, 2026-11-07; Piece 1b).
+
 ## Open
-- Move the offline conversion experiment (2a, H1–H3: `ab3fc62e`, `eaa73607`, `88bfc2a0`, `44dd8336`; ~17.5 MB of JSON) off this branch and into issue 0003's branch (Phil, 2026-11-07). Open: exactly where the boundary falls, whether to remove it with a commit or rewrite the branch, and how 0003's branch picks it up.
+- How 0003's branch holds the experiment. 0003's issue branch `refine-westminster-and-us-poll-error-models` doesn't exist yet; the only branch is its planner chat's worktree branch, at `44dd8336`, which already has the experiment. Proposed: cut 0003 at `44dd8336`, as its plan already allows, and record in 0003's and 0004's plans that the later merge from this branch or master must not apply the removals.
 - W-4 at 3a: MC median as the headline, or shown alongside the deterministic count. Thread 4's Notes record Phil choosing **headline** on 2026-10-28 (deterministic count kept, labelled "uniform-swing projection"); this ledger carried it as open. Asked Phil to confirm on 2026-11-07, after the ship-as-built decision.
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.
 - The go-ahead for each live step of the Westminster backfill and export (Piece 6).

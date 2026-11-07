@@ -851,3 +851,101 @@ class TestHouseComparisonAcrossDistrictSets:
             "2019-general": "2017-general",
             "2017-general": None,
         }
+
+
+class TestSenateComparisonSixYearsEarlier:
+    """Each Senate result compares with the same class six years earlier, when listed."""
+
+    @staticmethod
+    def _senate(year: int | str, **extra: Any) -> dict[str, Any]:
+        return {"id": f"{year}-us-senate", "type": "us_senate", "mapId": 23, "parliament": "us_senate", **extra}
+
+    @staticmethod
+    def _comparisons(entries: list[dict[str, Any]]) -> dict[str, Any]:
+        return {entry["id"]: entry.get("comparisonElectionId") for entry in entries}
+
+    def test_2026_compares_with_2020_and_2024_with_2018(self) -> None:
+        entries = [self._senate(y) for y in (2026, 2024, 2022, 2020, 2018)]
+        assign_comparison_elections(entries)
+
+        assert self._comparisons(entries) == {
+            "2026-us-senate": "2020-us-senate",
+            "2024-us-senate": "2018-us-senate",
+            "2022-us-senate": None,
+            "2020-us-senate": None,
+            "2018-us-senate": None,
+        }
+
+    def test_a_later_import_of_2016_becomes_2022s_comparison(self) -> None:
+        entries = [self._senate(y) for y in (2026, 2024, 2022, 2020, 2018, 2016)]
+        assign_comparison_elections(entries)
+
+        assert self._comparisons(entries)["2022-us-senate"] == "2016-us-senate"
+        assert self._comparisons(entries)["2016-us-senate"] is None
+
+    def test_a_gap_that_is_not_six_years_gets_no_comparison(self) -> None:
+        # Years five, four and seven apart are other classes, never a match.
+        entries = [self._senate(2027), self._senate(2026), self._senate(2022), self._senate(2019)]
+        assign_comparison_elections(entries)
+
+        assert self._comparisons(entries) == {
+            "2027-us-senate": None,
+            "2026-us-senate": None,
+            "2022-us-senate": None,
+            "2019-us-senate": None,
+        }
+
+    def test_current_senate_without_a_year_gets_none(self) -> None:
+        entries = [self._senate(2026), {**self._senate(2026), "id": "current-senate"}, self._senate(2020)]
+        assign_comparison_elections(entries)
+
+        assert self._comparisons(entries) == {
+            "2026-us-senate": "2020-us-senate",
+            "current-senate": None,
+            "2020-us-senate": None,
+        }
+
+    def test_two_entries_in_the_earlier_year_pick_the_plain_id_then_the_first(self) -> None:
+        special = {**self._senate(2020), "id": "2020-us-senate-special"}
+        entries = [self._senate(2026), special, self._senate(2020)]
+        assign_comparison_elections(entries)
+        assert self._comparisons(entries)["2026-us-senate"] == "2020-us-senate"
+
+        other = {**self._senate(2020), "id": "2020-us-senate-b"}
+        entries = [self._senate(2026), special, other]
+        assign_comparison_elections(entries)
+        assert self._comparisons(entries)["2026-us-senate"] == "2020-us-senate-special"
+
+    def test_an_explicit_comparison_wins(self) -> None:
+        entries = [self._senate(2026, comparisonElectionId="2024-us-senate"), self._senate(2024), self._senate(2020)]
+        assign_comparison_elections(entries)
+
+        assert self._comparisons(entries)["2026-us-senate"] == "2024-us-senate"
+
+    def test_the_earlier_entry_must_be_the_same_parliament_and_type(self) -> None:
+        other = {"id": "2020-us-house", "type": "us_house", "mapId": 25, "parliament": "us_house"}
+        president = {"id": "2020-us-president", "type": "us_presidential", "mapId": 22, "parliament": "us_presidential"}
+        entries = [self._senate(2026), other, president]
+        assign_comparison_elections(entries)
+
+        assert self._comparisons(entries)["2026-us-senate"] is None
+
+    def test_house_and_uk_rules_are_unchanged_alongside_the_senate(self) -> None:
+        entries: list[dict[str, Any]] = [
+            self._senate(2026),
+            self._senate(2020),
+            {"id": "2026-us-house", "type": "us_house", "mapId": 24, "parliament": "us_house"},
+            {"id": "2024-us-house", "type": "us_house", "mapId": 21, "parliament": "us_house"},
+            {"id": "2024-general", "type": "uk_general", "mapId": 2, "parliament": "westminster"},
+            {"id": "2019-general", "type": "uk_general", "mapId": 2, "parliament": "westminster"},
+        ]
+        assign_comparison_elections(entries)
+
+        assert self._comparisons(entries) == {
+            "2026-us-senate": "2020-us-senate",
+            "2020-us-senate": None,
+            "2026-us-house": "2024-us-house",
+            "2024-us-house": None,
+            "2024-general": "2019-general",
+            "2019-general": None,
+        }

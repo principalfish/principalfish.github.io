@@ -331,7 +331,7 @@ export class Seat {
   /**
    * @param {{seat: string, region: string, winner: (string|number), votes: object,
    *   called?: boolean, pctCounted?: (number|null), sameParty?: boolean, round?: (string|null),
-   *   senateClass?: (number|null)}} input
+   *   senateClass?: (number|null), previous?: ({winner?: (string|number), votes?: object}|null)}} input
    *   Normalised seat-shaped object. For raw JSON input, use {@link Seat.fromRaw} instead.
    *   The status fields are optional; a seat built without them is a called, ordinary result.
    */
@@ -366,6 +366,24 @@ export class Seat {
     // Multi-member seats only (a seat that returns several members, each {party, name, up});
     // null for single-winner seats. Drives the per-member popup and the chamber tally.
     this.members = Array.isArray(input?.members) ? input.members : null;
+    // The previous same-class result of an off-cycle Senate seat (a special): `{winner, votes}`
+    // with party keys, `winner` null when the export omitted it. Null for every other seat.
+    // The popup measures its deltas against this instead of the comparison election, whose
+    // seat for the same state belongs to a different class.
+    this.previous = Seat.#normalizePrevious(input?.previous);
+  }
+
+  /**
+   * Normalises a previous-result record (`{winner, votes}`, party refs or keys) into party keys.
+   * @param {{winner?: (string|number), votes?: object}|null|undefined} previous
+   * @returns {{winner: (string|null), votes: Object<string, number>}|null} Null when absent or empty.
+   */
+  static #normalizePrevious(previous) {
+    if (!previous || typeof previous !== 'object') return null;
+    const votes = Seat.#normalizeVotes(previous.votes);
+    const hasWinner = previous.winner !== undefined && previous.winner !== null && previous.winner !== '';
+    if (!hasWinner && !Object.keys(votes).length) return null;
+    return { winner: hasWinner ? manifest.resolvePartyRef(previous.winner) : null, votes };
   }
 
   /**
@@ -373,7 +391,8 @@ export class Seat {
    * @param {{n: string, r: (number|string), w: (number|string), p: Array<[number|string, number]>,
    *   c?: boolean, pc?: number, sp?: boolean, rd?: string, cl?: number}} rawSeat - Optional keys
    *   `c` (false = uncalled), `pc` (percent counted), `sp` (same-party top candidates), `rd`
-   *   (decisive round) and `cl` (Senate class, specials only) are absent on older payloads.
+   *   (decisive round), `cl` (Senate class, specials only) and `pv` (`{w?, p}`, the previous
+   *   same-class result of an off-cycle Senate seat) are absent on older payloads.
    * @returns {Seat}
    */
   static fromRaw(rawSeat) {
@@ -390,6 +409,9 @@ export class Seat {
       sameParty: rawSeat?.sp === true,
       round: rawSeat?.rd,
       senateClass: rawSeat?.cl,
+      previous: rawSeat?.pv && typeof rawSeat.pv === 'object'
+        ? { winner: rawSeat.pv.w, votes: Seat.#decodeCompactVotes(rawSeat.pv.p) }
+        : null,
     });
   }
 
@@ -1372,6 +1394,13 @@ class AppState {
      * comparison data is loaded. */
     this.filteredSeatsComparisonSummary = null;
 
+    /** The current-side totals the totals table's deltas are measured from, when they differ from
+     * filteredSeatsSummary: the visible seats that have a counterpart in the comparison election,
+     * with specials left out (see {@link AppState#comparesMatchingSeatsOnly}). Null for every
+     * election that compares against the whole comparison election, and when no comparison is loaded.
+     * The displayed seat and vote figures always come from filteredSeatsSummary. */
+    this.filteredSeatsDeltaSummary = null;
+
     /** Per-region rollup from ElectionSummary.summarizeByRegion over the chamber's list
      * seats only. Null when the chamber has no list seats. Feeds the region-table
      * overlay and the per-region popup. */
@@ -1688,9 +1717,48 @@ class AppState {
     const memberFilter = { party: this.mapFilters.party, upcoming: this.mapFilters.upcoming };
     const visibleSpecials = this.visibleSpecials();
     this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode, memberFilter, visibleSpecials);
-    this.filteredSeatsComparisonSummary = this.comparisonElectionData?.currentSeats.length
+    const hasComparison = !!this.comparisonElectionData?.currentSeats.length;
+    this.filteredSeatsComparisonSummary = hasComparison
       ? this.#comparisonSummary(visibleSpecials, memberFilter)
       : null;
+    this.filteredSeatsDeltaSummary = hasComparison && this.comparesMatchingSeatsOnly
+      ? ElectionSummary.summarize(this.#matchedSeats().current, this.voteTotals.mode, memberFilter, [])
+      : null;
+  }
+
+  /**
+   * True when the totals table's seat and vote deltas compare only the states that were up in
+   * both elections. This is the US Senate (election type `us_senate`, the same type the export
+   * keys its six-years-earlier comparison on): each cycle contests one class of states, so a
+   * Senate election and the one six years earlier share only the states of that class, while
+   * off-cycle specials (and a state's special folded into the same file) have no counterpart.
+   * Comparing everything would show those as gains or losses. Every other election, the US
+   * House included, compares against the whole comparison election.
+   * @returns {boolean}
+   */
+  get comparesMatchingSeatsOnly() {
+    return this.currentElection?.type === 'us_senate';
+  }
+
+  /**
+   * The visible current seats that also exist in the comparison election, each paired by seat
+   * key with its comparison seat. Specials are never part of either list, and neither are
+   * off-cycle seats (those carrying a `previous` result): they compare with their own last
+   * race, not with the comparison election's seat for the same state.
+   * @returns {{current: Seat[], comparison: Seat[]}}
+   */
+  #matchedSeats() {
+    const byKey = this.comparisonElectionData?.seatsByKey ?? new Map();
+    const current = [];
+    const comparison = [];
+    this.mapSeatsVisible.seats.forEach((seat) => {
+      if (seat.previous) return;
+      const match = byKey.get(seatLookupKey(seat.seat));
+      if (!match) return;
+      current.push(seat);
+      comparison.push(match);
+    });
+    return { current, comparison };
   }
 
   /**
@@ -1757,12 +1825,19 @@ class AppState {
    * keys) would otherwise drop the unmatched comparison seats and misreport the seat change.
    * Per-seat gain/hold labels stay key-matched either way. With a filter active it is the
    * comparison counterparts of the visible seats, as the filter intends.
+   *
+   * The US Senate ({@link AppState#comparesMatchingSeatsOnly}) always uses the key-matched
+   * comparison seats, filter or not, and no specials from the comparison election: only states
+   * up in both elections are compared.
    * @param {Seat[]} visibleSpecials - Current specials passing the filters (see {@link AppState#visibleSpecials}).
    * @param {{party?: string, upcoming?: string}} memberFilter
    * @returns {[Seat[], string, object, Seat[]]} Arguments for `ElectionSummary.summarize`.
    */
   comparisonTotalsInputs(visibleSpecials, memberFilter) {
     const comparison = this.comparisonElectionData;
+    if (this.comparesMatchingSeatsOnly) {
+      return [this.#matchedSeats().comparison, this.voteTotals.mode, memberFilter, []];
+    }
     if (!this.hasActiveFilters()) {
       return [comparison.currentSeats, this.voteTotals.mode, memberFilter, Array.from(comparison.specials?.values() ?? [])];
     }

@@ -26,6 +26,7 @@ import re
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -56,13 +57,17 @@ from scripts.export.naming import (
     party_key_for_party,
 )
 from scripts.export.payload import (
+    SenateResults,
     SeatRow,
-    choose_winner,
-    party_id_for_vote,
+    add_previous_senate_results,
     build_result_payload,
     build_special_entries,
+    choose_winner,
     compact_votes_to_dict,
     convert_legacy_seatinfo_to_v4,
+    party_id_for_vote,
+    senate_class_by_name,
+    senate_results_by_class,
     set_others_party_id,
 )
 from scripts.export.serialize import (
@@ -260,6 +265,58 @@ def senate_special_entries(
         ))
     entries.sort(key=lambda entry: str(entry["n"]))
     return entries
+
+
+def earlier_senate_results(
+    session: Session, election: Election, cache: dict[int, SenateResults]
+) -> list[SenateResults]:
+    """Return the results of every ``us_senate`` election before ``election``.
+
+    The list is ordered oldest first, so the caller takes the latest match by scanning
+    it backwards. It includes folded same-day specials, which are elections of their
+    own, but never ``election`` itself or its own child specials. "Before" is strictly
+    earlier by election date (the year's 1 January when undated); a child special is
+    dated with its parent, so a parent without a date and a child with one cannot
+    order each other. Among elections on the same date the regular one sorts last
+    (so it is preferred), then the lower id. Each election's results are keyed by
+    ``(state, senate_class)`` (see :func:`scripts.export.payload.senate_results_by_class`);
+    ``cache`` memoises them by election id across calls.
+    """
+    all_rows = {
+        row.id: row
+        for row in session.execute(
+            select(Election).where(Election.type == ElectionType.us_senate)
+        ).scalars()
+    }
+
+    def when(row: Election) -> date:
+        parent = all_rows.get(row.parent_election_id) if row.parent_election_id is not None else None
+        dated = parent if parent is not None else row
+        return dated.election_date or date(dated.year, 1, 1)
+
+    cutoff = when(election)
+    rows = [
+        row
+        for row in all_rows.values()
+        if row.id != election.id and row.parent_election_id != election.id and when(row) < cutoff
+    ]
+    rows.sort(key=lambda row: (when(row), row.parent_election_id is None, -row.id))
+    results: list[SenateResults] = []
+    for row in rows:
+        if row.id not in cache:
+            seats = [
+                SeatRow(seat_id=seat.id, seat_name=seat.seat_name, region_id=seat.region_id,
+                        region_name=None, electorate=None)
+                for seat in session.execute(select(Seat).where(Seat.map_id == row.map_id)).scalars()
+            ]
+            votes = list(session.execute(
+                select(Vote).where(Vote.election_id == row.id).options(joinedload(Vote.party))
+            ).scalars().all())
+            statuses = seat_statuses_for_election(session, row.id)
+            payload = build_result_payload(seats, votes, election_year=row.year, statuses=statuses)
+            cache[row.id] = senate_results_by_class(payload["seats"], senate_class_by_name(seats, statuses))
+        results.append(cache[row.id])
+    return results
 
 
 def parse_args() -> argparse.Namespace:
@@ -734,6 +791,7 @@ def _export_page(
     written_map_ids: set[int] = set()
     manifest_id_by_db_id: dict[int, str] = {}
     pending_by_election_rows: list[dict[str, Any]] = []
+    senate_results_cache: dict[int, SenateResults] = {}
 
     for election in elections:
         if is_folded_senate_special(election):
@@ -813,15 +871,22 @@ def _export_page(
                 ),
                 (seat.seat_name for seat in seats),
             )
+        election_statuses = seat_statuses_for_election(session, election.id)
         result_payload = build_result_payload(
             seats,
             votes,
             election_year=election.year,
             ev_by_unit=ev_by_unit,
-            statuses=seat_statuses_for_election(session, election.id),
+            statuses=election_statuses,
         )
         if election.type == ElectionType.us_senate:
             specials = senate_special_entries(session, election, seats)
+            add_previous_senate_results(
+                result_payload["seats"],
+                specials,
+                senate_class_by_name(seats, election_statuses),
+                earlier_senate_results(session, election, senate_results_cache),
+            )
             if specials:
                 result_payload["specials"] = specials
 

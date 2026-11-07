@@ -440,6 +440,124 @@ describe('comparison totals', () => {
     });
   });
 
+  describe('US Senate compares matching states only', () => {
+    // 2020 comparison: states a, b, c plus x (not up in 2026) and AZ (2020's special sits in the
+    // regular file); its own folded special for b must be ignored. 2026 current: a, b, c plus FL and
+    // OH, whose off-cycle specials are not in the 2020 file at all, and a folded special for c.
+    const cmpFile = () => new ElectionData({
+      seats: [
+        rawSeat('a', 'republican', { republican: 60, democrat: 40 }),
+        rawSeat('b', 'republican', { republican: 55, democrat: 45 }),
+        rawSeat('c', 'democrat', { democrat: 70, republican: 30 }),
+        rawSeat('x', 'democrat', { democrat: 80, republican: 20 }),
+        rawSeat('arizona', 'democrat', { democrat: 51, republican: 49 }),
+      ],
+      specials: [rawSeat('b', 'democrat', { democrat: 90, republican: 10 }, { cl: 3 })],
+    });
+    const curFile = (extraSeats = []) => new ElectionData({
+      seats: [
+        rawSeat('a', 'democrat', { democrat: 52, republican: 48 }),
+        rawSeat('b', 'republican', { republican: 55, democrat: 45 }),
+        rawSeat('c', 'democrat', { democrat: 70, republican: 30 }),
+        rawSeat('florida', 'republican', { republican: 100 }),
+        rawSeat('ohio', 'republican', { republican: 100 }),
+        ...extraSeats,
+      ],
+      specials: [rawSeat('c', 'republican', { republican: 100 }, { cl: 3 })],
+    });
+    const loadSenate = (cur, cmp, type = 'us_senate') => {
+      state.currentElection = { mapId: 1, type, byElectionSeats: null };
+      state.mapConfig = { voteTotalsViews: [{ id: 'all' }] };
+      state.electionData = cur;
+      state.comparisonElectionData = cmp;
+      state.applyMapFilters();
+      state.recomputeVoteTotalsForMode();
+    };
+    const seatDelta = (party) => (findParty(state.filteredSeatsDeltaSummary, party)?.seats ?? 0)
+      - (findParty(state.filteredSeatsComparisonSummary, party)?.seats ?? 0);
+
+    it('compares only states up in both elections, leaving specials and unmatched states out', () => {
+      loadSenate(curFile(), cmpFile());
+      const cmp = state.filteredSeatsComparisonSummary;
+      expect(cmp.totalSeats).toBe(3); // a, b, c: not x, arizona or the folded special for b
+      expect(findParty(cmp, 'republican').seats).toBe(2);
+      expect(findParty(cmp, 'democrat').seats).toBe(1);
+      expect(findParty(cmp, 'republican').votes).toBe(145);
+      const delta = state.filteredSeatsDeltaSummary;
+      expect(delta.totalSeats).toBe(3); // not florida, ohio or the folded special for c
+      expect(findParty(delta, 'democrat').seats).toBe(2);
+      expect(seatDelta('democrat')).toBe(1);
+      expect(seatDelta('republican')).toBe(-1);
+      // Votes: matched current R 133 / D 167 against matched comparison R 145 / D 155.
+      expect(findParty(delta, 'republican').votes).toBe(48 + 55 + 30);
+      expect(findParty(delta, 'democrat').votes).toBe(52 + 45 + 70);
+    });
+
+    it('still displays every seat, including the off-cycle ones, in the chamber tally', () => {
+      loadSenate(curFile(), cmpFile());
+      const shown = state.filteredSeatsSummary;
+      expect(shown.totalSeats).toBe(6); // a, b, c, florida, ohio + the folded special
+      expect(findParty(shown, 'republican').seats).toBe(4); // b, florida, ohio, special c
+      expect(findParty(shown, 'republican').votes).toBe(48 + 55 + 30 + 100 + 100 + 100);
+    });
+
+    it('matching also holds with a filter active, and ignores the comparison specials', () => {
+      loadSenate(curFile(), cmpFile());
+      state.mapFilters.party = 'republican';
+      state.applyMapFilters();
+      state.recomputeVoteTotalsForMode();
+      // Visible: b, florida, ohio (leading R). Matched: b only.
+      expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(1);
+      expect(state.filteredSeatsDeltaSummary.totalSeats).toBe(1);
+      expect(findParty(state.filteredSeatsComparisonSummary, 'republican').seats).toBe(1);
+    });
+
+    it('an uncalled Senate seat is left out of the seat change on both sides', () => {
+      const cur = curFile();
+      cur.currentSeats[0] = Seat.fromRaw(rawSeat('a', 'democrat', { democrat: 52, republican: 48 }, { c: false }));
+      cur.seatsByKey = ElectionData.buildSeatIndex(cur.currentSeats);
+      loadSenate(cur, cmpFile());
+      // a is uncalled: out of the comparison's R tally (a) and not credited to D now.
+      expect(findParty(state.filteredSeatsComparisonSummary, 'republican').seats).toBe(1); // b
+      expect(findParty(state.filteredSeatsComparisonSummary, 'democrat').seats).toBe(1); // c
+      expect(seatDelta('democrat')).toBe(0); // c held, a not counted
+      expect(seatDelta('republican')).toBe(0); // b held, a not counted
+      expect(state.filteredSeatsSummary.uncalled).toBe(1);
+      // Its votes still count.
+      expect(findParty(state.filteredSeatsDeltaSummary, 'democrat').votes).toBe(52 + 45 + 70);
+    });
+
+    it('a state with no comparison counterpart contributes nothing to the delta basis', () => {
+      loadSenate(curFile([rawSeat('alaska', 'democrat', { democrat: 1 })]), cmpFile());
+      expect(state.filteredSeatsDeltaSummary.totalSeats).toBe(3);
+      expect(seatDelta('democrat')).toBe(1);
+    });
+
+    it('an off-cycle seat carrying a previous result is not matched by state key', () => {
+      // x exists in the comparison file, but this x is a special with its own previous result.
+      const offCycle = rawSeat('x', 'republican', { republican: 60, democrat: 40 }, { pv: { w: 'democrat', p: [['democrat', 55], ['republican', 45]] } });
+      loadSenate(curFile([offCycle]), cmpFile());
+      expect(state.filteredSeatsDeltaSummary.totalSeats).toBe(3); // a, b, c only
+      expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(3);
+      expect(seatDelta('democrat')).toBe(1);
+      expect(seatDelta('republican')).toBe(-1);
+    });
+
+    it('the House (and every other type) keeps the whole comparison election and no delta basis', () => {
+      loadSenate(curFile(), cmpFile(), 'us_house');
+      expect(state.filteredSeatsDeltaSummary).toBeNull();
+      const cmp = state.filteredSeatsComparisonSummary;
+      expect(cmp.totalSeats).toBe(6); // 5 seats + the folded special
+      expect(findParty(cmp, 'democrat').seats).toBe(4); // c, x, arizona and the folded special b
+    });
+
+    it('has no delta basis without a comparison election', () => {
+      loadSenate(curFile(), null);
+      expect(state.filteredSeatsDeltaSummary).toBeNull();
+      expect(state.filteredSeatsComparisonSummary).toBeNull();
+    });
+  });
+
   it('is null when there is no comparison election', () => {
     load(current(), null);
     expect(state.filteredSeatsComparisonSummary).toBeNull();

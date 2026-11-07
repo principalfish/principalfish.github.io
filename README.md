@@ -1047,9 +1047,17 @@ for supported fields, selection rules, and shell transformations.
 		- `pc`: percent of the expected vote counted, to one decimal place; uncalled seats only, when known
 		- `sp`: `true` when the top candidates share a party (top-two / jungle races, merged into one row)
 		- `rd`: the decisive round, `"rcv-final"` or `"runoff"`, when the first round did not decide the seat
+		- `pv` (US Senate seats and `specials` entries): `{w, p}`, the previous result for the same state and Senate class, so
+		  an off-cycle seat can be compared with its own last race. `w` is the previous winner's party ref (omitted when
+		  that result had none) and `p` its party rows `[[partyRef, votes], ...]`, without candidate names. It is the most
+		  recent earlier `us_senate` election, regular or special, with a seat for that state and class (classes come from
+		  `election_seat_status.senate_class`; a seat or earlier result with no class is skipped). Only seats whose class
+		  differs from the election's regular class (the class most of its seats have) get it: the standalone specials
+		  (Florida and Ohio 2026) and every `specials` entry. Regular seats are compared through the entry's comparison
+		  election instead. Absent when no earlier election holds that state and class.
 	- an uncalled seat's `w` is the party leading on votes; with no positive votes or a tie for the lead, `w` is omitted
 	- optional top-level `specials` (US Senate): same-day special elections held alongside a state's regular race, one
-	  `{n, cl, w, p, c, pc, sp, rd}` per state, sorted by name. `cl` is the seat's Senate class; the other keys follow
+	  `{n, cl, w, p, c, pc, sp, rd, pv}` per state, sorted by name. `cl` is the seat's Senate class; the other keys follow
 	  the seat rules above, and there is no `r`. The special has no result file or manifest entry of its own.
 - Frontend loader supports both compact and legacy result formats.
 

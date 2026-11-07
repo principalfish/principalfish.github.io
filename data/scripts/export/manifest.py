@@ -13,10 +13,12 @@ from models import Election, ElectionType, Party, Region
 from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
 from scripts.export.naming import party_key_for_party
 
-# Election types that must never auto-chain to a comparison election. The US Senate's
-# staggered classes contest a different ~third of the states each cycle, so a delta against
-# the preceding cycle would compare unrelated seats. See ``assign_comparison_elections``.
-NO_AUTO_COMPARISON_TYPES: frozenset[str] = frozenset({ElectionType.us_senate.value})
+# Election types that compare with the election of the same type exactly N years earlier
+# rather than the preceding one. The US Senate's staggered classes contest a different
+# third of the states each cycle, so only the cycle six years back contests the same class
+# of seats; when that election is not in the list the entry has no comparison. See
+# ``assign_comparison_elections``.
+FIXED_GAP_COMPARISON_YEARS: dict[str, int] = {ElectionType.us_senate.value: 6}
 
 # Election types that chain to the preceding election of the same type and parliament even
 # across a boundary change (a different mapId). US House districts are redrawn each census
@@ -374,9 +376,14 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
       an earlier year (read from the id), whatever the list order.
     - The last entry of each (parliament, mapId, type) receives no comparison (for
       US House, the oldest House election).
-    - Types in ``NO_AUTO_COMPARISON_TYPES`` (US Senate) never auto-chain: their
-      staggered classes contest different states each cycle, so a delta against
-      the preceding cycle would compare unrelated seats.
+    - Types in ``FIXED_GAP_COMPARISON_YEARS`` (US Senate) compare with the election of
+      the same parliament and type exactly that many years earlier (six): the staggered
+      classes contest a different third of the states each cycle, so only the same class,
+      six years back, is like for like (2026 against 2020, 2024 against 2018). The earlier
+      election's year is read from its id; when none is in the list (for example 2022, 2020 and
+      2018 while only the latest cycles are imported) the entry gets no comparison, and a later import of the earlier cycle is
+      picked up automatically. Entries without a year in their id (``current-senate``)
+      get none.
 
     Idempotent and safe to call more than once: entries that already have a
     comparison are skipped, so a second pass only fills entries left unresolved
@@ -398,14 +405,28 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
         if entry.get("comparisonElectionId"):
             continue
 
-        # Staggered-class chambers (US Senate) contest different states each cycle, so
-        # auto-chaining against the previous cycle would compare unrelated seats — skip them.
-        if entry.get("type") in NO_AUTO_COMPARISON_TYPES:
-            continue
-
         comparison_id: str | None = None
 
-        if entry.get("type") == ElectionType.model_uns.value:
+        if entry.get("type") in FIXED_GAP_COMPARISON_YEARS:
+            # Staggered-class chambers (US Senate): the same class last voted a fixed gap
+            # earlier. Auto-chaining to the previous cycle would compare unrelated seats.
+            entry_year = _entry_year(entry)
+            if entry_year is not None:
+                earlier_year = entry_year - FIXED_GAP_COMPARISON_YEARS[str(entry.get("type"))]
+                candidates = [
+                    other
+                    for other in manifest_entries
+                    if other.get("parliament") == entry.get("parliament")
+                    and other.get("type") == entry.get("type")
+                    and _entry_year(other) == earlier_year
+                ]
+                # Two entries can share a year; the plain "<year>-<type slug>" id wins,
+                # otherwise the first in list order.
+                plain_id = f"{earlier_year}-{str(entry.get('type')).replace('_', '-')}"
+                preferred = [other for other in candidates if other.get("id") == plain_id]
+                if preferred or candidates:
+                    comparison_id = (preferred or candidates)[0]["id"]
+        elif entry.get("type") == ElectionType.model_uns.value:
             comparison_id = latest_general_id
         elif entry.get("type") in US_MODEL_COMPARISON_IDS:
             # US forecasts compare against their model's baseline; only when that

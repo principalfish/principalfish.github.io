@@ -630,11 +630,16 @@ function sortPartyRows(rows) {
  *
  * @param {{parties: Array<object>, totalVotes: number}} [summary] - Summary to render; defaults to state.filteredSeatsSummary.
  * @param {{parties: Array<object>, totalVotes: number}|null} [comparisonSummary] - Comparison for delta columns; defaults to state.filteredSeatsComparisonSummary.
+ * @param {{parties: Array<object>, totalVotes: number}|null} [deltaBasis] - Current-side totals the deltas
+ *   are measured from, when they differ from `summary` (the US Senate compares matching states only, while
+ *   still displaying every seat). Defaults to state.filteredSeatsDeltaSummary when rendering the default
+ *   summary, otherwise `summary` itself.
  * @returns {void}
  */
 function renderVoteTotals(
   summary = state.filteredSeatsSummary,
-  comparisonSummary = state.filteredSeatsComparisonSummary
+  comparisonSummary = state.filteredSeatsComparisonSummary,
+  deltaBasis = summary === state.filteredSeatsSummary ? state.filteredSeatsDeltaSummary : null
 ) {
   voteTotalsTabNav.querySelectorAll('[data-vote-tab]').forEach((b) => {
     b.classList.toggle('active', b.dataset.voteTab === state.voteTotals.mode);
@@ -661,14 +666,18 @@ function renderVoteTotals(
     });
   }
 
+  const basis = deltaBasis ?? summary;
+  const basisByParty = new Map(basis.parties.map((basisRow) => [basisRow.party, basisRow]));
   const rows = summary.parties.map((partyRow) => {
     const votePct = summary.totalVotes > 0 ? (partyRow.votes / summary.totalVotes) * 100 : 0;
     const comparison = comparisonByParty.get(partyRow.party) || { seats: 0, votePct: 0 };
+    const basisRow = basisByParty.get(partyRow.party) || { seats: 0, votes: 0 };
+    const basisVotePct = basis.totalVotes > 0 ? (basisRow.votes / basis.totalVotes) * 100 : 0;
     return {
       ...partyRow,
       votePct,
-      seatsDelta: Number(partyRow.seats || 0) - comparison.seats,
-      votePctDelta: votePct - comparison.votePct,
+      seatsDelta: Number(basisRow.seats || 0) - comparison.seats,
+      votePctDelta: basisVotePct - comparison.votePct,
     };
   });
 
@@ -1403,6 +1412,27 @@ export function refreshOpenSeatPopup() {
 }
 
 /**
+ * What a seat popup measures its vote-share deltas and gain indicator against. A seat carrying
+ * a `previous` result (an off-cycle Senate seat) uses that, never the comparison election's seat
+ * for the same state, which would be a different class. Any other seat uses the comparison seat.
+ * @param {Seat} seat
+ * @param {Seat|null} comparisonSeat - The comparison election's seat for the same key, or null.
+ * @returns {{winner: (string|null), deltaFor: function(string, number): (number|null)}}
+ *   `deltaFor(party, pct)` is the party's share change in points, or null with no basis.
+ */
+function popupDeltaBasis(seat, comparisonSeat) {
+  const basis = seat.previous ?? comparisonSeat;
+  const votes = basis?.votes || {};
+  const total = seat.previous
+    ? Object.values(votes).reduce((sum, v) => sum + Number(v || 0), 0)
+    : Number(comparisonSeat?.turnout ?? 0);
+  return {
+    winner: basis?.winner ?? null,
+    deltaFor: (party, pct) => (total > 0 ? pct - (Number(votes[party] || 0) / total) * 100 : null),
+  };
+}
+
+/**
  * Builds the extra seat-popup block for a state's same-day special Senate election: a title
  * naming the Senate class, a status line (UNCALLED tag with the counted share, the winner or
  * current leader, and the same-party / decisive-round notes) and the special's vote-share
@@ -1437,13 +1467,29 @@ function buildSpecialPopupBlock(special) {
   }
   addMeta(notes.samePartyNote, 'maps-popup-status-note');
   addMeta(notes.roundNote, 'maps-popup-status-note');
+  // A special's deltas and FROM tag are measured against its own previous result (`pv`). The
+  // payload does not carry that election's year, so the popup shows them without a "vs year" label.
+  const gainFrom = special.gainFromParty(special.previous?.winner ?? null);
+  if (gainFrom) {
+    const item = document.createElement('span');
+    item.className = 'maps-popup-meta-item';
+    item.append(`FROM ${manifest.labelParty(gainFrom)} `);
+    const icon = document.createElement('span');
+    icon.className = 'maps-seat-icon';
+    icon.style.background = manifest.colourParty(gainFrom);
+    item.appendChild(icon);
+    meta.appendChild(item);
+  }
   if (meta.childElementCount) block.appendChild(meta);
 
   const rows = special.voteShareRows();
   const maxPct = rows.reduce((max, row) => Math.max(max, row.pct), 0);
+  const previousDeltas = popupDeltaBasis(special, null);
   rows.forEach((row) => {
     const barWidth = maxPct > 0 ? Math.max(0, Math.min(75, (row.pct / maxPct) * 75)) : 0;
-    block.appendChild(buildPopupRow(row.party, barWidth, `<span>${formatPct(row.pct)}%</span>`, row.label));
+    const delta = previousDeltas.deltaFor(row.party, row.pct);
+    const deltaHtml = delta == null ? '' : `<span class="${deltaClass(delta)}">${formatSigned(delta, 2)}</span>`;
+    block.appendChild(buildPopupRow(row.party, barWidth, `<span>${formatPct(row.pct)}%</span>${deltaHtml}`, row.label));
   });
   return block;
 }
@@ -1502,7 +1548,10 @@ export function renderSeatPopup(seatName) {
   // Resolve gain indicator and majority stats via Seat instance methods so the
   // logic stays in one place and this function has no arithmetic of its own.
   const comparisonSeat = state.comparisonElectionData?.seatsByKey.get(seatKey) || null;
-  const gainFrom = seat.gainFromParty(comparisonSeat?.winner || null);
+  // Deltas and the gain indicator read the seat's own previous result when it has one. The
+  // payload carries no year for it, so no "vs year" label is shown.
+  const deltaBasis = popupDeltaBasis(seat, comparisonSeat);
+  const gainFrom = seat.gainFromParty(deltaBasis.winner);
   const isByElection = Seat.isByElectionSeat(seat, state.currentElection.byElectionSeats);
   const majority = seat.majorityStats();
   const statusNotes = seat.statusNotes();
@@ -1523,18 +1572,15 @@ export function renderSeatPopup(seatName) {
     ${statusNotes.roundNote ? `<span class="maps-popup-meta-item maps-popup-status-note">${escapeHtml(statusNotes.roundNote)}</span>` : ''}
   `;
 
-  // Build vote-share rows with comparison deltas. prevPct is null before the
-  // comparison election's first data point, which suppresses the delta span.
+  // Build vote-share rows with comparison deltas. deltaBasis.deltaFor returns null when
+  // there is nothing to compare with, which suppresses the delta span.
   const currentTurnout = seat.turnout;
-  const comparisonTurnout = comparisonSeat?.turnout ?? 0;
-  const comparisonVotes = comparisonSeat?.votes || {};
 
   const rows = Object.entries(seat.votes || {})
     .map(([party, votes]) => {
       const voteTotal = Number(votes || 0);
       const pct = currentTurnout > 0 ? (voteTotal / currentTurnout) * 100 : 0;
-      const prevPct = comparisonTurnout > 0 ? ((Number(comparisonVotes[party] || 0) / comparisonTurnout) * 100) : null;
-      const delta = prevPct == null ? null : pct - prevPct;
+      const delta = deltaBasis.deltaFor(party, pct);
       // Label by candidate name where available (name mode); party label otherwise.
       return { party, pct, delta, label: seat.candidates?.[party] };
     })

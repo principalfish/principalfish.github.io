@@ -152,6 +152,88 @@ describe('renderSeatPopup', () => {
   });
 });
 
+describe('renderSeatPopup: previous same-class result (pv)', () => {
+  const load = (payload, comparison = null) => {
+    const { state, ElectionData } = stateModule;
+    state.electionData = new ElectionData(payload);
+    state.comparisonElectionData = comparison ? new ElectionData(comparison) : null;
+  };
+  const meta = () => document.getElementById('mapsSeatPopupMeta');
+  const list = () => document.getElementById('mapsSeatPopupList');
+  const rowText = (container, party) => [...container.querySelectorAll('.maps-popup-row')]
+    .map((row) => row.textContent.replace(/\s+/g, ' ').trim()).find((text) => text.startsWith(party)) ?? '';
+  // The comparison election's Florida seat is a different class: wildly different shares.
+  const comparison = { seats: [rawSeat('Florida', 'republican', { republican: 90, democrat: 10 })] };
+
+  it('parses pv into previous, with party keys; null when absent; survives a clone', () => {
+    const { Seat } = stateModule;
+    const seat = Seat.fromRaw(rawSeat('Florida', 'republican', { republican: 60 }, { pv: { w: 'democrat', p: [['democrat', 55], ['republican', 45]] } }));
+    expect(seat.previous).toEqual({ winner: 'democrat', votes: { democrat: 55, republican: 45 } });
+    expect(new Seat(seat).previous).toEqual(seat.previous);
+    expect(Seat.fromRaw(rawSeat('A', 'republican', { republican: 1 })).previous).toBeNull();
+    expect(Seat.fromRaw(rawSeat('A', 'republican', { republican: 1 }, { pv: { p: [['democrat', 5]] } })).previous)
+      .toEqual({ winner: null, votes: { democrat: 5 } });
+  });
+
+  it('a standalone special seat takes its deltas and FROM tag from previous, not the comparison seat', () => {
+    load({ seats: [rawSeat('Florida', 'republican', { republican: 60, democrat: 40 }, { pv: { w: 'democrat', p: [['democrat', 55], ['republican', 45]] } })] }, comparison);
+    dom.renderSeatPopup('Florida');
+    expect(meta().textContent).toContain('FROM');
+    expect(rowText(list(), 'republican')).toContain('60.00%');
+    expect(rowText(list(), 'republican')).toContain('+15.00');
+    expect(rowText(list(), 'democrat')).toContain('-15.00');
+  });
+
+  it('a pv without w shows deltas but no FROM tag', () => {
+    load({ seats: [rawSeat('Florida', 'republican', { republican: 60, democrat: 40 }, { pv: { p: [['democrat', 55], ['republican', 45]] } })] }, comparison);
+    dom.renderSeatPopup('Florida');
+    expect(meta().textContent).not.toContain('FROM');
+    expect(rowText(list(), 'republican')).toContain('+15.00');
+  });
+
+  it('a seat without pv still uses the comparison seat', () => {
+    load({ seats: [rawSeat('Florida', 'republican', { republican: 60, democrat: 40 })] }, comparison);
+    dom.renderSeatPopup('Florida');
+    expect(rowText(list(), 'republican')).toContain('-30.00');
+    expect(rowText(list(), 'democrat')).toContain('+30.00');
+    expect(meta().textContent).not.toContain('FROM');
+  });
+
+  it('the folded special block shows deltas and a FROM tag when the winner changed', () => {
+    load({
+      seats: [rawSeat('Ohio', 'republican', { republican: 55, democrat: 45 })],
+      specials: [rawSeat('Ohio', 'democrat', { democrat: 52, republican: 48 }, { cl: 3, pv: { w: 'republican', p: [['republican', 60], ['democrat', 40]] } })],
+    });
+    dom.renderSeatPopup('Ohio');
+    const block = list().querySelector('.maps-popup-special');
+    expect(block.textContent).toContain('FROM');
+    expect(rowText(block, 'democrat')).toContain('+12.00');
+    expect(rowText(block, 'republican')).toContain('-12.00');
+    // The regular block is unchanged: no comparison, no deltas.
+    expect(meta().textContent).not.toContain('FROM');
+  });
+
+  it('a special held by the same party has deltas but no FROM tag, and one without pv has neither', () => {
+    load({
+      seats: [rawSeat('Ohio', 'republican', { republican: 55, democrat: 45 })],
+      specials: [rawSeat('Ohio', 'republican', { republican: 52, democrat: 48 }, { cl: 3, pv: { w: 'republican', p: [['republican', 60], ['democrat', 40]] } })],
+    });
+    dom.renderSeatPopup('Ohio');
+    const block = list().querySelector('.maps-popup-special');
+    expect(block.textContent).not.toContain('FROM');
+    expect(rowText(block, 'republican')).toContain('-8.00');
+
+    load({
+      seats: [rawSeat('Ohio', 'republican', { republican: 55 })],
+      specials: [rawSeat('Ohio', 'democrat', { democrat: 52, republican: 48 }, { cl: 3 })],
+    });
+    dom.renderSeatPopup('Ohio');
+    const plain = list().querySelector('.maps-popup-special');
+    expect(plain.textContent).not.toContain('FROM');
+    expect(plain.textContent).not.toMatch(/[+-]\d+\.\d\d/);
+  });
+});
+
 describe('renderSeatPopup: Current Senate uncalled members', () => {
   const list = () => document.getElementById('mapsSeatPopupList');
 

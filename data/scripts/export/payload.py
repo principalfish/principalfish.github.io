@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
@@ -272,11 +272,7 @@ def build_special_entries(
         with votes, sorted by seat name (``w`` follows the same rule as a seat's).
     """
     payload = build_result_payload(seats, votes, election_year=election_year, statuses=statuses)
-    class_by_name: dict[str, int] = {}
-    for seat in seats:
-        status = statuses.get(seat.seat_id)
-        if status is not None and status.senate_class is not None:
-            class_by_name[seat.seat_name] = status.senate_class
+    class_by_name = senate_class_by_name(seats, statuses)
 
     entries: list[dict[str, Any]] = []
     for seat_entry in payload["seats"]:
@@ -287,6 +283,103 @@ def build_special_entries(
         entry.update({key: value for key, value in seat_entry.items() if key not in ("n", "r")})
         entries.append(entry)
     return entries
+
+
+def senate_class_by_name(seats: list[SeatRow], statuses: Mapping[int, SeatStatus]) -> dict[str, int]:
+    """Return ``{seat_name: senate_class}`` for the seats whose status row has a class."""
+    class_by_name: dict[str, int] = {}
+    for seat in seats:
+        status = statuses.get(seat.seat_id)
+        if status is not None and status.senate_class is not None:
+            class_by_name[seat.seat_name] = status.senate_class
+    return class_by_name
+
+
+SenateResults = dict[tuple[str, int], dict[str, Any]]
+"""One Senate election's results keyed by ``(state, senate_class)``; each value is the
+previous-result shape ``{"w"?: partyRef, "p": [[partyRef, votes], ...]}``."""
+
+
+def senate_results_by_class(
+    seat_entries: Sequence[Mapping[str, Any]], class_by_name: Mapping[str, int]
+) -> SenateResults:
+    """Index a Senate election's payload seats by ``(state, senate_class)``.
+
+    Each value is the ``pv`` shape: ``w`` (kept only when present) and ``p`` as
+    ``[partyRef, votes]`` rows with the candidate names dropped. Seats whose class is
+    unknown are left out: they cannot be matched to a later election's seat.
+    """
+    results: SenateResults = {}
+    for entry in seat_entries:
+        senate_class = class_by_name.get(entry["n"])
+        if senate_class is None:
+            continue
+        previous: dict[str, Any] = {}
+        if "w" in entry:
+            previous["w"] = entry["w"]
+        previous["p"] = [[row[0], row[1]] for row in entry["p"]]
+        results[(entry["n"], senate_class)] = previous
+    return results
+
+
+def regular_senate_class(class_by_name: Mapping[str, int]) -> int | None:
+    """Return the class most of an election's seats belong to (its regular class).
+
+    ``None`` when there are no classes or two classes tie for the most seats.
+    """
+    ranked = Counter(class_by_name.values()).most_common(2)
+    if not ranked or (len(ranked) > 1 and ranked[0][1] == ranked[1][1]):
+        return None
+    return ranked[0][0]
+
+
+def add_previous_senate_results(
+    seat_entries: Sequence[dict[str, Any]],
+    special_entries: Sequence[dict[str, Any]],
+    class_by_name: Mapping[str, int],
+    earlier: Sequence[SenateResults],
+) -> None:
+    """Add ``pv``, the previous same-class result, to a Senate payload's off-cycle seats.
+
+    A regular seat is compared through the election's comparison election (the regular
+    race six years before), so it needs no ``pv``. A seat is off-cycle when its Senate
+    class differs from the election's regular class (:func:`regular_senate_class`): a
+    standalone special such as Florida in 2026 (class 3 among class 2 seats), or a
+    ``specials`` entry whose class differs from the regular class. Such a seat gets
+    ``pv: {"w"?, "p"}``, the result of the most
+    recent earlier election, regular or special, that held a seat for the same state
+    and class (``p`` is ``[[partyRef, votes], ...]``, no candidate names). ``pv`` is
+    absent when no earlier election in ``earlier`` holds that state and class, or when
+    the election has no clear regular class.
+
+    Args:
+        seat_entries: The payload's seat entries (mutated).
+        special_entries: The payload's ``specials`` entries, which carry ``cl`` (mutated).
+        class_by_name: The election's ``{seat_name: senate_class}``.
+        earlier: Results of every Senate election before this one, oldest first, each
+            from :func:`senate_results_by_class`.
+    """
+    regular_class = regular_senate_class(class_by_name)
+    if regular_class is None:
+        return
+
+    def previous_for(name: str, senate_class: int | None) -> dict[str, Any] | None:
+        if senate_class is None or senate_class == regular_class:
+            return None
+        for results in reversed(earlier):
+            found = results.get((name, senate_class))
+            if found is not None:
+                return found
+        return None
+
+    for entry in seat_entries:
+        previous = previous_for(entry["n"], class_by_name.get(entry["n"]))
+        if previous is not None:
+            entry["pv"] = previous
+    for entry in special_entries:
+        previous = previous_for(entry["n"], entry.get("cl"))
+        if previous is not None:
+            entry["pv"] = previous
 
 
 def compact_votes_to_dict(compact_rows: list[Any]) -> dict[str, float | int]:

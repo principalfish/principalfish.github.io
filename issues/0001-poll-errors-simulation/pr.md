@@ -14,5 +14,6 @@ Westminster only. The US uncertainty work moved to its own branch, and the model
 - [x] Style cleanup (`000fbd9f`)
 - [x] Branch self-review and fixes (`eeee25d0`, `a832137d`)
 - [x] Merge master in (`af4405fb`)
+- [x] Westminster poll weighting: 15-day half-life over a 60-day window (`a5cdf8e0`)
 - [ ] Westminster backfill and export
 - [ ] Final PR description

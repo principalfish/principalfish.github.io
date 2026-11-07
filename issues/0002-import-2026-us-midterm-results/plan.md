@@ -251,7 +251,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [x] 6. House maps 24 (2026) and 25 (2012 cycle) (bfe5dc77)
 - [x] 7. Export: status, sourceNote, specials, naming (f90f26d3)
 - [x] 8. Front end: uncalled, source line, specials (9ec98204)
-- [ ] 9. Predict rollover + per-seat Senate baselines
+- [x] 9. Predict rollover + per-seat Senate baselines (2f87352b)
 - [ ] 10. Derived Current Senate
 - [ ] 11. Docs + live-data runbook (live steps on go-ahead)
 
@@ -423,3 +423,4 @@ No test touches the live DB (conftest guard).
   - House district polls are stored against map-21 seats, so the House model on map 24 sees no district polls (generic ballot unaffected); the poll importers need repointing before the 2028 House run.
   - The Senate predict landing renders the 2022 baseline until the first projection; House and Senate predict views open on a zero-swing projection (existing pattern, unchanged).
   - Checks: `./run_tests.sh` 5119 passed (mypy strict clean); vitest 1409 passed, 3 skipped; jsdom harness on the House and Senate predict views (synthetic manifest from the real `build_map_modes_with_regions`), the anchor views, Westminster and US President predict: no console errors; the House predict shows 5 of 6 uncalled test seats called and the zero-vote seat uncalled, the anchor keeps all 6 uncalled. Changed-lines coverage: predict*.js and senate-chamber.js 100%, manifest.py 100%, run_us_senate_model.py 93.8% (three defensive lines), export_elections.py 93.4%.
+- 2026-11-07: piece 9 committed (2f87352b) and pushed. User accepted the class-keyed overrides, left the archived 2026 Senate forecast gaps to the scoring issue, and moved the four 2028 model-run items into piece 11's runbook. Next is piece 10.

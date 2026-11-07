@@ -1,6 +1,6 @@
 # Plan: poll-errors-simulation
 
-**Build model:** claude-opus-5-5. The open work is statistical modelling and gated live operations, so every piece needs frontier judgement.
+**Build model:** claude-opus-5-5. The remaining work is model fixes, calibration judgement and gated live operations. The style piece is mechanical and runs on Sonnet.
 
 ## Context
 
@@ -13,112 +13,76 @@ Branch `poll-errors-simulation` (base `master`) holds all of the poll-error unce
 | 1 | Westminster Monte Carlo uncertainty: poll bases, n_eff/MoE, MC engine, calibration, storage, console, export, map, tracker bands | `threads/add-monte-carlo-uncertainty-to-westminster-projection/` | 12/13 | Built and committed (`4eb2646b` → `40d3933f`, plus tracker follow-ups `d50922ea`, `9bb8c2c8`). Only "Full backfill published" is open (see thread 4, Phase 5). |
 | 2 | US uncertainty (House, Senate, President) and overall poll trackers | `threads/add-us-election-uncertainty-and-overall-poll-trackers/` | 16/20 | Software committed (`6c4de57d` → `03bbf46d`, review fixes `76be5ea8`). Open items are gated: calibration acceptance, certified-2026 validation, pilots/backfills, publication. |
 | 3 | Anchor Senate swings to matching House national baselines (bug fix) | `threads/anchor-us-senate-swings-to-matching-house-national-baselines/` | 8/11 | Fix committed (`087afcfc`, `134d1fc4`, `282dd916`). Open: manual review of the corrected comparison, calibration acceptance, live runs. |
-| 4 | Fix the branch review findings (validation harness, robustness, model changes, US fixes, backfill) | `threads/fix-poll-errors-simulation-review-findings/` | 4/18 | **Active thread.** Pieces 0/1a/1b/1c committed (`c067f150` → `92743751`). The Piece 2a experiment is committed as evidence that it failed (`ab3fc62e`). |
+| 4 | Fix the branch review findings (validation harness, robustness, model changes, US fixes, backfill) | `threads/fix-poll-errors-simulation-review-findings/` | 4/18 | **Active thread.** Pieces 0/1a/1b/1c committed (`c067f150` → `92743751`). The 2a experiment and H1–H3 are committed as evidence that it failed (`ab3fc62e`, `44dd8336`). On 2026-11-07, 2a–2f and 4b–4d moved to issue 0003; 3a, 4a, 4e, Phase 5 and Phase 6 stay here. |
 
 Reviews of the branch (all six) are in `threads/reviews/`.
 
-### Where it stopped (updated 2026-10-30), and what's needed to resume
+### The ship decision (2026-11-07)
 
-**Start with `resume.md`** in this folder. It has the state checks, the decision chain, the next open point and the standing constraints. In short:
-
-**Thread 4, Piece 2a** (correlated vote-to-seat conversion error) is being worked through Pieces **2a-H1 → 2a-H3** below. **2a-H1 (`eaa73607`), 2a-H2 (`88bfc2a0`) and 2a-H3 (`44dd8336`, report committed as evidence) are done. H3 failed the gate (best 15/20, candidate 14/20, `stop_before_engine`); the fail-branch decision is open (see `resume.md`).**
-- The offline joint validation completed: cluster variants cover 15/20 against the unchanged 17/20 gate, and no-cluster controls cover 13/20. The decision was `stop_before_engine`.
-- Phil chose to investigate more comparable history. On 2026-10-30 he decided:
-  - **scope A:** 1997→2001 and 2005→2010; the 1980s/early 1990s are not included;
-  - **entry "both":** the new transitions train in every original fold and are also held out as separate diagnostics;
-  - **storage:** a frozen in-repo fixture; no DB write, no export.
-- Don't add older outcomes to the 20-outcome gate's denominator. Don't lower the gate, integrate the failed model, or move to 2b/2c on this evidence.
-
-Thread 4's archives of the 2a prototype were written to `/tmp/poll-errors-piece2a-prototype-complete-2026-10-29.*` and may not survive a reboot. The committed report (`data/models/westminster/uncertainty_conversion_prototype_report.json`) is the durable copy. Its file SHA-256 is `e732edbd…b317`; its internal `report_hash` field is `3ead7c58…1428`.
+Phil decided to **ship this branch as built and refine the model afterwards.** "Producing something that works and refining it after is best."
+- **Moved to issue 0003** (`refine-westminster-and-us-poll-error-models`, GitHub principalfish/principalfish.github.io#78, based on this branch): thread 4's Westminster Phase 2 (2a–2f) and the US model refinements 4b–4d. That includes the whole 2a investigation: H1 `eaa73607`, H2 `88bfc2a0`, H3 `44dd8336` (failed the gate at 14/20; report committed as evidence). Those commits stay on this branch; the code is offline-only and touches no production path.
+- **Westminster ships as built, with no caveat label**, even though the review found its seat ranges and odds too narrow (W-1, W-2).
+- **Stays here:** 4a (small US fixes, including the A-1 Senate bug), 3a (display), the style cleanup, the gated US calibration and 2026 back-run, the Westminster backfill, and the merge.
+- **Merge order (Phil, 2026-11-07):**
+  1. finish issue 0002 (2026 US midterm results import) and merge it into master;
+  2. merge master into this branch;
+  3. ship this branch.
 
 ## Approach
 
-Thread 4 is the controlling plan for the remaining work. It was written last, against the whole branch, and its pieces cover the model corrections every later live run depends on.
+Get the branch to a mergeable, honest state with the smallest set of changes. Code first: 4a, 3a and style, then a self-review. Then bring master in once 0002 has landed. Then do the gated live work in an order that leaves the published data complete at merge time:
+- US calibration acceptance;
+- the US 2026 back-run;
+- scoring;
+- Westminster backfill and export last, so its history runs to the latest date.
 
-Threads 1–3 are complete apart from gated operational steps: calibration acceptance, backfills, live reruns, publication. Each needs Phil's explicit go-ahead at the time, as it always has.
-
-Where an open checkpoint appears in two threads, both are listed below and cross-referenced, not merged, so neither thread's record changes meaning.
+**Merging is publishing.** GitHub Pages serves master, and the exported data files are committed. Once this branch merges, whatever Westminster uncertainty export it carries goes live. The US stays dark unless its release flags are flipped (Piece 10).
 
 ## Pieces
 
-Remaining work, in order. Pieces 2a-H1 to 2a-H3 are written out in full here, because they were planned after the threads were consolidated. Every other entry's full text (Files, What, Acceptance, decisions) is in the named thread plan's `## Pieces`.
+Full text for each piece is in the named thread plan under `threads/`. Below is what's specific to shipping.
 
-1. **Thread 4 / Piece 2a:** correlated vote-to-seat conversion error. The thread 4 entry still holds the design constraints and the evidence gate. The current route is 2a-H1 → 2a-H3; 2a itself is done only after H3 passes and the engine integration in thread 4's entry is built. Model: frontier.
-   1. **2a-H1: acquire and audit 1997→2001 and 2005→2010 into a frozen fixture.**
-      - Files:
-        - new `data/scripts/build_westminster_historical_fixture.py`;
-        - new `data/models/westminster/historical-transitions-v1.json`;
-        - a fixture loader module next to `data/model_support/westminster_validation_inputs.py` (follow its loader/fingerprint pattern);
-        - new tests in `data/tests/`.
-      - What:
-        - **Sources.** Fetch read-only into a fresh scratch dir; parse with `python -I`.
-          - 2005 notional (591 England/Wales/NI seats on 2010 boundaries): `https://electionresults.parliament.uk/general-elections/7/candidacies.csv`.
-          - 1997, 2001, and the actual 2005 results for Scotland's 59 seats (already on the 2010 Scottish boundaries): `https://api.parliament.uk/uk-general-elections/general-elections/42`, `/43` and `/44`.
-          - Boundary documentation: `https://commonslibrary.parliament.uk/research-briefings/cbp-8647/`.
-        - **Fixture contents.** Per seat: party vote totals, nation/region, and the Speaker flag. Provenance: URLs, download SHA-256s and dates. A content fingerprint over the whole fixture.
-        - **Crosswalks.**
-          - 2005n seat code → existing 2010 seat names on the "UK Constituencies pre 2019" map.
-          - A 659-seat 1997/2001 seat list with explicit nation/region. Reject unsupported regions; never default to England.
-          - The old site's constituency IDs don't encode boundary changes, so match by code and region.
-        - **Party mapping.**
-          - Labour Co-op → Labour.
-          - Speaker excluded: Boothroyd 1997, Martin 2001/2005.
-          - Referendum Party, UKIP and the NI parties map to the existing keys, aligned with `calibrate_uncertainty.py` (`PARTY_ID_ALIASES`, `DB_PARTY_NAMES`).
-          - The 349 unnamed 2005 minor-party aggregates stay one "unknown other" total. Never split them, and never turn unknown into zero.
-        - **Off limits.** No `elections.db` write, no export, no change to production `ELECTION_PAIRS`.
-      - Depends on: none.
-      - Acceptance:
-        - the fixture loads and its fingerprint verifies; a malformed or tampered fixture is rejected;
-        - the audit is recorded in the fixture and asserted by tests:
-          - seat counts 659 (1997/2001) and 650 (2005n/2010);
-          - one winner per seat;
-          - candidate sums reconcile with published valid votes;
-          - national party shares match published totals;
-          - every 2005n seat matches a 2010 seat by code and region;
-        - the nation-mapping reject is tested;
-        - the export dry-run lists no new elections.
-      - **Pause:** show Phil the audit numbers and any open data-quality points before H2.
-   2. **2a-H2: revise the experiment contract for six transitions.**
-      - **Phil decided (2026-10-30):**
-        - all six transitions weighted equally;
-        - the two new held-out folds are report-only: they feed no guard (RMS, stability, drift) and no gate.
-      - Files:
-        - `data/model_support/westminster_conversion_validation.py`, `westminster_conversion_design.py`, `westminster_conversion_report.py`, `westminster_conversion_checkpoint.py`;
-        - `data/scripts/validate_westminster_conversion.py`;
-        - `data/models/westminster/conversion-prototype-method.md`;
-        - the console Validation view;
-        - tests.
-      - What:
-        - Load the fixture transitions alongside the four DB transitions, as identical cell structures.
-        - Each original fold trains on its 3 original transitions plus the 2 new ones. Two extra folds hold out each new transition and are reported separately.
-        - The coverage gate denominator stays the original 20 cells.
-        - Lambda predictive df follows the training count (5 per original fold).
-        - New statistical contract hash, and a new report file (e.g. `uncertainty_conversion_historical_report.json`). The committed 15/20 report stays untouched.
-      - Depends on: 2a-H1.
-      - Acceptance:
-        - tests cover holdout exclusion (including the new folds), the 20-cell gate denominator, and fixture/DB cell parity on a known seat;
-        - synthetic recovery passes under the new contract;
-        - the method doc describes the change.
-      - **Pause:** Phil's go-ahead before the batch run.
-   3. **2a-H3: run the six-transition experiment and report.**
-      - Files: the new report file only.
-      - What:
-        - Run the checkpointed eight-variant batch from `data/`: `OPENBLAS_NUM_THREADS=1 ./election_data/bin/python scripts/validate_westminster_conversion.py`, plus H2's contract flag.
-        - The gates are unchanged: 17/20, the RMS predictive reference, 128/256 stability, drift ≤0.15, and lambda attribution.
-        - Report every variant, both new diagnostic folds, and 2024's intervals.
-      - Depends on: 2a-H2 and Phil's go-ahead.
-      - Acceptance: the report is saved and hash-verified, the console route returns HTTP 200, and the results are presented to Phil.
-        - **Pass:** take the W-1 decisions, then do 2a's engine integration (off by default).
-        - **Fail:** the replan-with-new-assumptions question; 1983–92 becomes a candidate.
-        - Adding the transitions to production `ELECTION_PAIRS` is a separate live-calibration go-ahead.
-2. **Thread 4 / Pieces 2b–2f:** heavy seat-level tails; error-scale parameter uncertainty; house effects and sparse windows; nation-only parties and lead calibration; joint recalibration. Depends on 2a.
-3. **Thread 4 / Piece 3a:** Westminster and US display changes.
-4. **Thread 4 / Pieces 4a–4d:** small US model fixes; US national parameter uncertainty; Senate state/race allocation; correlated US state errors.
-5. **Gated US calibration and validation:** thread 2's Pieces 3, 13 and 14 and thread 3's calibration acceptance, after thread 4's US pieces.
-6. **Thread 4 / Piece 4e:** approved anchored Senate rerun. This also covers thread 3's live reruns.
-7. **Thread 4 / Phase 5:** approved Westminster backfill and publish. This also covers thread 1's "Full backfill published".
-8. **Thread 2:** publication, only with explicit authorisation.
-9. **Thread 4 / Phase 6:** style cleanup.
+1. **4a: small US model fixes** (thread 4, Piece 4a). Model: frontier.
+   - Files: `data/models/us/_common.py`, `data/model_support/us_simulation.py`, the calibration script/report, tests.
+   - What:
+     - A-1: the regional own-poll branch subtracts the matching House anchor instead of the Senate-field regional baseline (`_common.py` around 2431–2439; re-locate). Add a test.
+     - US-3: seed the national G stream by date only, so all chambers share G.
+     - US-4: always load the parent statewide residual on the ME/NE districts, plus a district term.
+     - US-5: calibrate House G on projected-output national error, *or* document the shrinkage. Phil picks when the piece starts.
+   - Depends on: none.
+   - Acceptance: tests for each fix; parity invariants green; `validate_us_uncertainty.py` deltas presented.
+2. **3a: Westminster and US display** (thread 4, Piece 3a; Phil chose to ship it, 2026-11-07).
+   - What: W-4, the MC median seat count as the headline or alongside it (Phil picks at the brief), with the deterministic count labelled "uniform-swing projection" and flagged when it falls outside its own 90% range. S-1: integer percentages, "<1%" and ">99%" at the extremes, stored to 3 dp; same rules on the US views.
+   - Depends on: none.
+   - Acceptance: `npm test`, `npm run minify:electionmaps`, the jsdom harness on both pages; screenshots or text dumps of the headline and popups presented.
+3. **Style cleanup** (thread 4, Phase 6). One formatting-only commit; no behaviour change; the full suite passes unchanged. Model: `claude-sonnet-5-5`.
+   - Note: 0003 branches from this branch. Doing this before 0003 cuts its branch saves it a large formatting merge. If 0003 has already started, it merges this in later.
+   - Depends on: 1, 2.
+4. **Self-review of the branch.** Run `/review self poll-errors-simulation`. Nothing since the 2026-10-26 review has been reviewed: Pieces 0 and 1a–1c (`c067f150` → `92743751`), the 2a experiment and H1–H3, and Pieces 1–3 above. Fix what Phil picks.
+   - Depends on: 3.
+5. **Merge master in** (after 0002 is merged into master).
+   - What: `git merge master` on this branch. Overlapping files:
+     - regenerate the generated ones (`map-modes.json`, `map-modes.md`, `model_output_trends.json`, `prediction-simulation.json`, the minified bundles) rather than hand-merging them;
+     - expect real conflicts in `uselectionmaps/data/map-modes-shell.json`, `data/scripts/export_elections.py` and `data/models/us/_common.py`.
+   - Check: `run_us_senate_model.py` picks its races from `parliamentFeatures.us_senate.nextElectionYear`. If 0002 moves that to 2028, a 2026 Senate back-run would target the wrong class. Pin the cycle for the back-run, or confirm 0002 leaves it alone. House and President baselines are hard-coded to 2024 in their run scripts.
+   - Depends on: 4 and 0002 merged. Needs Phil's go-ahead to push the merge commit.
+   - Acceptance: full checks green; `export_elections.py --dry-run` clean.
+6. **US calibration acceptance** (thread 2 Piece 3; thread 3's corrected-comparison review and calibration acceptance). Phil's go/no-go on the House, Senate and President scales. The review found them weakly identified: House G from 6 cycles; Senate/President carry no numeric scales yet. Present each scale with its evidence and the 2026-11-07 caveat that 4b–4d are deferred to 0003.
+   - Depends on: 1. It can be reviewed before 5; the back-run waits for 5.
+7. **US 2026 back-run** (thread 2 Piece 14 pilots and backfill; thread 4 Piece 4e; thread 3's live reruns). Backup → scratch pilots reviewed → authorised backfill of the 2026 House and Senate runs with uncertainty, including the anchored Senate rerun (removes the legacy +5.4 pt D shift). The President has no 2026 race.
+   - Depends on: 5, 6. Each live step needs Phil's go-ahead at the time.
+8. **US 2026 scoring** (thread 2 Piece 13). Score the frozen pre-election forecasts against 0002's imported results.
+   - Decisions when it starts:
+     - 0002 imports provisional results (NYT), while Piece 13's contract asks for certified results with strict identities. Score provisionally now and re-score once certified, or wait.
+     - No US uncertainty ran live before polling day. The back-run is a replay with pre-election inputs and pre-election code (`c7c994af`, 2026-10-25). Does that count?
+   - Can be split into its own issue if Phil prefers; 0002 had planned scoring separately.
+   - Depends on: 7 and 0002.
+9. **Westminster backfill and export** (thread 4 Phase 5; thread 1 "Full backfill published"). Backup → rerun 2024-07-05 to the latest date under the current config → backup → `rebuild_model_trends.py` → staged export to `--output-base` and sanity checks → the real export with approval → commit the data files separately. Live uncertainty rows currently stop at 2026-10-22; master's daily runs since then have none.
+   - Depends on: 5 (so it runs on the merged code), and 1–2 (so the export has 3a's keys). Do it last before the merge.
+10. **US publication decision** (thread 2's publication checkpoint). Flip the US release flags for the back-run bands and history, or merge with the US dark.
+    - Depends on: 7 (and 8, if scoring should come first).
+11. **PR text.** `/builder poll-errors-simulation finish` drafts `pr.md`. Phil opens and merges the PR.
+    - Depends on: everything above.
 
 ## Checkpoints
 
@@ -126,28 +90,18 @@ Remaining work, in order. Pieces 2a-H1 to 2a-H3 are written out in full here, be
 - [x] T4 · Piece 2a-H1: 1997→2001 and 2005→2010 fixture built and audited (`eaa73607`).
 - [x] T4 · Piece 2a-H2: six-transition experiment contract revised and tested (`88bfc2a0`).
 - [x] T4 · Piece 2a-H3: six-transition experiment run and reported to Phil (failed the gate; report committed as evidence, `44dd8336`).
-- [ ] T4 · Piece 2a: Correlated vote-to-seat conversion error (ticked only after H3 passes and the engine integration is built).
-- [ ] T4 · Piece 2b: Heavy seat-level tails.
-- [ ] T4 · Piece 2c: Error-scale parameter uncertainty.
-- [ ] T4 · Piece 2d: House effects and sparse windows.
-- [ ] T4 · Piece 2e: Nation-only parties and lead calibration.
-- [ ] T4 · Piece 2f: Joint recalibration.
-- [ ] T4 · Piece 3a: Westminster and US display changes.
-- [ ] T4 · Piece 4a: Small US model fixes.
-- [ ] T4 · Piece 4b: US national parameter uncertainty.
-- [ ] T4 · Piece 4c: Senate state/race allocation.
-- [ ] T4 · Piece 4d: Correlated US state errors.
-- [ ] T2 · Piece 3: calibration accepted (go/no-go gate); console calibration view.
-- [ ] T2 · Piece 13: actual certified2026 result validation report, reviewed evaluation basis and compatible frozen inputs.
-- [ ] T3 · Corrected comparison proposal manually reviewed.
-- [ ] T3 · Calibration assumptions/values separately accepted, or release remains gated.
-- [ ] T2 · Piece 14: actual accepted-calibration scratch pilots reviewed; separately authorised backfills done.
-- [ ] T4 · Piece 4e: Approved anchored Senate rerun.
-- [ ] T3 · Any live reruns/backfills/publication separately authorised. (Overlaps T4 · 4e.)
-- [ ] T4 · Phase 5: Approved Westminster backfill and publish.
-- [ ] T1 · Full backfill published. (Overlaps T4 · Phase 5.)
-- [ ] T2 · Publication completed only with explicit authorisation, or handed over as pending.
-- [ ] T4 · Phase 6: Style cleanup.
+- [x] T4 · Pieces 2a–2f and 4b–4d moved to issue 0003 (2026-11-07).
+- [ ] 1 · T4 Piece 4a: Small US model fixes.
+- [ ] 2 · T4 Piece 3a: Westminster and US display changes.
+- [ ] 3 · T4 Phase 6: Style cleanup.
+- [ ] 4 · Branch self-review done and chosen fixes committed.
+- [ ] 5 · Master (with 0002) merged in; checks green.
+- [ ] 6 · T2 Piece 3 and T3: US calibration accepted, or release stays gated.
+- [ ] 7 · T2 Piece 14, T4 Piece 4e, T3 live reruns: US 2026 back-run done with authorisation.
+- [ ] 8 · T2 Piece 13: US 2026 scoring report (or split to its own issue).
+- [ ] 9 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation.
+- [ ] 10 · T2: US publication decided.
+- [ ] 11 · PR text drafted.
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
 
@@ -186,3 +140,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-10-30: Phil had the failed report committed as evidence: `44dd8336` (file sha256 `0893389a…9ab4`, matching the run), pushed to `origin/poll-errors-simulation`.
 - 2026-11-07: Resumed. H3 ticked; `resume.md` rewritten. Open: the fail-branch decision.
 
+- 2026-11-07: **Ship decision.** Phase 2 (2a–2f) and 4b–4d moved to issue 0003 (#78). Westminster ships as built with no caveat; 3a ships; merge order is 0002 → master, then master → this branch, then ship. Pieces and checkpoints rewritten around shipping.

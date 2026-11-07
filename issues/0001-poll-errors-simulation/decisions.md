@@ -13,10 +13,21 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - 2a historical scope: **A**, adding 1997→2001 and 2005→2010 now; the 1980s/early 1990s are not included (2026-10-30, after the full-flow explanation). The risk is accepted: both are low/moderate-change elections and may not contain a 2024-sized miss.
 - 2a entry: **both**. The new transitions join every fold's training set, and each is also held out and reported as a separate diagnostic. The gate stays 17/20 on the original 20 cells (2026-10-30).
 - 2a storage: a **frozen, hashed in-repo fixture** that only the experiment reads. No DB write, no export, nothing on the site (2026-10-30).
+- Ship the branch as built and refine afterwards. 2a–2f and 4b–4d move to issue 0003 (#78), based on this branch. (2026-11-07)
+- 4b–4d go into the same refinement issue as 2a–2f, not a separate US issue. (2026-11-07)
+- Westminster ships with no caveat label about the missing conversion error and fat tails. (2026-11-07)
+- 3a (display) ships with this branch. (2026-11-07)
+- Merge order: 0002 → master, then master → this branch, then ship this branch. (2026-11-07)
+- 2a-H2 contract: equal weights across six transitions, new folds report-only (decided 2026-10-30; built in `88bfc2a0`).
 
 ## Open
-- **2a-H2 contract details** (ask when H2 starts): the weight of the two new transitions (equal across all six is the natural extension), and whether their held-out folds count toward any guard (RMS, stability, drift) or are report-only.
-- Thread 4's per-piece decisions, to raise when each piece starts: W-1 cluster definition and 2024 weighting (2a), W-2 regime scaling (2b), W-4 headline median (3a), US-2 correlation source (4d), and the live-run go-aheads (4e, Phase 5).
+- W-4 at 3a: MC median as the headline, or shown alongside the deterministic count.
+- US-5 at 4a: calibrate House G on projected-output error, or document the shrinkage.
+- Whether to run the branch self-review (Piece 4) before the master merge. Recommended.
+- Senate cycle after the master merge: does 0002 move `nextElectionYear` to 2028? If so, pin 2026 for the back-run.
+- US calibration go/no-go (Piece 6), and the go-ahead for each live step (Pieces 7 and 9).
+- US scoring (Piece 8): provisional now vs certified later; whether a replay with pre-election inputs and code counts; here or its own issue.
+- US publication (Piece 10): flip the release flags, or merge with the US dark.
 
 ## Assumed
 - Older historical outcomes stay outside the original 20-outcome gate's denominator (thread 4 Notes; confirmed by the 2026-10-30 entry decision).

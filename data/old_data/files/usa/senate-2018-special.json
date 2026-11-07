@@ -1,0 +1,85 @@
+{
+  "meta": {
+    "source": "The New York Times / AP",
+    "source_urls": [
+      "https://int.nyt.com/applications/elections/2018/api/1/races/2018-11-06.json",
+      "https://int.nyt.com/applications/elections/2018/api/1/races/2018-11-27.json"
+    ],
+    "retrieved_at": "2026-11-07T20:05:26.838525+00:00",
+    "source_updated_at": "2019-05-15T19:08:52.339Z",
+    "sources": [
+      {
+        "kind": "general",
+        "url": "https://int.nyt.com/applications/elections/2018/api/1/races/2018-11-06.json",
+        "retrieved_at": "2026-11-07T20:05:26.838525+00:00",
+        "source_updated_at": "2019-05-15T19:08:52.339Z"
+      },
+      {
+        "kind": "runoff",
+        "url": "https://int.nyt.com/applications/elections/2018/api/1/races/2018-11-27.json",
+        "retrieved_at": "2026-11-07T20:05:27.052626+00:00",
+        "source_updated_at": "2018-11-28T20:15:46.080Z"
+      }
+    ],
+    "year": 2018,
+    "chamber": "senate",
+    "special": true,
+    "map_id": 23,
+    "map_name": "US Senate 2024",
+    "special_file": null,
+    "election_date": "2018-11-06",
+    "source_note": "Results: The New York Times / AP."
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": true,
+      "senateClass": 2
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1370540,
+        "name": "Tina Smith"
+      },
+      "republican": {
+        "total": 1095777,
+        "name": "Karin Housley"
+      },
+      "independent": {
+        "total": 119938,
+        "name": "Sarah Wellington"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": "runoff",
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": true,
+      "senateClass": 2
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 479278,
+        "name": "Cindy Hyde-Smith"
+      },
+      "democrat": {
+        "total": 410693,
+        "name": "Mike Espy"
+      }
+    }
+  }
+}

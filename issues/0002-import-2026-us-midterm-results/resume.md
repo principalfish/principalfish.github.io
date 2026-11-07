@@ -11,9 +11,9 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Pieces 1–10 and the piece 11 docs (`613ac558`) committed and pushed; PR #80 ticked. Merge order revised by Phil: don't wait for #74. Master merged in as `b51ab61c` and pushed. `/review self` 01 done (`reviews/01-2026-11-07.md`): Phil chose findings 1, 3, 4, 5; the builder has built them, uncommitted (5 files, +308/−9), paused for Phil's review. Re-check done: all four resolved; one optional low (test seam) and one doc wording note (`map-modes.md:218`). Phil approved as is ("Approve and commit"); relayed to the builder to commit and push. Once pushed: record the SHA in reviews/01 and review.md. Then `/review self import-2026-us-midterm-results` in this chat, then the live steps (README section 12), each with Phil's go-ahead. The hatch look needs a real-browser check after the piece 11 export.
+Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Pieces 1–10 and the piece 11 docs (`613ac558`) committed and pushed; PR #80 ticked. Merge order revised by Phil: don't wait for #74. Master merged in as `b51ab61c` and pushed. `/review self` 01 done: findings 1, 3, 4, 5 fixed in `98269358` (pushed); see `reviews/01-2026-11-07.md`. Pending for Phil: go-ahead for the live steps (README §12: back up, migrate, confirm map ids 24/25 free, imports, Current Senate, export), each on its own go-ahead. The hatch look needs a real-browser check after the piece 11 export.
 
-Next step: relay the chosen fixes to the builder; checkpoint 11's live steps after. See `plan.md`.
+Next step: checkpoint 11's live steps, then `/publish`; checkpoint 11's live steps after. See `plan.md`.
 
 ## Don't
 - Run imports, migrations or exports against the live DB without Phil's explicit go-ahead at the time.

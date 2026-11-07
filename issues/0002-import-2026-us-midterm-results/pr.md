@@ -22,4 +22,5 @@ Closes #79
 - [x] 8. Front end: uncalled seats, source line, specials (`9ec98204`)
 - [x] 9. Predict rollover to 2028 and per-seat Senate baselines (`2f87352b`)
 - [x] 10. Derived Current Senate (`cd7dbc43`)
+- [x] Branch self-review fixes (`98269358`)
 - [ ] 11. Docs and live-data runbook (docs `613ac558`; live migration, imports, Current Senate and export to come)

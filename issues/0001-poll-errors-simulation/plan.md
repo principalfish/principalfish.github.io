@@ -203,7 +203,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6c · Self-review 2 fixes and the election-day tracker point (`ae61f984`, `b2c33428`).
 - [x] 6d · Header reading note below the latest poll, smaller, with the nowcast sentence (`950b22a2`).
 - [x] 6e · Vote-totals table: Seats column from the simulated median; toggle adds only ranges (`b788ae28`).
-- [ ] 6f · Poll tracker Chances view: no blank space on the left.
+- [x] 6f · Poll tracker Chances view: no blank space on the left (`8d7c9d42`).
 - [ ] 6g · Seats as the simulated mean in the table and headline.
 - [ ] 7 · PR text drafted.
 
@@ -341,3 +341,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (planner): 6f choices made and 6f started ("Start 6f"). Phil then chose "Mean everywhere" for the seats figure, which becomes new Piece **6g**, queued after 6f.
 - 2026-11-07 (planner): Phil wants the table to add up to 650. Asked which seats figure, he chose the mean with largest-remainder rounding (not one decimal, not seats-by-favourite, which is about the uniform-swing count). He had no preference on a map-colours label, so none is added. The uniform-swing number stays unnamed: it's the map colours, the tracker seat line, and filtered-view Seats.
 - 2026-11-07 (builder, Piece 6f): `polltracker-view.js`: the grid is drawn from the left on the active y scale, so lines run 0 → innerWidth in every mode. `margin.left` is 70 with Seats ticked and 16 otherwise. In Chances, the window start is max(range start, `firstChanceIndex`), with every series sliced from it. With the 16px gutter, the x-axis drops ticks whose rotated label would run off the left edge (kept when margin.left + x ≥ 56). The 70px path keeps its original tick call. `firstChanceIndex` is exported from `polltracker-uncertainty.js` and also drives capabilities' `chances`. Real data, Chances: 815 points from 2024-08-07, translate(16,14), gridline 0→660. An end-date sweep over 2026 shows 0 clipped labels after the fix, against up to 365/365 before. Analysis loop: round 1 had 3 verified findings (clipped labels, a duplicated presence check, a missing pLargest-only test), all fixed, and 2 dropped. Round 2 was clean on all five checks.
+- 2026-11-07: Piece 6f committed as `8d7c9d42` and pushed with Phil's approval ("Approve, commit and push"). Next: 6g look-ahead, then 6g on its go-ahead.

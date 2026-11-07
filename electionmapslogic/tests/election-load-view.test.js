@@ -178,6 +178,10 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       expect(state.electionData.uncertainty.national.hung).toBe(0.81);
       expect(headline().textContent).toBe(HEADLINE);
       expect(mainLine().textContent).toBe(SIMULATED);
+      // The totals table shows the simulated medians, not the one-seat uniform-swing count.
+      expect([...document.querySelectorAll("#mapsVoteTotalsBody tr")].map((tr) => tr.cells[1].textContent))
+        .toEqual(["282", "120"]);
+      expect(document.getElementById("mapsSeatMedianNote").hidden).toBe(false);
       expect(document.querySelectorAll("#mapContent .maps-region-path")).toHaveLength(1);
       expect(dom.window.location.search).toBe("?view=election&election=current-prediction");
     });
@@ -272,6 +276,9 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       await boot("?parliament=westminster&election=2024-general");
       await startApp();
       expect(mainLine().textContent).toBe("2024 General Election · Labour majority: 1");
+      expect([...document.querySelectorAll("#mapsVoteTotalsBody tr")].map((tr) => tr.cells[1].textContent))
+        .toEqual(["1", "0"]);
+      expect(document.getElementById("mapsSeatMedianNote").hidden).toBe(true);
       expect(headline()).toBeNull();
       expect(basisNote()).toBeNull();
     });

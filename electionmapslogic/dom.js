@@ -8,13 +8,11 @@ import { manifest, state, page, seatComparisonHidden, Seat } from './state.js';
 import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR, buildStateTrendSeries } from './utils.js';
 import { fetchJson } from './files.js';
 import {
-  activeUncertainty, simulatedSubtitle, uncertaintyForTotals, uncertaintyLabel,
-  uncertaintyRange, seatMedianRange, seatUncertaintyText,
+  activeUncertainty, seatMedianRange, seatUncertaintyText, simulatedSubtitle, uncertaintyForTotals,
+  uncertaintyNumber, uncertaintyRange,
 } from "./uncertainty.js";
 import {
-  outsideRangeMarker, renderSeatsHeader, renderUncertaintyBasis, renderUncertaintyHeader,
-  renderUncertaintyToggle,
-  wireUncertaintyToggle,
+  renderUncertaintyBasis, renderUncertaintyHeader, renderUncertaintyToggle, wireUncertaintyToggle,
 } from "./uncertainty-view.js";
 
 // ─── Page title ───────────────────────────────────────────────────────────────
@@ -583,6 +581,7 @@ const voteTotalsBody = document.getElementById('mapsVoteTotalsBody');
 const voteTotalsTable = document.getElementById('mapsVoteTotalsTable');
 const voteTotalsToggle = document.getElementById('mapsVoteTotalsToggle');
 const uncertaintyToggle = document.getElementById("mapsUncertaintyToggle");
+const seatMedianNote = document.getElementById("mapsSeatMedianNote");
 const voteTotalsCollapse = document.getElementById('mapsVoteTotalsCollapse');
 
 /**
@@ -593,9 +592,10 @@ const voteTotalsCollapse = document.getElementById('mapsVoteTotalsCollapse');
 /**
  * Returns a sorted copy of party rows according to state.voteTotals.sort (party name alpha, or numeric column with label tiebreak).
  * @param {Array<object>} rows - Party summary rows with a `party` key and numeric fields matching sort key names.
+ * @param {boolean} [seatTiesByName=false] - Break equal seat counts by name alone (simulated medians).
  * @returns {Array<object>} New sorted array of party rows.
  */
-function sortPartyRows(rows) {
+function sortPartyRows(rows, seatTiesByName = false) {
   const multiplier = state.voteTotals.sort.direction === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
     if (state.voteTotals.sort.key === 'party') {
@@ -605,6 +605,9 @@ function sortPartyRows(rows) {
     const av = Number(a[state.voteTotals.sort.key] || 0);
     const bv = Number(b[state.voteTotals.sort.key] || 0);
     if (av !== bv) return multiplier * (av - bv);
+    if (seatTiesByName && state.voteTotals.sort.key === 'seats') {
+      return manifest.labelParty(a.party).localeCompare(manifest.labelParty(b.party));
+    }
     const voteDiff = Number(b.votePct || 0) - Number(a.votePct || 0);
     if (voteDiff !== 0) return voteDiff;
     return manifest.labelParty(a.party).localeCompare(manifest.labelParty(b.party));
@@ -635,19 +638,26 @@ export function renderVoteTotals(
   });
 
   voteTotalsBody.innerHTML = '';
-  renderSeatsHeader(voteTotalsTable.querySelector('th[data-sort-key="seats"]'), state);
+  // The "Seats" column counts electoral votes on EV-tally maps (presidential), so relabel it.
+  const seatsHeader = voteTotalsTable.querySelector('th[data-sort-key="seats"]');
+  if (seatsHeader) seatsHeader.textContent = state.mapConfig?.tally === 'electoralVotes' ? 'EV' : 'Seats';
   voteTotalsTable.classList.toggle('hide-vote-total-col', !state.voteTotalsColumnVisible('votes'));
   voteTotalsTable.classList.toggle('hide-vote-pct-col', !state.voteTotalsColumnVisible('votePct'));
+  // Whole-country and single-region views of a saved run have stored simulations: Seats is then
+  // the simulated median, and the toggle adds only the range text. Every other view (filtered
+  // slices, predict, scenarios, real elections) keeps the plain count.
   const uncertainty = uncertaintyForTotals(state);
-  const uncertaintySummary = activeUncertainty(state);
-  const showUncertainty = renderUncertaintyToggle(uncertaintyToggle, state);
-  voteTotalsTable.classList.toggle("hide-uncertainty-cols", !showUncertainty);
-  voteTotalsTable.querySelectorAll("[data-uncertainty-label]").forEach((element) => {
-    element.textContent = showUncertainty
-      ? uncertaintyLabel(element.dataset.uncertaintyLabel, uncertaintySummary.interval) : "";
-  });
+  const showRanges = renderUncertaintyToggle(uncertaintyToggle, state);
+  if (seatMedianNote) {
+    seatMedianNote.hidden = !uncertainty;
+    seatMedianNote.textContent = uncertainty
+      ? `Seats are simulated medians, so they needn't add up to ${formatInt(summary.totalSeats)}. `
+        + "Map colours show each seat's uniform-swing winner."
+      : '';
+  }
   const descriptions = ["mapsSenateForecastComparison"];
-  if (uncertaintySummary?.basis) descriptions.push("mapsUncertaintyBasis");
+  if (activeUncertainty(state)?.basis) descriptions.push("mapsUncertaintyBasis");
+  if (uncertainty) descriptions.push("mapsSeatMedianNote");
   voteTotalsTable.setAttribute("aria-describedby", descriptions.join(" "));
 
   const hiddenParties = new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []);
@@ -667,15 +677,21 @@ export function renderVoteTotals(
   const rows = summary.parties.map((partyRow) => {
     const votePct = summary.totalVotes > 0 ? (partyRow.votes / summary.totalVotes) * 100 : 0;
     const comparison = comparisonByParty.get(partyRow.party) || { seats: 0, votePct: 0 };
+    // The uniform-swing count is replaced, not kept beside the median; a party with no stored
+    // row in this view (no simulated median) gets a dash, not that count.
+    const band = uncertainty ? uncertainty.parties[partyRow.party] ?? null : undefined;
+    const seats = band === undefined ? partyRow.seats : band?.s[1] ?? null;
     return {
       ...partyRow,
+      band,
+      seats,
       votePct,
-      seatsDelta: Number(partyRow.seats || 0) - comparison.seats,
+      seatsDelta: seats === null ? null : Number(seats || 0) - comparison.seats,
       votePctDelta: votePct - comparison.votePct,
     };
   });
 
-  const sortedRows = sortPartyRows(rows).filter((r) => !hiddenParties.has(r.party));
+  const sortedRows = sortPartyRows(rows, Boolean(uncertainty)).filter((r) => !hiddenParties.has(r.party));
   const visibleRows = state.voteTotals.expanded ? sortedRows : sortedRows.slice(0, 7);
 
   if (voteTotalsToggle) {
@@ -688,19 +704,44 @@ export function renderVoteTotals(
 
   visibleRows.forEach((partyRow) => {
     const tr = document.createElement('tr');
-    const band = showUncertainty ? uncertainty.parties[partyRow.party] : null;
+    const { band } = partyRow;
+    const showSeatsDelta = showComparison && partyRow.seatsDelta !== null;
     tr.innerHTML = `
       <td><span class="maps-party-cell"><span class="maps-party-swatch" style="background:${manifest.colourParty(partyRow.party)}"></span>${escapeHtml(manifest.labelParty(partyRow.party))}</span></td>
-      <td>${formatInt(partyRow.seats)}${band ? outsideRangeMarker(partyRow.seats, band.s, uncertaintySummary.interval) : ""}</td>
-      <td class="comparison-col ${showComparison ? deltaClass(partyRow.seatsDelta) : ''}">${showComparison ? formatSigned(partyRow.seatsDelta, 0) : ''}</td>
-      <td class="uncertainty-col">${seatMedianRange(band?.s)}</td>
+      <td>${seatsCellText(partyRow.seats, band, showRanges)}</td>
+      <td class="comparison-col ${showSeatsDelta ? deltaClass(partyRow.seatsDelta) : ''}">${showSeatsDelta ? formatSigned(partyRow.seatsDelta, 0) : ''}</td>
       <td class="vote-total-col">${formatInt(partyRow.votes)}</td>
-      <td class="vote-pct-col">${formatPct(partyRow.votePct)}</td>
-      <td class="uncertainty-col vote-pct-col">${uncertaintyRange(band?.v, "%")}</td>
+      <td class="vote-pct-col">${votePctCellText(partyRow.votePct, band, showRanges)}</td>
       <td class="comparison-col vote-pct-comparison-col ${showComparison ? deltaClass(partyRow.votePctDelta) : ''}">${showComparison ? formatSigned(partyRow.votePctDelta, 2) : ''}</td>
     `;
     voteTotalsBody.appendChild(tr);
   });
+}
+
+/**
+ * The Seats cell: the plain count without stored simulations (`band` undefined), else the
+ * simulated median, with "(lo–hi)" when ranges are shown, or a dash for a party with no stored row.
+ * @param {number} seats - The party's seat count in this view.
+ * @param {{s: number[], v: number[]}|null|undefined} band - The stored bands; `undefined` when the
+ *   view has no stored simulations, `null` when the party has no stored row.
+ * @param {boolean} showRanges - Whether "Show uncertainty" is on.
+ * @returns {string}
+ */
+function seatsCellText(seats, band, showRanges) {
+  if (band === undefined) return formatInt(seats);
+  if (!band) return '—';
+  return showRanges ? seatMedianRange(band.s) : uncertaintyNumber(band.s[1]);
+}
+
+/**
+ * The Vote % cell: the central share, with the simulated "(lo–hi%)" when ranges are shown.
+ * @param {number} votePct - The party's central vote share.
+ * @param {{s: number[], v: number[]}|null|undefined} band - The stored bands, if any.
+ * @param {boolean} showRanges - Whether "Show uncertainty" is on.
+ * @returns {string}
+ */
+function votePctCellText(votePct, band, showRanges) {
+  return showRanges && band ? `${formatPct(votePct)} (${uncertaintyRange(band.v, '%')})` : formatPct(votePct);
 }
 
 /**
@@ -744,8 +785,8 @@ function wireVoteTotalsToggle() {
 
 /**
  * Wires the vote-totals card collapse button. Mirrors the predict-window collapse pattern:
- * toggles `maps-vote-totals--collapsed` on the card (CSS hides the tabs, table, and Show all
- * button) and flips the glyph between ▲ (expanded) and ▼ (collapsed). The button itself is
+ * toggles `maps-vote-totals--collapsed` on the card (CSS hides the tabs, table, seat-median note
+ * and Show all button) and flips the glyph between ▲ (expanded) and ▼ (collapsed). The button itself is
  * hidden on mobile via a media query in mobile-sidebar.css.
  * @returns {void}
  */

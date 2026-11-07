@@ -148,22 +148,21 @@
         <nav class="maps-vote-tabs" id="mapsVoteTotalsTabNav" hidden aria-label="Vote totals view"></nav>
         <p id="mapsSenateForecastComparison" class="maps-control-note maps-senate-forecast-comparison" hidden></p>
         <div class="maps-vote-table-scroll">
-          <table id="mapsVoteTotalsTable" class="maps-table hide-uncertainty-cols" aria-label="Vote totals" aria-describedby="mapsSenateForecastComparison">
+          <table id="mapsVoteTotalsTable" class="maps-table" aria-label="Vote totals" aria-describedby="mapsSenateForecastComparison">
             <thead>
               <tr>
                 <th data-sort-key="party" role="button" tabindex="0" title="Sort by party">Party</th>
                 <th data-sort-key="seats" role="button" tabindex="0" title="Sort by seats">Seats</th>
                 <th class="comparison-col">±</th>
-                <th class="uncertainty-col" scope="col" data-uncertainty-label="Simulated ({interval})"></th>
                 <th class="vote-total-col" data-sort-key="votes" role="button" tabindex="0" title="Sort by votes">Votes</th>
                 <th class="vote-pct-col" data-sort-key="votePct" role="button" tabindex="0" title="Sort by vote percentage">Vote %</th>
-                <th class="uncertainty-col vote-pct-col" scope="col" data-uncertainty-label="{interval} vote range"></th>
                 <th class="comparison-col vote-pct-comparison-col">±</th>
               </tr>
             </thead>
             <tbody id="mapsVoteTotalsBody"></tbody>
           </table>
         </div>
+        <p id="mapsSeatMedianNote" class="maps-control-note maps-seat-median-note" hidden></p>
       </article>
 
       <article id="mapsPredictWindow" class="maps-predict-window" hidden aria-label="Predict input">

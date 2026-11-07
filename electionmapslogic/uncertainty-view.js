@@ -1,5 +1,5 @@
 import {
-  activeUncertainty, intervalPercent, outsideSeatRange, uncertaintyForTotals, uncertaintyHeadline,
+  activeUncertainty, uncertaintyForTotals, uncertaintyHeadline,
 } from "./uncertainty.js";
 
 /** Append the simulated seats and odds line, in the headline area. */
@@ -27,8 +27,7 @@ export function renderUncertaintyBasis(container, summary) {
 }
 
 export function renderUncertaintyToggle(button, state) {
-  const uncertainty = uncertaintyForTotals(state);
-  const available = !!uncertainty && Object.keys(uncertainty.parties).length > 0;
+  const available = !!uncertaintyForTotals(state);
   const visible = available && state.voteTotals.showUncertainty;
   if (button) {
     button.hidden = !available;
@@ -44,24 +43,4 @@ export function wireUncertaintyToggle(button, state, onChange) {
     state.voteTotals.showUncertainty = !state.voteTotals.showUncertainty;
     onChange();
   });
-}
-
-/**
- * A saved run with uncertainty shows two seat figures, so the deterministic one is named by its
- * method; everywhere else the column keeps its plain label ("EV" on electoral-vote tallies).
- */
-export function renderSeatsHeader(header, state) {
-  if (!header) return;
-  const uniformSwing = !!activeUncertainty(state);
-  header.textContent = uniformSwing ? "Uniform swing"
-    : state.mapConfig?.tally === "electoralVotes" ? "EV" : "Seats";
-  header.setAttribute("title", uniformSwing ? "Uniform-swing projection. Sort by seats" : "Sort by seats");
-}
-
-/** HTML: a dagger, explained to pointer and screen-reader users, when the count leaves its range. */
-export function outsideRangeMarker(seats, values, interval) {
-  if (!outsideSeatRange(seats, values)) return "";
-  const note = `outside its ${intervalPercent(interval)} simulated range`;
-  return `<span class="maps-outside-range" title="Uniform-swing count ${note}" aria-hidden="true">†</span>`
-    + `<span class="maps-visually-hidden"> (${note})</span>`;
 }

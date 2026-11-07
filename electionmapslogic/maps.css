@@ -1082,6 +1082,7 @@ a {
 .maps-vote-totals--collapsed .maps-senate-forecast-comparison,
 .maps-vote-totals--collapsed .maps-uncertainty-toggle,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-table,
+#mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-seat-median-note,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed #mapsVoteTotalsToggle {
   display: none;
 }
@@ -1121,28 +1122,6 @@ a {
 
 .maps-vote-table-scroll {
   overflow-x: auto;
-}
-
-.maps-table.hide-uncertainty-cols .uncertainty-col {
-  display: none;
-}
-
-.maps-table .uncertainty-col {
-  white-space: nowrap;
-}
-
-.maps-outside-range {
-  margin-inline-start: 0.1em;
-  cursor: help;
-}
-
-.maps-visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 .maps-table th,

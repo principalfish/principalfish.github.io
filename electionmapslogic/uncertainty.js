@@ -58,7 +58,10 @@ export function activeUncertainty(state) {
     ? state.electionData?.uncertainty ?? null : null;
 }
 
-/** Whole-country and exactly-one-region totals have stored ranges; arbitrary slices do not. */
+/**
+ * Whole-country and exactly-one-region totals have stored medians and ranges; arbitrary slices,
+ * and a region stored with no party rows, do not.
+ */
 export function uncertaintyForTotals(state) {
   const summary = activeUncertainty(state);
   const filters = state.mapFilters;
@@ -66,16 +69,12 @@ export function uncertaintyForTotals(state) {
       || filters.secondParty !== "all" || filters.majorityMin !== 0
       || filters.majorityMax !== 100 || filters.gainsOnly || filters.upcoming !== "all"
       || typeof filters.region !== "string") return null;
-  return filters.region === "all" ? summary.national : summary.regions[filters.region] ?? null;
+  const block = filters.region === "all" ? summary.national : summary.regions[filters.region];
+  return block && Object.keys(block.parties).length ? block : null;
 }
 
 export function uncertaintyNumber(value) {
   return Number(value.toFixed(2)).toString();
-}
-
-/** An interval level such as 0.9 as "90%". */
-export function intervalPercent(interval) {
-  return `${uncertaintyNumber(interval * 100)}%`;
 }
 
 export function uncertaintyRange(values, suffix = "") {
@@ -110,17 +109,6 @@ export function formatProbability(value) {
 export function seatMedianRange(values) {
   if (!Array.isArray(values) || values.length !== 3) return "—";
   return `${uncertaintyNumber(values[1])} (${uncertaintyRange(values)})`;
-}
-
-/** The uniform-swing count can fall outside the simulated range, whose median it need not match. */
-export function outsideSeatRange(seats, values) {
-  return Array.isArray(values) && values.length === 3
-    && (seats < values[0] || seats > values[2]);
-}
-
-/** A column label template from shell.html, with "{interval}" as e.g. "90%". */
-export function uncertaintyLabel(template, interval) {
-  return template.replace("{interval}", intervalPercent(interval));
 }
 
 /** Text only: the caller escapes it or assigns textContent. */

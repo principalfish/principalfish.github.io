@@ -851,7 +851,7 @@ export class ElectionSummary {
    *
    * A saved model run with uncertainty shows the simulated odds in place of this line
    * (uncertainty.js `simulatedSubtitle`, chosen in dom.js), since the uniform-swing count can
-   * contradict them; the count stays in the totals table's "Uniform swing" column.
+   * contradict them; its vote-totals table shows the simulated medians too.
    *
    * @param {{parties: Array<{party: string, seats: number}>, totalSeats: number}} data - Structured summary aggregate.
    * @param {string} electionName - Display label prefix for the subtitle.

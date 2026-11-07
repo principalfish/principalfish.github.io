@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { ElectionData, manifest, Seat, state } from "../state.js";
 import {
-  activeUncertainty, decodeUncertainty, formatProbability, outsideSeatRange, probabilityPercent,
-  seatMedianRange, seatUncertaintyText, simulatedSubtitle, uncertaintyForTotals, uncertaintyHeadline,
-  uncertaintyLabel, uncertaintyOutcomeLine, uncertaintyRange,
+  activeUncertainty, decodeUncertainty, formatProbability, probabilityPercent, seatMedianRange,
+  seatUncertaintyText, simulatedSubtitle, uncertaintyForTotals, uncertaintyHeadline,
+  uncertaintyOutcomeLine, uncertaintyRange,
 } from "../uncertainty.js";
 
 export function publicSummary() {
@@ -92,22 +92,6 @@ describe("seat ranges", () => {
     expect(seatMedianRange(undefined)).toBe("—");
     expect(seatMedianRange([20, 30])).toBe("—");
   });
-
-  it.each([
-    [282, false], [199, false], [359, false], [198, true], [360, true], [300, false],
-  ])("flags a uniform-swing count of %s outside 199–359: %s", (seats, outside) => {
-    expect(outsideSeatRange(seats, [199, 282, 359])).toBe(outside);
-  });
-
-  it("never flags a count without a band", () => {
-    expect(outsideSeatRange(300, undefined)).toBe(false);
-    expect(outsideSeatRange(300, null)).toBe(false);
-  });
-
-  it("fills the interval into a column label", () => {
-    expect(uncertaintyLabel("Simulated ({interval})", 0.9)).toBe("Simulated (90%)");
-    expect(uncertaintyLabel("{interval} vote range", 0.8)).toBe("80% vote range");
-  });
 });
 
 describe("uncertainty totals and headline", () => {
@@ -116,6 +100,12 @@ describe("uncertainty totals and headline", () => {
     state.mapFilters.region = "northeast";
     expect(uncertaintyForTotals(state).parties.labour.s).toEqual([20, 30, 40]);
     expect(uncertaintyForTotals(state).parties.conservative).toBeUndefined();
+  });
+
+  it("has no stored totals for a region stored without party rows", () => {
+    state.electionData.uncertainty.regions.northeast = { parties: {}, hung: null };
+    state.mapFilters.region = "northeast";
+    expect(uncertaintyForTotals(state)).toBeNull();
   });
 
   it.each([

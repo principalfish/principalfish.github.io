@@ -44,7 +44,7 @@ The live database was migrated and the 2018–2026 House and Senate results impo
 
 ## Check by hand
 
-- **The map in a browser:** hatched uncalled seats, the source line, the Senate ± against 2020, and the election list order. It was checked against the exported data; none of the hatching was seen before the export.
+- **The map in a browser:** Phil checked the served page. Worth a second look: the hatched uncalled seats, the source line, the Senate ± against 2020, and the election list order.
 - **Alaska 2026 Senate:** shown through a one-seat override (`data/scripts/export/seat_overrides.json`) with NYT's candidate rows. Otherwise the same-party merge would show "Dan Sullivan 107,171". It switches itself off with a warning if the live counts move. Delete it once the ranked-choice final round is imported.
 - **2026 is provisional:** re-run the import with `--refresh` as counts finish (README section 12).
 

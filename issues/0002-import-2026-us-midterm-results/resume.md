@@ -11,7 +11,7 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Piece 8 (with the seat ± change) approved by Phil ("Approve, commit") and relayed to the builder to commit and push. Check: `git log --oneline -1 origin/import-2026-us-midterm-results`. Once pushed, tick piece 8 in pr.md and `gh pr edit 80`. The hatch look needs a real-browser check after the piece 11 export.
+Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Pending for Phil: go-ahead for piece 9. The hatch look needs a real-browser check after the piece 11 export.
 
 Next step: checkpoint 9 (starts by raising the uncalled-baseline options). See `plan.md`.
 

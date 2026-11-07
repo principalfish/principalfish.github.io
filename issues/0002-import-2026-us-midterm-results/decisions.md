@@ -48,6 +48,8 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 
 - Specials' own-class comparison data: the export embeds an optional `pv: {w, p}` (the previous same-state, same-class result) on just those seats. No extra fetch; the schema stays pf-results-v4. (2026-11-07)
 
+- Multiple same-party candidates in one race (e.g. Alaska 2026 Senate: Sullivan + Heikes, R): keep the existing one-row-per-party merge, with summed votes and the top candidate named. Uncalled shading follows the party total. Phil chose to accept it until the ranked-choice rounds are published and the importer keeps the final round. Raised at the browser check, where the merged row read as 'Dan Sullivan 107,171' against NYT's 102,325. (2026-11-07)
+
 ## Open
 
 ## Assumed

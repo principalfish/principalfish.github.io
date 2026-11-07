@@ -45,10 +45,11 @@ Full text for each piece is in the named thread plan under `threads/`. Below is 
 1. **4a: small US model fixes** (thread 4, Piece 4a). Model: frontier.
    - Files: `data/models/us/_common.py`, `data/model_support/us_simulation.py`, the calibration script/report, tests.
    - What:
-     - A-1: the regional own-poll branch subtracts the matching House anchor instead of the Senate-field regional baseline (`_common.py` around 2431–2439; re-locate). Add a test.
+     - A-1: moved to Piece 5a (Phil, 2026-11-07); it needs 2020 House results by district, which 0002 is to import.
      - US-3: seed the national G stream by date only, so all chambers share G.
      - US-4: always load the parent statewide residual on the ME/NE districts, plus a district term.
-     - US-5: calibrate House G on projected-output national error, *or* document the shrinkage. Phil picks when the piece starts.
+     - US-5: document the shrinkage (Phil, 2026-11-07): G stays on the 2.44 input error; the G-only output SD of 2.29 is recorded in the calibration report, ledger and console.
+     - US-4 district term: new `district_scale` in `UsErrorConfig`, default 0 (Phil, 2026-11-07); the historical district-vs-state swing evidence goes in the calibration sources doc and the value is set at Piece 6.
    - Depends on: none.
    - Acceptance: tests for each fix; parity invariants green; `validate_us_uncertainty.py` deltas presented.
 2. **3a: Westminster and US display** (thread 4, Piece 3a; Phil chose to ship it, 2026-11-07).
@@ -67,6 +68,10 @@ Full text for each piece is in the named thread plan under `threads/`. Below is 
    - Check: `run_us_senate_model.py` picks its races from `parliamentFeatures.us_senate.nextElectionYear`. If 0002 moves that to 2028, a 2026 Senate back-run would target the wrong class. Pin the cycle for the back-run, or confirm 0002 leaves it alone. House and President baselines are hard-coded to 2024 in their run scripts.
    - Depends on: 4 and 0002 merged. Needs Phil's go-ahead to push the merge commit.
    - Acceptance: full checks green; `export_elections.py --dry-run` clean.
+5a. **A-1: Senate regional own-poll branch** (thread 4, Piece 4a's A-1; split out 2026-11-07).
+   - What: `senate_fallback_swings` (`_common.py:2432`) uses the regional poll minus the 2020 Senate field pooled by census division. Replace that with the regional poll minus the matching-year House vote pooled by division, from 2020 House results by district (state → division is enough; 2020 district lines differ from map 21). Add a test.
+   - Why it waits: the DB has House results for 2022 and 2024 only, and the anchor catalogue is national-only. Phil wants 0002 to import the 2020 House results first. No US poll has a `region_id` today, so the branch is dormant.
+   - Depends on: 5 (0002 merged, with 2020 House results).
 6. **US calibration acceptance** (thread 2 Piece 3; thread 3's corrected-comparison review and calibration acceptance). Phil's go/no-go on the House, Senate and President scales. The review found them weakly identified: House G from 6 cycles; Senate/President carry no numeric scales yet. Present each scale with its evidence and the 2026-11-07 caveat that 4b–4d are deferred to 0003.
    - Depends on: 1. It can be reviewed before 5; the back-run waits for 5.
 7. **US 2026 back-run** (thread 2 Piece 14 pilots and backfill; thread 4 Piece 4e; thread 3's live reruns). Backup → scratch pilots reviewed → authorised backfill of the 2026 House and Senate runs with uncertainty, including the anchored Senate rerun (removes the legacy +5.4 pt D shift). The President has no 2026 race.
@@ -91,11 +96,12 @@ Full text for each piece is in the named thread plan under `threads/`. Below is 
 - [x] T4 · Piece 2a-H2: six-transition experiment contract revised and tested (`88bfc2a0`).
 - [x] T4 · Piece 2a-H3: six-transition experiment run and reported to Phil (failed the gate; report committed as evidence, `44dd8336`).
 - [x] T4 · Pieces 2a–2f and 4b–4d moved to issue 0003 (2026-11-07).
-- [ ] 1 · T4 Piece 4a: Small US model fixes.
+- [ ] 1 · T4 Piece 4a: Small US model fixes (US-3, US-4, US-5; A-1 is 5a).
 - [ ] 2 · T4 Piece 3a: Westminster and US display changes.
 - [ ] 3 · T4 Phase 6: Style cleanup.
 - [ ] 4 · Branch self-review done and chosen fixes committed.
 - [ ] 5 · Master (with 0002) merged in; checks green.
+- [ ] 5a · T4 Piece 4a A-1: Senate regional own-poll branch uses a matching-year House regional reference.
 - [ ] 6 · T2 Piece 3 and T3: US calibration accepted, or release stays gated.
 - [ ] 7 · T2 Piece 14, T4 Piece 4e, T3 live reruns: US 2026 back-run done with authorisation.
 - [ ] 8 · T2 Piece 13: US 2026 scoring report (or split to its own issue).
@@ -141,3 +147,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07: Resumed. H3 ticked; `resume.md` rewritten. Open: the fail-branch decision.
 
 - 2026-11-07: **Ship decision.** Phase 2 (2a–2f) and 4b–4d moved to issue 0003 (#78). Westminster ships as built with no caveat; 3a ships; merge order is 0002 → master, then master → this branch, then ship. Pieces and checkpoints rewritten around shipping.
+- 2026-11-07 (builder, Piece 1 brief): Phil chose US-5 = document the shrinkage; US-4 = new `district_scale`, default 0. A-1 split out to Piece 5a: Phil wants 2020 House results by district imported in 0002 first (the DB has House 2022/2024 only). `validate_us_uncertainty.py` only captures and scores saved runs, so Piece 1's deltas come from read-only scratch simulations instead.

@@ -35,6 +35,9 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 - The archived 2026 Senate forecast after the rollover (FL/OH comparison unavailable; Full Senate merges into the current chamber) is left to the future forecast-scoring issue, which needs per-forecast archives anyway. (2026-11-07)
 - The 2028 model-run follow-ups go into piece 11's runbook as a "before you start" list. (2026-11-07)
 
+- Derived Current Senate: `EXPECTED_SPECIALS_2026` (FL/OH Class 3) stays hard-coded; the runbook notes it needs editing at the next cycle with specials. (2026-11-07)
+- Derived Current Senate, mixed state (one called member, one uncalled): the state is coloured by its called member; both uncalled is neutral. The uncalled member stays uncalled (no party count, uncalled tally, "Uncalled" popup row). Changed before piece 10's commit. (2026-11-07)
+
 ## Open
 
 ## Assumed

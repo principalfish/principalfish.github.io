@@ -11,7 +11,7 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Piece 9 committed `2f87352b`. Piece 10 started on Phil's go-ahead ("Go ahead"). Pending: piece 10 built, uncommitted, in `.claude/worktrees/great-nightingale-9085bc`, waiting on Phil's review. Open for Phil: `EXPECTED_SPECIALS_2026` hard-coded vs read from the manifest; a state with one called and one uncalled member drawn neutral. The hatch look needs a real-browser check after the piece 11 export.
+Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Piece 9 committed `2f87352b`. Piece 10 started on Phil's go-ahead ("Go ahead"). Pending: piece 10 approved ("Approve, commit") subject to one change first: a mixed state is coloured by its called member ("Use the called member"). The builder is making it and will pause again for a short re-review before committing. `EXPECTED_SPECIALS_2026` stays hard-coded (runbook note added to piece 11). The hatch look needs a real-browser check after the piece 11 export.
 
 Next step: checkpoint 10 (in progress). See `plan.md`.
 

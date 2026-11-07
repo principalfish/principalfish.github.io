@@ -233,6 +233,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
         - the House runner moving from map 21 to 24 makes `publish_trends` drop the archived 2026 House trend series;
         - House district polls are stored on map-21 seats, so repoint the poll importers before the 2028 House run;
         - every Senate forecast exports as `current-us-senate` / "2026 Prediction", so a 2028 run collides with the 2026 one.
+      - Note in the runbook that `EXPECTED_SPECIALS_2026` (`current_senate.py`, FL/OH Class 3) is hard-coded and needs editing at the next cycle with Senate specials. Runbook order for the Current Senate: migrate, import 2026 Senate, `cli.py current-senate --dry-run`, write, export.
       - Then, only with go-ahead, run against the live DB:
         - the migration;
         - imports for 2018–2026 House + Senate, with the NYT-vs-538 diff reported for 2020–24;

@@ -181,7 +181,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation (`51c31966`).
 - [x] 6b · Main headline line leads with the simulation (`c7a85eab`).
 - [x] 6c · Self-review 2 fixes and the election-day tracker point (`ae61f984`, `b2c33428`).
-- [ ] 6d · Header reading note below the latest poll, smaller, with the nowcast sentence.
+- [x] 6d · Header reading note below the latest poll, smaller, with the nowcast sentence (`950b22a2`).
 - [ ] 6e · Vote-totals table: Seats column from the simulated median; toggle adds only ranges.
 - [ ] 6f · Poll tracker Chances view: no blank space on the left.
 - [ ] 7 · PR text drafted.
@@ -314,3 +314,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (planner): Phil asked for the vote-totals table rework (Piece **6e**) and to queue it until 6d is done. Its open points (a)–(c) go to Phil at the 6e briefing.
 - 2026-11-07 (builder, Piece 6d): `renderUncertaintyHeader` now draws only the odds line, and a new `renderUncertaintyBasis` draws the note in full (no stripping), with the same id. `dom.js` orders the lines main, odds, latest poll, note. The "(if an election were held today)" suffix is gone from line 2. `.maps-subtitle-basis` is 0.85rem, weight 400, colour #475569: an existing grey, because `--muted` is the subtitle's own colour. `aria-describedby` is unchanged. Checks: Vitest 1467 passed with 0 jsdom skips; JS and CSS bundles up to date; the jsdom harness on both pages had 0 errors. Analysis loop: all five checks clean on round 1, so no verifier ran.
 - 2026-11-07 (planner): Phil reported blank space on the left of the poll tracker's Chances views (Majority and Largest party). Queued as Piece **6f**, after 6e.
+- 2026-11-07: Piece 6d committed as `950b22a2` and pushed with Phil's approval ("Approve, commit and push"). Next: 6e (vote-totals table), once the planner relays its go-ahead.

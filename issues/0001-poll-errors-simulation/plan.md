@@ -22,11 +22,8 @@ Reviews of the branch (all six) are in `threads/reviews/`.
 Phil decided to **ship this branch as built and refine the model afterwards.** "Producing something that works and refining it after is best."
 - **Moved to issue 0003** (`refine-westminster-and-us-poll-error-models`, GitHub principalfish/principalfish.github.io#78, based on this branch): thread 4's Westminster Phase 2 (2a–2f) and the US model refinements 4b–4d. That includes the whole 2a investigation: H1 `eaa73607`, H2 `88bfc2a0`, H3 `44dd8336` (failed the gate at 14/20; report committed as evidence). Those commits stay on this branch; the code is offline-only and touches no production path.
 - **Westminster ships as built, with no caveat label**, even though the review found its seat ranges and odds too narrow (W-1, W-2).
-- **Stays here:** 4a (small US fixes, including the A-1 Senate bug), 3a (display), the style cleanup, the gated US calibration and 2026 back-run, the Westminster backfill, and the merge.
-- **Merge order (Phil, 2026-11-07):**
-  1. finish issue 0002 (2026 US midterm results import) and merge it into master;
-  2. merge master into this branch;
-  3. ship this branch.
+- **Stays here (after the UK-only re-scope, below):** 3a (display), the style cleanup, a self-review, merging master in, the Westminster backfill and export, and the PR text. All US work, 4a included, is in issue 0004.
+- ~~Merge order: 0002 → master, then master → this branch, then ship.~~ Superseded the same day: the UK ship doesn't wait for 0002.
 
 ## Approach
 

@@ -11,6 +11,6 @@ Settled 2026-11-07: regenerate the stale validation report as Piece 1c, straight
 
 Done: **Piece 1b** committed as `39610fb9` and pushed. Next: **Piece 1c** (regenerate the validation report; `plan.md`).
 
-Pending decisions:
-
 Settled 2026-11-07: W-4 = MC median as the headline (Phil confirmed).
+
+No pending decision. After 1c comes Piece 2 (3a, display); see `plan.md`.

@@ -23,9 +23,35 @@ import { activeMapMode, ElectionData, manifest, page, Seat, state } from "../sta
 import { seatLookupKey } from "../utils.js";
 
 const readData = (file) => JSON.parse(readFileSync(new URL(`../../uselectionmaps/data/${file}`, import.meta.url), "utf8"));
-const manifestData = readData("map-modes.json");
+// These tests exercise the dormant saved-forecast view, which describes a forecast made in the
+// 2026 cycle. The exported manifest has moved on (Predict rolled to 2028, and the House/Senate
+// forecast elections are not exported while the export flag is off), so the 2026-cycle
+// manifest is rebuilt here from the committed one and the forecast payload is a fixture.
+function cycle2026Manifest(exported) {
+  const cycle = structuredClone(exported);
+  for (const entry of [
+    { id: "current-us-house", name: "2026 Prediction", type: "us_house_model", mapId: 24, parliament: "us_house", model: true },
+    { id: "current-us-senate", name: "2026 Prediction", type: "us_senate_model", mapId: 23, parliament: "us_senate", model: true },
+  ]) {
+    if (!cycle.elections.some((election) => election.id === entry.id)) cycle.elections.push(entry);
+  }
+  const senate = cycle.parliamentFeatures.us_senate;
+  senate.nextElectionYear = 2026;
+  senate.predictAnchorElectionId = "current-us-senate";
+  senate.predictBaselineElectionId = "2020-us-senate";
+  senate.predict.tabs[0].label = "Seats up (2026)";
+  const mode = cycle.mapModes["23"];
+  mode.senateClassNextElection = { 1: 2030, 2: 2026, 3: 2028 };
+  mode.senateSpecialElections = [
+    { seat: "Florida", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
+    { seat: "Ohio", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
+  ];
+  delete mode.senateBaselineOverrides;
+  return cycle;
+}
+const manifestData = cycle2026Manifest(readData("map-modes.json"));
 const chamberData = readData("results/senate-current.json");
-const forecastData = readData("results/us-senate-forecast.json");
+const forecastData = JSON.parse(readFileSync(new URL("./fixtures/us-senate-forecast.json", import.meta.url), "utf8"));
 const baselineData = readData("results/us-senate-2020.json");
 const specialBaselineData = readData("results/us-senate-2022.json");
 function fetchResults(url) {
@@ -104,7 +130,12 @@ describe("activateSenateForecastView", () => {
     const expectedTallies = expectedChamberTallies();
     expect(Object.values(expectedTallies).reduce((sum, seats) => sum + seats, 0)).toBe(100);
     expect(tallies(state.filteredSeatsSummary)).toEqual(expectedTallies);
-    expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({ republican: 53, democrat: 45, independent: 2 });
+    // The comparison side is the current chamber itself, so its tallies are the snapshot's members.
+    const snapshotMembers = {};
+    new ElectionData(chamberData).currentSeats.forEach((seat) => seat.members.forEach((member) => {
+      if (member.party) snapshotMembers[member.party] = (snapshotMembers[member.party] || 0) + 1;
+    }));
+    expect(tallies(state.filteredSeatsComparisonSummary)).toEqual(snapshotMembers);
     expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(100);
     expect(state.filteredSeatsSummary.totalVotes).toBe(0);
     expect(state.voteTotals.columns).toMatchObject({ votes: false, votePct: false });

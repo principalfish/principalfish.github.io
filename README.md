@@ -941,8 +941,9 @@ All commands in this section run from `data/`.
 ```
 
 The full export includes supported UK and US elections and, when present in the
-database, the latest Westminster UNS simulation and latest forecast for each US
-contest. It writes each page's manifest and data files.
+database, the latest Westminster UNS simulation and the latest US presidential
+forecast (the House and Senate forecasts only when `EXPORT_US_CHAMBER_FORECASTS` is
+on, see below). It writes each page's manifest and data files.
 
 Election placement is owned by `data/scripts/export/ordering.py`. The previous
 generated manifest remains an ordering input; the shell does not define election
@@ -957,8 +958,27 @@ rules in sequence:
    is retained.
 2. Reapply supplemental anchors. A non-null `insertBeforeId` takes precedence
    over `insertAfterId`; a missing selected anchor appends the entry.
-3. Promote forecasts to their parliament's first occurrence, preserving relative
+3. List each US chamber's results newest first (`us_house` and `us_senate` only; the
+   President list keeps its curated order). Newness is the year the election id starts
+   with, so a future 2028 result lands at the top and an imported older year
+   (`2016-us-house`) lands in its place. The Senate's `current-senate` snapshot is pinned
+   directly after the newest result. The Predict / Poll tracker links are not entries:
+   the left bar places them after the newest result (House) or after Current Senate
+   (Senate, via `predict.chamberElectionId`).
+4. Promote forecasts to their parliament's first occurrence, preserving relative
    forecast and non-forecast order without regrouping interleaved parliaments.
+
+**US House and Senate forecasts are switched off.** The module constant
+`EXPORT_US_CHAMBER_FORECASTS` in `data/scripts/export_elections.py` is `False`, so the
+export drops the `us_house_model` / `us_senate_model` elections before any page is
+written: no `current-us-house` / `current-us-senate` ("2026 Prediction") manifest entries,
+no `us-house-forecast.json` / `us-senate-forecast.json` result files (the export never
+deletes result files, so the two committed ones were removed by hand). The presidential
+forecast is unaffected. Model runs still record to the database and the trends; to
+publish chamber forecasts again, set the constant to `True` and re-export (see "2028 model
+run: before you start" in section 12). Old `?election=current-us-house` /
+`?election=current-us-senate` links no longer match an election; the page then opens that
+parliament's predict-anchor election (the 2026 result) instead of showing an error.
 
 Initial supplemental registration replaces existing IDs in place. Current
 Parliament initially follows `current-prediction` (or leads if absent); restored
@@ -1168,6 +1188,9 @@ chamber, and **Run US Models** on the home page has one for all three (see
 
 ### Model runs
 
+Note: the House and Senate forecasts are currently not exported (`EXPORT_US_CHAMBER_FORECASTS`
+in `scripts/export_elections.py`, see "Full export"); the runs and the poll tracker still work.
+
 **Run US Models** (home page) runs House → President → Senate → export. Its
 **Rebuild all US history** box appends `--rebuild-history` to all three runners
 (each under the long rebuild timeout), after a confirmation: one blocking request
@@ -1315,8 +1338,9 @@ that database.
    ./election_data/bin/python models/us/run_us_senate_model.py --since-days-back 60 --rebuild-history
    ./election_data/bin/python scripts/export_elections.py
    ```
-   Then `uselectionmaps/data/results/us-senate-forecast.json` should have 34 seats
-   (the 2028 Class 3 field, including Ohio and Florida).
+   While `EXPORT_US_CHAMBER_FORECASTS` is off (the default) the export does not publish the
+   House or Senate forecast; with it on, `uselectionmaps/data/results/us-senate-forecast.json`
+   should have 34 seats (the 2028 Class 3 field, including Ohio and Florida).
 
 ---
 
@@ -1463,6 +1487,8 @@ The predict views already roll over to 2028, but the models were not re-run. Bef
 - House district polls are stored on map-21 seats, so on map 24 the House model sees no
   district polls (the national generic ballot is unaffected). Repoint the poll importers to
   the new map before the 2028 House run.
+- Set `EXPORT_US_CHAMBER_FORECASTS = True` in `scripts/export_elections.py`. It is off, so the
+  House and Senate forecasts are not exported at all until it is switched back on.
 - Every House and Senate forecast is exported as `current-us-house` / `current-us-senate` and
   labelled "2026 Prediction" (`scripts/export/naming.py`, `manifest_name_for_election`), so a
   2028 run would collide with the 2026 one; bump the label with the cycle. Archive the 2026 forecast under its own id first; the

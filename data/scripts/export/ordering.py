@@ -2,9 +2,21 @@
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from collections.abc import Sequence
 from typing import Any
+
+# US chambers whose result elections are listed newest first by rule, not by curated
+# order. The value is the id of a snapshot entry pinned directly after the newest
+# result (the Senate's "Current Senate"), or None when the chamber has none.
+# us_presidential is not listed: its order stays curated.
+NEWEST_FIRST_PARLIAMENTS: dict[str, str | None] = {
+    "us_house": None,
+    "us_senate": "current-senate",
+}
+
+_LEADING_YEAR = re.compile(r"^(\d{4})(?!\d)")
 
 
 def _supplemental_insert_index(
@@ -200,6 +212,55 @@ def float_model_entries_first(manifest_entries: list[dict[str, Any]]) -> None:
     manifest_entries[:] = result
 
 
+def _id_year(entry: dict[str, Any]) -> int:
+    """Return the four-digit year an entry id starts with, or -1 when it has none."""
+    match = _LEADING_YEAR.match(str(entry.get("id", "")))
+    return int(match.group(1)) if match else -1
+
+
+def sort_us_chamber_entries(manifest_entries: list[dict[str, Any]]) -> None:
+    """List each US chamber's result elections newest first, in place.
+
+    For every parliament in :data:`NEWEST_FIRST_PARLIAMENTS`: the newest result
+    election first, then the chamber's pinned snapshot entry (Senate:
+    ``current-senate``), then the older results newest first. Newness is the
+    four-digit year an election id starts with (``2024-us-house``), so a newly
+    imported year (a future 2028 result, or an older 2016 one) lands in place
+    with no curation. Ids with no leading year sort last, and ties keep their
+    previous relative order.
+
+    Forecast (``model``) entries and other parliaments are left untouched: only
+    the slots the sorted entries already occupy are refilled, so interleaved
+    parliaments are not regrouped. The Predict / Poll tracker links are not
+    manifest entries; the front end places them after the newest result (and
+    after the pinned snapshot that follows it).
+
+    Args:
+        manifest_entries: Manifest election list to modify in-place.
+    """
+    for parliament, pinned_id in NEWEST_FIRST_PARLIAMENTS.items():
+        slots = [
+            index
+            for index, entry in enumerate(manifest_entries)
+            if entry.get("parliament") == parliament and not entry.get("model")
+        ]
+        pinned = [
+            manifest_entries[i]
+            for i in slots
+            if pinned_id is not None and manifest_entries[i].get("id") == pinned_id
+        ]
+        pinned_ids = {id(entry) for entry in pinned}
+        results = [
+            manifest_entries[i]
+            for i in slots
+            if id(manifest_entries[i]) not in pinned_ids
+        ]
+        results.sort(key=_id_year, reverse=True)  # stable: ties keep their order
+        ordered = [*results[:1], *pinned, *results[1:]]
+        for index, entry in zip(slots, ordered):
+            manifest_entries[index] = entry
+
+
 def reposition_supplemental_entries(
     manifest_entries: list[dict[str, Any]],
     supplemental_entries: Sequence[dict[str, Any]],
@@ -212,7 +273,9 @@ def reposition_supplemental_entries(
     which can override the position ``apply_supplemental_legacy_elections`` gave
     a supplemental (e.g. a newly-promoted "Current Senate" that should lead its
     parliament). Running this after the reorder restores the configured
-    ``insertBeforeId`` / ``insertAfterId`` position. Idempotent.
+    ``insertBeforeId`` / ``insertAfterId`` position. Idempotent. A chamber's pinned
+    snapshot (see :data:`NEWEST_FIRST_PARLIAMENTS`) has no anchor in its descriptor:
+    the newest-first sort places it.
 
     Args:
         manifest_entries: Manifest election list to reorder in-place.
@@ -245,7 +308,10 @@ def finalize_manifest_order(
     *,
     parliaments: set[str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Return final order: remembered positions, supplemental anchors, then forecasts.
+    """Return the final manifest order for one page's entries.
+
+    Applies, in sequence: remembered positions, supplemental anchors, the US
+    chamber newest-first sort, then forecasts first. Idempotent.
 
     The supplied list is unchanged; the returned list contains the same entry
     dictionaries. Comparison assignment and default selection remain independent
@@ -257,5 +323,6 @@ def finalize_manifest_order(
         supplemental_entries,
         parliaments=parliaments,
     )
+    sort_us_chamber_entries(ordered_entries)
     float_model_entries_first(ordered_entries)
     return ordered_entries

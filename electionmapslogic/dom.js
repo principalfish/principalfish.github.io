@@ -183,10 +183,14 @@ function renderParliamentTabs() {
  * Rebuilds the election list nav with one link per election, plus a Predict link (when the
  * feature is enabled for the current parliament) and a Poll tracker link (likewise). Both
  * extras are inserted after the predict-anchor election so they sit alongside the most
- * recent / live result for that parliament.
+ * recent / live result for that parliament. One exception: when the election listed directly
+ * after the anchor is the predict feature's chamber election (`predict.chamberElectionId`, e.g.
+ * the Senate's "Current Senate" snapshot), the extras follow that entry instead, so the chamber
+ * snapshot stays next to the result it belongs to. Hidden elections are skipped when looking
+ * at what follows the anchor.
  * @returns {void}
  */
-function renderElectionLinks() {
+export function renderElectionLinks() {
   if (!electionList) return;
   const activeId = state.view === 'election' ? state.currentElection.id : null;
 
@@ -215,16 +219,20 @@ function renderElectionLinks() {
   // Elections marked hidden for this parliament are omitted from the nav (kept in the manifest
   // and still reachable by an explicit ?election= id) — e.g. Holyrood's retired forecast.
   const hidden = new Set(manifest.hiddenElectionIds(state.currentParliament));
+  const visible = state.parliamentElections.filter((election) => !hidden.has(election.id));
+  const chamberId = manifest.parliamentFeatures[state.currentParliament]?.predict?.chamberElectionId;
+  const anchorIndex = visible.findIndex((election) => election.id === anchorId);
+  const followingId = anchorIndex >= 0 ? visible[anchorIndex + 1]?.id : undefined;
+  const extrasAfterId = chamberId && followingId === chamberId ? chamberId : anchorId;
   let extrasInserted = false;
-  state.parliamentElections.forEach((election) => {
-    if (hidden.has(election.id)) return;
+  visible.forEach((election) => {
     const link = document.createElement('a');
     link.href = state.viewUrl('election', election.id);
     link.className = `maps-election-item${election.id === activeId ? ' active' : ''}`;
     link.textContent = election.name;
     electionList.appendChild(link);
 
-    if (!extrasInserted && election.id === anchorId) {
+    if (!extrasInserted && election.id === extrasAfterId) {
       if (hasPredict) appendPredictLink();
       if (hasPollTracker) appendPollTrackerLink();
       extrasInserted = true;

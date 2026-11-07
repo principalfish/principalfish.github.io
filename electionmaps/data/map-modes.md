@@ -81,6 +81,12 @@ Current category values are:
 | UK | `uk_general`, `holyrood_general`, `model_uns`, `holyrood_uns`, `eu_referendum` |
 | US | `us_house`, `us_house_model`, `us_presidential`, `us_presidential_model`, `us_senate`, `us_senate_model` |
 
+The US House and Senate model types (`us_house_model`, `us_senate_model`) are valid but
+currently not exported (`EXPORT_US_CHAMBER_FORECASTS` in `data/scripts/export_elections.py`);
+the presidential forecast is. Election order is not set by the shell: the export keeps the
+previous manifest's order, except that the `us_house` and `us_senate` result elections are
+listed newest first (Senate: `current-senate` directly after the newest) and forecasts lead.
+
 A type label alone does not enable a prediction engine or referendum UI. For
 example, the UK forecast carries `"type": "model_uns"` and `"model": true`;
 the EU referendum carries this configuration:
@@ -168,7 +174,7 @@ previous day, so use a bare date when that is unsuitable. The text is
 | `virtualColumnMeta` | Virtual column key → optional `title` tooltip and `swatchClass` CSS class. |
 | `regionLabelOverrides` | Normalized region key → shorter label for the prediction grid only. |
 | `tabs` | Ordered `{ "key": "constituency", "label": "Constituency" }` records. AMS uses `constituency`/`list` input tabs; Senate uses `seatsup`/`chamber` output tabs. The first tab is initially active. |
-| `chamberElectionId` | Senate-only election ID for the full-chamber snapshot, currently `current-senate`. Carried-over members are merged with projected seats-up winners. |
+| `chamberElectionId` | Senate-only election ID for the full-chamber snapshot, currently `current-senate`. Carried-over members are merged with projected seats-up winners. It also decides where the left bar puts the Predict and Poll tracker links: after this election when it directly follows the predict anchor in the list, otherwise right after the anchor. |
 
 ## Map configuration: `mapModes`
 

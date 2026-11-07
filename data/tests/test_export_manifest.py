@@ -23,6 +23,7 @@ import pytest
 from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload
 
+import export_elections
 from db import Database, SeatStatus
 from export_elections import DEM_PARTY_ID, REP_PARTY_ID, export_pages, missing_export_inputs
 from models import Election, ElectionType, Party
@@ -509,8 +510,7 @@ class TestUsResultsExport:
             "us-president-trends-by-state.json",  # the whole US page runs, presidential included
             "us-senate-2018.json",
             "us-senate-2020.json",
-            "us-senate-forecast.json",
-        ]
+        ]  # no us-senate-forecast.json: chamber forecasts are switched off by default
         manifest = self._read(output_root / "map-modes.json")
         ids = [entry["id"] for entry in manifest["elections"]]
         assert "2020-us-senate-special" not in ids
@@ -548,7 +548,10 @@ class TestUsResultsExport:
             }],
         }
 
-    def test_source_note_is_recomputed_from_the_db(self, db: Database, tmp_path: Path) -> None:
+    def test_source_note_is_recomputed_from_the_db(
+        self, db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(export_elections, "EXPORT_US_CHAMBER_FORECASTS", True)
         output_root = self._seed(db, tmp_path)
         self._export(db, output_root, tmp_path)
 
@@ -557,7 +560,38 @@ class TestUsResultsExport:
         assert "sourceNote" not in entries["2018-us-senate"]
         assert "sourceNote" not in entries["current-us-senate"]
 
-    def test_archived_forecast_stays_listed(self, db: Database, tmp_path: Path) -> None:
+    def test_forecast_is_dropped_while_the_flag_is_off(
+        self, db: Database, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        output_root = self._seed(db, tmp_path)
+        # A forecast entry and file left by an earlier export must not return either.
+        (output_root / "results" / "us-senate-forecast.json").write_text("{}", encoding="utf-8")
+        old = {"elections": [{"id": "current-us-senate", "type": "us_senate_model", "model": True}],
+               "files": {"elections": {"electionsById": {"current-us-senate": "results/us-senate-forecast.json"}}}}
+        (output_root / "map-modes.json").write_text(json.dumps(old), encoding="utf-8")
+
+        self._export(db, output_root, tmp_path)
+
+        manifest = self._read(output_root / "map-modes.json")
+        assert "current-us-senate" not in [entry["id"] for entry in manifest["elections"]]
+        assert "current-us-senate" not in manifest["files"]["elections"]["electionsById"]
+        assert "Skipping 'US Senate UNS 2026-11-01'" in capsys.readouterr().out
+
+    def test_single_export_of_a_dropped_forecast_writes_nothing(self, db: Database, tmp_path: Path) -> None:
+        output_root = self._seed(db, tmp_path)
+        output_file = tmp_path / "forecast.json"
+
+        self._export(
+            db, output_root, tmp_path, names=("US Senate UNS 2026-11-01",), output_file=output_file
+        )
+
+        assert not output_file.exists()
+        assert not (output_root / "results" / "us-senate-forecast.json").exists()
+
+    def test_archived_forecast_stays_listed(
+        self, db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(export_elections, "EXPORT_US_CHAMBER_FORECASTS", True)
         output_root = self._seed(db, tmp_path)
         self._export(db, output_root, tmp_path)
 
@@ -578,7 +612,8 @@ class TestUsResultsExport:
 
         out = capsys.readouterr().out
         assert "Missing (a real export would fail): pre-built map " in out
-        assert "map-1.topo.json (needed by 'US Senate UNS 2026-11-01', '2020 US Senate Election'," in out
+        assert "map-1.topo.json (needed by '2020 US Senate Election'," in out
+        assert "US Senate UNS 2026-11-01" in out  # reported as skipped, not as needing the map
         assert "Warning: no mapModes entry for map id(s)" in out
         assert "Folding '2020 US Senate Special Election'" in out
         assert f"Would write results: {output_root / 'results' / 'us-senate-2020.json'} (2 seats)" in out

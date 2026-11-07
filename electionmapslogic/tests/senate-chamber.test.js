@@ -7,7 +7,8 @@ import { seatLookupKey } from '../utils.js';
 const readData = (file) => JSON.parse(readFileSync(new URL(`../../uselectionmaps/data/${file}`, import.meta.url), 'utf8'));
 const manifestData = readData('map-modes.json');
 const chamberData = readData('results/senate-current.json');
-const forecastData = readData('results/us-senate-forecast.json');
+// A saved 2026 Senate forecast payload; the live one is not exported while chamber forecasts are off.
+const forecastData = JSON.parse(readFileSync(new URL('./fixtures/us-senate-forecast.json', import.meta.url), 'utf8'));
 const specialClasses = new Map([['florida', 3], ['ohio', 3]]);
 
 describe('buildSenateChamber', () => {

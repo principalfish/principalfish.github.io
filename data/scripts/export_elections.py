@@ -108,6 +108,29 @@ PAGE_PARLIAMENTS = {
 }
 
 
+# Whether the US House and Senate forecast ("2026 Prediction") elections, types
+# ``us_house_model`` / ``us_senate_model``, are exported. OFF: they are dropped before any
+# page is exported, so no ``current-us-house`` / ``current-us-senate`` manifest entry, no
+# ``us-house-forecast.json`` / ``us-senate-forecast.json`` result file is written, and an
+# old manifest entry cannot return (the preservation pass only restores UK/Holyrood types).
+# The forecast code (naming, comparison ids, the front-end forecast view) is kept dormant;
+# set this to True to publish chamber forecasts again, e.g. for the 2028 cycle. The
+# presidential forecast (``us_presidential_model``) is independent of this flag.
+EXPORT_US_CHAMBER_FORECASTS = False
+US_CHAMBER_FORECAST_TYPES = (ElectionType.us_house_model, ElectionType.us_senate_model)
+
+
+def drop_disabled_forecasts(elections: Sequence[Election]) -> list[Election]:
+    """Return ``elections`` without the US House/Senate forecasts unless they are enabled.
+
+    Governed by :data:`EXPORT_US_CHAMBER_FORECASTS`, read at call time. Every other
+    election, including the presidential forecast, is kept in its original order.
+    """
+    if EXPORT_US_CHAMBER_FORECASTS:
+        return list(elections)
+    return [e for e in elections if e.type not in US_CHAMBER_FORECAST_TYPES]
+
+
 # mapMode keys that the shell doesn't hold verbatim: ``build_map_modes_with_regions`` derives
 # each one at export time (the Senate class cycle resolved to concrete years; the special
 # elections filtered to the ones the next Senate election holds; the per-seat baseline
@@ -506,12 +529,20 @@ def main() -> None:
             # UK model_uns run, only the most recent run per type ships as the
             # "current forecast" anchor; earlier runs stay in the DB for the
             # poll-tracker trend history only.
+            # The House and Senate forecasts are skipped here while
+            # EXPORT_US_CHAMBER_FORECASTS is off, to save their queries; export_pages
+            # drops them again, which covers the other ways elections are selected.
             latest_us_models: list[Election] = []
             for _us_model_type in (
                 ElectionType.us_house_model,
                 ElectionType.us_presidential_model,
                 ElectionType.us_senate_model,
             ):
+                if (
+                    _us_model_type in US_CHAMBER_FORECAST_TYPES
+                    and not EXPORT_US_CHAMBER_FORECASTS
+                ):
+                    continue
                 latest_us_model = session.execute(
                     select(Election)
                     .where(Election.type == _us_model_type)
@@ -631,6 +662,13 @@ def export_pages(
             :func:`missing_export_inputs` finds anything missing; nothing has been
             written. A dry run prints the missing files instead and carries on.
     """
+    # Switched-off chamber forecasts are dropped here, so every path that selects elections
+    # (full export, --election-name, tests) skips them alike.
+    kept = drop_disabled_forecasts(elections)
+    for dropped in (e for e in elections if e not in kept):
+        print(f"Skipping {dropped.name!r}: US chamber forecast export is switched off")
+    elections = kept
+
     if single_election_mode:
         folded = [election.name for election in elections if is_folded_senate_special(election)]
         if folded:

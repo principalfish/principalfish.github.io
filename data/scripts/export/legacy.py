@@ -39,7 +39,8 @@ SUPPLEMENTAL_LEGACY_ELECTIONS: list[dict[str, Any]] = [
         "prebuilt": True,
         "multiMember": True,
         "upcomingElections": True,
-        "insertBeforeId": "2024-us-senate",
+        # No insertBeforeId: the export's newest-first sort for the US chambers pins this
+        # entry directly after the newest Senate result (scripts/export/ordering.py).
         "noComparison": True,
     },
 ]

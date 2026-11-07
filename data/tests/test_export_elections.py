@@ -15,6 +15,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
+import export_elections
 from db import Database
 from models import Election, ElectionType, Party
 from export_elections import (
@@ -627,3 +628,44 @@ class TestStateTrendsThirdParty:
         units = self._run_export(db, self._seed(db, tmp_path), tmp_path)
         assert "Mississippi" in units  # export ran and produced a series...
         assert "Alabama" not in units  # ...but the no-Dem/Rep unit is dropped by the guard
+
+
+class TestMainLatestUsForecastSelection:
+    """``main`` prepends the latest forecast run per US type, honouring the chamber flag."""
+
+    @staticmethod
+    def _run_main(db: Database, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        db.add_party("Others")
+        house_map = db.add_map("US House", parliament="us_house")
+        senate_map = db.add_map("US Senate", parliament="us_senate")
+        president_map = db.add_map("US President", parliament="us_presidential")
+        db.add_election(house_map.id, 2026, "House run 1", ElectionType.us_house_model)
+        db.add_election(house_map.id, 2026, "House run 2", ElectionType.us_house_model)
+        db.add_election(senate_map.id, 2026, "Senate run", ElectionType.us_senate_model)
+        db.add_election(president_map.id, 2028, "President run", ElectionType.us_presidential_model)
+        db.add_election(house_map.id, 2024, "2024 US House", ElectionType.us_house)
+
+        exported: list[str] = []
+
+        def record(**kwargs: Any) -> None:
+            exported.extend(str(election.name) for election in kwargs["elections"])
+
+        # Use the fixture database and stop at the export step: nothing is written.
+        monkeypatch.setattr(export_elections, "Database", lambda: db)
+        monkeypatch.setattr(export_elections, "export_pages", record)
+        monkeypatch.setattr(sys, "argv", ["export_elections.py", "--dry-run"])
+        export_elections.main()
+        return exported
+
+    def test_flag_off_skips_the_chamber_forecasts_but_keeps_the_presidential_one(
+        self, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert self._run_main(db, monkeypatch) == ["President run", "2024 US House"]
+
+    def test_flag_on_prepends_the_latest_run_of_each_type(
+        self, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(export_elections, "EXPORT_US_CHAMBER_FORECASTS", True)
+        assert self._run_main(db, monkeypatch) == [
+            "House run 2", "President run", "Senate run", "2024 US House",
+        ]

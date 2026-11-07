@@ -26,4 +26,8 @@ Checks and models: correctness (claude-opus-5-5), security (claude-opus-5-5), co
 - Tracked exports look like real exports, not test output.
 
 ## Fixes
-Sent to the builder 2026-11-07. Commits: (pending).
+Sent to the builder 2026-11-07. Commit: `eeee25d0` (all seven, pushed; Phil approved in the builder chat). 16 files, +859/−105. Checks: mypy 246 clean, pytest 5793, Vitest 638 / 3 skipped (jsdom), `electionmaps.min.js` rebuilt, US bundle unchanged. `uncertainty_validation_report.json` was regenerated in the same commit: no numbers changed, only `limitations[2]`/`[3]`, 8 `source_sha256` entries (7 of them stale since `000fbd9f`) and `report_hash`.
+- Builder's analysis loop on the fixes: correctness found that `trends.py` decided boundaries using runs it then dropped (fixed before commit), a non-existent `sigma_seat` key in the new wording (fixed), and a weak interval test (strengthened).
+- Outside the brief, kept: `poll_list.html` (the error alert) and `services/uncertainty_explorer.py` (the shared `outcome_tail()` now lives there).
+- Correction to finding 5: `poll_detail` (`polls.py:188-190`) doesn't catch the config error; it only skips loading the config for non-Westminster polls. A Westminster poll's detail page still errors on a malformed uncertainty config. Possible follow-up; not fixed here.
+- Planner re-check of `000fbd9f..eeee25d0` (correctness opus, coverage sonnet): pending.

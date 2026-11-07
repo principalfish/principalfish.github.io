@@ -170,15 +170,15 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
    - What:
      - export a mean seat count per party, national and per region, for the latest run;
      - the vote-totals Seats column and the headline's second line use the mean (with the 5–95 range unchanged), and ± is from the mean;
-     - remove the "needn't add up to N" note (means do add up);
+     - remove the "needn't add up to N" note (the displayed means add up, by largest-remainder rounding);
      - the history and trends are untouched, and no history rerun.
    - Open, for the builder's look-ahead and the 6g briefing:
      - (a) where the mean comes from: the export reading the latest run's draws file, or adding a mean to the stored summary (`monte_carlo.py`) and rerunning the latest date only;
-     - (b) rounding (whole seats; ties);
+     - (b) rounding: **decided, largest remainder** (Phil, 2026-11-07, "Mean, largest remainder"). Floor each party's mean, then give the leftover seats to the largest fractional parts, so the whole numbers add up exactly to 650 (or the region's total). Each stays within one seat of its mean. On 30 Oct, plain rounding totals 648. Tie order for equal fractions is open for the look-ahead.
      - (c) whether the headline's largest-party pick and tie rules change (they use odds, not seats, so probably not);
      - (d) the live steps (a re-export; a single-date rerun if (a) is the stored-summary route), each with its own go-ahead.
    - Supersedes: W-4 / 6b / 6e "median" wording becomes "mean" for the headline and table.
-   - Tests: the mean in the table and headline, national and region; ± from the mean; no note; filtered views and other pages unchanged; the export carries the mean, and it sums to the seat total.
+   - Tests: the mean in the table and headline, national and region; largest-remainder rounding sums to the seat total (including a case where plain rounding wouldn't); ± from the mean; no note; filtered views and other pages unchanged; the export carries the mean, and it sums to the seat total.
    - Acceptance: `./run_tests.sh` (then restore any test-written trends file), `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, an export dry-run, the jsdom harness on both pages, and the rendered headline and table shown.
 7. **PR text.** `/publish poll-errors-simulation`, run from the planner chat: it drafts the final description into `pr.md` and, once Phil approves, puts it on PR #74 (opened by Phil 2026-10-13). Merging is Phil's.
 
@@ -339,3 +339,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (builder, Piece 6e): `renderVoteTotals` shows Seats as the median ("319 (238–389)" with the toggle on), with ± and sort from the median. Vote % gains "(lo–hi%)". The separate range columns, the † marker and the hide-columns CSS are removed. A new `#mapsSeatMedianNote` gives the visible seat total (650, or the region's own) and hides when the card collapses. A party with votes but no stored median shows "—". Filtered views show the uniform-swing number under "Seats", with no note. Predict, scenario, historical and US tables are unchanged. Analysis loop: round 1 had 1 verified finding (note not hidden on collapse), fixed with a test, and 3 dropped. Round 2 had 1 verified nit (JSDoc `@param`), fixed. Round 3 re-ran only the style check, because that fix was comments only; it was clean.
 - 2026-11-07: Piece 6e committed as `b788ae28` and pushed with Phil's approval ("Approve, commit and push"); the orphaned JSDoc at `dom.js:587-591` was left alone (Phil). Next: 6f look-ahead, then 6f on its go-ahead.
 - 2026-11-07 (planner): 6f choices made and 6f started ("Start 6f"). Phil then chose "Mean everywhere" for the seats figure, which becomes new Piece **6g**, queued after 6f.
+- 2026-11-07 (planner): Phil wants the table to add up to 650. Asked which seats figure, he chose the mean with largest-remainder rounding (not one decimal, not seats-by-favourite, which is about the uniform-swing count). He had no preference on a map-colours label, so none is added. The uniform-swing number stays unnamed: it's the map colours, the tracker seat line, and filtered-view Seats.

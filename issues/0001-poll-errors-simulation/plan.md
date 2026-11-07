@@ -157,9 +157,29 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
    - Seen in the screenshot (to confirm in the code): (1) an empty left-axis gutter. Horizontal gridlines run across a column with no labels, presumably the seat/vote axis the "Seats & votes" view uses, while Chances draws its probability axis on the right. (2) The x-axis starts on 2024-07-05 (the election-day point kept in 6c), but chance lines start on 2024-08-07, because the 07-05 point has no uncertainty, which leaves about a month of empty plot.
    - What: in the Chances views (Majority and Largest party), drop or collapse the unused left axis column, and start the x-domain at the first date with chance data; or whatever the builder's investigation shows is the cause. The "Seats & votes" view keeps its axes and its 2024-07-05 start.
    - Files (expected): `electionmapslogic/features/polltracker-view.js` (chart layout, axes, domain), `electionmapslogic/features/polltracker.js` if the domain comes from parsing, `electionmapslogic/maps.css`, the bundles, and tests in `electionmapslogic/tests/` (polltracker view).
-   - Open, for the 6f briefing: whether the Chances x-axis should start at the first chance date (2024-08-07), or keep 2024-07-05 to stay aligned with "Seats & votes" when switching views.
+   - **Decisions (Phil, 2026-11-07, at the 6f briefing):**
+     - Causes, confirmed by the builder and checked by the planner: `pollTrackerDimensions()` always keeps `margin.left = 70`; `pollTrackerDrawGrid` (`polltracker-view.js:396`) draws `axisRight(...).tickSize(-innerWidth)` gridlines leftwards into the margin when seats are off (also on master, in "Seats & votes" with only Vote % ticked); and the x-domain starts on 2024-07-05 while chances start on 2024-08-07.
+     - Gridlines cross the plot in every mode (a bug fix).
+     - "Yes, same rule": no left axis drawn means no left gutter (about 16px), in Chances and in "Seats & votes" with only Vote % ticked. "Seats & votes" with Seats ticked is unchanged.
+     - "First chance date": the Chances timeline starts on the first date with chance data (2024-08-07). "Seats & votes" keeps 2024-07-05.
    - Tests: in the Chances views, no empty left gutter and the domain as decided; "Seats & votes" unchanged; both sub-views.
    - Acceptance: `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, the jsdom harness on the poll-tracker view (axes and domain dumped), and a before/after description.
+6g. **Seats as the simulated mean, not the median, in the table and headline** (Phil, 2026-11-07; queued, starts after 6f). Model: frontier. Depends on: 6f.
+   - Phil asked: "can the main seats figure in the table show the mean, not median"; chose "Mean everywhere".
+   - Facts: the national block already exports each party's seat `hist`, so the national mean is computable (Labour 317.0 vs median 319 on 30 Oct). Region blocks store only `s: [p5, median, p95]`, with no mean or hist (DB `model_uncertainty.regions_json`). The latest run's raw draws are at `~/dbs/simulations/westminster-latest.npz` (written 18:36 by the 15/60 rerun). Means sum exactly to the seat total.
+   - What:
+     - export a mean seat count per party, national and per region, for the latest run;
+     - the vote-totals Seats column and the headline's second line use the mean (with the 5–95 range unchanged), and ± is from the mean;
+     - remove the "needn't add up to N" note (means do add up);
+     - the history and trends are untouched, and no history rerun.
+   - Open, for the builder's look-ahead and the 6g briefing:
+     - (a) where the mean comes from: the export reading the latest run's draws file, or adding a mean to the stored summary (`monte_carlo.py`) and rerunning the latest date only;
+     - (b) rounding (whole seats; ties);
+     - (c) whether the headline's largest-party pick and tie rules change (they use odds, not seats, so probably not);
+     - (d) the live steps (a re-export; a single-date rerun if (a) is the stored-summary route), each with its own go-ahead.
+   - Supersedes: W-4 / 6b / 6e "median" wording becomes "mean" for the headline and table.
+   - Tests: the mean in the table and headline, national and region; ± from the mean; no note; filtered views and other pages unchanged; the export carries the mean, and it sums to the seat total.
+   - Acceptance: `./run_tests.sh` (then restore any test-written trends file), `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, an export dry-run, the jsdom harness on both pages, and the rendered headline and table shown.
 7. **PR text.** `/publish poll-errors-simulation`, run from the planner chat: it drafts the final description into `pr.md` and, once Phil approves, puts it on PR #74 (opened by Phil 2026-10-13). Merging is Phil's.
 
 ## Checkpoints
@@ -184,6 +204,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6d · Header reading note below the latest poll, smaller, with the nowcast sentence (`950b22a2`).
 - [x] 6e · Vote-totals table: Seats column from the simulated median; toggle adds only ranges (`b788ae28`).
 - [ ] 6f · Poll tracker Chances view: no blank space on the left.
+- [ ] 6g · Seats as the simulated mean in the table and headline.
 - [ ] 7 · PR text drafted.
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
@@ -317,3 +338,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07: Piece 6d committed as `950b22a2` and pushed with Phil's approval ("Approve, commit and push"). Next: 6e (vote-totals table), once the planner relays its go-ahead.
 - 2026-11-07 (builder, Piece 6e): `renderVoteTotals` shows Seats as the median ("319 (238–389)" with the toggle on), with ± and sort from the median. Vote % gains "(lo–hi%)". The separate range columns, the † marker and the hide-columns CSS are removed. A new `#mapsSeatMedianNote` gives the visible seat total (650, or the region's own) and hides when the card collapses. A party with votes but no stored median shows "—". Filtered views show the uniform-swing number under "Seats", with no note. Predict, scenario, historical and US tables are unchanged. Analysis loop: round 1 had 1 verified finding (note not hidden on collapse), fixed with a test, and 3 dropped. Round 2 had 1 verified nit (JSDoc `@param`), fixed. Round 3 re-ran only the style check, because that fix was comments only; it was clean.
 - 2026-11-07: Piece 6e committed as `b788ae28` and pushed with Phil's approval ("Approve, commit and push"); the orphaned JSDoc at `dom.js:587-591` was left alone (Phil). Next: 6f look-ahead, then 6f on its go-ahead.
+- 2026-11-07 (planner): 6f choices made and 6f started ("Start 6f"). Phil then chose "Mean everywhere" for the seats figure, which becomes new Piece **6g**, queued after 6f.

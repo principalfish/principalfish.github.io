@@ -24,3 +24,4 @@
 - 2026-11-07 19:24 · poll-errors-simulation (0001) · building → review
 - 2026-11-07 22:25 · import-2026-us-midterm-results (0002) · building → review
 - 2026-11-07 22:28 · import-2026-us-midterm-results (0002) · review → ready
+- 2026-11-07 22:28 · import-2026-us-midterm-results (0002) · PR #80 description final

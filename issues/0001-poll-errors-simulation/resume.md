@@ -22,6 +22,11 @@ Options:
 
 Planner recommendation (2026-11-07): 3 now, with 1 as a later, separately briefed experiment. Not decided.
 
+Context raised in the 2026-11-07 full assessment (affects ordering, not yet discussed with Phil):
+- The 2026 US midterms were on 2026-11-03. US uncertainty never ran live: the live DB's `model_uncertainty` holds only `pf-model-uncertainty-v1` Westminster rows (840, election dates 2024-07-05 → 2026-10-22). US central runs go up to 2026-11-01 (House) and 2026-11-02 (Senate). So there's no saved pre-election US uncertainty forecast for Piece 13 to score. Whether a replay from frozen pre-election inputs with the pre-election code counts is a decision for Phil. Publishing US 2026 forecasts now has little value; the US work is now about validation and preparing for 2028.
+- Thread 4's text gives explicit 2a dependencies only for 2b, 2c (lambda part) and 2f. 2d and 2e state none, although the top-level plan groups 2b–2f under "Depends on 2a".
+- Westminster daily runs on master after 2026-10-22 have no uncertainty rows (master doesn't have the code). Phase 5's backfill covers them.
+
 If 3 is chosen, update `plan.md` `## Pieces` order and checkpoints so 3a/4a come next (Resume step 5) before `/builder`.
 
 ## The test 2a has to pass

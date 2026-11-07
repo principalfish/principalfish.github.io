@@ -43,7 +43,7 @@
               <th scope="col">n source</th>
               <th scope="col">Weighted n</th>
               <th scope="col">n_eff</th>
-              <th scope="col">MoE at {{ ref_pct }}%</th>
+              <th scope="col">{% if config is not none %}MoE at {{ ref_pct }}%{% else %}MoE{% endif %}</th>
               <th>Actions</th>
             </tr>
           </thead>

@@ -197,8 +197,15 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
         n_index.resolve(poll_id, region_ids[name]) for name in region_headers
     ]
     # Only Westminster polls read the (Westminster) settings, so a malformed
-    # settings file cannot break other parliaments' poll pages.
-    config = load_uncertainty_config() if show_error else None
+    # settings file cannot break other parliaments' poll pages. A Westminster
+    # poll still renders, without n_eff or margins, and the page says why.
+    config: UncertaintyConfig | None = None
+    config_error: str | None = None
+    if show_error:
+        try:
+            config = load_uncertainty_config()
+        except UncertaintyConfigError as err:
+            config_error = str(err)
     effective_cells: list[EffectiveN | None] = [
         effective_n(resolved, config) if config is not None else None
         for resolved in n_cells
@@ -239,6 +246,7 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
         effective_cells=effective_cells,
         show_error=show_error,
         config=config,
+        config_error=config_error,
     )
 
 

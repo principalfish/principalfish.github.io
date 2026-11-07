@@ -29,7 +29,6 @@ import pytest
 from flask import Flask
 
 from db import Database
-from model_support.uncertainty import UncertaintyConfigError
 from models import PollBase
 
 from tests.console_fixtures import app, flashes as _flashes
@@ -837,6 +836,10 @@ class TestPollListN:
         assert "the uncertainty settings are invalid" in text
         assert "design_effect" in text
         assert "Westminster polls also show n_eff" not in text
+        # The reference share comes from the settings, so the header drops it.
+        headers = _table_headers(body)
+        assert "MoE" in headers
+        assert not any(h.startswith("MoE at") for h in headers)
 
     def test_capped_n_eff_is_marked(
         self, app: Flask, db: Database, westminster_world: WestminsterWorld
@@ -1200,10 +1203,23 @@ class TestPollDetailError:
             pollster_identifier="yougov",
             fieldwork_end=date(2026, 9, 28),
             national={world.party_ids["Labour"]: 20.0},
+            sample_size=2000,
         )
 
-        with pytest.raises(UncertaintyConfigError, match="design_effect"):
-            app.test_client().get(f"/polls/{poll.id}")
+        response = app.test_client().get(f"/polls/{poll.id}")
+
+        # The poll still renders: n resolves, but n_eff and margins are hidden.
+        assert response.status_code == 200
+        body = response.get_data(as_text=True)
+        footer = _tfoot_rows(body)
+        assert footer["n"] == ["2000"]
+        assert footer["Adjustment"] == ["-"]
+        assert footer["n_eff"] == ["-"]
+        assert "<small>" not in body
+        text = " ".join(body.split())
+        assert "the uncertainty settings are invalid" in text
+        assert "design_effect" in text
+        assert "Adjustment turns n into decided respondents" not in text
 
     def test_reads_the_settings_file(
         self,

@@ -6,12 +6,12 @@ vi.mock("../files.js", () => ({ fetchJson: vi.fn() }));
 // The table never draws the map, and the vendored topojson build points at a missing source map.
 vi.mock("../../site/vendor/topojson-client.v3.esm.js", () => ({ feature: vi.fn(), mesh: vi.fn(), merge: vi.fn() }));
 
-// The browser harness is optional locally; CI can supply a jsdom 24 installation
-// without making it a production dependency of the static website.
+// jsdom 24 is a devDependency (AGENTS.md pins 24: later majors fail to load on Node 21).
+// PF_TEST_JSDOM overrides it; the suites skip if the chosen jsdom fails to load.
 let JSDOM;
 try {
   ({ JSDOM } = createRequire(import.meta.url)(process.env.PF_TEST_JSDOM || "jsdom"));
-} catch { /* Actual-module browser checks run when the optional harness is supplied. */ }
+} catch { /* Without jsdom the browser suites below are skipped. */ }
 
 const shell = readFileSync(new URL("../shell.html", import.meta.url), "utf8");
 

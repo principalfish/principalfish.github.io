@@ -7,12 +7,12 @@ vi.mock("../files.js", () => ({ fetchJson }));
 // The view's d3 import is written relative to the built bundle, not this source tree.
 vi.mock("../site/vendor/d3.v7.esm.js", () => import("../../site/vendor/d3.v7.esm.js"));
 
-// The browser harness is optional locally; CI can supply a jsdom 24 installation
-// without making it a production dependency of the static website.
+// jsdom 24 is a devDependency (AGENTS.md pins 24: later majors fail to load on Node 21).
+// PF_TEST_JSDOM overrides it; the suites skip if the chosen jsdom fails to load.
 let JSDOM;
 try {
   ({ JSDOM } = createRequire(import.meta.url)(process.env.PF_TEST_JSDOM || "jsdom"));
-} catch { /* Actual-module browser checks run when the optional harness is supplied. */ }
+} catch { /* Without jsdom the browser suites below are skipped. */ }
 
 const shell = readFileSync(new URL("../shell.html", import.meta.url), "utf8");
 const fragment = readFileSync(new URL("../fragments/polltracker.html", import.meta.url), "utf8");

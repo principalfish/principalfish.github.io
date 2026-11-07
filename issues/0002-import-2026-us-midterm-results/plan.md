@@ -342,3 +342,11 @@ No test touches the live DB (conftest guard).
   - a public `fetch.cached_snapshot_info` replaces the form's direct pointer reads (fetch.py added to piece 5's files);
   - a separate "not imported (House special)" label;
   - change-label tests, the files-checked count, line wrapping.
+- 2026-11-07 (piece 5) review rounds 2–3 closed:
+  - Per-file restore: a file whose import committed stays; others are restored or deleted, along with every directory the write created.
+  - The stale-token refusal keys on `meta.retrieved_at`; sibling tokens are dropped on success.
+  - The token is re-read inside `model_run_slot`.
+  - `fetch.cached_snapshot_info` is used by the form.
+  - Final: mypy clean, 4995 passed.
+- IMPORTANT for piece 11 and for any manual try-out: from piece 1 on, the ORM's `Election` has `source_note` and there's a new `election_seat_status` table. The live DB isn't migrated, so the branch's console, export and importers fail on any elections query until `migrate_add_us_result_status.py` has run.
+  - For a hand test before going live: back up the DB, migrate a copy, and point `.env`'s DATABASE_PATH at the copy (`.env` overrides the shell). Or run the migration on the live DB with the user's go-ahead.

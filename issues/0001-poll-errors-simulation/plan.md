@@ -91,7 +91,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 2 · T4 Piece 3a: Westminster display changes (`860b0d85`).
 - [x] 3 · T4 Phase 6: Style cleanup (`000fbd9f`).
 - [x] 4 · Branch self-review done and chosen fixes committed (`eeee25d0`).
-- [ ] 5 · Master merged in; checks green.
+- [x] 5 · Master merged in; checks green (`af4405fb`).
 - [ ] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation.
 - [ ] 7 · PR text drafted.
 
@@ -184,3 +184,17 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07: Review fixes committed as `eeee25d0` and pushed. Next: Piece 5, merge master in, which needs Phil's go-ahead to push.
 - 2026-11-07 (builder, Piece 5 brief): Phil chose to resolve the conflicting exports (`model_output_trends.json`, `prediction-simulation.json`) with master's versions. Uncertainty displays stay hidden until Piece 6, because the stale `prediction-uncertainty.json` id no longer matches. He also chose to verify the auto-merged `map-modes.json` against a scratch `export_elections.py --output-base` run (live DB read-only, nothing written in the repo). Merging `origin/master` at `dc2fda3d`, since local `master` is behind it.
 - 2026-11-07: Round-2 review fixes (R2-1 jsdom devDependency, R2-2 `poll_list` header guard, R2-4 `poll_detail` config error) were received mid-merge. Phil chose to finish the Piece 5 merge first and build R2 on top of it.
+- 2026-11-07 (builder, Piece 5): the merge of `origin/master` (`dc2fda3d`, 36 commits) is staged with `--no-commit` and paused for Phil's review.
+  - **Resolution:** the conflicting bundles were regenerated with `minify:electionmaps`. `model_output_trends.json` and `prediction-simulation.json` were taken from master.
+  - **Scratch export check:** `export_elections.py --output-base <scratch>` read the live DB read-only. All 63 files it writes, `map-modes.json` included, are byte-identical to the merged tree. It would also delete the stale branch-only `prediction-uncertainty.json`, which stays in the merge. It's inert: master's `prediction-simulation.json` has no `uncertaintyId`, so it's never fetched. Piece 6 handles it.
+  - **Merge review:** correctness check clean (config/env, conftest, dom/state, CSS, README, home page).
+  - **Checks:** mypy 246 clean; pytest 5781 (master drops some Drive-backup tests); Vitest 1449 / 3 skipped. A plain `npm test` with no `PF_TEST_JSDOM` now runs every jsdom suite, because master adds `jsdom@^24.1.3` as a devDependency (installed with `npm ci` in the worktree's own `node_modules`). The 3 skipped are referdle local-baseline benchmarks. Export dry-run and console smoke OK; jsdom harness shows 0 errors on both pages. The merged Westminster page shows no uncertainty, as expected.
+  - **Diff check:** `git diff --cached --check origin/master` flags only the branch's existing YouGov fixture whitespace.
+- 2026-11-07: Piece 5 merge committed as `af4405fb` (parents `eeee25d0` and `dc2fda3d`) and pushed with Phil's go-ahead. Next: round-2 review fixes, then Piece 6.
+- 2026-11-07 (builder, round-2 review fixes): built and paused for Phil's review (uncommitted). 7 files, +45/−16.
+  - **R2-1:** already met by the master merge, which adds `jsdom ^24.1.3` (it can't resolve to 25+). A plain `npm test` runs every jsdom suite; only 3 referdle benchmarks are skipped. Only the three stale "optional harness" comments are updated.
+  - **R2-2:** the `poll_list.html` header reads "MoE" when the settings are invalid, and the malformed-config test asserts it.
+  - **R2-4:** `poll_detail` catches `UncertaintyConfigError` for Westminster polls and shows "-" for n_eff and Adjustment, no margins, and an alert. The explanation paragraph is guarded. The old raise-expecting test now expects 200 and the alert. An unused import was removed.
+  - **Checks:** mypy 246 clean; pytest 5781; Vitest 1449 / 3 skipped; console smoke OK; `git diff --check` clean.
+  - **Re-check:** correctness and coverage clean after two comment-accuracy fixes.
+- 2026-11-07: Round-2 review fixes committed as `a832137d` and pushed. Next: Piece 6, the Westminster backfill and export (each live step needs Phil's go-ahead).

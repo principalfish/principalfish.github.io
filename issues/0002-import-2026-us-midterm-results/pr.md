@@ -20,6 +20,6 @@ Closes #79
 - [x] 6. House district maps 24 (2026) and 25 (2012 cycle) (`bfe5dc77`)
 - [x] 7. Export: status, source line data, specials, naming (`f90f26d3`)
 - [x] 8. Front end: uncalled seats, source line, specials (`9ec98204`)
-- [ ] 9. Predict rollover to 2028 and per-seat Senate baselines
+- [x] 9. Predict rollover to 2028 and per-seat Senate baselines (`2f87352b`)
 - [ ] 10. Derived Current Senate
 - [ ] 11. Docs and live-data runbook

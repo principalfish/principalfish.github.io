@@ -11,7 +11,7 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Piece 9 approved ("Approve, commit") with the class-keyed overrides accepted, the archived-forecast gap left to the scoring issue, and the 2028 list added to piece 11. Relayed to the builder to commit and push; once pushed, tick piece 9 in pr.md and `gh pr edit 80`. The hatch look needs a real-browser check after the piece 11 export.
+Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Piece 9 committed `2f87352b` and pushed; PR #80 ticked. Pending for Phil: go-ahead for piece 10. The hatch look needs a real-browser check after the piece 11 export.
 
 Next step: checkpoint 10 (Derived Current Senate) on Phil's go-ahead. See `plan.md`.
 

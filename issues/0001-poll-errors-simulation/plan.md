@@ -150,6 +150,14 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
      - (c) should the uniform-swing count appear anywhere at all (e.g. a hover title on the Seats cell), or be dropped from the table entirely? This supersedes Piece 2's "keep the deterministic count labelled uniform-swing projection".
    - Tests: Seats shows the median with and without ranges; ± from the median; Vote % with and without ranges; the toggle changes only the text; unchanged tables without uncertainty and on the US page; the filtered-view behaviour as decided.
    - Acceptance: `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, the jsdom harness on both pages, and the rendered table text shown with the toggle on and off.
+6f. **Poll tracker Chances view: remove the blank space on the left** (Phil, 2026-11-07; queued, starts after 6e is committed). Model: frontier. Depends on: 6e.
+   - Phil's words: "blank space to the left on this polltracker view. Same with largest party", with a screenshot of the Chances view, Majority sub-view; the Largest-party sub-view does the same.
+   - Seen in the screenshot (to confirm in the code): (1) an empty left-axis gutter. Horizontal gridlines run across a column with no labels, presumably the seat/vote axis the "Seats & votes" view uses, while Chances draws its probability axis on the right. (2) The x-axis starts on 2024-07-05 (the election-day point kept in 6c), but chance lines start on 2024-08-07, because the 07-05 point has no uncertainty, which leaves about a month of empty plot.
+   - What: in the Chances views (Majority and Largest party), drop or collapse the unused left axis column, and start the x-domain at the first date with chance data; or whatever the builder's investigation shows is the cause. The "Seats & votes" view keeps its axes and its 2024-07-05 start.
+   - Files (expected): `electionmapslogic/features/polltracker-view.js` (chart layout, axes, domain), `electionmapslogic/features/polltracker.js` if the domain comes from parsing, `electionmapslogic/maps.css`, the bundles, and tests in `electionmapslogic/tests/` (polltracker view).
+   - Open, for the 6f briefing: whether the Chances x-axis should start at the first chance date (2024-08-07), or keep 2024-07-05 to stay aligned with "Seats & votes" when switching views.
+   - Tests: in the Chances views, no empty left gutter and the domain as decided; "Seats & votes" unchanged; both sub-views.
+   - Acceptance: `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, the jsdom harness on the poll-tracker view (axes and domain dumped), and a before/after description.
 7. **PR text.** `/publish poll-errors-simulation`, run from the planner chat: it drafts the final description into `pr.md` and, once Phil approves, puts it on PR #74 (opened by Phil 2026-10-13). Merging is Phil's.
 
 ## Checkpoints
@@ -173,6 +181,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6c · Self-review 2 fixes and the election-day tracker point (`ae61f984`, `b2c33428`).
 - [ ] 6d · Header reading note below the latest poll, smaller, with the nowcast sentence.
 - [ ] 6e · Vote-totals table: Seats column from the simulated median; toggle adds only ranges.
+- [ ] 6f · Poll tracker Chances view: no blank space on the left.
 - [ ] 7 · PR text drafted.
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
@@ -302,3 +311,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (planner): Phil's manual check of the header led to new Piece **6d**: the basis note moves below "Latest poll used", smaller and not bold, with the exported nowcast sentence no longer stripped; line 2 drops "(if an election were held today)". Phil chose "Nowcast, today" (not "tomorrow", which would need a re-export) and "Smaller, not bold".
 - 2026-11-07 (planner): Phil asked for the vote-totals table rework (Piece **6e**) and to queue it until 6d is done. Its open points (a)–(c) go to Phil at the 6e briefing.
 - 2026-11-07 (builder, Piece 6d): `renderUncertaintyHeader` now draws only the odds line, and a new `renderUncertaintyBasis` draws the note in full (no stripping), with the same id. `dom.js` orders the lines main, odds, latest poll, note. The "(if an election were held today)" suffix is gone from line 2. `.maps-subtitle-basis` is 0.85rem, weight 400, colour #475569: an existing grey, because `--muted` is the subtitle's own colour. `aria-describedby` is unchanged. Checks: Vitest 1467 passed with 0 jsdom skips; JS and CSS bundles up to date; the jsdom harness on both pages had 0 errors. Analysis loop: all five checks clean on round 1, so no verifier ran.
+- 2026-11-07 (planner): Phil reported blank space on the left of the poll tracker's Chances views (Majority and Largest party). Queued as Piece **6f**, after 6e.

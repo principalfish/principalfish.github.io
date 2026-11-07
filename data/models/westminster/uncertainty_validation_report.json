@@ -1176,21 +1176,21 @@
     "final_polls_sha256": "7a01a6a73185486f3ea8d5646d3b2099b5f6107dad5443f2017fdf00a422b933",
     "numpy_version": "2.5.3",
     "source_sha256": {
-      "model_support/calibration.py": "96fcdfb78427e5f4485f954dd6fc85d6f98a68e65c9ef3f500bfbc1eafb86929",
-      "model_support/monte_carlo.py": "2af5785e47bb32499fc3ab0ae71ba3137b8c11cf02b6ef22954c0840ba8a9e09",
-      "model_support/uncertainty.py": "85b5a2f144e555489730024f38eef15c10a345b50e2f0059578199e695ccd996",
-      "model_support/westminster_validation.py": "13bb4a120b4b139023d59a55d1dc0e84d0d192e01ca3579763c8084c2e3239ef",
-      "model_support/westminster_validation_inputs.py": "19f9b03908aedccf651e34e993e7c00da74e5b85997e9a2a547716c9081113e0",
-      "model_support/westminster_validation_replay.py": "0c416150d4b6d17dddd28c98d9c433800f4a23a01d584d194d76471a58b9812d",
-      "scripts/calibrate_uncertainty.py": "cf77230c7e93693e8629c7c0e3c06e83920a904629a5b50eee25813cc2df504d",
-      "scripts/validate_westminster_uncertainty.py": "2be27f5a758a73814614b90570f4f79bb281d2490851cf4eab57073bf3fe5c9f"
+      "model_support/calibration.py": "5ac92e6f20d229e78ff24f318f9d14e1c8a7211b527207e052ab972b9e8cf61b",
+      "model_support/monte_carlo.py": "d5ae3e4a65915295de03993702259bae2d96e432693224022142a0c22d1b544c",
+      "model_support/uncertainty.py": "773bbd177c5b95d941c95a1cee790c3b59ca792f8a6684951b7b9dbda8368b9a",
+      "model_support/westminster_validation.py": "53714e5ba8e3e90a20d65311f23bbc5c0fdd20a026f5ecf6bfdf3a24f530d01e",
+      "model_support/westminster_validation_inputs.py": "fba00d554e8cbe0a675b548b95a765f8db903ac8d7b40d2eb88e11e32d6273b6",
+      "model_support/westminster_validation_replay.py": "a7ff42ddab79adeb0cb5ba82a20add095035225e10bd0ae21dd3941fb9f3ae4d",
+      "scripts/calibrate_uncertainty.py": "24cfacd159977624f87cff4bc716be78937d1980fb9b9b76e2d800adbe495864",
+      "scripts/validate_westminster_uncertainty.py": "5bdc0cfd50934f9919ac438510f5a3c30130e42fe18d3b7c9059a76fc06b2fe3"
     }
   },
   "limitations": [
     "Conditional conversion diagnostics know actual regional votes. They do not validate the full forecast pipeline or polling windows.",
     "Only four election transitions and nine final-poll elections inform the production baseline.",
-    "Historical conditional draws reproduce the Gaussian audit experiment; new model components require extending this experiment before claiming validation.",
-    "Current-config reliability uses rounded deployed scales; the original audit used 4.9029 and 0.3818."
+    "Historical conditional draws reproduce the Gaussian calibration experiment that fits the seat and lambda scales; new model components require extending this experiment before claiming validation.",
+    "Current-config reliability uses the deployed scales, rounded to 2 dp; the fitted scales are 4.9029 and 0.3818 (4 dp: swing.pooled.sigma_seat_raw and swing.pooled.sigma_lambda in uncertainty_calibration_report.json)."
   ],
   "methods": {
     "national": "Leave one election out; election-weighted RMS of centring-corrected misses; 1.645 Gaussian band; top-two covariance from (I-q1^T)D(I-q1^T)^T.",
@@ -2280,6 +2280,6 @@
       }
     ]
   },
-  "report_hash": "6c36090c4e642584d256c187fb43f8e8df90f0398a9167ed24d3970b0655e991",
+  "report_hash": "09aea5289c3055cd69ff342b7c0743e047eb54ef263c31a89c3865c35eb601c4",
   "schema": "westminster-validation-v1"
 }

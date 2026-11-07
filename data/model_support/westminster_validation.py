@@ -1,6 +1,7 @@
 """Offline Westminster diagnostics, conditional on actual regional vote shares.
 
-Historical checks deliberately reproduce the Gaussian calibration experiment:
+Historical checks deliberately reproduce the Gaussian model that
+``scripts/calibrate_uncertainty.py`` fits the seat and lambda scales with:
 shared election lambda, independent centred seat errors, and no polling error.
 These are conditional conversion checks, not a full forecast backtest. Runtime
 checks use saved inputs with the requested current config and the real kernel.
@@ -459,8 +460,8 @@ def build_report(
         "limitations": [
             "Conditional conversion diagnostics know actual regional votes. They do not validate the full forecast pipeline or polling windows.",
             "Only four election transitions and nine final-poll elections inform the production baseline.",
-            "Historical conditional draws reproduce the Gaussian audit experiment; new model components require extending this experiment before claiming validation.",
-            "Current-config reliability uses rounded deployed scales; the original audit used 4.9029 and 0.3818.",
+            "Historical conditional draws reproduce the Gaussian calibration experiment that fits the seat and lambda scales; new model components require extending this experiment before claiming validation.",
+            "Current-config reliability uses the deployed scales, rounded to 2 dp; the fitted scales are 4.9029 and 0.3818 (4 dp: swing.pooled.sigma_seat_raw and swing.pooled.sigma_lambda in uncertainty_calibration_report.json).",
         ],
         "historical": historical_validation(
             pairs, config, calibration_inputs.party_names(connection), count

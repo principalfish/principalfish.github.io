@@ -15,6 +15,7 @@ from console.services.uncertainty_explorer import (
     filter_draws,
     majority_threshold,
     normal_term,
+    outcome_tail,
     raw_run,
     replay,
     seat_decomposition,
@@ -144,6 +145,10 @@ def seat(seat_id: int) -> str:
     if draws:
         try:
             s = draws.seat_ids.index(seat_id)
+            tail = outcome_tail(view["run"].stored.national)
+        # SimulationFileError subclasses ValueError, so it is caught first.
+        except SimulationFileError as err:
+            view["error"] = str(err)
         except ValueError:
             view["error"] = "Seat is not in this simulation run."
         else:
@@ -158,8 +163,6 @@ def seat(seat_id: int) -> str:
                 if len(central_shares) > 1
                 else None
             )
-            interval = float(view["run"].stored.national.get("interval", 0.9))
-            tail = (1 - interval) / 2
             counts = np.bincount(draws.winner[:, s], minlength=len(draws.party_ids))
             view.update(
                 seat_id=str(seat_id),

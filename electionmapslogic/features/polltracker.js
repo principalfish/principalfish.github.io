@@ -135,16 +135,28 @@ export function parsePollTrackerData(data) {
     }
     return entries;
   })();
-  // A null point immediately before a changed run breaks lines and band smoothing.
-  // Legacy central-only Westminster history has no uncertainty to separate.
+  // A null point immediately before a changed run breaks lines and band smoothing. A run
+  // is changed when uncertainty appears or disappears relative to the previous run, or when
+  // its known config/kernel segment id differs from the last known one. A run with no segment
+  // id (e.g. rows written before ids existed) continues the segment before it: unknown ->
+  // unknown and known <-> unknown are continuous unless uncertainty presence also changes.
+  // Comparing against the last *known* id means known A, unknown, known B still breaks at B.
+  // For Westminster (model_uns) only, data/model_support/trends.py keeps equal-central
+  // duplicates wherever this rule would break, so the exported rows carry every break.
+  // Central-only history has no uncertainty to separate, so it never breaks.
   {
     let previous;
+    let lastSegment = null;
     timeline = timeline.flatMap((entry) => {
       const current = runsByDate.get(entry.dateKey);
-      const boundary = current && previous !== undefined
-        && (current.hung !== null || previous.hung !== null)
-        && (!current.segment || !previous.segment || current.segment !== previous.segment);
-      if (current) previous = current;
+      if (!current) return [entry];
+      const uncertain = current.hung !== null;
+      const boundary = previous !== undefined && (
+        uncertain !== (previous.hung !== null)
+        || (uncertain && current.segment !== null && lastSegment !== null
+          && current.segment !== lastSegment));
+      previous = current;
+      if (uncertain && current.segment !== null) lastSegment = current.segment;
       return boundary ? [{ ...entry, boundary: true,
         dateValue: new Date(entry.dateValue.getTime() - 1) }, entry] : [entry];
     });
@@ -160,12 +172,8 @@ export function parsePollTrackerData(data) {
     let lastOptional = optionalFields(null, false);
     let lastSeats = null;
     let lastVotePct = null;
-    let lastContext = null;
     timeline.forEach((entry) => {
       const row = entry.boundary ? null : rowsByDateKey.get(entry.dateKey);
-      if (!entry.boundary && runsByDate.has(entry.dateKey)) {
-        lastContext = runsByDate.get(entry.dateKey).segment;
-      }
       if (entry.boundary) {
         lastSeats = null;
         lastVotePct = null;
@@ -177,7 +185,6 @@ export function parsePollTrackerData(data) {
       }
       // Calendar gaps carry forward; an explicit run clears any missing optional values.
       if (!entry.boundary && runsByDate.has(entry.dateKey)) lastOptional = row ?? optionalFields(null, false);
-      if (!runsByDate.has(entry.dateKey) && !lastContext) lastOptional = optionalFields(null, false);
       for (const key of Object.keys(optional)) optional[key].push(lastOptional[key]);
       seats.push(lastSeats);
       votePct.push(lastVotePct);
@@ -197,17 +204,10 @@ export function parsePollTrackerData(data) {
   });
 
   let lastHung = null;
-  let lastSegment = null;
   const hung = timeline.map((entry) => {
     const run = entry.boundary ? null : runsByDate.get(entry.dateKey);
-    if (entry.boundary) {
-      lastHung = null;
-    } else if (run) {
-      lastHung = run.hung;
-      lastSegment = run.segment;
-    } else if (!lastSegment) {
-      lastHung = null;
-    }
+    if (entry.boundary) lastHung = null;
+    else if (run) lastHung = run.hung;
     return lastHung;
   });
   return { timeline, seriesByParty, hung };

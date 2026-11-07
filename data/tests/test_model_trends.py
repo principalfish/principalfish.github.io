@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import sqlite3
 from contextlib import closing
@@ -626,22 +627,168 @@ def test_equal_central_runs_preserve_each_identity_boundary(
 
 @pytest.mark.parametrize("field", ["config_hash", "kernel_version"])
 @pytest.mark.parametrize("value", [None, "", " ", 1])
-def test_unknown_identity_never_proves_equal_bands_comparable(
+def test_unknown_identity_runs_are_one_continuous_segment(
     db: Database, only_the_test_database: Path, field: str, value: object,
 ) -> None:
+    """Legacy summaries without an identity continue each other, so equal ones collapse."""
     scope, seats, parties = setup_scope(db, "westminster")
-    for day in range(1, 4):
-        block = national_block(parties)
+    for day, share in ((1, 60), (2, 60), (3, 60), (4, 65)):
+        block = national_block(parties, hung=0.1 * day)
         if value is None:
             block.pop(field)
         else:
             block[field] = value
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, 60, block,
+            only_the_test_database, scope, day, seats[0], parties, share, block,
         )
     entries = reconstruct_trends(only_the_test_database, scope)
-    assert len(entries) == 3
+    assert [e["as_of_date"] for e in entries] == ["2026-06-01", "2026-06-04"]
     assert all(e["segment_id"] is None for e in entries)
+
+
+def _identity_block(parties: list[int], identity: str | None) -> dict[str, object]:
+    """A national block with this config identity, or none (a legacy summary)."""
+    block = national_block(parties)
+    if identity is None:
+        block.pop("config_hash")
+    else:
+        block["config_hash"] = identity
+    return block
+
+
+@pytest.mark.parametrize(
+    ("identities", "kept_days"),
+    [
+        # Known -> unknown is continuous: equal central values collapse.
+        (("a", None), [1]),
+        (("a", None, "a"), [1]),
+        # The first known identity after unknown ones draws no break but is kept,
+        # so the tracker can see a later change away from it.
+        ((None, "a"), [1, 2]),
+        ((None, "a", "b"), [1, 2, 3]),
+        # A known change is kept even across an unknown run in between.
+        (("a", None, "b"), [1, 3]),
+        (("a", "b", None), [1, 2]),
+    ],
+)
+def test_mixed_known_and_unknown_identities_keep_each_known_change(
+    db: Database,
+    only_the_test_database: Path,
+    identities: tuple[str | None, ...],
+    kept_days: list[int],
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day, identity in enumerate(identities, start=1):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, 60,
+            _identity_block(parties, identity),
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [e["as_of_date"] for e in entries] == [
+        f"2026-06-0{day}" for day in kept_days
+    ]
+
+
+def test_known_change_after_a_kept_unknown_run_is_still_a_boundary(
+    db: Database, only_the_test_database: Path
+) -> None:
+    """The comparison is with the last known identity, not the last kept run's."""
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day, share, identity in ((1, 60, "a"), (2, 65, None), (3, 65, "b")):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, share,
+            _identity_block(parties, identity),
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [e["as_of_date"] for e in entries] == [
+        "2026-06-01", "2026-06-02", "2026-06-03",
+    ]
+    assert entries[1]["segment_id"] is None
+
+
+def _tracker_breaks(runs: list[tuple[str, bool, str | None]]) -> list[str]:
+    """The poll tracker's break rule (polltracker.js) over (date, has hung, segment id).
+
+    A break precedes a run where uncertainty appears or disappears, or where its
+    known segment id differs from the last known one; unknown ids continue.
+    """
+    breaks: list[str] = []
+    previous_uncertain: bool | None = None
+    last_segment: str | None = None
+    for as_of_date, uncertain, segment in runs:
+        if previous_uncertain is not None and (
+            uncertain != previous_uncertain
+            or (
+                uncertain
+                and segment is not None
+                and last_segment is not None
+                and segment != last_segment
+            )
+        ):
+            breaks.append(as_of_date)
+        previous_uncertain = uncertain
+        if uncertain and segment is not None:
+            last_segment = segment
+    return breaks
+
+
+# Per run: no summary, a summary without identity, or a summary with identity a/b.
+_RUN_KINDS = ("none", "unknown", "a", "b")
+
+
+@pytest.mark.parametrize(
+    "kinds",
+    [
+        *itertools.product(_RUN_KINDS, repeat=3),
+        ("unknown", "a", "unknown", "b"),
+        ("a", "unknown", "unknown", "a"),
+        ("none", "unknown", "a", "none"),
+    ],
+)
+def test_kept_runs_carry_every_tracker_break(
+    db: Database, only_the_test_database: Path, kinds: tuple[str, ...]
+) -> None:
+    """The tracker reads only kept runs; it must draw the breaks all runs would."""
+    scope, seats, parties = setup_scope(db, "westminster")
+    stored: list[tuple[str, bool, str | None]] = []
+    for day, kind in enumerate(kinds, start=1):
+        block = (
+            None
+            if kind == "none"
+            else _identity_block(parties, None if kind == "unknown" else kind)
+        )
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, 60, block,
+        )
+        segment = None if block is None or kind == "unknown" else kind
+        stored.append((f"2026-06-0{day}", block is not None, segment))
+    entries = reconstruct_trends(only_the_test_database, scope)
+    exported = [
+        (e["as_of_date"], "hung" in e, e.get("segment_id")) for e in entries
+    ]
+    # Exported ids are hashes; map them back to the stored kind for the comparison.
+    by_date = {as_of_date: segment for as_of_date, _, segment in stored}
+    kept = [
+        (as_of_date, uncertain, by_date[as_of_date] if segment else None)
+        for as_of_date, uncertain, segment in exported
+    ]
+    assert _tracker_breaks(kept) == _tracker_breaks(stored)
+
+
+@pytest.mark.parametrize("identity", [None, "a"])
+def test_summary_appearing_or_disappearing_is_a_boundary(
+    db: Database, only_the_test_database: Path, identity: str | None
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day, has_summary in ((1, False), (2, True), (3, True), (4, False)):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, 60,
+            _identity_block(parties, identity) if has_summary else None,
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [(e["as_of_date"], "hung" in e) for e in entries] == [
+        ("2026-06-01", False), ("2026-06-02", True), ("2026-06-04", False),
+    ]
 
 
 # SHA-256 of '["c0ffee","pf-westminster-mc-v1"]', national_block's default identity.

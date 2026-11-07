@@ -790,6 +790,54 @@ class TestPollListN:
             "-",
         ]
 
+    def test_malformed_settings_hide_margins_but_keep_every_poll_listed(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        config_path: Path,
+    ) -> None:
+        config_path.write_text('{"design_effect": 0}', encoding="utf-8")
+        world = westminster_world
+        labour = world.party_ids["Labour"]
+        holyrood_map = db.add_map("Holyrood Witness Map", parliament="holyrood")
+        westminster_poll = add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="yougov",
+            fieldwork_end=date(2026, 9, 28),
+            national={labour: 20.0},
+            sample_size=2000,
+        )
+        holyrood_poll = add_poll_with_rows(
+            db,
+            map_id=holyrood_map.id,
+            pollster_identifier="survation",
+            fieldwork_end=date(2026, 9, 21),
+            national={labour: 20.0},
+            sample_size=1020,
+        )
+
+        response = app.test_client().get("/polls")
+
+        assert response.status_code == 200
+        body = response.get_data(as_text=True)
+        rows = {
+            re.sub(r"<[^>]+>", "", row[0]).strip(): [
+                html.unescape(c).strip() for c in row[6:11]
+            ]
+            for row in _table_rows(body)
+        }
+        # n still resolves for both; neither shows n_eff or a margin.
+        assert rows == {
+            f"#{westminster_poll.id}": ["2000", "sample_size", "-", "-", "-"],
+            f"#{holyrood_poll.id}": ["1020", "sample_size", "-", "-", "-"],
+        }
+        text = " ".join(body.split())
+        assert "the uncertainty settings are invalid" in text
+        assert "design_effect" in text
+        assert "Westminster polls also show n_eff" not in text
+
     def test_capped_n_eff_is_marked(
         self, app: Flask, db: Database, westminster_world: WestminsterWorld
     ) -> None:

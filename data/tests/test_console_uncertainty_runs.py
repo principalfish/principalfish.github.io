@@ -13,10 +13,12 @@ from typing import Any
 
 import numpy as np
 import pytest
-from flask import Flask
+from flask import Flask, template_rendered
 
+from console.blueprints import uncertainty_explorer as explorer_blueprint
 from console.services.uncertainty_explorer import (
     filter_draws,
+    outcome_tail,
     raw_run,
     seat_decomposition,
 )
@@ -377,6 +379,81 @@ def test_zero_matches_show_no_conditional_average(
     )
     assert "0 / 50 simulations" in body
     assert "Mean λ: matching -;" in body
+
+
+@pytest.mark.parametrize(
+    ("interval", "tail"), [(0.9, 0.05), (0.8, 0.1), (0.95, 0.025), (0.5, 0.25)]
+)
+def test_outcome_tail_is_rounded_to_the_intended_quantile(
+    interval: float, tail: float
+) -> None:
+    # Plain float subtraction drifts: (1 - 0.9) / 2 == 0.04999999999999999.
+    assert outcome_tail({"interval": interval}) == tail
+
+
+@pytest.mark.parametrize(
+    "national",
+    [{}, *({"interval": value} for value in (0, 1, 1.5, -0.1, "0.9", None))],
+)
+def test_outcome_tail_rejects_a_missing_or_out_of_range_interval(
+    national: dict[str, object],
+) -> None:
+    with pytest.raises(SimulationFileError, match="valid outcome interval"):
+        outcome_tail(national)
+
+
+def _serve_run_with_national(
+    monkeypatch: pytest.MonkeyPatch, national: dict[str, Any]
+) -> None:
+    """Swap the stored run's national summary after the raw file is validated."""
+    real_context = explorer_blueprint.explorer_context
+
+    def edited() -> dict[str, Any]:
+        view = real_context()
+        run = view["run"]
+        view["run"] = replace(run, stored=replace(run.stored, national=national))
+        return view
+
+    monkeypatch.setattr(explorer_blueprint, "explorer_context", edited)
+
+
+def test_seat_margins_use_the_stored_interval_tail(
+    app: Flask, saved: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    draws, record = saved["draws"], saved["record"]
+    # 0.8, not the fixture's 0.9, so a silent 0.9 fallback would fail.
+    _serve_run_with_national(monkeypatch, {**record.stored.national, "interval": 0.8})
+    contexts: list[dict[str, Any]] = []
+
+    def record_context(_: Flask, template: object, context: dict[str, Any]) -> None:
+        contexts.append(context)
+
+    with template_rendered.connected_to(record_context, app):
+        seat = draws.seat_ids[0]
+        response = app.test_client().get(f"/westminster/uncertainty/sims/seat/{seat}")
+    assert response.status_code == 200
+    [context] = contexts
+    assert context["margins"] == (
+        np.quantile(draws.margin[:, 0].astype(float), [0.1, 0.5, 0.9]).tolist()
+    )
+
+
+def test_seat_page_reports_a_missing_interval_instead_of_assuming_one(
+    app: Flask, saved: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    national = {
+        key: value
+        for key, value in saved["record"].stored.national.items()
+        if key != "interval"
+    }
+    _serve_run_with_national(monkeypatch, national)
+    seat = saved["draws"].seat_ids[0]
+    response = app.test_client().get(f"/westminster/uncertainty/sims/seat/{seat}")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "Stored run lacks a valid outcome interval" in body
+    assert "Seat is not in this simulation run" not in body
+    assert "winner-minus-runner-up margin" not in body
 
 
 def test_raw_vote_rounding_can_cross_summary_boundary(saved: dict[str, Any]) -> None:

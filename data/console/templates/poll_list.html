@@ -9,16 +9,23 @@
       that prints only a weighted base, used as n), else the sample size.
       <a href="{{ url_for('polls.poll_coverage') }}">Base coverage by pollster</a>
     </p>
-    {% set ref_pct = "%g" | format(config.p_ref * 100) %}
-    <p>
-      Westminster polls also show n_eff, the effective sample size behind the
-      national shares (n &times; its kind adjustment &divide; design effect
-      {{ "%g" | format(config.design_effect) }}, capped at
-      {{ "%g" | format(config.n_eff_cap) }}), and the
-      {{ "%g" | format(config.interval * 100) }}% margin of error at that n_eff
-      for a party on {{ ref_pct }}%. Each share's own margin is on the poll's
-      page.
-    </p>
+    {% if config is not none %}
+      {% set ref_pct = "%g" | format(config.p_ref * 100) %}
+      <p>
+        Westminster polls also show n_eff, the effective sample size behind the
+        national shares (n &times; its kind adjustment &divide; design effect
+        {{ "%g" | format(config.design_effect) }}, capped at
+        {{ "%g" | format(config.n_eff_cap) }}), and the
+        {{ "%g" | format(config.interval * 100) }}% margin of error at that n_eff
+        for a party on {{ ref_pct }}%. Each share's own margin is on the poll's
+        page.
+      </p>
+    {% else %}
+      <p class="alert">
+        Westminster n_eff and margins of error are hidden: the uncertainty
+        settings are invalid ({{ config_error }}).
+      </p>
+    {% endif %}
     {% if not polls %}
       <p>No polls have been imported yet.</p>
     {% else %}

@@ -10,7 +10,9 @@ For Westminster polls they also show sampling error, from
 ``model_support.uncertainty`` with the settings loaded once per request: each
 column's kind adjustment and effective n, a margin of error beside each share
 in the detail matrix, and in the list a national margin of error for a party
-on the reference share (30%).
+on the reference share (30%). The list mixes parliaments, so a malformed
+settings file there hides the Westminster margins and names the error instead
+of failing the whole page.
 """
 
 from __future__ import annotations
@@ -35,6 +37,7 @@ from model_support.poll_bases import PollNIndex, ResolvedN, poll_base_coverage
 from model_support.uncertainty import (
     EffectiveN,
     UncertaintyConfig,
+    UncertaintyConfigError,
     effective_n,
     load_uncertainty_config,
     poll_moe,
@@ -80,7 +83,11 @@ def _share_cell(
 def poll_list() -> str:
     """GET /polls — List all polls ordered by fieldwork end date descending with row counts."""
     db = get_db()
-    config = load_uncertainty_config()
+    config: UncertaintyConfig | None
+    try:
+        config, config_error = load_uncertainty_config(), None
+    except UncertaintyConfigError as err:
+        config, config_error = None, str(err)
     with db.session() as session:
         westminster_id = _westminster_map_id(session)
         polls = session.execute(
@@ -108,7 +115,9 @@ def poll_list() -> str:
     for poll, pollster in polls:
         resolved = n_index.resolve(poll.id, None)
         effective = (
-            effective_n(resolved, config) if poll.map_id == westminster_id else None
+            effective_n(resolved, config)
+            if config is not None and poll.map_id == westminster_id
+            else None
         )
         items.append(
             {
@@ -126,13 +135,15 @@ def poll_list() -> str:
                 "effective": effective,
                 "moe": (
                     poll_moe(config.p_ref * 100, effective.n_eff, config)
-                    if effective is not None
+                    if effective is not None and config is not None
                     else None
                 ),
             }
         )
 
-    return render_template("poll_list.html", polls=items, config=config)
+    return render_template(
+        "poll_list.html", polls=items, config=config, config_error=config_error
+    )
 
 
 @bp.route("/polls/<int:poll_id>", methods=["GET"])

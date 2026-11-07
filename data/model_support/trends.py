@@ -11,10 +11,16 @@ probability 0, and a party lacking ``vl``/``vh`` was not in the summary.
 
 Consecutive runs with the same seats and shares collapse to the first, as
 before; uncertainty does not keep a duplicate (the simulation seed changes
-daily, so its odds always differ slightly). Westminster retains changes in
-summary availability or config/kernel identity, even with unchanged central
-values. Unknown identities cannot establish comparability. With no summaries
-anywhere the rule is exactly the old one.
+daily, so its odds always differ slightly). Westminster keeps a duplicate
+where summary availability changes, or where a run's known config/kernel
+identity differs from the last known identity among the runs kept so far
+(including the first known one after unknown ones). The poll tracker
+(electionmapslogic/features/polltracker.js) reads only the kept runs and breaks
+its lines where availability changes or a known identity differs from the last
+known one; a run with no identity (stored before identities existed) continues
+the segment before it, so unknown to unknown and known to/from unknown are
+continuous unless availability also changes. With no summaries anywhere the
+rule is exactly the old one.
 
 A run whose stored error budget shows no national polls for any party is
 left out: with nothing polled it projects the baseline with no error, which
@@ -269,7 +275,9 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
         uncertainty, unpolled, segments = _trend_uncertainty(conn, scope, elections)
         dates: set[str] = set()
         previous: tuple[dict[str, dict[str, int | float]], bool] | None = None
-        previous_segment: str | None = None
+        # The last known identity among the runs kept so far. The tracker sees
+        # only kept runs, so this must not advance on a collapsed one.
+        last_segment: str | None = None
         for eid, (name, as_of) in sorted(
             elections.items(), key=lambda item: (item[1][1], item[0])
         ):
@@ -287,23 +295,24 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             summary = uncertainty.get(eid)
             segment = segments.get(eid)
             has_summary = summary is not None
+            # Kept even with equal central values: an availability change (a
+            # tracker break), or a known identity new to the kept runs. The
+            # first known identity after unknown ones draws no break, but is kept
+            # so that a later change away from it is visible to the tracker.
+            must_keep = previous is not None and (
+                previous[1] != has_summary
+                or (has_summary and segment is not None and segment != last_segment)
+            )
             if (
                 previous is not None
                 and previous[0] == parties
                 and (summary is None or previous[1])
-                and not (
-                    scope.election_type == "model_uns"
-                    and (
-                        previous[1] != has_summary
-                        or (has_summary and (
-                            segment is None or segment != previous_segment
-                        ))
-                    )
-                )
+                and not (scope.election_type == "model_uns" and must_keep)
             ):
                 continue
             previous = (parties, has_summary)
-            previous_segment = segment
+            if has_summary and segment is not None:
+                last_segment = segment
             entry: TrendEntry = {
                 "election_id": eid,
                 "election_name": name,

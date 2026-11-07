@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -152,3 +154,131 @@ def test_resealed_invalid_provenance_fails_closed(
     _reseal(raw, path)
     with pytest.raises(SimulationFileError):
         load_validation_inputs(path)
+
+
+def _edited(tmp_path: Path, edit: Callable[[dict[str, Any]], None]) -> Path:
+    """Write a resealed copy of the committed inputs with one edit applied."""
+    raw = json.loads(INPUTS_PATH.read_text())
+    edit(raw)
+    path = tmp_path / "inputs.json"
+    _reseal(raw, path)
+    return path
+
+
+def _set(*keys: str, value: object) -> Callable[[dict[str, Any]], None]:
+    """Return an edit that sets the value at a nested key path."""
+
+    def edit(raw: dict[str, Any]) -> None:
+        target = raw
+        for key in keys[:-1]:
+            target = target[key]
+        target[keys[-1]] = value
+
+    return edit
+
+
+def _drop(*keys: str) -> Callable[[dict[str, Any]], None]:
+    """Return an edit that removes the key at a nested key path."""
+
+    def edit(raw: dict[str, Any]) -> None:
+        target = raw
+        for key in keys[:-1]:
+            target = target[key]
+        target.pop(keys[-1])
+
+    return edit
+
+
+@pytest.mark.parametrize(
+    ("content", "message"),
+    [
+        ("[]", "schema is incomplete"),
+        ("{not json", "Cannot read"),
+    ],
+)
+def test_unreadable_or_non_object_inputs_fail_closed(
+    tmp_path: Path, content: str, message: str
+) -> None:
+    path = tmp_path / "inputs.json"
+    path.write_text(content)
+    with pytest.raises(SimulationFileError, match=message):
+        load_validation_inputs(path)
+
+
+def test_missing_inputs_file_fails_closed(tmp_path: Path) -> None:
+    with pytest.raises(SimulationFileError, match="Cannot read"):
+        load_validation_inputs(tmp_path / "absent.json")
+
+
+def test_tampered_inputs_raise_before_any_replay(tmp_path: Path) -> None:
+    raw = json.loads(INPUTS_PATH.read_text())
+    raw["region_names"]["22"] = "Not Scotland"
+    path = tmp_path / "inputs.json"
+    path.write_text(json.dumps(raw))
+    with pytest.raises(SimulationFileError, match="content hash"):
+        frozen_input_validation(path, load_uncertainty_config(), count=4)
+
+
+@pytest.mark.parametrize(
+    ("edit", "message"),
+    [
+        # Top-level shape and identity.
+        (_set("extra", value=1), "schema is incomplete"),
+        (_set("schema", value="westminster-validation-inputs-v2"), "Unknown frozen"),
+        # Provenance.
+        (_set("provenance", value=[]), "provenance is incomplete"),
+        (_drop("provenance", "seed"), "provenance is incomplete"),
+        (_set("provenance", "extra", value=1), "provenance is incomplete"),
+        (_set("provenance", "source_archive_sha256", value="ab"), "invalid source_"),
+        (_set("provenance", "archive_input_hash", value=None), "invalid archive_"),
+        (_set("provenance", "config_hash", value="0" * 64), "invalid config_hash"),
+        (_set("provenance", "election_id", value=-1), "invalid election_id"),
+        (_set("provenance", "seed", value="7"), "invalid seed"),
+        # Original settings.
+        (_set("provenance", "config", value=[]), "lacks original settings"),
+        (_drop("provenance", "config", "sigma_nat"), "lacks original settings"),
+        (_set("provenance", "config", "extra", value=1), "lacks original settings"),
+        (_set("provenance", "config", "sigma_nat", value="1"), "sigma_nat is invalid"),
+        (_set("provenance", "config", "sigma_nat", value=True), "sigma_nat is invalid"),
+        (_set("provenance", "config", "simulations", value=0), "simulations is inv"),
+        (_set("provenance", "config", "chunk_size", value=2.5), "chunk_size is inv"),
+        # Input arrays.
+        (_set("inputs", value=[]), "fields are incomplete"),
+        (_drop("inputs", "seat_turnout"), "fields are incomplete"),
+        (_set("inputs", "extra", value=[]), "fields are incomplete"),
+        (_set("inputs", "seat_turnout", value=1.0), "must be an array"),
+        (_set("inputs", "seat_turnout", value=["x"] * 650), "invalid array"),
+        (_set("inputs", "seat_region", value=[1.5] * 650), "invalid array"),
+        # Readable axis names.
+        (_set("party_names", value=[]), "party names does not match"),
+        (_drop("region_names", "22"), "region names does not match"),
+        (_set("region_names", "22", value=""), "nonempty names"),
+        (_set("party_names", "1", value=1), "nonempty names"),
+    ],
+)
+def test_resealed_mismatched_or_malformed_inputs_fail_closed(
+    tmp_path: Path,
+    edit: Callable[[dict[str, Any]], None],
+    message: str,
+) -> None:
+    with pytest.raises(SimulationFileError, match=message):
+        load_validation_inputs(_edited(tmp_path, edit))
+
+
+@pytest.mark.parametrize(
+    ("edit", "cause", "detail"),
+    [
+        (_set("provenance", "config_hash", value="z" * 16), ValueError, "base 16"),
+        (_set("provenance", "as_of_date", value=20261022), TypeError, "str"),
+    ],
+)
+def test_resealed_unparseable_provenance_fails_closed_with_its_cause(
+    tmp_path: Path,
+    edit: Callable[[dict[str, Any]], None],
+    cause: type[Exception],
+    detail: str,
+) -> None:
+    with pytest.raises(SimulationFileError, match="Cannot read") as caught:
+        load_validation_inputs(_edited(tmp_path, edit))
+    assert type(caught.value.__cause__) is cause
+    assert detail in str(caught.value.__cause__)

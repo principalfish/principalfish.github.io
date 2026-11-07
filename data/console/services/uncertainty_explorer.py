@@ -85,13 +85,25 @@ def raw_run(path: Path, run: RunRecord) -> SimulationDraws:
     return draws
 
 
-def _check_outcomes(draws: SimulationDraws, run: RunRecord) -> None:
-    """Detect stale same-date files, including legacy files without input hashes."""
-    national = run.stored.national
+def outcome_tail(national: Mapping[str, Any]) -> float:
+    """Return the lower quantile of a stored run's central outcome interval.
+
+    Rounded to 12 places so that, for example, a 0.9 interval gives exactly
+    0.05 and the quantiles match the ones the model stored.
+
+    Raises:
+        SimulationFileError: The run stores no interval strictly between 0 and 1.
+    """
     interval = national.get("interval")
     if not isinstance(interval, int | float) or not 0 < interval < 1:
         raise SimulationFileError("Stored run lacks a valid outcome interval")
-    tail = round((1 - interval) / 2, 12)
+    return round((1 - interval) / 2, 12)
+
+
+def _check_outcomes(draws: SimulationDraws, run: RunRecord) -> None:
+    """Detect stale same-date files, including legacy files without input hashes."""
+    national = run.stored.national
+    tail = outcome_tail(national)
     parties = mapping(national.get("parties"))
     for k, party in enumerate(draws.party_ids):
         item = mapping(parties.get(str(party)))

@@ -363,3 +363,9 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
   - Changed-lines coverage 99%: one line, an accepted type guard.
 - 2026-11-07: Piece 6g code committed as `be4222f5` and pushed with Phil's approval ("Approve, commit and push"). Next: live steps backup → 10-30 rerun → trends rebuild → re-export → data commit, each with its own go-ahead.
 - 2026-11-07 22:51Z, 6g step 1 (Phil: "Go ahead with backup"): `backup_db.py` printed "Unchanged since the last archive", so `elections-2026-11-07-210040.db.gz` is the backup. Between 18:39 and 21:00 the shared DB gained 9 US elections (ids 106320–106328, issue 0002's imports). Westminster polls and UNS runs are unchanged, so restore from the 21:00 archive, not 18:39.
+- 2026-11-07 22:56Z, 6g step 2 (Phil: "Go ahead with rerun"): the 10-30 single-date rerun (exit 0) replaced election 106319 with 106329.
+  - Against the 21:00 archive, the stored national, regional and seats blocks match field for field apart from `mean`, with the same seed (739919) and config. The vote rows are byte-identical (sha256 match).
+  - Means: national 650.02 (2 dp); the region sums round to their seat counts.
+  - The draws file now names 106329. There are still 848 UNS runs, and no other elections changed. No auto-archive was made.
+  - `export_elections.py --dry-run` now passes. The worktree trends file (384 points, Lab `sm` 317.0) is byte-identical to a scratch rebuild.
+  - It also rewrote the tracked `model_output_trends_meta.json`, whose `since_date` went from 2026-09-30 to 2026-08-31. That fixes metadata left over from the 30-day window, and it becomes a 4th file for the data commit.

@@ -10,3 +10,4 @@
 - 2026-11-07 10:53 · refine-westminster-and-us-poll-error-models (0003) · build_model = claude-opus-5-5
 - 2026-11-07 10:53 · refine-westminster-and-us-poll-error-models (0003) · investigating → planned
 - 2026-11-07 10:55 · poll-errors-simulation (0001) · Ship decision: 2a–2f and 4b–4d moved to 0003 (#78); plan rewritten around shipping
+- 2026-11-07 11:24 · us-poll-errors-uncertainty (0004) · created (build): Poll-error uncertainty for US forecasts

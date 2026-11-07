@@ -1,0 +1,14 @@
+{
+  "id": 4,
+  "slug": "us-poll-errors-uncertainty",
+  "title": "Poll-error uncertainty for US forecasts",
+  "mode": "build",
+  "state": "investigating",
+  "branch": "us-poll-errors-uncertainty",
+  "base": "master",
+  "gh_issue": null,
+  "build_model": null,
+  "created": "2026-11-07 11:24",
+  "updated": "2026-11-07 11:24",
+  "done": null
+}

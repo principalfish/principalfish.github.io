@@ -1,6 +1,6 @@
 # Resume point: read this first
 
-Updated 2026-11-07 (planner, Piece 1 in progress). Issue state: `planned`.
+Updated 2026-11-07 (planner, Piece 1 done). Issue state: `planned`.
 
 ## Where we are
 
@@ -11,16 +11,20 @@ State checks:
 - `git show 44dd8336:data/models/westminster/uncertainty_conversion_historical_report.json | sha256sum` → `0893389afce7babd00c69e98bdea9331113e0ffe900568c64ce1d602ebc59ab4`.
 - `git branch --list refine-westminster-and-us-poll-error-models` → empty until the build starts.
 
-## Pending decision (Phil)
+## Next step
 
-**Piece 1, second half: the form of 2a's landslide term.** Phil chose route (a) on 2026-11-07: a pre-registered landslide/efficiency term (see `decisions.md` Settled). Asked next which form: (1) a fit-free decomposition diagnostic first, then choose (recommended); (2) a directional term that shifts expected seats, which changes the central projection; (3) a lead-dependent spread term that leaves the centre unchanged. Phil answered "something else" with no detail. Ask what he has in mind (a combination? a different driver, such as the incumbent's vote drop? a projection change, such as MRP or seat type?).
+Piece 1 is done (2026-11-07). Phil chose route (a), a pre-registered landslide/efficiency term, and "diagnose, then choose" for its form. **The first unticked checkpoint is 2a-L1: decompose the landslide miss (offline, fit-free)**, then pause to present it and a recommended term form. See `plan.md` piece 2. Run it with `/builder refine-westminster-and-us-poll-error-models`, which cuts the branch from `poll-errors-simulation`.
 
-Why it matters: the central projection is uniform regional swing, with λ pushing towards proportional (`data/model_support/monte_carlo.py:61`, `:1038`). Even at λ=1 it gives Labour 354 against 411 in 2024, so the miss is mostly projection bias, not spread.
+2d and 2e (pieces 8–9) and the national part of 2c (piece 7) don't depend on 2a and can go in any order alongside it.
 
-Once the form is settled: write the 2a pieces into `plan.md` (replacing the single 2a entry), tick Piece 1, then the remaining Open items (US piece order; 4d's data source).
+## Still open (not blocking 2a-L1)
+
+- The order of the US pieces (4b–4d) relative to Westminster. Recommendation: Westminster first, US before the 2028 cycle.
+- 4d's data source for state correlations: historical presidential state swings, or census regions.
 
 ## Don't
 
 - Lower the 17/20 gate or add older outcomes to its denominator.
-- Integrate any failed candidate into the engine, or start 2b, 2c's λ part or 2f before 2a passes.
+- Integrate any failed candidate into the engine, or start 2b, 2c's λ part or 2f before 2a-L3 passes.
+- Fit anything for the landslide term before Phil has approved its form and contract (2a-L2).
 - Write to the live DB, rerun, backfill or publish without a fresh go-ahead.

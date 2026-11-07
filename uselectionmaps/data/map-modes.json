@@ -68,7 +68,8 @@
       "type": "us_senate",
       "mapId": 23,
       "parliament": "us_senate",
-      "sourceNote": "Results: The New York Times / AP. Provisional until certified."
+      "sourceNote": "Results: The New York Times / AP. Provisional until certified.",
+      "comparisonElectionId": "2020-us-senate"
     },
     {
       "id": "current-senate",
@@ -133,7 +134,8 @@
       "type": "us_senate",
       "mapId": 23,
       "parliament": "us_senate",
-      "sourceNote": "Results: The New York Times / AP. California's partial-term special election is not included."
+      "sourceNote": "Results: The New York Times / AP. California's partial-term special election is not included.",
+      "comparisonElectionId": "2018-us-senate"
     },
     {
       "id": "2022-us-senate",

@@ -28,3 +28,4 @@ Precondition until merge: no poll imports or model runs from the main checkout's
 - 2026-11-07: **Piece 6f queued** (poll tracker Chances blank space), after 6e. Pieces are now 15: 6d 12/15, 6e 13/15, 6f 14/15, 7 15/15.
 - 2026-11-07: 6d committed as `950b22a2`; PR #74 updated. 6e choices made (`plan.md` 6e Decisions) and 6e started on Phil's "Start 6e". After 6e: the 6f briefing, then `/publish`.
 - 2026-11-07: 6e approved by Phil ("Approve, commit and push"), without the orphan-JSDoc removal; the builder is committing. Next: the 6f look-ahead, then the 6f briefing.
+- 2026-11-07: 6e committed as `b788ae28`; PR #74 updated. The 6f briefing has been given. Pending Phil: the Chances start (R 2024-08-07, or 07-05), the vote-only gutter (R same rule), and the start go-ahead. The builder's causes are confirmed: the fixed 70px margin, the grid drawn into the margin (`polltracker-view.js:396`), and the 07-05 domain.

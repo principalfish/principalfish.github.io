@@ -11,7 +11,8 @@ Split from issue 0001 (`poll-errors-simulation`) on 2026-11-07. 0001 ships the M
 - `threads/reviews/poll-errors-simulation-20261026-134d1fc4-uncertainty-methodology/review.md`: the evidence for each finding (W-1…W-8, US-1, US-2).
 - `resume.md` and `plan.md` (2026-10-30 Notes): the 2a-H1 → H3 decisions and results.
 
-**Branch:** `refine-westminster-and-us-poll-error-models`, cut from `poll-errors-simulation` at `44dd8336` or later. After 0001 merges into master, merge master into this branch.
+**Branch:** `refine-westminster-and-us-poll-error-models`, cut locally at `44dd8336` on 2026-11-07 (not yet pushed). That commit holds the whole offline conversion experiment (2a, H1–H3), which 0001 removes from its own branch (0001 Piece 1b) so that it lives only here. It also still holds the US code that 0001 removed in `5a96e52c`.
+- **Merging 0001 or master in later:** the merge brings in 0001's removal commits, which would delete the experiment (and, for `5a96e52c`, the US code) here. Straight after that merge, revert 0001's Piece 1b removal commit; its SHA is in 0001's `plan.md` Checkpoints. Whether to revert `5a96e52c` too depends on whether 4b–4d stay in this issue or move to 0004. Then rerun the full checks.
 
 **Where 2a stands.** The test: feed the engine the actual regional results, so only seat noise and λ are left. Over the four transitions 2015, 2017, 2019 and 2024, × 5 parties, do the 90% seat-total intervals cover the actual seats in at least 17 of 20 cells? Also: the stability guard (128 vs 256 training draws), leader/runner standardised RMS within the paired predictive 5–95% reference, national mean-vote drift ≤0.15 pt, and lambda attribution.
 
@@ -140,3 +141,4 @@ Run from `data/` unless noted.
 
 - 2026-11-07: Created by splitting 0001. Thread 4's Phase 2 and 4b–4d moved here; 0001 keeps 3a, 4a, the gated US/Westminster live work, and style.
 - 2026-11-07: Piece 1 done. Phil chose route (a), a pre-registered landslide/efficiency term, over 1983–92 history first or deferring 2a. For its form he chose "diagnose, then choose" over committing now to directional, lead-dependent spread, or both. 2a is now 2a-L1…L4 (pieces 2–5); later pieces renumbered 6–14.
+- 2026-11-07 (from 0001's planner chat, with Phil's OK while 0003 is paused): branch cut locally at `44dd8336`, so it keeps the conversion experiment that 0001 Piece 1b removes. See the Branch note in Context for the revert needed after merging 0001 or master in.

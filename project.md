@@ -8,6 +8,8 @@ Election maps: a GitHub Pages static site for principalfish.co.uk, plus the Pyth
 
 **Checks:** `cd data && ./run_tests.sh` (strict mypy gates the run, then pytest; forwards args, e.g. `-k <kw>` or a test path) · `npm test` (Vitest) · `npm run minify:electionmaps` after front-end changes · `git diff --check`
 
+**Worktree setup:** `scripts/setup-worktree.sh` (creates the `data/election_data` venv from `data/requirements.txt`, runs `npm ci`, copies `.env` from the main checkout if there is one; safe to re-run). The database is outside the repo (`DATABASE_PATH`, default `/home/philiph/dbs/elections.db`) and shared by every worktree: a builder must not write to it unless the plan says so.
+
 **Commit style:** conventional commits, `feat:` / `fix:` / `test:` / `docs:` / `chore:` / `data:` + an imperative summary, e.g. `feat: add presidential map uncertainty and electoral vote tracker`.
 
 ## Instructions

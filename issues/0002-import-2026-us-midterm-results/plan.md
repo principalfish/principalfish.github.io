@@ -265,6 +265,16 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
     - Tests: the comparison rule (2026→2020, 2024→2018, none where the year isn't there, specials not matched across classes); the Senate totals ± over matching states only (FL/OH 2026 and AZ 2020 excluded); a special's popup comparing with its class's previous election; House comparisons and totals unchanged.
     - Acceptance: on the served page the 2026 Senate shows seat ±, vote % ± and per-state vote % ± against 2020 for the Class 2 states, and FL/OH popups against 2022; 2024 against 2018; House unchanged; checks green.
 
+14. **Alaska 2026 Senate: one-seat candidate override**
+    - Files: the export (`data/scripts/export/payload.py` / `export_elections.py`), a small committed override file (its location the builder's choice, next to the export's other data), README/map-modes.md, tests
+    - What (user decision at the browser check, 2026-11-07): the 2026 Alaska Senate seat merges two Republicans (Sullivan 102,325 + Heikes 4,846) into one row named Sullivan, and is shaded R. For this seat only, the export applies a committed override:
+      - candidate rows as NYT shows them: Peltola (D) 102,962, Sullivan (R) 102,325, Heikes (R) 4,846, Daniel Sullivan (Other) 3,600;
+      - the uncalled seat's `w` set to the individual leader (Peltola, D).
+      Party totals in chamber tallies and the ± stay summed by party. The override is keyed by election and seat, survives re-exports, and is removed once the ranked-choice final round is imported. Nothing else changes, and the general same-party merge stays.
+    - Depends on: 13
+    - Tests: the override applies to Alaska 2026 only (rows and `w`); other seats and elections are untouched; party totals still sum correctly with two same-party rows; the popup lists four rows; the seat is shaded D.
+    - Acceptance: on the served page Alaska 2026 matches NYT's rows and is shaded as Peltola-leading; checks green; one re-export commit carries both piece 13's and piece 14's data.
+
 ## Checkpoints
 - [x] 1. Seat status/source schema + migration (ec682969)
 - [x] 2. NYT fetch + cache (2a8f90e5)
@@ -279,6 +289,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [ ] 11. Docs + live-data runbook (live steps on go-ahead)
 - [x] 12. US election list order; 2026 House/Senate forecasts switched off (91f4528e, re-export f54c40bd)
 - [ ] 13. Senate comparisons: same class, six years earlier
+- [ ] 14. Alaska 2026 Senate candidate override
 
 ## Verification
 After each piece:

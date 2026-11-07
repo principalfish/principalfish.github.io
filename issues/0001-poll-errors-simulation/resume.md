@@ -3,7 +3,7 @@
 Updated 2026-11-07 (builder). Issue state: `building`.
 
 State checks:
-- `git rev-parse poll-errors-simulation origin/poll-errors-simulation` → both `8d7c9d42…` (Piece 6f).
+- `git rev-parse poll-errors-simulation origin/poll-errors-simulation` → both `789e36ae…` (Piece 6g data).
 - Builder worktree clean.
 
 The builder's pieces are all done and pushed:
@@ -14,6 +14,7 @@ The builder's pieces are all done and pushed:
 - 6d `950b22a2` (nowcast note below the latest poll)
 - 6e `b788ae28` (vote-totals Seats from the simulated median)
 - 6f `8d7c9d42` (poll tracker: no blank left gutter, Chances from 2024-08-07)
+- 6g code `be4222f5`, data `789e36ae` (seats as the simulated mean; 2026-10-30 rerun)
 
 Nothing is pending. Next: Piece 7, `/publish poll-errors-simulation` from the planner chat (PR #74). See `plan.md` for the full record.
 

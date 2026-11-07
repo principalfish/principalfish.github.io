@@ -211,7 +211,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6d · Header reading note below the latest poll, smaller, with the nowcast sentence (`950b22a2`).
 - [x] 6e · Vote-totals table: Seats column from the simulated median; toggle adds only ranges (`b788ae28`).
 - [x] 6f · Poll tracker Chances view: no blank space on the left (`8d7c9d42`).
-- [ ] 6g · Seats as the simulated mean in the table and headline.
+- [x] 6g · Seats as the simulated mean in the table and headline (`be4222f5`, `789e36ae`).
 - [ ] 7 · PR text drafted.
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
@@ -375,3 +375,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
   - `--current-simulation --output-root <copy of electionmaps/data>` writes only `prediction-simulation.json` and `prediction-uncertainty.json`. These are byte-identical to the full export's output, and nothing else differs.
   - The staged page renders "Labour 317 seats (238–389) · majority 44%" with the map-colour note, 0 errors.
 - 2026-11-07, 6g step 4 (Phil: "Go ahead with export"): `export_elections.py --current-simulation` (exit 0) wrote only `prediction-simulation.json` and `prediction-uncertainty.json`, byte-identical to the scratch output. The worktree has exactly the 4 data files modified. The jsdom harness on the real repo data: electionmaps "Labour 317 seats (238–389) · majority 44%", uselectionmaps unchanged, 0 errors. Next: data-commit review.
+- 2026-11-07: Piece 6g data committed as `789e36ae` and pushed with Phil's approval ("Approve, commit and push"). Every builder piece is done; Piece 7 is `/publish` in the planner chat.

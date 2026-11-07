@@ -245,7 +245,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [x] 5. Console results tool (147ad9d4)
 - [x] 6. House maps 24 (2026) and 25 (2012 cycle) (bfe5dc77)
 - [x] 7. Export: status, sourceNote, specials, naming (f90f26d3)
-- [ ] 8. Front end: uncalled, source line, specials
+- [x] 8. Front end: uncalled, source line, specials (9ec98204)
 - [ ] 9. Predict rollover + per-seat Senate baselines
 - [ ] 10. Derived Current Senate
 - [ ] 11. Docs + live-data runbook (live steps on go-ahead)
@@ -403,3 +403,4 @@ No test touches the live DB (conftest guard).
 - 2026-11-07: issue handed over to the new-style planner chat `planner: import-2026-us-midterm-results` (main checkout), which starts the builder. The old worktree `planner-us-midterm-import-eee87c` was switched back to its own branch, freeing `import-2026-us-midterm-results`.
 - 2026-11-07 (planner chat): record ingested from the old chat's outbox (plan.md merged by hand: its piece-1 Files line and two piece-1 notes had never reached the record). Draft PR #80 opened. Overlap check against issue 0001 (`poll-errors-simulation`, PR #74): the committed branches already conflict in 6 files (`README.md`, `data/models.py`, `data/scripts/export/payload.py`, `data/scripts/export_elections.py`, `data/tests/test_export_manifest.py`, `data/tests/test_export_payload.py`; `git merge-tree`). Piece 6 shares nothing with 0001. Piece 8 shares `electionmapslogic/state.js`, `dom.js`, `shell.html`, `maps.css`, the tests folder and both rebuilt bundles; piece 9 shares `test_export_manifest.py`; piece 11 shares `README.md`/`AGENTS.md`. 0001 has only its live backfill/export left and ships first, so merging master into this branch after #74 lands (before piece 8) is the suggested order — the user decides.
 - 2026-11-07 (planner chat): merge order decided by the user — piece 8 goes ahead now; merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on a US House and a Westminster page.
+- 2026-11-07: piece 8 committed (9ec98204) and pushed. Next is piece 9; it begins by raising the uncalled-baseline options.

@@ -1,0 +1,318 @@
+.env_example: 332ca4bc 
+AGENTS.md: e4aad160 
+README.md: 88bfc2a0 ab3fc62e 92743751 c067f150 282dd916 03bbf46d c7c994af aafc7be2 0dcd8bb3 e4aad160 
+data/config.py: 332ca4bc 
+data/console/__init__.py: 6ff412a8 8588845f 769602c4 
+data/console/blueprints/poll_import.py: bb499720 
+data/console/blueprints/polls.py: e2a8e6fa 8c85b9da bb499720 
+data/console/blueprints/uncertainty.py: 88bfc2a0 ab3fc62e c067f150 e4aad160 b10516b9 46882f96 769602c4 
+data/console/blueprints/uncertainty_explorer.py: b10516b9 8588845f 
+data/console/blueprints/uncertainty_runs.py: 8588845f 
+data/console/blueprints/us.py: f1e7d0cb 282dd916 c7c994af aafc7be2 d71845aa f70496e6 fecbbd0c e770a063 15611eed 
+data/console/blueprints/us_uncertainty_explorer.py: 134d1fc4 d71845aa f70496e6 6ff412a8 
+data/console/services/trends.py: 795d46b9 dcd2b883 a48ecdf6 
+data/console/services/uncertainty_explorer.py: 8588845f 
+data/console/services/uncertainty_export.py: dc5426f5 e4aad160 
+data/console/services/uncertainty_runs.py: 8588845f 
+data/console/services/us_models.py: d71845aa f70496e6 fecbbd0c 
+data/console/services/us_uncertainty_explorer.py: f1e7d0cb 134d1fc4 d71845aa f70496e6 6ff412a8 
+data/console/services/wikipedia_queue.py: bb499720 
+data/console/static/style.css: 8588845f 769602c4 8c85b9da 
+data/console/templates/_poll_rows_table.html: bb499720 
+data/console/templates/_uncertainty_comparison.html: b10516b9 8588845f 
+data/console/templates/base.html: 8c85b9da 
+data/console/templates/home.html: 795d46b9 fecbbd0c 15611eed 769602c4 
+data/console/templates/import_preview.html: bb499720 
+data/console/templates/model_output_detail.html: 8588845f 
+data/console/templates/poll_coverage.html: bb499720 
+data/console/templates/poll_detail.html: e2a8e6fa 8c85b9da bb499720 
+data/console/templates/poll_list.html: e2a8e6fa 8c85b9da bb499720 
+data/console/templates/uncertainty_budget.html: b10516b9 8588845f 
+data/console/templates/uncertainty_calibration.html: b10516b9 769602c4 
+data/console/templates/uncertainty_conversion_validation.html: 88bfc2a0 ab3fc62e 
+data/console/templates/uncertainty_history.html: b10516b9 8588845f 
+data/console/templates/uncertainty_hub.html: c067f150 e4aad160 8588845f 46882f96 769602c4 
+data/console/templates/uncertainty_results.html: b10516b9 8588845f 
+data/console/templates/uncertainty_run_base.html: 8588845f 
+data/console/templates/uncertainty_seat.html: b10516b9 8588845f 
+data/console/templates/uncertainty_simulation.html: b10516b9 8588845f 
+data/console/templates/uncertainty_simulation_seat.html: b10516b9 8588845f 
+data/console/templates/uncertainty_simulations.html: 8588845f 
+data/console/templates/uncertainty_validation.html: ab3fc62e 92743751 c067f150 
+data/console/templates/us_poll_queue.html: e2a8e6fa 
+data/console/templates/us_uncertainty_budget.html: e770a063 15611eed 
+data/console/templates/us_uncertainty_calibration.html: e770a063 
+data/console/templates/us_uncertainty_comparison.html: f1e7d0cb 282dd916 aafc7be2 
+data/console/templates/us_uncertainty_explorer.html: 134d1fc4 087afcfc d71845aa f70496e6 6ff412a8 
+data/console/templates/us_uncertainty_hub.html: c7c994af f70496e6 6ff412a8 fecbbd0c 
+data/console/templates/us_uncertainty_validation.html: c7c994af 
+data/console/templates/wikipedia_queue.html: bb499720 
+data/db.py: e2a8e6fa 
+data/model_support/calibration.py: 769602c4 
+data/model_support/io.py: 769602c4 
+data/model_support/monte_carlo.py: f417a14e f1e7d0cb 8588845f d2a80a7e 769602c4 9007e57a 
+data/model_support/persistence.py: fecbbd0c 0dcd8bb3 e4aad160 46882f96 
+data/model_support/poll_bases.py: 8c85b9da bb499720 
+data/model_support/public_uncertainty.py: d71845aa f70496e6 a48ecdf6 fecbbd0c 423a8419 e4aad160 
+data/model_support/senate_cycles.py: 087afcfc f70496e6 0dcd8bb3 
+data/model_support/simulation_replay.py: 8588845f 
+data/model_support/trends.py: f417a14e 087afcfc 795d46b9 dcd2b883 a48ecdf6 fecbbd0c e2a47fbe 423a8419 e4aad160 
+data/model_support/uncertainty.py: 9007e57a 8c85b9da 
+data/model_support/us_calibration.py: e770a063 
+data/model_support/us_calibration_comparison.py: f1e7d0cb 282dd916 aafc7be2 
+data/model_support/us_comparison_inputs.py: 282dd916 aafc7be2 
+data/model_support/us_comparison_president.py: aafc7be2 
+data/model_support/us_comparison_senate.py: 282dd916 aafc7be2 
+data/model_support/us_house_anchors.py: 087afcfc 
+data/model_support/us_house_baseline.py: 9d858a83 
+data/model_support/us_outcomes.py: 6c4de57d 
+data/model_support/us_poll_evidence.py: e2a8e6fa 
+data/model_support/us_president.py: d71845aa 
+data/model_support/us_release.py: 087afcfc d71845aa f70496e6 a48ecdf6 fecbbd0c 
+data/model_support/us_replay.py: f1e7d0cb d71845aa 6ff412a8 fecbbd0c 
+data/model_support/us_run.py: f1e7d0cb d71845aa f70496e6 a48ecdf6 fecbbd0c 
+data/model_support/us_senate.py: f70496e6 
+data/model_support/us_senate_anchors.py: f1e7d0cb 087afcfc 
+data/model_support/us_simulation.py: f1e7d0cb d71845aa a48ecdf6 fecbbd0c 15611eed 
+data/model_support/us_uncertainty.py: 6c4de57d 
+data/model_support/us_validation.py: c7c994af 
+data/model_support/us_validation_contracts.py: c7c994af 
+data/model_support/us_validation_io.py: c7c994af 
+data/model_support/westminster_conversion_checkpoint.py: ab3fc62e 
+data/model_support/westminster_conversion_design.py: 88bfc2a0 ab3fc62e 
+data/model_support/westminster_conversion_report.py: 88bfc2a0 ab3fc62e 
+data/model_support/westminster_conversion_validation.py: 88bfc2a0 ab3fc62e 
+data/model_support/westminster_historical_transitions.py: eaa73607 
+data/model_support/westminster_uncertainty.py: 332ca4bc 
+data/model_support/westminster_validation.py: 88bfc2a0 c067f150 
+data/model_support/westminster_validation_inputs.py: eaa73607 92743751 
+data/model_support/westminster_validation_replay.py: 92743751 c067f150 
+data/models.py: e2a8e6fa 46882f96 bb499720 4eb2646b 
+data/models/us/_common.py: f1e7d0cb 087afcfc 76be5ea8 d71845aa f70496e6 a48ecdf6 6ff412a8 fecbbd0c 0dcd8bb3 15611eed c0d62535 e2a8e6fa 
+data/models/us/baseline_audit/house-2024.json: 9d858a83 
+data/models/us/calibration/house-candidate.json: e770a063 
+data/models/us/calibration/house-inputs.json: e770a063 
+data/models/us/calibration/house-report.json: e770a063 
+data/models/us/calibration/house-report.md: e770a063 
+data/models/us/calibration/president-candidate.json: d71845aa 
+data/models/us/calibration/president-comparison-inputs.json: aafc7be2 
+data/models/us/calibration/president-comparison-report.json: aafc7be2 
+data/models/us/calibration/president-comparison-report.md: aafc7be2 
+data/models/us/calibration/senate-candidate.json: f70496e6 
+data/models/us/calibration/senate-comparison-house-anchor-v2-review.md: 282dd916 
+data/models/us/calibration/senate-comparison-inputs.json: aafc7be2 
+data/models/us/calibration/senate-comparison-report-house-anchor-v2.json: f1e7d0cb 282dd916 
+data/models/us/calibration/senate-comparison-report-house-anchor-v2.md: f1e7d0cb 282dd916 
+data/models/us/calibration/senate-comparison-report.json: aafc7be2 
+data/models/us/calibration/senate-comparison-report.md: aafc7be2 
+data/models/us/house-2024-baseline-audit.md: 9d858a83 
+data/models/us/house-release.json: fecbbd0c 
+data/models/us/house_anchors/accepted-v1.json: 087afcfc 
+data/models/us/house_anchors/candidates-v1.json: 087afcfc 
+data/models/us/house_anchors/source-audit.md: 087afcfc 
+data/models/us/phantom-party-fix.md: c0d62535 
+data/models/us/poll-evidence.md: e2a8e6fa 
+data/models/us/president-release.json: d71845aa 
+data/models/us/run_us_presidential_model.py: d71845aa 
+data/models/us/run_us_senate_model.py: f70496e6 0dcd8bb3 
+data/models/us/senate-cycles.md: 0dcd8bb3 
+data/models/us/senate-release.json: f70496e6 
+data/models/us/senate_cycles/cycles-v1.json: 0dcd8bb3 
+data/models/us/senate_cycles/roster-2026-v1.json: 0dcd8bb3 
+data/models/us/simulation-kernel.md: d71845aa 15611eed 
+data/models/us/uncertainty-calibration-sources.md: e770a063 6c4de57d 
+data/models/us/uncertainty-contracts.md: 795d46b9 d71845aa dcd2b883 f70496e6 a48ecdf6 fecbbd0c 6c4de57d 
+data/models/us/uncertainty-operations.md: 03bbf46d 
+data/models/us/uncertainty-readiness-2026-10-22.json: 6c4de57d 
+data/models/us/uncertainty-readiness.md: 6c4de57d 
+data/models/us/validation-2026.md: c7c994af 
+data/models/westminster/conversion-prototype-method.md: 88bfc2a0 ab3fc62e 
+data/models/westminster/historical-transitions-v1.json: eaa73607 
+data/models/westminster/run_uns_model.py: e4aad160 309bad61 332ca4bc 46882f96 
+data/models/westminster/uk_final_poll_errors.json: 769602c4 
+data/models/westminster/uncertainty_calibration_report.json: 769602c4 
+data/models/westminster/uncertainty_config.json: 769602c4 
+data/models/westminster/uncertainty_conversion_historical_report.json: 44dd8336 
+data/models/westminster/uncertainty_conversion_prototype_report.json: ab3fc62e 
+data/models/westminster/uncertainty_validation_report.json: c067f150 
+data/models/westminster/validation-inputs-2026-10-22-v1.json: 92743751 
+data/polls/importers/bases.py: bb499720 
+data/polls/importers/sanity.py: bb499720 
+data/polls/importers/types.py: bb499720 
+data/polls/importers/us/us_polls_common.py: 4eb2646b 
+data/polls/importers/us/us_wikipedia_polls.py: e2a8e6fa 
+data/polls/importers/westminster/bmg_research_import.py: bb499720 
+data/polls/importers/westminster/deltapoll_import.py: bb499720 
+data/polls/importers/westminster/find_out_now_import.py: bb499720 
+data/polls/importers/westminster/focaldata_import.py: bb499720 
+data/polls/importers/westminster/ipsos_import.py: bb499720 4eb2646b 
+data/polls/importers/westminster/lord_ashcroft_import.py: bb499720 4eb2646b 
+data/polls/importers/westminster/more_in_common_import.py: bb499720 
+data/polls/importers/westminster/opinium_import.py: bb499720 
+data/polls/importers/westminster/survation_import.py: bb499720 
+data/polls/importers/westminster/techne_import.py: bb499720 4eb2646b 
+data/polls/importers/westminster/wikipedia_index.py: 4eb2646b 
+data/polls/importers/westminster/yougov_import.py: bb499720 
+data/polls/importers/wikipedia_common.py: 4eb2646b 
+data/requirements.txt: 8c85b9da 4eb2646b 
+data/scripts/audit_us_house_anchors.py: 087afcfc 
+data/scripts/audit_us_house_baseline.py: 9d858a83 
+data/scripts/backfill_poll_bases.py: d2a80a7e bb499720 
+data/scripts/backfill_us_poll_evidence.py: e2a8e6fa 
+data/scripts/build_final_poll_errors.py: 769602c4 
+data/scripts/build_westminster_historical_fixture.py: eaa73607 
+data/scripts/calibrate_uncertainty.py: c067f150 769602c4 
+data/scripts/calibrate_us_uncertainty.py: 282dd916 aafc7be2 e770a063 
+data/scripts/export/manifest.py: 0dcd8bb3 
+data/scripts/export/payload.py: e4aad160 
+data/scripts/export/senate.py: 76be5ea8 0dcd8bb3 
+data/scripts/export/serialize.py: e4aad160 
+data/scripts/export/uncertainty.py: a48ecdf6 fecbbd0c dc5426f5 e4aad160 
+data/scripts/export/us_uncertainty.py: d71845aa f70496e6 a48ecdf6 
+data/scripts/export_elections.py: d71845aa f70496e6 a48ecdf6 0dcd8bb3 dc5426f5 e4aad160 
+data/scripts/migrate_add_model_uncertainty.py: 46882f96 
+data/scripts/migrate_add_poll_bases.py: bb499720 
+data/scripts/migrate_add_us_poll_evidence.py: e2a8e6fa 
+data/scripts/poll_sources.py: d2a80a7e bb499720 
+data/scripts/rebuild_model_trends.py: a48ecdf6 
+data/scripts/repair_poll_records.py: 76be5ea8 4eb2646b 
+data/scripts/repair_regional_poll_rows.py: bb499720 
+data/scripts/validate_us_uncertainty.py: c7c994af 
+data/scripts/validate_westminster_conversion.py: 88bfc2a0 ab3fc62e 
+data/scripts/validate_westminster_uncertainty.py: 92743751 c067f150 
+data/tests/conftest.py: 332ca4bc 
+data/tests/export_golden.py: e4aad160 
+data/tests/fixtures/export_golden/no_uncertainty.json: e4aad160 
+data/tests/fixtures/lord_ashcroft/tables-2025-06-30.json: bb499720 
+data/tests/fixtures/lord_ashcroft/tables-2026-09-28.json: bb499720 
+data/tests/fixtures/us_uncertainty/house-public.json: 6c4de57d 
+data/tests/fixtures/us_uncertainty/house-trend.json: 6c4de57d 
+data/tests/fixtures/us_uncertainty/president-public.json: 6c4de57d 
+data/tests/fixtures/us_uncertainty/president-trend.json: 6c4de57d 
+data/tests/fixtures/us_uncertainty/senate-legacy-trend.json: 76be5ea8 
+data/tests/fixtures/us_uncertainty/senate-public.json: 6c4de57d 
+data/tests/fixtures/us_uncertainty/senate-trend.json: 6c4de57d 
+data/tests/fixtures/yougov/headline-20250804.txt: bb499720 
+data/tests/test_backfill_poll_bases.py: d2a80a7e bb499720 
+data/tests/test_bmg_research_import.py: bb499720 
+data/tests/test_build_final_poll_errors.py: 769602c4 
+data/tests/test_calibrate_uncertainty.py: 769602c4 
+data/tests/test_calibration.py: d2a80a7e 769602c4 
+data/tests/test_console_poll_import.py: bb499720 
+data/tests/test_console_polls.py: e2a8e6fa 8c85b9da bb499720 
+data/tests/test_console_uncertainty.py: e4aad160 b10516b9 46882f96 769602c4 
+data/tests/test_console_uncertainty_runs.py: f417a14e 73fadb68 e4aad160 8588845f 
+data/tests/test_console_us.py: 795d46b9 
+data/tests/test_deltapoll_import.py: bb499720 
+data/tests/test_export_elections.py: dc5426f5 e4aad160 
+data/tests/test_export_golden.py: e4aad160 
+data/tests/test_export_manifest.py: e4aad160 
+data/tests/test_export_ordering.py: e4aad160 
+data/tests/test_export_payload.py: e4aad160 
+data/tests/test_find_out_now_import.py: bb499720 
+data/tests/test_focaldata_import.py: bb499720 
+data/tests/test_holyrood_import.py: 4eb2646b 
+data/tests/test_importer_sanity.py: bb499720 
+data/tests/test_ipsos_import.py: bb499720 4eb2646b 
+data/tests/test_lord_ashcroft_import.py: bb499720 4eb2646b 
+data/tests/test_migrate_add_model_uncertainty.py: 46882f96 
+data/tests/test_migrate_add_poll_bases.py: bb499720 
+data/tests/test_migrate_add_us_poll_scope.py: e2a8e6fa 
+data/tests/test_model_consumers.py: 795d46b9 dcd2b883 a48ecdf6 
+data/tests/test_model_history.py: a48ecdf6 
+data/tests/test_model_persistence.py: 087afcfc 
+data/tests/test_model_trends.py: f417a14e 795d46b9 dcd2b883 a48ecdf6 e2a47fbe 423a8419 e4aad160 
+data/tests/test_model_uncertainty_persistence.py: e4aad160 d2a80a7e 46882f96 
+data/tests/test_monte_carlo.py: f417a14e 8588845f d2a80a7e 9007e57a 
+data/tests/test_more_in_common_import.py: bb499720 
+data/tests/test_opinium_import.py: bb499720 
+data/tests/test_poll_bases.py: 8c85b9da bb499720 
+data/tests/test_polls.py: 4eb2646b 
+data/tests/test_public_uncertainty.py: 423a8419 e4aad160 
+data/tests/test_repair_poll_records.py: 76be5ea8 4eb2646b 
+data/tests/test_repair_regional_poll_rows.py: bb499720 
+data/tests/test_senate_cycles.py: 73fadb68 76be5ea8 0dcd8bb3 
+data/tests/test_survation_import.py: bb499720 
+data/tests/test_techne_import.py: bb499720 4eb2646b 
+data/tests/test_uncertainty.py: 9007e57a 8c85b9da 
+data/tests/test_uncertainty_export_identity.py: dc5426f5 
+data/tests/test_us_calibration.py: 73fadb68 e770a063 
+data/tests/test_us_calibration_comparison.py: 73fadb68 f1e7d0cb 282dd916 aafc7be2 
+data/tests/test_us_house_anchors.py: 087afcfc 
+data/tests/test_us_house_baseline.py: 9d858a83 
+data/tests/test_us_house_persistence.py: 73fadb68 a48ecdf6 fecbbd0c 
+data/tests/test_us_house_public.py: 73fadb68 f1e7d0cb a48ecdf6 
+data/tests/test_us_model.py: 087afcfc 795d46b9 dcd2b883 0dcd8bb3 c0d62535 
+data/tests/test_us_poll_evidence.py: e2a8e6fa 
+data/tests/test_us_poll_queue.py: 4eb2646b 
+data/tests/test_us_polls_import.py: 4eb2646b 
+data/tests/test_us_president_uncertainty.py: 795d46b9 d71845aa 
+data/tests/test_us_review_export.py: 73fadb68 
+data/tests/test_us_review_guards.py: 73fadb68 
+data/tests/test_us_robustness.py: f1e7d0cb 
+data/tests/test_us_senate_anchor_comparison.py: f1e7d0cb 282dd916 
+data/tests/test_us_senate_anchors.py: 087afcfc 
+data/tests/test_us_senate_console_provenance.py: 134d1fc4 
+data/tests/test_us_senate_uncertainty.py: 087afcfc 76be5ea8 dcd2b883 f70496e6 
+data/tests/test_us_simulation.py: 15611eed 
+data/tests/test_us_uncertainty_contracts.py: 6c4de57d 
+data/tests/test_us_uncertainty_explorer.py: 73fadb68 6ff412a8 
+data/tests/test_us_validation.py: c7c994af 
+data/tests/test_us_wikipedia_polls.py: e2a8e6fa 
+data/tests/test_westminster_conversion_historical.py: 88bfc2a0 
+data/tests/test_westminster_conversion_report.py: 88bfc2a0 ab3fc62e 
+data/tests/test_westminster_conversion_validation.py: 88bfc2a0 ab3fc62e 
+data/tests/test_westminster_historical_transitions.py: eaa73607 
+data/tests/test_westminster_importers_commit.py: bb499720 
+data/tests/test_westminster_model.py: e2a47fbe 309bad61 332ca4bc 
+data/tests/test_westminster_uncertainty_integration.py: 73fadb68 e4aad160 309bad61 332ca4bc 
+data/tests/test_westminster_validation.py: c067f150 
+data/tests/test_westminster_validation_inputs.py: 92743751 
+data/tests/test_wikipedia_queue.py: bb499720 4eb2646b 
+data/tests/test_yougov_import.py: bb499720 
+data/tests/uk_fixtures.py: bb499720 
+electionmaps/data/map-modes-shell.json: e4aad160 
+electionmaps/data/map-modes.json: 40d3933f 
+electionmaps/data/map-modes.md: e4aad160 
+electionmaps/data/results/model_output_trends.json: 40d3933f 
+electionmaps/data/results/prediction-simulation.json: 40d3933f 
+electionmaps/data/results/prediction-uncertainty.json: 40d3933f 
+electionmaps/electionmaps.min.js: f417a14e 76be5ea8 795d46b9 dcd2b883 a48ecdf6 9bb8c2c8 d50922ea 423a8419 dc5426f5 
+electionmapslogic/app.js: dc5426f5 
+electionmapslogic/dom.js: 76be5ea8 dcd2b883 a48ecdf6 dc5426f5 
+electionmapslogic/features/polltracker-uncertainty.js: f417a14e 795d46b9 dcd2b883 a48ecdf6 9bb8c2c8 d50922ea 423a8419 
+electionmapslogic/features/polltracker-us.js: 795d46b9 dcd2b883 a48ecdf6 
+electionmapslogic/features/polltracker-view.js: 795d46b9 dcd2b883 a48ecdf6 9bb8c2c8 423a8419 
+electionmapslogic/features/polltracker.js: f417a14e 76be5ea8 795d46b9 dcd2b883 a48ecdf6 423a8419 
+electionmapslogic/features/predict.js: 76be5ea8 
+electionmapslogic/features/senate-chamber.js: 76be5ea8 dcd2b883 
+electionmapslogic/features/senate-forecast-controller.js: 76be5ea8 dcd2b883 
+electionmapslogic/fragments/polltracker.html: 795d46b9 9bb8c2c8 423a8419 
+electionmapslogic/maps.css: 9bb8c2c8 423a8419 dc5426f5 
+electionmapslogic/maps.min.css: 9bb8c2c8 423a8419 dc5426f5 
+electionmapslogic/model-descriptors.js: 795d46b9 dcd2b883 a48ecdf6 
+electionmapslogic/shell.html: dc5426f5 
+electionmapslogic/state.js: dcd2b883 423a8419 dc5426f5 
+electionmapslogic/tests/polltracker-uncertainty.test.js: f417a14e 9bb8c2c8 d50922ea 423a8419 
+electionmapslogic/tests/polltracker-view.test.js: f417a14e 76be5ea8 795d46b9 dcd2b883 a48ecdf6 
+electionmapslogic/tests/polltracker.test.js: f417a14e 76be5ea8 423a8419 
+electionmapslogic/tests/predict.test.js: 76be5ea8 
+electionmapslogic/tests/seat-popup-uncertainty.test.js: 73fadb68 76be5ea8 
+electionmapslogic/tests/senate-chamber.test.js: 76be5ea8 dcd2b883 
+electionmapslogic/tests/senate-forecast-controller.test.js: 76be5ea8 dcd2b883 
+electionmapslogic/tests/senate-forecast-view.test.js: dc5426f5 
+electionmapslogic/tests/uncertainty-controller.test.js: dcd2b883 dc5426f5 
+electionmapslogic/tests/uncertainty-view.test.js: 73fadb68 dc5426f5 
+electionmapslogic/tests/uncertainty.test.js: dc5426f5 
+electionmapslogic/tests/us-house-uncertainty.test.js: 73fadb68 a48ecdf6 
+electionmapslogic/tests/us-president-uncertainty.test.js: 795d46b9 
+electionmapslogic/tests/us-senate-uncertainty.test.js: 73fadb68 dcd2b883 
+electionmapslogic/uncertainty-controller.js: dcd2b883 a48ecdf6 dc5426f5 
+electionmapslogic/uncertainty-view.js: dc5426f5 
+electionmapslogic/uncertainty.js: 795d46b9 dcd2b883 a48ecdf6 dc5426f5 
+electionmapslogic/us-uncertainty.js: 795d46b9 dcd2b883 a48ecdf6 
+uselectionmaps/data/map-modes-shell.json: 795d46b9 dcd2b883 a48ecdf6 
+uselectionmaps/data/map-modes.json: 795d46b9 dcd2b883 a48ecdf6 
+uselectionmaps/index.html: a48ecdf6 
+uselectionmaps/uselectionmaps.js: dcd2b883 a48ecdf6 
+uselectionmaps/uselectionmaps.min.js: f417a14e 76be5ea8 795d46b9 dcd2b883 a48ecdf6 423a8419 dc5426f5 

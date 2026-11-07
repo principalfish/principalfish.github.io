@@ -40,54 +40,27 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 
 ## Pieces
 
-Full text for each piece is in the named thread plan under `threads/`. Below is what's specific to shipping.
+**Re-scoped 2026-11-07 (second time): UK only.** Phil: "remove uncertainty from US and ship UK". All US work, including the US poll trackers and the three ungated US deterministic fixes (Senate anchor, phantom party, Senate roster pin), moved to issue 0004 (`us-poll-errors-uncertainty`). Its branch was created at `44dd8336` and pushed. The UK ship no longer waits for 0002. The earlier ship-plan pieces for US work (4a, 5a A-1, US calibration, back-run, scoring, publication) are in 0004's `plan.md`.
 
-1. **4a: small US model fixes** (thread 4, Piece 4a). Model: frontier.
-   - Files: `data/models/us/_common.py`, `data/model_support/us_simulation.py`, the calibration script/report, tests.
-   - What:
-     - A-1: moved to Piece 5a (Phil, 2026-11-07); it needs 2020 House results by district, which 0002 is to import.
-     - US-3: seed the national G stream by date only, so all chambers share G.
-     - US-4: always load the parent statewide residual on the ME/NE districts, plus a district term.
-     - US-5: document the shrinkage (Phil, 2026-11-07): G stays on the 2.44 input error; the G-only output SD of 2.29 is recorded in the calibration report, ledger and console.
-     - US-4 district term: new `district_scale` in `UsErrorConfig`, default 0 (Phil, 2026-11-07); the historical district-vs-state swing evidence goes in the calibration sources doc and the value is set at Piece 6.
-   - Depends on: none.
-   - Acceptance: tests for each fix; parity invariants green; `validate_us_uncertainty.py` deltas presented.
-2. **3a: Westminster and US display** (thread 4, Piece 3a; Phil chose to ship it, 2026-11-07).
-   - What: W-4, the MC median seat count as the headline or alongside it (Phil picks at the brief), with the deterministic count labelled "uniform-swing projection" and flagged when it falls outside its own 90% range. S-1: integer percentages, "<1%" and ">99%" at the extremes, stored to 3 dp; same rules on the US views.
-   - Depends on: none.
-   - Acceptance: `npm test`, `npm run minify:electionmaps`, the jsdom harness on both pages; screenshots or text dumps of the headline and popups presented.
-3. **Style cleanup** (thread 4, Phase 6). One formatting-only commit; no behaviour change; the full suite passes unchanged. Model: `claude-sonnet-5-5`.
-   - Note: 0003 branches from this branch. Doing this before 0003 cuts its branch saves it a large formatting merge. If 0003 has already started, it merges this in later.
-   - Depends on: 1, 2.
-4. **Self-review of the branch.** Run `/review self poll-errors-simulation`. Nothing since the 2026-10-26 review has been reviewed: Pieces 0 and 1a–1c (`c067f150` → `92743751`), the 2a experiment and H1–H3, and Pieces 1–3 above. Fix what Phil picks.
-   - Depends on: 3.
-5. **Merge master in** (after 0002 is merged into master).
-   - What: `git merge master` on this branch. Overlapping files:
-     - regenerate the generated ones (`map-modes.json`, `map-modes.md`, `model_output_trends.json`, `prediction-simulation.json`, the minified bundles) rather than hand-merging them;
-     - expect real conflicts in `uselectionmaps/data/map-modes-shell.json`, `data/scripts/export_elections.py` and `data/models/us/_common.py`.
-   - Check: `run_us_senate_model.py` picks its races from `parliamentFeatures.us_senate.nextElectionYear`. If 0002 moves that to 2028, a 2026 Senate back-run would target the wrong class. Pin the cycle for the back-run, or confirm 0002 leaves it alone. House and President baselines are hard-coded to 2024 in their run scripts.
-   - Depends on: 4 and 0002 merged. Needs Phil's go-ahead to push the merge commit.
-   - Acceptance: full checks green; `export_elections.py --dry-run` clean.
-5a. **A-1: Senate regional own-poll branch** (thread 4, Piece 4a's A-1; split out 2026-11-07).
-   - What: `senate_fallback_swings` (`_common.py:2432`) uses the regional poll minus the 2020 Senate field pooled by census division. Replace that with the regional poll minus the matching-year House vote pooled by division, from 2020 House results by district (state → division is enough; 2020 district lines differ from map 21). Add a test.
-   - Why it waits: the DB has House results for 2022 and 2024 only, and the anchor catalogue is national-only. Phil wants 0002 to import the 2020 House results first. No US poll has a `region_id` today, so the branch is dormant.
-   - Depends on: 5 (0002 merged, with 2020 House results).
-6. **US calibration acceptance** (thread 2 Piece 3; thread 3's corrected-comparison review and calibration acceptance). Phil's go/no-go on the House, Senate and President scales. The review found them weakly identified: House G from 6 cycles; Senate/President carry no numeric scales yet. Present each scale with its evidence and the 2026-11-07 caveat that 4b–4d are deferred to 0003.
-   - Depends on: 1. It can be reviewed before 5; the back-run waits for 5.
-7. **US 2026 back-run** (thread 2 Piece 14 pilots and backfill; thread 4 Piece 4e; thread 3's live reruns). Backup → scratch pilots reviewed → authorised backfill of the 2026 House and Senate runs with uncertainty, including the anchored Senate rerun (removes the legacy +5.4 pt D shift). The President has no 2026 race.
-   - Depends on: 5, 6. Each live step needs Phil's go-ahead at the time.
-8. **US 2026 scoring** (thread 2 Piece 13). Score the frozen pre-election forecasts against 0002's imported results.
-   - Decisions when it starts:
-     - 0002 imports provisional results (NYT), while Piece 13's contract asks for certified results with strict identities. Score provisionally now and re-score once certified, or wait.
-     - No US uncertainty ran live before polling day. The back-run is a replay with pre-election inputs and pre-election code (`c7c994af`, 2026-10-25). Does that count?
-   - Can be split into its own issue if Phil prefers; 0002 had planned scoring separately.
-   - Depends on: 7 and 0002.
-9. **Westminster backfill and export** (thread 4 Phase 5; thread 1 "Full backfill published"). Backup → rerun 2024-07-05 to the latest date under the current config → backup → `rebuild_model_trends.py` → staged export to `--output-base` and sanity checks → the real export with approval → commit the data files separately. Live uncertainty rows currently stop at 2026-10-22; master's daily runs since then have none.
-   - Depends on: 5 (so it runs on the merged code), and 1–2 (so the export has 3a's keys). Do it last before the merge.
-10. **US publication decision** (thread 2's publication checkpoint). Flip the US release flags for the back-run bands and history, or merge with the US dark.
-    - Depends on: 7 (and 8, if scoring should come first).
-11. **PR text.** `/builder poll-errors-simulation finish` drafts `pr.md`. Phil opens and merges the PR.
-    - Depends on: everything above.
+1. **Remove the US work from this branch.** Model: frontier.
+   - What: one removal commit, so the branch's diff against master carries only UK work.
+     - Revert or delete the US-only files to their merge-base (`7736a80e`) state.
+     - Strip the US parts of the shared files. `40d3933f` (the last UK commit before the US thread) is the reference: the UK core is byte-identical between it and HEAD.
+     - Hand-port the UK hunks of mixed commits. `f417a14e` (the tracker look-ahead fix) sits on the US descriptor refactor. `model-descriptors.js` exports `WESTMINSTER_DESCRIPTOR`, which the UK tracker imports.
+     - Keep `4eb2646b`'s generic poll repair.
+     - Rebuild the bundles.
+     - The file map is in 0004's `us-file-commit-map.txt`.
+   - Acceptance:
+     - `git diff master...HEAD` shows no US files and no US hunks;
+     - `uselectionmaps/` is identical to the merge base;
+     - full checks are green: mypy, pytest, `npm test`, minify, export dry-run, console smoke, and the jsdom harness on both pages, with the US page behaving as master.
+2. **3a: Westminster display** (thread 4, Piece 3a). W-4: the MC median seat count as the headline or alongside it (Phil picks at the brief), with the deterministic count labelled "uniform-swing projection" and flagged when it falls outside its own 90% range. S-1: integer percentages, "<1%" and ">99%", stored to 3 dp. Westminster views only now.
+   - Acceptance: `npm test`, `npm run minify:electionmaps`, the jsdom harness on both pages; screenshots or text dumps presented.
+3. **Style cleanup** (thread 4, Phase 6). One formatting-only commit; no behaviour change. Model: `claude-sonnet-5-5`. Depends on: 1, 2.
+4. **Self-review of the branch.** `/review self poll-errors-simulation` on the UK-only diff. Fix what Phil picks. Depends on: 3.
+5. **Merge master in.** `git merge master`; regenerate the generated files rather than hand-merging them. Needs Phil's go-ahead to push. Depends on: 4. Acceptance: full checks green; `export_elections.py --dry-run` clean.
+6. **Westminster backfill and export** (thread 4 Phase 5; thread 1 "Full backfill published"). Backup → rerun 2024-07-05 to the latest date under the current config → backup → `rebuild_model_trends.py` → staged export to `--output-base` and sanity checks → the real export with approval → commit the data files separately. Live uncertainty rows stop at 2026-10-22. Each live step needs Phil's go-ahead at the time. Depends on: 5. Do it last before the merge.
+7. **PR text.** `/builder poll-errors-simulation finish`. Phil opens and merges the PR.
 
 ## Checkpoints
 
@@ -96,18 +69,14 @@ Full text for each piece is in the named thread plan under `threads/`. Below is 
 - [x] T4 · Piece 2a-H2: six-transition experiment contract revised and tested (`88bfc2a0`).
 - [x] T4 · Piece 2a-H3: six-transition experiment run and reported to Phil (failed the gate; report committed as evidence, `44dd8336`).
 - [x] T4 · Pieces 2a–2f and 4b–4d moved to issue 0003 (2026-11-07).
-- [ ] 1 · T4 Piece 4a: Small US model fixes (US-3, US-4, US-5; A-1 is 5a).
-- [ ] 2 · T4 Piece 3a: Westminster and US display changes.
+- [x] US work moved to issue 0004; branch `us-poll-errors-uncertainty` at `44dd8336` pushed (2026-11-07).
+- [ ] 1 · US work removed from this branch; checks green.
+- [ ] 2 · T4 Piece 3a: Westminster display changes.
 - [ ] 3 · T4 Phase 6: Style cleanup.
 - [ ] 4 · Branch self-review done and chosen fixes committed.
-- [ ] 5 · Master (with 0002) merged in; checks green.
-- [ ] 5a · T4 Piece 4a A-1: Senate regional own-poll branch uses a matching-year House regional reference.
-- [ ] 6 · T2 Piece 3 and T3: US calibration accepted, or release stays gated.
-- [ ] 7 · T2 Piece 14, T4 Piece 4e, T3 live reruns: US 2026 back-run done with authorisation.
-- [ ] 8 · T2 Piece 13: US 2026 scoring report (or split to its own issue).
-- [ ] 9 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation.
-- [ ] 10 · T2: US publication decided.
-- [ ] 11 · PR text drafted.
+- [ ] 5 · Master merged in; checks green.
+- [ ] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation.
+- [ ] 7 · PR text drafted.
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
 
@@ -148,3 +117,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 
 - 2026-11-07: **Ship decision.** Phase 2 (2a–2f) and 4b–4d moved to issue 0003 (#78). Westminster ships as built with no caveat; 3a ships; merge order is 0002 → master, then master → this branch, then ship. Pieces and checkpoints rewritten around shipping.
 - 2026-11-07 (builder, Piece 1 brief): Phil chose US-5 = document the shrinkage; US-4 = new `district_scale`, default 0. A-1 split out to Piece 5a: Phil wants 2020 House results by district imported in 0002 first (the DB has House 2022/2024 only). `validate_us_uncertainty.py` only captures and scores saved runs, so Piece 1's deltas come from read-only scratch simulations instead.
+- 2026-11-07: **Re-scoped to UK only** (Phil, during Piece 1's US-4a build, before any code was written). US work → issue 0004, branch `us-poll-errors-uncertainty` (`44dd8336`, pushed). Phil: move the US central fixes and US trackers too; leave 0003 as is (it still lists 4b–4d); don't wait for 0002. The 4a brief and Phil's US-4/US-5 choices are carried into 0004's plan.

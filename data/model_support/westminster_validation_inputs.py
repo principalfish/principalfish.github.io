@@ -53,8 +53,7 @@ class FrozenValidationInputs:
     fixture_sha256: str
 
 
-def content_hash(value: object) -> str:
-    """SHA-256 of *value* as sorted-key compact JSON (a fixture's sealed body)."""
+def _content_hash(value: object) -> str:
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return hashlib.sha256(encoded.encode()).hexdigest()
 
@@ -81,7 +80,7 @@ def load_validation_inputs(path: Path = INPUTS_PATH) -> FrozenValidationInputs:
         if raw["schema"] != INPUTS_SCHEMA:
             raise SimulationFileError("Unknown frozen validation input schema")
         body = {key: value for key, value in raw.items() if key != "content_sha256"}
-        if raw["content_sha256"] != content_hash(body):
+        if raw["content_sha256"] != _content_hash(body):
             raise SimulationFileError("Frozen validation input content hash differs")
         source = raw["provenance"]
         required = {

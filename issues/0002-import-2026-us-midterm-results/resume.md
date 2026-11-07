@@ -11,9 +11,9 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Pending: piece 8 built, uncommitted, in `.claude/worktrees/great-nightingale-9085bc`. Phil approved it ("Approve, commit") subject to one change first: leave uncalled seats out of the seat ± (seat ± only). The builder is making the change and will pause again for a short re-review, and only then commit. The hatch look needs a real-browser check after the piece 11 export.
+Piece 8 (with the seat ± change) approved by Phil ("Approve, commit") and relayed to the builder to commit and push. Check: `git log --oneline -1 origin/import-2026-us-midterm-results`. Once pushed, tick piece 8 in pr.md and `gh pr edit 80`. The hatch look needs a real-browser check after the piece 11 export.
 
-Next step: checkpoint 8 (in progress). See `plan.md`.
+Next step: checkpoint 9 (starts by raising the uncalled-baseline options). See `plan.md`.
 
 ## Don't
 - Run imports, migrations or exports against the live DB without Phil's explicit go-ahead at the time.

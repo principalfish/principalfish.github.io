@@ -46,6 +46,8 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 
 - Senate comparisons (after the browser check, 2026-11-07): each Senate result compares with the one six years earlier (same class) where present (2026→2020, 2024→2018). The totals ± cover matching states only, with specials excluded. Specials' popups compare with their own class's previous election (FL/OH 2026 → 2022). This replaces master's "Senate never auto-chains" rule. New piece 13. (2026-11-07)
 
+- Specials' own-class comparison data: the export embeds an optional `pv: {w, p}` (the previous same-state, same-class result) on just those seats. No extra fetch; the schema stays pf-results-v4. (2026-11-07)
+
 ## Open
 
 ## Assumed

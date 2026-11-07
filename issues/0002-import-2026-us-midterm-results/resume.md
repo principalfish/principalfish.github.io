@@ -11,9 +11,9 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Pieces 1–10 and the piece 11 docs (`613ac558`) committed and pushed; PR #80 ticked. Merge order revised by Phil: don't wait for #74. Master merged in as `b51ab61c` and pushed. `/review self` running in this chat (checks on the whole branch; coverage report requested from the builder). Then `/review self import-2026-us-midterm-results` in this chat, then the live steps (README section 12), each with Phil's go-ahead. The hatch look needs a real-browser check after the piece 11 export.
+Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Pieces 1–10 and the piece 11 docs (`613ac558`) committed and pushed; PR #80 ticked. Merge order revised by Phil: don't wait for #74. Master merged in as `b51ab61c` and pushed. `/review self` done, 7 verified findings (scratchpad raw list not kept; see reviews/ once written): 1 medium (Senate class-2 `up` year resolved from calendar 2026), 1 low (archived 2026 forecast specials never match; already deferred to the scoring issue), 3 low coverage gaps (dom.js uncalled tally, seat-list swatch, check_redistricting main), 2 low style (test-local imports, long lines). Pending: Phil is choosing which to fix. Then `/review self import-2026-us-midterm-results` in this chat, then the live steps (README section 12), each with Phil's go-ahead. The hatch look needs a real-browser check after the piece 11 export.
 
-Next step: present the review findings for Phil to pick fixes; checkpoint 11's live steps after. See `plan.md`.
+Next step: relay the chosen fixes to the builder; checkpoint 11's live steps after. See `plan.md`.
 
 ## Don't
 - Run imports, migrations or exports against the live DB without Phil's explicit go-ahead at the time.

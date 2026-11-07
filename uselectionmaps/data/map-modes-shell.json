@@ -102,6 +102,16 @@
         { "seat": "Florida", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate" },
         { "seat": "Ohio", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate" }
       ]
+    },
+    "24": {
+      "name": "us-house-2026",
+      "projection": "albersUsa",
+      "postcodeSupported": false
+    },
+    "25": {
+      "name": "us-house-2018",
+      "projection": "albersUsa",
+      "postcodeSupported": false
     }
   }
 }

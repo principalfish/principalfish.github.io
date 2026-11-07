@@ -21,7 +21,7 @@ Reviews of the branch (all six) are in `threads/reviews/`.
 
 **Start with `resume.md`** in this folder. It has the state checks, the decision chain, the next open point and the standing constraints. In short:
 
-**Thread 4, Piece 2a** (correlated vote-to-seat conversion error) is being worked through Pieces **2a-H1 → 2a-H3** below. **2a-H1 (`eaa73607`) and 2a-H2 (`88bfc2a0`) are done; 2a-H3 (the run) is in progress.**
+**Thread 4, Piece 2a** (correlated vote-to-seat conversion error) is being worked through Pieces **2a-H1 → 2a-H3** below. **2a-H1 (`eaa73607`), 2a-H2 (`88bfc2a0`) and 2a-H3 (`44dd8336`, report committed as evidence) are done. H3 failed the gate (best 15/20, candidate 14/20, `stop_before_engine`); the fail-branch decision is open (see `resume.md`).**
 - The offline joint validation completed: cluster variants cover 15/20 against the unchanged 17/20 gate, and no-cluster controls cover 13/20. The decision was `stop_before_engine`.
 - Phil chose to investigate more comparable history. On 2026-10-30 he decided:
   - **scope A:** 1997→2001 and 2005→2010; the 1980s/early 1990s are not included;
@@ -125,7 +125,7 @@ Remaining work, in order. Pieces 2a-H1 to 2a-H3 are written out in full here, be
 - [x] Threads 1–4: 40 completed checkpoints, recorded with their commits in each thread plan's `## Checkpoints` (thread 1: 12, thread 2: 16, thread 3: 8, thread 4: 4).
 - [x] T4 · Piece 2a-H1: 1997→2001 and 2005→2010 fixture built and audited (`eaa73607`).
 - [x] T4 · Piece 2a-H2: six-transition experiment contract revised and tested (`88bfc2a0`).
-- [ ] T4 · Piece 2a-H3: six-transition experiment run and reported to Phil.
+- [x] T4 · Piece 2a-H3: six-transition experiment run and reported to Phil (failed the gate; report committed as evidence, `44dd8336`).
 - [ ] T4 · Piece 2a: Correlated vote-to-seat conversion error (ticked only after H3 passes and the engine integration is built).
 - [ ] T4 · Piece 2b: Heavy seat-level tails.
 - [ ] T4 · Piece 2c: Error-scale parameter uncertainty.
@@ -183,4 +183,6 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - **Open data-quality issue (logged 2026-10-30, not in scope for H2):** the DB's 2010 NI rows have no Conservative row (UCUNF appears stored as UUP) and no UUP votes in Belfast West, Mid Ulster and Fermanagh & South Tyrone (Fermanagh likely a genuine stand-aside). This also feeds the existing 2010→2015 transition. Investigate read-only against sources before any DB correction; any write needs Phil's go-ahead.
 - 2026-10-30: 2a-H2 committed as `88bfc2a0` and pushed. Phil gave the go-ahead for the H3 batch the same day.
 - 2026-10-30: 2a-H3 batch run 15:56→16:52 UTC (~57 min), exit 0. Report `data/models/westminster/uncertainty_conversion_historical_report.json` (sha256 `0893389afce7babd00c69e98bdea9331113e0ffe900568c64ce1d602ebc59ab4`, report_hash `50f2f5ea…`, verified by `read_report`), uncommitted pending Phil. Console route 200. **Result: fail, `stop_before_engine`.** No-cluster 13/20 (unchanged); cluster-gaussian 15/20 (unchanged); cluster-student incl. the candidate 14/20 (was 15; 2015 SNP and Con now missed). RMS fails in every variant (candidate 3.32/3.22 vs reference ~0.42–1.54); drift fails in 7/8. 2024 still 1/5 (Lab 322–358 vs 411; Con 188–237 vs 121). Report-only: 1997→2001 3/5 (Lab 376–407 vs 411, Con 168–205 vs 166: same direction as 2024); 2005n→2010 4/5 for the candidate. Next: Phil's call on the fail branch (replan with new assumptions; 1983–92 a candidate).
+- 2026-10-30: Phil had the failed report committed as evidence: `44dd8336` (file sha256 `0893389a…9ab4`, matching the run), pushed to `origin/poll-errors-simulation`.
+- 2026-11-07: Resumed. H3 ticked; `resume.md` rewritten. Open: the fail-branch decision.
 

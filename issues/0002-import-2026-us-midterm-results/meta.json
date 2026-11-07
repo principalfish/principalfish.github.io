@@ -6,9 +6,9 @@
   "state": "investigating",
   "branch": "import-2026-us-midterm-results",
   "base": "master",
-  "gh_issue": null,
+  "gh_issue": 79,
   "build_model": null,
   "created": "2026-11-07 10:25",
-  "updated": "2026-11-07 10:25",
+  "updated": "2026-11-07 11:39",
   "done": null
 }

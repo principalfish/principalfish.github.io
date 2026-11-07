@@ -33,8 +33,10 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - Self-review 2: fix all three verified doc items, and keep the 2024-07-05 election-day point at the start of the poll tracker, as master has it (Phil, 2026-11-07; Piece 6c).
 - 6c: the election-day point is kept without bands and separate from the nowcast line (break at 2024-08-07); keep rule = leading unpolled runs; live step = trends rebuild only (Phil, 2026-11-07).
 - 6d: the header note goes below "Latest poll used", smaller and not bold, and leads with "Nowcast: if an election were held today."; line 2 drops its "(if an election were held today)" (Phil, 2026-11-07). Front end only.
+- 6e: the vote-totals Seats column shows the simulated median when the run has uncertainty, ± from the median; the uncertainty toggle only adds the range text to Seats and Vote %. Queued after 6d (Phil, 2026-11-07). Supersedes Piece 2's separate uniform-swing and simulated columns.
 
 ## Open
+- 6e (a) medians sum to 642, not 650, and differ from the map's colours; (b) filtered views with no stored medians; (c) whether the uniform-swing count appears anywhere.
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.
 - The go-ahead for each live step of the Westminster backfill and export (Piece 6).
 

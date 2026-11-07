@@ -22,3 +22,4 @@ Precondition until merge: no poll imports or model runs from the main checkout's
 - 2026-11-07: 6c choices made (`plan.md` 6c Decisions) and 6c started on Phil's "Start 6c". Next: the 6c code review request, then the trends-rebuild live step, then the data-commit review, then `/publish`.
 - 2026-11-07: self-review 2 closed (`reviews/02-2026-11-07.md`); HEAD `b2c33428`; PR #74 ticked through 6c. State `review`. No pending decision. Next: Piece 7, `/publish poll-errors-simulation`, after its next-stage briefing to Phil.
 - 2026-11-07: new **Piece 6d** (header note) from Phil's manual check; choices made; sent to the builder. Pieces for the header line are now 13: 6d is 12/13, 7 is 13/13. After 6d: `/publish`.
+- 2026-11-07: **Piece 6e queued** (vote-totals table rework). Don't send it to the builder until 6d is committed; then give the 6e next-stage briefing with open points (a)–(c) from `plan.md`. Pieces are now 14: 6d is 12/14, 6e 13/14, 7 14/14.

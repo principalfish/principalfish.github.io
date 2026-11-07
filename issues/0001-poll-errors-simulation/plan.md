@@ -134,6 +134,22 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
      - Keep the `aria-describedby` hook (`dom.js:645`) working. Front end only: no export change, no re-export, no live step. Rebuild the bundles (`maps.min.css` too).
    - Tests: the note follows the latest-poll line in DOM order and contains the nowcast sentence; line 2 no longer ends "(if an election were held today)", in every headline case; pages without uncertainty show no note and are unchanged.
    - Acceptance: `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, the jsdom harness on both pages, and the rendered header text shown in order.
+6e. **Vote-totals table: one Seats column from the simulated median; the uncertainty toggle only adds the ranges** (Phil, 2026-11-07; queued, starts after 6d is committed). Model: frontier. Depends on: 6d.
+   - Phil's words: "can we make uniform swing column just show the simulated median - and call that column Seats. toggling show uncertainty simply adds the (xxx-yyy) to the text in that column. +/- is based off the median. Similar for vote % - toggling uncertainty shows/hides the (xx.x%-yy.y%) text in the column."
+   - What, when the run has uncertainty:
+     - The "Uniform swing" column becomes **Seats**, showing the simulated median (e.g. 319). With "Show uncertainty" on it reads "319 (238–389)".
+     - Its ± is median − 2024 seats.
+     - **Vote %** shows the central share. With the toggle on it reads "27.45 (23.4–31.3%)", and the vote ± is unchanged.
+     - The separate "Simulated (90%)" and "90% vote range" columns go. The toggle no longer adds columns, only the range text.
+     - The † "outside its range" marker goes, since the uniform-swing count is no longer shown in the table.
+   - Without uncertainty (historical elections, US page, predict view, user scenarios): the table is unchanged.
+   - Files (expected): `electionmapslogic/dom.js` (`renderVoteTotals`, the seats header, the toggle), `electionmapslogic/uncertainty.js` / `uncertainty-view.js`, `electionmapslogic/maps.css`, the bundles, and tests in `electionmapslogic/tests/` (vote-totals and uncertainty views).
+   - Open, for the 6e briefing:
+     - (a) the party medians sum to 642, not 650 (30 Oct data), and won't match the map's seat colours, which are uniform-swing winners. Accept with a short note ("medians; may not sum to 650"), or something else?
+     - (b) the table's filtered views with no stored medians (party, majority, gains-only and upcoming filters; `uncertaintyForTotals` returns null): show the uniform-swing count there, labelled, or something else? Whole-country and single-region views have stored medians.
+     - (c) should the uniform-swing count appear anywhere at all (e.g. a hover title on the Seats cell), or be dropped from the table entirely? This supersedes Piece 2's "keep the deterministic count labelled uniform-swing projection".
+   - Tests: Seats shows the median with and without ranges; ± from the median; Vote % with and without ranges; the toggle changes only the text; unchanged tables without uncertainty and on the US page; the filtered-view behaviour as decided.
+   - Acceptance: `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, the jsdom harness on both pages, and the rendered table text shown with the toggle on and off.
 7. **PR text.** `/publish poll-errors-simulation`, run from the planner chat: it drafts the final description into `pr.md` and, once Phil approves, puts it on PR #74 (opened by Phil 2026-10-13). Merging is Phil's.
 
 ## Checkpoints
@@ -156,6 +172,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6b · Main headline line leads with the simulation (`c7a85eab`).
 - [x] 6c · Self-review 2 fixes and the election-day tracker point (`ae61f984`, `b2c33428`).
 - [ ] 6d · Header reading note below the latest poll, smaller, with the nowcast sentence.
+- [ ] 6e · Vote-totals table: Seats column from the simulated median; toggle adds only ranges.
 - [ ] 7 · PR text drafted.
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
@@ -283,3 +300,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07: Piece 6c code committed as `ae61f984` and pushed with Phil's approval ("Approve, commit and push"). Next: the trends rebuild live step, then the data commit.
 - 2026-11-07: Piece 6c data committed as `b2c33428` and pushed with Phil's approval ("Approve, commit and push"). All builder pieces are done; Piece 7 is `/publish` in the planner chat.
 - 2026-11-07 (planner): Phil's manual check of the header led to new Piece **6d**: the basis note moves below "Latest poll used", smaller and not bold, with the exported nowcast sentence no longer stripped; line 2 drops "(if an election were held today)". Phil chose "Nowcast, today" (not "tomorrow", which would need a re-export) and "Smaller, not bold".
+- 2026-11-07 (planner): Phil asked for the vote-totals table rework (Piece **6e**) and to queue it until 6d is done. Its open points (a)–(c) go to Phil at the 6e briefing.

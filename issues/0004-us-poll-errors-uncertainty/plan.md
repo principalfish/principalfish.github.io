@@ -14,7 +14,7 @@ Issue 0003 (#78) still holds the US model refinements 4b–4d (Phil, 2026-11-07:
 
 ## Pieces carried over from 0001 (not yet re-planned)
 
-1. **Bring the branch up to date.** Merge master in. Master by then contains 0001's US-removal commit, so **revert that commit on this branch straight after the merge**, then fix any conflicts with whatever master has gained (0002's imports, for example).
+1. **Bring the branch up to date.** Merge master in. Master by then contains 0001's US-removal commit, so **revert that commit (`5a96e52c`) on this branch straight after the merge**, then fix any conflicts with whatever master has gained (0002's imports, for example).
 2. **4a: small US model fixes** (thread 4 Piece 4a). Briefed on 2026-11-07 with Phil's choices:
    - US-3: seed the national G stream by date only, one normal per party id (not per column position), so the chambers share G and the columns can't misalign; the scales stay per chamber.
    - US-4: always load the parent statewide residual on the ME/NE districts, plus a new district term, `district_scale` in `UsErrorConfig`, default 0 (Phil). Evidence for the calibration sources doc: district-vs-state swing differs by about 3.8 margin points RMS across 20 district-transitions, 2008–2024, or about 2.2 without 2016.

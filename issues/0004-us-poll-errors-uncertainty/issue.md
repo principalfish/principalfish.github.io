@@ -10,7 +10,7 @@ On 2026-11-07 Phil split the US work out of issue 0001 (`poll-errors-simulation`
 
 ## Where the code is
 
-Branch `us-poll-errors-uncertainty` was created at `44dd8336`, the tip of `poll-errors-simulation` on 2026-11-07, and pushed to origin. It holds every US commit as built, on top of the UK work. `poll-errors-simulation` removes the US parts in one commit (Piece 1 of 0001) and ships. **Merging master into this branch later brings that removal commit with it,** so revert it on this branch right after the merge (see `plan.md`).
+Branch `us-poll-errors-uncertainty` was created at `44dd8336`, the tip of `poll-errors-simulation` on 2026-11-07, and pushed to origin. It holds every US commit as built, on top of the UK work. `poll-errors-simulation` removed the US parts in one commit, `5a96e52c` (Piece 1 of 0001) and ships. **Merging master into this branch later brings that removal commit with it,** so revert it on this branch right after the merge (see `plan.md`).
 
 `us-file-commit-map.txt` in this folder maps each changed file to the commits that touched it, as classified on 2026-11-07.
 

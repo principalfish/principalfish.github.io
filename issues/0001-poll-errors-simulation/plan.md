@@ -70,7 +70,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] T4 · Piece 2a-H3: six-transition experiment run and reported to Phil (failed the gate; report committed as evidence, `44dd8336`).
 - [x] T4 · Pieces 2a–2f and 4b–4d moved to issue 0003 (2026-11-07).
 - [x] US work moved to issue 0004; branch `us-poll-errors-uncertainty` at `44dd8336` pushed (2026-11-07).
-- [ ] 1 · US work removed from this branch; checks green.
+- [x] 1 · US work removed from this branch; checks green (`5a96e52c`).
 - [ ] 2 · T4 Piece 3a: Westminster display changes.
 - [ ] 3 · T4 Phase 6: Style cleanup.
 - [ ] 4 · Branch self-review done and chosen fixes committed.
@@ -118,3 +118,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07: **Ship decision.** Phase 2 (2a–2f) and 4b–4d moved to issue 0003 (#78). Westminster ships as built with no caveat; 3a ships; merge order is 0002 → master, then master → this branch, then ship. Pieces and checkpoints rewritten around shipping.
 - 2026-11-07 (builder, Piece 1 brief): Phil chose US-5 = document the shrinkage; US-4 = new `district_scale`, default 0. A-1 split out to Piece 5a: Phil wants 2020 House results by district imported in 0002 first (the DB has House 2022/2024 only). `validate_us_uncertainty.py` only captures and scores saved runs, so Piece 1's deltas come from read-only scratch simulations instead.
 - 2026-11-07: **Re-scoped to UK only** (Phil, during Piece 1's US-4a build, before any code was written). US work → issue 0004, branch `us-poll-errors-uncertainty` (`44dd8336`, pushed). Phil: move the US central fixes and US trackers too; leave 0003 as is (it still lists 4b–4d); don't wait for 0002. The 4a brief and Phil's US-4/US-5 choices are carried into 0004's plan.
+- 2026-11-07: Piece 1 committed as `5a96e52c` and pushed (162 files; branch diff vs merge base 318 → 184 files). Checks: mypy 257 files, pytest 5971, vitest 591. Analysis loop: security, style and common-mistakes clean; correctness found no lost UK hunks and no US residue; coverage gaps fixed by porting the shared poll-tracker view, controller identity and trends tests to Westminster fixtures, and pinning the `_segment_id` hash. Deviation: `uselectionmaps.min.js` differs from the merge base by the shared engine's inert UK code (acceptance reworded). Live DB read-only: 840 uncertainty rows, all Westminster v1; US `evidence_kind` all NULL.

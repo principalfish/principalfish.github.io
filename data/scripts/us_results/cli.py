@@ -65,6 +65,7 @@ from scripts.us_results.convert import (  # noqa: E402
     output_name,
 )
 from scripts.us_results.fetch import FetchError, FetchResult, fetch  # noqa: E402
+from scripts.us_results.races import Race  # noqa: E402
 from scripts.us_results.sources import (  # noqa: E402
     SOURCES,
     Chamber,
@@ -475,23 +476,52 @@ def fetch_cycle(
     cache_dir: Path,
     *,
     offline: bool,
+    echo: Callable[[str], None] = print,
 ) -> tuple[FetchResult, list[FetchResult]]:
     """Fetch (or read from the cache) a cycle's general file and available runoffs.
 
     Pending runoffs are skipped with a message.
+
+    Args:
+        year: Election cycle year.
+        chamber: ``"house"`` or ``"senate"``.
+        cache_dir: Root of the NYT cache.
+        offline: Read the latest cached files instead of downloading.
+        echo: Receives one line per file read and per pending runoff skipped;
+            the CLI prints them, the console shows them on its preview.
+
+    Returns:
+        The general file and the runoff files read.
     """
     general_source, runoff_sources = cycle_sources(year, chamber)
     general = fetch(general_source, cache_dir, offline=offline)
-    _print_fetch(general)
+    echo(_fetch_line(general))
     runoffs: list[FetchResult] = []
     for source in runoff_sources:
         if source.status is SourceStatus.PENDING:
-            print(f"skipping pending runoff {year}/{chamber}: {source.note}")
+            echo(f"skipping pending runoff {year}/{chamber}: {source.note}")
             continue
         result = fetch(source, cache_dir, offline=offline)
-        _print_fetch(result)
+        echo(_fetch_line(result))
         runoffs.append(result)
     return general, runoffs
+
+
+def parse_cycle(general: FetchResult, runoffs: Sequence[FetchResult]) -> list[Race]:
+    """Parse a cycle's fetched files and apply its runoffs.
+
+    Args:
+        general: The general election file.
+        runoffs: Runoff files whose races replace the general file's.
+
+    Returns:
+        The cycle's races, each holding its decisive round.
+    """
+    races = parse(general.source, general.data)
+    runoff_races = [
+        race for result in runoffs for race in parse(result.source, result.data)
+    ]
+    return apply_runoffs(races, runoff_races)
 
 
 def convert_cycle(
@@ -499,6 +529,7 @@ def convert_cycle(
     runoffs: Sequence[FetchResult],
     *,
     out_dir: Path | None = None,
+    races: Sequence[Race] | None = None,
 ) -> ConversionResult:
     """Parse a cycle's fetched files, apply its runoffs and convert the races.
 
@@ -507,16 +538,16 @@ def convert_cycle(
         runoffs: Runoff files to apply.
         out_dir: Folder holding the files this conversion replaces; unopposed
             seats take their real totals from them where they can.
+        races: The races :func:`parse_cycle` already returned for these files,
+            so a caller that shows them need not parse twice; parsed here when
+            omitted.
 
     Returns:
         The conversion.
     """
     source = general.source
-    races = parse(source, general.data)
-    runoff_races = [
-        race for result in runoffs for race in parse(result.source, result.data)
-    ]
-    races = apply_runoffs(races, runoff_races)
+    if races is None:
+        races = parse_cycle(general, runoffs)
     previous = previous_special = None
     if out_dir is not None:
         previous = read_election_file(
@@ -574,6 +605,62 @@ def report_conversion(
     return "\n".join(lines)
 
 
+def refuse_stale_special(
+    result: ConversionResult,
+    *,
+    year: int,
+    chamber: Chamber,
+    out_dir: Path,
+    db: Database,
+) -> None:
+    """Refuse a Senate conversion with no specials over a leftover specials file.
+
+    Writing the new main file would leave ``senate-<year>-special.json`` beside
+    a main file that does not name it, which the import then refuses; checking
+    first writes nothing.
+
+    Raises:
+        CliError: If the leftover file exists.
+    """
+    stale_special = out_dir / output_name(year, chamber, special=True)
+    if chamber == "senate" and result.special is None and stale_special.exists():
+        raise CliError(_stale_special_message(stale_special, db, year))
+
+
+def check_import(
+    db: Database,
+    data: dict[str, Any],
+    *,
+    name: str,
+    year: int,
+    chamber: Chamber,
+    what: str,
+) -> None:
+    """Run the importer's own checks for one election file, writing nothing.
+
+    The map in ``meta`` must be the election's existing map (when it exists),
+    the US parties must be seeded and every seat must be well formed.
+
+    Args:
+        db: Target database.
+        data: The election file's content.
+        name: The election it imports into.
+        year: Election cycle year.
+        chamber: ``"house"`` or ``"senate"``.
+        what: How to name the file in an error.
+
+    Raises:
+        CliError: Naming ``what`` and the first problem found.
+    """
+    default_map = map_for(year, chamber)
+    try:
+        map_id, _ = map_from_meta(data, default_map.id, default_map.name)
+        check_election_map(db, name, map_id)
+        plan_us_election(db, data, state_for_key=_state_for_key(chamber))
+    except SystemExit as err:
+        raise CliError(f"{what}: {err.code}") from err
+
+
 def write_conversion(
     result: ConversionResult,
     *,
@@ -604,6 +691,7 @@ def import_files(
     refresh: bool,
     dry_run: bool,
     report: bool = True,
+    on_imported: Callable[[Path], None] | None = None,
 ) -> str:
     """Import a cycle's converted files from ``out_dir`` (or report what would change).
 
@@ -615,6 +703,8 @@ def import_files(
         refresh: Update existing elections in place.
         dry_run: Report only; import nothing.
         report: Include the diff against the database.
+        on_imported: Called with each file's path once its election is
+            imported, so a caller whose later file fails knows which landed.
 
     Returns:
         The printable report.
@@ -667,14 +757,8 @@ def import_files(
     db.create_tables()
     # Plan every file before importing any, so a bad specials file cannot leave
     # the regular election refreshed and the special stale.
-    default_map = map_for(year, chamber)
     for path, data, name, _ in plan:
-        try:
-            map_id, _ = map_from_meta(data, default_map.id, default_map.name)
-            check_election_map(db, name, map_id)
-            plan_us_election(db, data, state_for_key=_state_for_key(chamber))
-        except SystemExit as err:
-            raise CliError(f"{path.name}: {err.code}") from err
+        check_import(db, data, name=name, year=year, chamber=chamber, what=path.name)
     for path, _, name, special in plan:
         try:
             if chamber == "house":
@@ -689,6 +773,8 @@ def import_files(
         election = db.get_election_by_name(name)
         if election is None:
             raise CliError(f"{name!r} is missing after its import")
+        if on_imported is not None:
+            on_imported(path)
         lines.append(
             f"imported {name}: {inserted} votes, election id {election.id}, "
             f"map id {election.map_id}",
@@ -813,13 +899,13 @@ def _senate_state(key: str) -> str:
     return key
 
 
-def _print_fetch(result: FetchResult) -> None:
+def _fetch_line(result: FetchResult) -> str:
     where = "cache" if result.from_cache else "NYT"
-    print(
+    return (
         f"{result.source.kind} {result.source.year}/{result.source.chamber} "
         f"from {where}: "
         f"retrieved {result.retrieved_at.isoformat()}, "
-        f"updated {result.source_updated_at or 'n/a'}",
+        f"updated {result.source_updated_at or 'n/a'}"
     )
 
 
@@ -944,9 +1030,9 @@ def _run(
         print("dry run: nothing written")
         return 0
     # Refuse rather than leave a specials file the new main file does not name.
-    stale_special = args.out_dir / output_name(year, chamber, special=True)
-    if chamber == "senate" and result.special is None and stale_special.exists():
-        raise CliError(_stale_special_message(stale_special, database, year))
+    refuse_stale_special(
+        result, year=year, chamber=chamber, out_dir=args.out_dir, db=database,
+    )
     written = write_conversion(result, year=year, chamber=chamber, out_dir=args.out_dir)
     for path in written:
         print(f"wrote {path}")

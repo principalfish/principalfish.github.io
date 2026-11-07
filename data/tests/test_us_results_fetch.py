@@ -23,10 +23,12 @@ import pytest
 import config
 from scripts.us_results import fetch as fetch_module
 from scripts.us_results.fetch import (
+    CachedSnapshot,
     DisallowedHostError,
     InvalidJsonError,
     NoCachedSnapshotError,
     SourcePendingError,
+    cached_snapshot_info,
     fetch,
     source_updated_at,
 )
@@ -736,3 +738,77 @@ def test_nyt_cache_dir_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("NYT_CACHE_DIR", raising=False)
     default = Path("/home/philiph/dbs/nyt-cache")
     assert config.NytCacheConfig().nyt_cache_dir == default
+
+
+# --- cached_snapshot_info ----------------------------------------------------
+
+
+def test_snapshot_info_describes_the_pointer_without_reading_the_snapshot(
+    tmp_path: Path,
+) -> None:
+    # The snapshot is not valid JSON: the info must not parse it.
+    _write_cache(tmp_path, snapshot_body=b"{truncated", source_updated_at="u1")
+
+    info = cached_snapshot_info(_HOUSE_24, tmp_path)
+
+    assert info == CachedSnapshot(
+        snapshot_path=tmp_path / "2024" / _GOOD_SNAPSHOT,
+        retrieved_at=datetime(2026, 11, 7, 12, tzinfo=UTC),
+        source_updated_at="u1",
+    )
+
+
+def test_snapshot_info_is_none_when_nothing_cached(tmp_path: Path) -> None:
+    assert cached_snapshot_info(_HOUSE_24, tmp_path) is None
+
+
+def test_snapshot_info_refuses_pending_source(tmp_path: Path) -> None:
+    with pytest.raises(SourcePendingError):
+        cached_snapshot_info(source_for(2026, "house", "runoff"), tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "error", "match"),
+    [
+        (
+            {"url": "https://static01.nyt.com/elections-assets/old.json"},
+            NoCachedSnapshotError,
+            "not the current",
+        ),
+        ({"schema": "A2"}, NoCachedSnapshotError, "not the current"),
+        ({"snapshot": "../x.json"}, InvalidJsonError, "no valid snapshot"),
+        ({"retrieved_at": "yesterday"}, InvalidJsonError, "retrieval time"),
+    ],
+)
+def test_snapshot_info_refuses_a_pointer_offline_reads_refuse(
+    tmp_path: Path,
+    overrides: dict[str, Any],
+    error: type[Exception],
+    match: str,
+) -> None:
+    _write_cache(tmp_path, **overrides)
+
+    with pytest.raises(error, match=match):
+        cached_snapshot_info(_HOUSE_24, tmp_path)
+
+
+def test_snapshot_info_refuses_missing_snapshot(tmp_path: Path) -> None:
+    _write_cache(tmp_path, snapshot_body=None)
+
+    with pytest.raises(NoCachedSnapshotError, match="which is missing"):
+        cached_snapshot_info(_HOUSE_24, tmp_path)
+
+
+def test_snapshot_info_refuses_snapshot_that_is_not_a_file(tmp_path: Path) -> None:
+    pointer = _write_cache(tmp_path, snapshot_body=None)
+    (pointer.parent / _GOOD_SNAPSHOT).mkdir()
+
+    with pytest.raises(NoCachedSnapshotError, match="not a file"):
+        cached_snapshot_info(_HOUSE_24, tmp_path)
+
+
+def test_snapshot_info_refuses_corrupt_pointer(tmp_path: Path) -> None:
+    _write_cache(tmp_path, pointer_body=b"{not json")
+
+    with pytest.raises(InvalidJsonError):
+        cached_snapshot_info(_HOUSE_24, tmp_path)

@@ -308,7 +308,54 @@ def _parse(raw: bytes, *, what: str) -> dict[str, Any]:
     return data
 
 
-def _read_latest(source: Source, cache_dir: Path) -> FetchResult:
+@dataclass(frozen=True, slots=True)
+class CachedSnapshot:
+    """What the cache's pointer says about a source's newest snapshot.
+
+    Attributes:
+        snapshot_path: The snapshot file the pointer names (it exists).
+        retrieved_at: When it was downloaded (UTC).
+        source_updated_at: The feed's own updated-at value, verbatim, or
+            ``None`` when the file does not carry one.
+    """
+
+    snapshot_path: Path
+    retrieved_at: datetime
+    source_updated_at: str | None
+
+
+def cached_snapshot_info(source: Source, cache_dir: Path) -> CachedSnapshot | None:
+    """Describe ``source``'s newest cached snapshot without reading the snapshot.
+
+    Makes the same checks an offline :func:`fetch` makes before it reads the
+    snapshot: the pointer is valid, was cached from the source's current URL and
+    schema, and names a snapshot file that is there.
+
+    Args:
+        source: The NYT file.
+        cache_dir: Root of the cache.
+
+    Returns:
+        The snapshot's details, or ``None`` when nothing is cached for it.
+
+    Raises:
+        SourcePendingError: If the source's contest has not been held.
+        DisallowedHostError: If the source's URL is not an allowed one.
+        NoCachedSnapshotError: If the pointer is for another URL or schema, or
+            its snapshot is missing or not a file, so an offline read would fail.
+        InvalidJsonError: If the pointer is corrupt.
+    """
+    _checked_url(source)
+    if not _pointer_path(source, cache_dir).exists():
+        return None
+    info = _latest_pointer(source, cache_dir)
+    if not info.snapshot_path.is_file():
+        raise NoCachedSnapshotError(f"cannot read {info.snapshot_path}: not a file")
+    return info
+
+
+def _latest_pointer(source: Source, cache_dir: Path) -> CachedSnapshot:
+    """Read and check ``source``'s pointer; see :func:`cached_snapshot_info`."""
     pointer_path = _pointer_path(source, cache_dir)
     try:
         pointer_raw = pointer_path.read_bytes()
@@ -334,20 +381,35 @@ def _read_latest(source: Source, cache_dir: Path) -> FetchResult:
     retrieved_at = _parse_retrieved_at(pointer.get("retrieved_at"), pointer_path)
 
     snapshot = pointer_path.parent / name
+    if not snapshot.exists():
+        raise NoCachedSnapshotError(
+            f"{pointer_path} names {snapshot.name}, which is missing",
+        )
+    updated_at = pointer.get("source_updated_at")
+    return CachedSnapshot(
+        snapshot_path=snapshot,
+        retrieved_at=retrieved_at,
+        source_updated_at=updated_at if isinstance(updated_at, str) else None,
+    )
+
+
+def _read_latest(source: Source, cache_dir: Path) -> FetchResult:
+    info = _latest_pointer(source, cache_dir)
+    snapshot = info.snapshot_path
     try:
         raw = snapshot.read_bytes()
     except FileNotFoundError as err:
+        pointer_path = _pointer_path(source, cache_dir)
         raise NoCachedSnapshotError(
             f"{pointer_path} names {snapshot.name}, which is missing",
         ) from err
     except OSError as err:
         raise NoCachedSnapshotError(f"cannot read {snapshot}: {err}") from err
-    updated_at = pointer.get("source_updated_at")
     return FetchResult(
         source=source,
         data=_parse(raw, what=str(snapshot)),
-        retrieved_at=retrieved_at,
-        source_updated_at=updated_at if isinstance(updated_at, str) else None,
+        retrieved_at=info.retrieved_at,
+        source_updated_at=info.source_updated_at,
         cache_path=snapshot,
         from_cache=True,
     )

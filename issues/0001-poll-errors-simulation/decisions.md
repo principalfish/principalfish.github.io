@@ -35,10 +35,10 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - 6d: the header note goes below "Latest poll used", smaller and not bold, and leads with "Nowcast: if an election were held today."; line 2 drops its "(if an election were held today)" (Phil, 2026-11-07). Front end only.
 - 6e: the vote-totals Seats column shows the simulated median when the run has uncertainty, ± from the median; the uncertainty toggle only adds the range text to Seats and Vote %. Queued after 6d (Phil, 2026-11-07). Supersedes Piece 2's separate uniform-swing and simulated columns.
 - 6f: fix the blank space on the left of the poll tracker's Chances views (Majority and Largest party); queued after 6e (Phil, 2026-11-07).
+- 6e: medians plus a note (sum 642, map colours = uniform swing); filtered views show the uniform-swing number under the plain Seats header; uniform-swing count dropped from the main table; tracker seat line left as uniform swing (Phil, 2026-11-07).
 
 ## Open
 - 6f: whether the Chances x-axis starts at the first chance date (2024-08-07) or stays aligned with "Seats & votes" at 2024-07-05.
-- 6e (a) medians sum to 642, not 650, and differ from the map's colours; (b) filtered views with no stored medians; (c) whether the uniform-swing count appears anywhere.
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.
 - The go-ahead for each live step of the Westminster backfill and export (Piece 6).
 

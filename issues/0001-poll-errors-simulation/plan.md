@@ -144,10 +144,12 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
      - The † "outside its range" marker goes, since the uniform-swing count is no longer shown in the table.
    - Without uncertainty (historical elections, US page, predict view, user scenarios): the table is unchanged.
    - Files (expected): `electionmapslogic/dom.js` (`renderVoteTotals`, the seats header, the toggle), `electionmapslogic/uncertainty.js` / `uncertainty-view.js`, `electionmapslogic/maps.css`, the bundles, and tests in `electionmapslogic/tests/` (vote-totals and uncertainty views).
-   - Open, for the 6e briefing:
-     - (a) the party medians sum to 642, not 650 (30 Oct data), and won't match the map's seat colours, which are uniform-swing winners. Accept with a short note ("medians; may not sum to 650"), or something else?
-     - (b) the table's filtered views with no stored medians (party, majority, gains-only and upcoming filters; `uncertaintyForTotals` returns null): show the uniform-swing count there, labelled, or something else? Whole-country and single-region views have stored medians.
-     - (c) should the uniform-swing count appear anywhere at all (e.g. a hover title on the Seats cell), or be dropped from the table entirely? This supersedes Piece 2's "keep the deterministic count labelled uniform-swing projection".
+   - **Decisions (Phil, 2026-11-07, at the 6e briefing):**
+     - (a) "Accept, add a note": a short note by the table, e.g. "Seats are simulated medians, so they needn't add up to 650. Map colours show each seat's uniform-swing winner."
+     - (b) filtered views with no stored medians (party, majority, gains-only, upcoming): show the uniform-swing number under the plain **Seats** header (Phil: "Uniform swing number but column header of Seats"), with no ranges and the toggle hidden as today.
+     - (c) "Drop it": the uniform-swing count doesn't appear in the whole-country or region table, not even as a hover title.
+     - Tracker: "No, leave it". The poll tracker's seat line stays the uniform-swing central with the simulated band.
+     - Builder defaults accepted: sort by the median (ties by name); the region view uses the region's medians, with ± against the region's 2024 seats; Vote % reads "27.45 (23.4–31.3%)", with vote ± unchanged; the toggle changes text only; remove the unused hide-columns CSS and the † code; predict view and US tables byte-for-byte unchanged.
    - Tests: Seats shows the median with and without ranges; ± from the median; Vote % with and without ranges; the toggle changes only the text; unchanged tables without uncertainty and on the US page; the filtered-view behaviour as decided.
    - Acceptance: `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, the jsdom harness on both pages, and the rendered table text shown with the toggle on and off.
 6f. **Poll tracker Chances view: remove the blank space on the left** (Phil, 2026-11-07; queued, starts after 6e is committed). Model: frontier. Depends on: 6e.

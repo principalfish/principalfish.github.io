@@ -3,12 +3,12 @@
   "slug": "import-2026-us-midterm-results",
   "title": "Import 2026 US midterm results",
   "mode": "build",
-  "state": "investigating",
+  "state": "planned",
   "branch": "import-2026-us-midterm-results",
   "base": "master",
   "gh_issue": 79,
-  "build_model": null,
+  "build_model": "claude-opus-5-5",
   "created": "2026-11-07 10:25",
-  "updated": "2026-11-07 11:39",
+  "updated": "2026-11-07 11:48",
   "done": null
 }

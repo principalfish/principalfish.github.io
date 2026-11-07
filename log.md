@@ -13,3 +13,5 @@
 - 2026-11-07 11:24 · us-poll-errors-uncertainty (0004) · created (build): Poll-error uncertainty for US forecasts
 - 2026-11-07 11:25 · poll-errors-simulation (0001) · title = Poll-error uncertainty for Westminster forecasts
 - 2026-11-07 11:39 · import-2026-us-midterm-results (0002) · GitHub issue #79
+- 2026-11-07 11:48 · import-2026-us-midterm-results (0002) · investigating → planned
+- 2026-11-07 11:48 · import-2026-us-midterm-results (0002) · build_model = claude-opus-5-5

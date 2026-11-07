@@ -369,3 +369,9 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
   - The draws file now names 106329. There are still 848 UNS runs, and no other elections changed. No auto-archive was made.
   - `export_elections.py --dry-run` now passes. The worktree trends file (384 points, Lab `sm` 317.0) is byte-identical to a scratch rebuild.
   - It also rewrote the tracked `model_output_trends_meta.json`, whose `since_date` went from 2026-09-30 to 2026-08-31. That fixes metadata left over from the 30-day window, and it becomes a 4th file for the data commit.
+- 2026-11-07, 6g step 3 (Phil: "Go ahead with rebuild"): the trends rebuild published 384 points, byte-identical to the rerun's file. The meta file goes in the data commit (Phil: "Include it").
+- Step-4 scoping evidence (scratch only):
+  - A full `--output-base` export now fails with `Pre-built map not found … uselectionmaps/data/maps/map-24.topo.json`, because it tries to export 0002's new US elections. So a full export must not be used on this branch.
+  - `--current-simulation --output-root <copy of electionmaps/data>` writes only `prediction-simulation.json` and `prediction-uncertainty.json`. These are byte-identical to the full export's output, and nothing else differs.
+  - The staged page renders "Labour 317 seats (238–389) · majority 44%" with the map-colour note, 0 errors.
+- 2026-11-07, 6g step 4 (Phil: "Go ahead with export"): `export_elections.py --current-simulation` (exit 0) wrote only `prediction-simulation.json` and `prediction-uncertainty.json`, byte-identical to the scratch output. The worktree has exactly the 4 data files modified. The jsdom harness on the real repo data: electionmaps "Labour 317 seats (238–389) · majority 44%", uselectionmaps unchanged, 0 errors. Next: data-commit review.

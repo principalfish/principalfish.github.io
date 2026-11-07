@@ -7,9 +7,8 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 - Import provisional results now, using re-runnable tools that refresh in place as counts finish. (2026-11-07)
 
 ## Open
-- Past elections (user: "make these run for previous elections if we can find that data"): NYT has 2018, 2020, 2022 and 2024 in three schema families (threads/sources.md). Which years and chambers get imported, and do NYT imports replace the 538-sourced 2020–2024 files?
 - Disclaimer: wording and where it shows (map page footer, results popup, export metadata).
-- House geometry for 2026: data shows CA, TX, UT, OH, NC, FL, TN, LA and AL redrew (threads/redistricting.md); MO did not. Need 2026 district shapes and a map strategy (new map id vs. patching map 21).
+- Geometry sources: 2026 shapes for the 9 redrawn states (Census 120th-Congress files likely not out until 2027), and the 2012-cycle set for 2018/2020. Note that NC's 2020 map (court remedial) differs from 2018's, and PA's 2018 court map differs from 2016's; whether Census cd116 covers both is unchecked.
 - Senate specials: `convert_538_senate.py:20` skips specials; FL and OH 2026 are specials (configured in `senateSpecialElections` in the US manifest shell). How do they enter the 2026 Senate file?
 - Downstream: after import, what moves? `current-us-house` / `current-us-senate` anchors, `predictBaselineElectionId`, `nextElectionYear` (2028), `senate-current.json` (chamber changes 2027-01-03), the US forecast and poll pages.
 

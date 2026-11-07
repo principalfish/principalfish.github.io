@@ -145,7 +145,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6a · Westminster weighting defaults: 15-day half-life, 60-day window (`a5cdf8e0`).
 - [x] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation (`51c31966`).
 - [x] 6b · Main headline line leads with the simulation (`c7a85eab`).
-- [ ] 6c · Self-review 2 fixes and the election-day tracker point.
+- [x] 6c · Self-review 2 fixes and the election-day tracker point (`ae61f984`, `b2c33428`).
 - [ ] 7 · PR text drafted.
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
@@ -271,3 +271,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (planner): self-review 2 on `a832137d..c7a85eab`: correctness and security clean, coverage 38/38, three low doc items verified. The planner noted that master's tracker starts on 2024-07-05 with the election-result point, which the branch drops as unpolled. Phil chose all three fixes and to keep the election-day point: new Piece **6c**.
 - 2026-11-07 (builder, Piece 6c code): review fixes 1–3 are in (`dom.js` comments, README lookback wording). In `trends.py`, a `seen_polled` flag means unpolled runs before the first polled run are published central-only (no summary or segment), so equal ones collapse to the first. Unpolled runs after it are dropped. Runs with no stored block, or a non-Westminster budget, count as polled. The bundles are unchanged, because the minifier drops comments. A read-only rebuild to scratch gives 384 points from 2024-07-05 (Lab 411, 33.7%, central-only), and the tracker breaks once, at 2024-08-07. Analysis loop: round 1 had 2 verified findings (a 90-column assert; two missing tests: different-central leading runs and an all-unpolled history), both fixed. Round 2 was clean on all five checks. Changed-lines coverage on `trends.py` is 100% (7/7).
 - 2026-11-07: Piece 6c code committed as `ae61f984` and pushed with Phil's approval ("Approve, commit and push"). Next: the trends rebuild live step, then the data commit.
+- 2026-11-07: Piece 6c data committed as `b2c33428` and pushed with Phil's approval ("Approve, commit and push"). All builder pieces are done; Piece 7 is `/publish` in the planner chat.

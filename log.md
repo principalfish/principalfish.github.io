@@ -15,3 +15,4 @@
 - 2026-11-07 11:39 · import-2026-us-midterm-results (0002) · GitHub issue #79
 - 2026-11-07 11:48 · import-2026-us-midterm-results (0002) · investigating → planned
 - 2026-11-07 11:48 · import-2026-us-midterm-results (0002) · build_model = claude-opus-5-5
+- 2026-11-07 11:48 · import-2026-us-midterm-results (0002) · title = Import 2018–2026 US House and Senate results from NYT data

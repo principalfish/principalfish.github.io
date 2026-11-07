@@ -1,7 +1,7 @@
 {
   "id": 2,
   "slug": "import-2026-us-midterm-results",
-  "title": "Import 2026 US midterm results",
+  "title": "Import 2018\u20132026 US House and Senate results from NYT data",
   "mode": "build",
   "state": "planned",
   "branch": "import-2026-us-midterm-results",

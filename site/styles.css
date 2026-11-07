@@ -232,6 +232,14 @@ a {
   line-height: 1.45;
 }
 
+.card-note {
+  margin-top: 0.35rem;
+  font-size: 0.88rem;
+  font-style: italic;
+  /* Darker than --amber so small italic text keeps readable contrast. */
+  color: #b45309;
+}
+
 .card-cta {
   margin-top: auto;
   padding-top: 0.7rem;

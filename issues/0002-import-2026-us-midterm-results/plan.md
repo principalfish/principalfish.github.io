@@ -235,8 +235,8 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
     - Acceptance: the runbook is reviewed; each live step is run only after approval, and its output (counts, diff summary) is reported.
 
 ## Checkpoints
-- [ ] 1. Seat status/source schema + migration
-- [ ] 2. NYT fetch + cache
+- [x] 1. Seat status/source schema + migration (ec682969)
+- [x] 2. NYT fetch + cache (2a8f90e5)
 - [ ] 3. Schema adapters A/B/C + race model
 - [ ] 4. Converter, importer extensions, CLI, diff report
 - [ ] 5. Console results tool
@@ -285,3 +285,4 @@ No test touches the live DB (conftest guard).
   - 2026 House (LA-05): pending, no URL yet (December 2026 runoff).
   - No LA December House runoffs were found for 2018, 2022 or 2024. The 2024-12-07 Louisiana file holds only constitutional amendments.
 - 2026-11-07 (pieces 1+2): one analysis pass ran over the combined diff, with findings routed per piece. Piece 1: only a missing CLI test. Piece 2: a batch of network-error, redirect-allowlist, pointer-validation and test fixes. `.env_example` gained `NYT_CACHE_DIR` (added to piece 2's files). The README migration step is left to piece 11.
+- 2026-11-07: pieces 1 and 2 committed separately (ec682969, 2a8f90e5) and pushed to `origin/import-2026-us-midterm-results`. Final checks: mypy clean, 4667 passed, plus a re-run of the touched files after the last two review fixes (158 passed).

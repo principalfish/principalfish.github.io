@@ -86,7 +86,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] T4 · Pieces 2a–2f and 4b–4d moved to issue 0003 (2026-11-07).
 - [x] US work moved to issue 0004; branch `us-poll-errors-uncertainty` at `44dd8336` pushed (2026-11-07).
 - [x] 1 · US work removed from this branch; checks green (`5a96e52c`).
-- [ ] 1b · Offline conversion experiment removed from this branch; checks green.
+- [x] 1b · Offline conversion experiment removed from this branch; checks green (`39610fb9`).
 - [ ] 1c · Westminster validation report regenerated and committed.
 - [ ] 2 · T4 Piece 3a: Westminster display changes.
 - [ ] 3 · T4 Phase 6: Style cleanup.
@@ -139,3 +139,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07: **Experiment moved out** (Phil). The offline conversion experiment (`ab3fc62e`, `eaa73607`, `88bfc2a0`, `44dd8336`; ~17.5 MB of JSON) comes off this branch in one removal commit (Piece 1b), not a history rewrite. If the PR is squash-merged the blobs stay out of master; otherwise they're in its history. The experiment lives on in issue 0003. Note for any branch cut before 1/1b (0003, and 0004 at `44dd8336`): merging this branch or master into it later would apply the removals and delete its US work or experiment, so that merge needs the removal commits neutralised.
 - 2026-11-07 (builder, Piece 1b): removal staged, paused for Phil's review (uncommitted). 21 files: 16 experiment-only files deleted; `uncertainty.py`, `uncertainty_validation.html`, `westminster_validation.py` and `westminster_validation_inputs.py` restored byte-for-byte to `92743751` (no other commit touched them); README's experiment section (28 lines) removed. Branch diff vs merge base 184 → 168 files. Acceptance grep empty. Checks: mypy 246 files clean; pytest 5668 passed (5971 → 5668 with the four experiment test files gone); vitest 588 passed / 3 skipped; export dry-run exit 0; console builds; `/westminster/uncertainty/validation` 200, `/…/conversion-validation` 404; `git diff --check` clean. Analysis loop: all five checks clean.
   - **Pre-existing gap (not caused by 1b):** the committed `uncertainty_validation_report.json` (from `c067f150`) was never regenerated after `92743751` switched the replay to frozen inputs. A run now matches it on `historical`, `national`, `methods` and `limitations`, but differs in `replay` (the frozen-input fields) and in `identity.source_sha256`. A run at `5a96e52c` (pre-1b) gives the same output as post-1b, apart from the two restored files' source hashes. So 1b changes no validation result. Regenerating the committed report is Phil's call.
+- 2026-11-07: Piece 1b committed as `39610fb9` and pushed (21 files, −529,284 lines). Next: Piece 1c.

@@ -1177,12 +1177,13 @@
     "numpy_version": "2.5.3",
     "source_sha256": {
       "model_support/calibration.py": "96fcdfb78427e5f4485f954dd6fc85d6f98a68e65c9ef3f500bfbc1eafb86929",
-      "model_support/monte_carlo.py": "15d3dc5cf88cba4be3fa2ced7271956b9d1d57675296aac11d874e33300a9254",
+      "model_support/monte_carlo.py": "2af5785e47bb32499fc3ab0ae71ba3137b8c11cf02b6ef22954c0840ba8a9e09",
       "model_support/uncertainty.py": "85b5a2f144e555489730024f38eef15c10a345b50e2f0059578199e695ccd996",
       "model_support/westminster_validation.py": "13bb4a120b4b139023d59a55d1dc0e84d0d192e01ca3579763c8084c2e3239ef",
-      "model_support/westminster_validation_replay.py": "8afba96b2d40ad1a7484fe51e86de8ef5b60673a9a71f8c805f4a7b8568f54ad",
+      "model_support/westminster_validation_inputs.py": "19f9b03908aedccf651e34e993e7c00da74e5b85997e9a2a547716c9081113e0",
+      "model_support/westminster_validation_replay.py": "0c416150d4b6d17dddd28c98d9c433800f4a23a01d584d194d76471a58b9812d",
       "scripts/calibrate_uncertainty.py": "cf77230c7e93693e8629c7c0e3c06e83920a904629a5b50eee25813cc2df504d",
-      "scripts/validate_westminster_uncertainty.py": "71d01b9de4f5016897c58b601d6563464b10db1299b7fdb0fe596c0e184aeb30"
+      "scripts/validate_westminster_uncertainty.py": "2be27f5a758a73814614b90570f4f79bb281d2490851cf4eab57073bf3fe5c9f"
     }
   },
   "limitations": [
@@ -1428,7 +1429,10 @@
     "as_of_date": "2026-10-22",
     "election_id": 104583,
     "evaluated_config_hash": "730a3349d3836bc6",
+    "evaluated_kernel_version": "pf-westminster-mc-v1",
+    "fixture_sha256": "3cc30b7ac78b03c6bf6b618b3e18f1433a6898ec7fdb441d3c6dfff147a0434c",
     "input_hash": "cdd6fefd8f68db5f60e926271f898f23dd83b07a313ab5fa91858d7114a79f91",
+    "input_source": "committed_frozen_inputs",
     "method": "Actual runtime draw_errors/project_seats_vectorised on frozen saved inputs; current settings. Binomial SE for majority and hung; sample SE for tie-split largest-party credit. Five independent seeds measure majority-odds spread.",
     "saved_config_hash": "730a3349d3836bc6",
     "seed": 739911,
@@ -1585,6 +1589,9 @@
       5
     ],
     "simulations": 10000,
+    "source_archive_input_hash": "cdd6fefd8f68db5f60e926271f898f23dd83b07a313ab5fa91858d7114a79f91",
+    "source_archive_sha256": "d9e819c628011483cc6eb67ccb5a784dee57d22b3087c783713c76f4eadd9c08",
+    "source_kernel_version": "pf-westminster-mc-v1",
     "status": "complete",
     "variants": [
       {
@@ -2273,6 +2280,6 @@
       }
     ]
   },
-  "report_hash": "08266bae1367a0a3f936508cedc0e4ffe6b409b1fa63f56646c2f5ed0572f380",
+  "report_hash": "6c36090c4e642584d256c187fb43f8e8df90f0398a9167ed24d3970b0655e991",
   "schema": "westminster-validation-v1"
 }

@@ -1,15 +1,14 @@
 # Resume point: read this first
 
-Updated 2026-11-07 (planner chat). Issue state: `building`.
+Updated 2026-11-07 (builder). Issue state: `building`.
 
 State checks:
-- `git rev-parse poll-errors-simulation origin/poll-errors-simulation` → both `5a96e52c…` (later is fine once Piece 1b is committed).
+- `git rev-parse poll-errors-simulation origin/poll-errors-simulation` → both `5a96e52c…` until Piece 1b is committed.
 - `git rev-parse origin/us-poll-errors-uncertainty` → `44dd8336514cb20953b76f0c8d24b87df814aa95` (0004's branch; don't touch it).
-- `git worktree list` → nothing has `poll-errors-simulation` checked out, so a builder can start fresh.
+- `git rev-parse refine-westminster-and-us-poll-error-models` → `44dd8336…` (0003's branch; holds the experiment).
 
-Next step: **Piece 1b**, removing the offline conversion experiment (`plan.md` has the file list and acceptance). The boundary and the removal commit are settled.
+Current: **Piece 1b** staged in the builder worktree and paused for Phil's review (see `plan.md` Notes, 2026-11-07 builder Piece 1b).
 
-Settled 2026-11-07: 0003's branch `refine-westminster-and-us-poll-error-models` was cut locally at `44dd8336` (check: `git rev-parse refine-westminster-and-us-poll-error-models` → `44dd8336…`), and 0003's and 0004's plans carry the merge-back notes.
-
-Pending decision:
-- **W-4 for Piece 2 (3a).** Thread 4's Notes (2026-10-28) record Phil choosing the MC median as the **headline**, with the deterministic count labelled "uniform-swing projection"; the ledger carried it as open. Phil hasn't confirmed it yet. Recommendation: keep it. The export already carries `s: [lo, median, hi]` (`data/model_support/public_uncertainty.py:114`). It doesn't block 1b.
+Pending decisions:
+- **Stale committed validation report** (found in 1b's checks, pre-existing since `92743751`): regenerate `data/models/westminster/uncertainty_validation_report.json` in its own commit after 1b, or leave it for Piece 4 (self-review). Recommendation: regenerate it as a separate small commit right after 1b. Its `historical`/`national` numbers already match, so only `replay` and the source hashes change. It reads the live DB read-only and writes only the repo file.
+- **W-4 for Piece 2 (3a).** Thread 4's Notes (2026-10-28) record Phil choosing the MC median as the **headline**, with the deterministic count labelled "uniform-swing projection". Phil hasn't confirmed it yet. Recommendation: keep it. The export already carries `s: [lo, median, hi]` (`data/model_support/public_uncertainty.py:114`).

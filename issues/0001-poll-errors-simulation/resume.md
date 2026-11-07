@@ -3,7 +3,7 @@
 Updated 2026-11-07 (builder). Issue state: `building`.
 
 State checks:
-- `git rev-parse poll-errors-simulation origin/poll-errors-simulation` → both `a832137d…` (round-2 review fixes).
+- `git rev-parse poll-errors-simulation origin/poll-errors-simulation` → both `a5cdf8e0…` (Piece 6a: 15-day half-life, 60-day window).
 - `git rev-parse origin/us-poll-errors-uncertainty` → `44dd8336514cb20953b76f0c8d24b87df814aa95` (0004's branch; don't touch it).
 - `git rev-parse refine-westminster-and-us-poll-error-models` → `44dd8336…` (0003's branch; holds the experiment).
 
@@ -32,3 +32,4 @@ After Piece 6: Piece 7, `/publish poll-errors-simulation` from the planner chat.
 - 2026-11-07: the dry runs confirmed that the window is the whole difference (30 days reproduces master's 10-30 exactly; 365 days reproduces the rerun). Phil asked how fast polls decay. Answer given: `run_uns_model.py:908` uses `exp(-ln2 · days / 30)`, which loses about 2.3% a day, is never exactly 0, and is cut off hard by the window. Still pending: his decision on the 30-day rerun.
 - 2026-11-07: **decided.** 15-day half-life and 60-day window. New Piece 6a changes the Westminster console and CLI defaults; then a full rerun (Piece 6 step 2) with those flags. Next: the builder builds 6a and sends its review request to the planner chat.
 - 2026-11-07 (planner chat): switched to the updated skills. Brief Phil in the fixed shapes (header line; next-stage, review, question and live-step briefings; all-done recap). /review uses fresh checks plus a fresh verifier. Piece numbering for headers: 1, 1b, 1c, 2, 3, 4, 5, 6a, 6, 7 (10 pieces), so 6a is 8/10.
+- **6a committed `a5cdf8e0`, pushed.** Rerun decision settled (Phil): 15-day half-life, 60-day window, full rerun. The worktree trends file is restored to HEAD. **Next: Piece 6 step 2**, the 15/60 rerun, waiting on Phil's go-ahead.

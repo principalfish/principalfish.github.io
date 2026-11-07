@@ -17,3 +17,11 @@
 ## BBC
 - `https://www.bbc.co.uk/news/election/2026/us/results` is an article (Optimo asset) with no results data of its own. `/house` and `/senate` return 404.
 - Its results are external embeds of AP's customer interactives (`interactives.apelections.org/.../organization-layouts/published/108620/...`), i.e. AP data under the BBC's licence. Not a usable source.
+
+## NYT per-state files (follow-up probe)
+- The national `results-senate.json` is state-level only (35 state units, no counties).
+- Per-state files exist with county units, precincts, timeseries and vote-type breakdowns:
+  - `.../2026-11-03/results-<state>-us-senate.json` (e.g. `results-texas-us-senate.json`, 7.2 MB, 254 counties)
+  - `.../2026-11-03/results-<state>-us-senate-special.json` (Ohio, Florida)
+  - `.../2026-11-03/results-<state>.json` (state overview, 3.2 MB for Texas)
+- Not needed for the state-level Senate map; useful only for county-level work later.

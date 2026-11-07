@@ -182,7 +182,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6b · Main headline line leads with the simulation (`c7a85eab`).
 - [x] 6c · Self-review 2 fixes and the election-day tracker point (`ae61f984`, `b2c33428`).
 - [x] 6d · Header reading note below the latest poll, smaller, with the nowcast sentence (`950b22a2`).
-- [ ] 6e · Vote-totals table: Seats column from the simulated median; toggle adds only ranges.
+- [x] 6e · Vote-totals table: Seats column from the simulated median; toggle adds only ranges (`b788ae28`).
 - [ ] 6f · Poll tracker Chances view: no blank space on the left.
 - [ ] 7 · PR text drafted.
 
@@ -316,3 +316,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (planner): Phil reported blank space on the left of the poll tracker's Chances views (Majority and Largest party). Queued as Piece **6f**, after 6e.
 - 2026-11-07: Piece 6d committed as `950b22a2` and pushed with Phil's approval ("Approve, commit and push"). Next: 6e (vote-totals table), once the planner relays its go-ahead.
 - 2026-11-07 (builder, Piece 6e): `renderVoteTotals` shows Seats as the median ("319 (238–389)" with the toggle on), with ± and sort from the median. Vote % gains "(lo–hi%)". The separate range columns, the † marker and the hide-columns CSS are removed. A new `#mapsSeatMedianNote` gives the visible seat total (650, or the region's own) and hides when the card collapses. A party with votes but no stored median shows "—". Filtered views show the uniform-swing number under "Seats", with no note. Predict, scenario, historical and US tables are unchanged. Analysis loop: round 1 had 1 verified finding (note not hidden on collapse), fixed with a test, and 3 dropped. Round 2 had 1 verified nit (JSDoc `@param`), fixed. Round 3 re-ran only the style check, because that fix was comments only; it was clean.
+- 2026-11-07: Piece 6e committed as `b788ae28` and pushed with Phil's approval ("Approve, commit and push"); the orphaned JSDoc at `dom.js:587-591` was left alone (Phil). Next: 6f look-ahead, then 6f on its go-ahead.

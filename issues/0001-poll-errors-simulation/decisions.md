@@ -39,9 +39,9 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - 6f: gridlines cross the plot in every mode; no left gutter when no left axis is drawn (Chances, and Seats & votes with Vote % only); the Chances timeline starts at the first chance date, 2024-08-07 (Phil, 2026-11-07).
 - 6g: seats are the simulated **mean** (not median) in the table and headline, national and regional; the note goes; no history rerun. Queued after 6f (Phil, 2026-11-07: "Mean everywhere").
 - 6g rounding: show the mean seats as whole numbers by largest remainder, so they add up exactly to 650 (or the region's total). No map-colours label (Phil had no preference) (Phil, 2026-11-07).
+- 6g: store the mean in the simulation summary and rerun 2026-10-30 only; largest-remainder ties go to the larger party; exporting a run with no stored mean fails; the poll tracker's seat line becomes the simulated mean, from stored distributions (Phil, 2026-11-07).
 
 ## Open
-- 6g: the mean's source (export from the draws file, or stored summary plus a single-date rerun), tie order in the rounding, and the live steps.
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.
 - The go-ahead for each live step of the Westminster backfill and export (Piece 6).
 

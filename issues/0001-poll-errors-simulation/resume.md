@@ -32,3 +32,4 @@ Precondition until merge: no poll imports or model runs from the main checkout's
 - 2026-11-07: 6e committed as `b788ae28`; PR #74 updated. The 6f briefing has been given. Pending Phil: the Chances start (R 2024-08-07, or 07-05), the vote-only gutter (R same rule), and the start go-ahead. The builder's causes are confirmed: the fixed 70px margin, the grid drawn into the margin (`polltracker-view.js:396`), and the 07-05 domain.
 - 2026-11-07: 6f started on Phil's choices (`plan.md` 6f Decisions). **6g queued** (mean seats). Pieces are now 16: 6f 14/16, 6g 15/16, 7 16/16.
 - 2026-11-07: 6f approved by Phil ("Approve, commit and push"); the builder is committing. Next: the 6g look-ahead, then the 6g briefing.
+- 2026-11-07: 6f committed as `8d7c9d42`; PR #74 updated. 6g choices made (`plan.md` 6g Decisions, including the tracker mean line) and 6g started on Phil's "Start 6g". Next: the 6g code review, then live steps 1–5.

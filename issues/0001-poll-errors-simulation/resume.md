@@ -12,4 +12,5 @@ Settled 2026-11-07: regenerate the stale validation report as Piece 1c, straight
 Done: **Piece 1b** committed as `39610fb9` and pushed. Next: **Piece 1c** (regenerate the validation report; `plan.md`).
 
 Pending decisions:
-- **W-4 for Piece 2 (3a).** Thread 4's Notes (2026-10-28) record Phil choosing the MC median as the **headline**, with the deterministic count labelled "uniform-swing projection". Phil hasn't confirmed it yet. Recommendation: keep it. The export already carries `s: [lo, median, hi]` (`data/model_support/public_uncertainty.py:114`).
+
+Settled 2026-11-07: W-4 = MC median as the headline (Phil confirmed).

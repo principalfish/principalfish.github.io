@@ -26,9 +26,9 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - Move the offline conversion experiment (2a, H1–H3: `ab3fc62e`, `eaa73607`, `88bfc2a0`, `44dd8336`) off this branch to issue 0003. The boundary covers everything those commits added or changed, including the `historical_pair` and `content_hash` refactors. The shipped-model validation harness stays. Removed with one commit, not a history rewrite (Phil, 2026-11-07; Piece 1b).
 - 0003's branch `refine-westminster-and-us-poll-error-models` was cut locally at `44dd8336`, so it keeps the experiment (not pushed). 0003's and 0004's plans now say what to do after merging this branch or master in: 0003 reverts 1b's removal commit, and 0004 reverts `5a96e52c` but leaves 1b applied (Phil, 2026-11-07).
 - Regenerate the stale `uncertainty_validation_report.json` in its own commit straight after 1b, as Piece 1c. Reads the live DB only and writes that one repo file (Phil, 2026-11-07).
+- W-4 (3a): the MC median seat count is the headline. The deterministic count stays, labelled "uniform-swing projection" and flagged when it falls outside its own 90% range. Confirmed 2026-11-07, as first chosen 2026-10-28 (Phil).
 
 ## Open
-- W-4 at 3a: MC median as the headline, or shown alongside the deterministic count. Thread 4's Notes record Phil choosing **headline** on 2026-10-28 (deterministic count kept, labelled "uniform-swing projection"); this ledger carried it as open. Asked Phil to confirm on 2026-11-07, after the ship-as-built decision.
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.
 - The go-ahead for each live step of the Westminster backfill and export (Piece 6).
 

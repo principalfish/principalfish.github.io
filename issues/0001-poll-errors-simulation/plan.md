@@ -69,7 +69,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
      - against the committed version, the diff touches only `replay` and `identity.source_sha256`, with `historical`, `national`, `methods` and `limitations` unchanged (present the diff summary);
      - a second run reproduces the new file byte-for-byte;
      - `./run_tests.sh` stays green, and no other file is staged (`model_output_trends.json` in particular).
-2. **3a: Westminster display** (thread 4, Piece 3a). W-4: the MC median seat count as the headline or alongside it (Phil picks at the brief), with the deterministic count labelled "uniform-swing projection" and flagged when it falls outside its own 90% range. S-1: integer percentages, "<1%" and ">99%", stored to 3 dp. Westminster views only now.
+2. **3a: Westminster display** (thread 4, Piece 3a). W-4: the MC median seat count as the headline (Phil, confirmed 2026-11-07), with the deterministic count labelled "uniform-swing projection" and flagged when it falls outside its own 90% range. S-1: integer percentages, "<1%" and ">99%", stored to 3 dp. Westminster views only now.
    - Acceptance: `npm test`, `npm run minify:electionmaps`, the jsdom harness on both pages; screenshots or text dumps presented.
 3. **Style cleanup** (thread 4, Phase 6). One formatting-only commit; no behaviour change. Model: `claude-sonnet-5-5`. Depends on: 1, 1b, 2.
 4. **Self-review of the branch.** `/review self poll-errors-simulation` on the UK-only diff. Fix what Phil picks. Depends on: 3.

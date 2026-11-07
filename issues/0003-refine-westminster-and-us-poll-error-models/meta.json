@@ -1,0 +1,14 @@
+{
+  "id": 3,
+  "slug": "refine-westminster-and-us-poll-error-models",
+  "title": "Refine the poll-error models for Westminster and the US",
+  "mode": "build",
+  "state": "investigating",
+  "branch": "refine-westminster-and-us-poll-error-models",
+  "base": "master",
+  "gh_issue": null,
+  "build_model": null,
+  "created": "2026-11-07 10:52",
+  "updated": "2026-11-07 10:52",
+  "done": null
+}

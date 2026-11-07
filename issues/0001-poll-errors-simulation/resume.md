@@ -26,3 +26,4 @@ Precondition until merge: no poll imports or model runs from the main checkout's
 - 2026-11-07: **Piece 6e queued** (vote-totals table rework). Don't send it to the builder until 6d is committed; then give the 6e next-stage briefing with open points (a)–(c) from `plan.md`. Pieces are now 14: 6d is 12/14, 6e 13/14, 7 14/14.
 - 2026-11-07: **Piece 6f queued** (poll tracker Chances blank space), after 6e. Pieces are now 15: 6d 12/15, 6e 13/15, 6f 14/15, 7 15/15.
 - 2026-11-07: 6d committed as `950b22a2`; PR #74 updated. 6e choices made (`plan.md` 6e Decisions) and 6e started on Phil's "Start 6e". After 6e: the 6f briefing, then `/publish`.
+- 2026-11-07: 6e approved by Phil ("Approve, commit and push"), without the orphan-JSDoc removal; the builder is committing. Next: the 6f look-ahead, then the 6f briefing.

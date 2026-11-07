@@ -1,4 +1,4 @@
-# Decisions: Poll-error uncertainty for Westminster and US forecasts
+# Decisions: Poll-error uncertainty for Westminster forecasts
 
 Each thread's decisions are recorded in full in its plan's Context and Notes under `threads/`. This ledger holds what's decided about the consolidated issue, and what's open now.
 
@@ -17,17 +17,16 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - 4b–4d go into the same refinement issue as 2a–2f, not a separate US issue. (2026-11-07)
 - Westminster ships with no caveat label about the missing conversion error and fat tails. (2026-11-07)
 - 3a (display) ships with this branch. (2026-11-07)
-- Merge order: 0002 → master, then master → this branch, then ship this branch. (2026-11-07)
+- ~~Merge order: 0002 → master, then master → this branch, then ship this branch.~~ Superseded the same day: the UK ship doesn't wait for 0002. (2026-11-07)
+- **Ship UK only.** All US work (uncertainty, US poll trackers, and the ungated Senate anchor, phantom-party and Senate roster fixes) moves to issue 0004 on branch `us-poll-errors-uncertainty` (`44dd8336`, pushed); this branch removes it in one commit. US uncertainty waits for the full US data pipeline and a more refined UK model. (2026-11-07)
+- 0003 is left as is, still holding 4b–4d. (2026-11-07)
+- Carried to 0004: US-5 = document the shrinkage; US-4 district term = new `district_scale`, default 0; A-1 waits for 2020 House results by district. (2026-11-07)
 - 2a-H2 contract: equal weights across six transitions, new folds report-only (decided 2026-10-30; built in `88bfc2a0`).
 
 ## Open
 - W-4 at 3a: MC median as the headline, or shown alongside the deterministic count.
-- US-5 at 4a: calibrate House G on projected-output error, or document the shrinkage.
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.
-- Senate cycle after the master merge: does 0002 move `nextElectionYear` to 2028? If so, pin 2026 for the back-run.
-- US calibration go/no-go (Piece 6), and the go-ahead for each live step (Pieces 7 and 9).
-- US scoring (Piece 8): provisional now vs certified later; whether a replay with pre-election inputs and code counts; here or its own issue.
-- US publication (Piece 10): flip the release flags, or merge with the US dark.
+- The go-ahead for each live step of the Westminster backfill and export (Piece 6).
 
 ## Assumed
 - Older historical outcomes stay outside the original 20-outcome gate's denominator (thread 4 Notes; confirmed by the 2026-10-30 entry decision).

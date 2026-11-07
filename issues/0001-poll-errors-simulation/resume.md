@@ -14,3 +14,5 @@ Done: **Piece 1b** (`39610fb9`), **1c** (`2618c0dd`), **2 (3a)** (`860b0d85`) an
 Settled 2026-11-07: **W-4**, Phil confirmed the MC median seat count as the headline for Piece 2 (3a). The deterministic count stays, labelled "uniform-swing projection", and is flagged when it falls outside its own 90% range.
 
 No pending decision. Next step: Piece 2 (3a); see `plan.md`.
+
+In progress 2026-11-07 (planner chat): **Piece 4 self-review** (`/review self poll-errors-simulation`) on `master...000fbd9f`. Correctness and security (opus) and style and common-mistakes (sonnet) are running; coverage (sonnet) waits for the builder's `coverage-changed.sh origin/master` report. If this chat ends first, re-run `/review self poll-errors-simulation`.

@@ -6,3 +6,6 @@
 - 2026-11-07 10:25 · import-2026-us-midterm-results (0002) · created (build): Import 2026 US midterm results
 - 2026-11-07 10:52 · refine-westminster-and-us-poll-error-models (0003) · created (build): Refine the poll-error models for Westminster and the US
 - 2026-11-07 10:52 · refine-westminster-and-us-poll-error-models (0003) · base = poll-errors-simulation
+- 2026-11-07 10:53 · refine-westminster-and-us-poll-error-models (0003) · GitHub issue #78
+- 2026-11-07 10:53 · refine-westminster-and-us-poll-error-models (0003) · build_model = claude-opus-5-5
+- 2026-11-07 10:53 · refine-westminster-and-us-poll-error-models (0003) · investigating → planned

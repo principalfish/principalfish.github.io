@@ -277,8 +277,8 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [x] 9. Predict rollover + per-seat Senate baselines (2f87352b)
 - [x] 10. Derived Current Senate (cd7dbc43)
 - [ ] 11. Docs + live-data runbook (live steps on go-ahead)
-- [ ] 13. Senate comparisons: same class, six years earlier
 - [x] 12. US election list order; 2026 House/Senate forecasts switched off (91f4528e, re-export f54c40bd)
+- [ ] 13. Senate comparisons: same class, six years earlier
 
 ## Verification
 After each piece:

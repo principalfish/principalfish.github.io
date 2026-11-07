@@ -1,0 +1,8 @@
+# Coverage settings for coverage-changed.sh, read from data/. Every module
+# under data/ counts, imported by a test or not, so a new untested file shows up.
+[run]
+source = .
+omit =
+    election_data/*
+    .venv/*
+    tests/*

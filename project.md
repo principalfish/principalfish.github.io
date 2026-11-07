@@ -8,9 +8,9 @@ Election maps: a GitHub Pages static site for principalfish.co.uk, plus the Pyth
 
 **Checks:** `cd data && ./run_tests.sh` (strict mypy gates the run, then pytest; forwards args, e.g. `-k <kw>` or a test path) · `npm test` (Vitest) · `npm run minify:electionmaps` after front-end changes · `git diff --check`
 
-**Worktree setup:** `scripts/setup-worktree.sh` (creates the `data/election_data` venv from `data/requirements.txt`, runs `npm ci`, copies `.env` from the main checkout if there is one; safe to re-run). The database is outside the repo (`DATABASE_PATH`, default `/home/philiph/dbs/elections.db`) and shared by every worktree: a builder must not write to it unless the plan says so.
+**Worktree setup:** `"$(python3 ~/.claude/lib/planner.py tools)/setup-worktree.sh"`, run from the worktree (the tools live on the planner branch, not in the code): creates the `data/election_data` venv from `data/requirements.txt` plus the coverage tools, runs `npm ci`, adds the Vitest coverage plugin without touching `package.json`, copies `.env` from the main checkout if there is one; safe to re-run. The database is outside the repo (`DATABASE_PATH`, default `/home/philiph/dbs/elections.db`) and shared by every worktree: a builder must not write to it unless the plan says so.
 
-**Coverage:** `scripts/coverage-changed.sh [<base>]` (default `origin/master`): runs pytest under coverage and Vitest with coverage, then `diff-cover` lists the changed lines no test runs, including uncommitted changes. Takes about 2–3 minutes; exits non-zero only when a test run fails.
+**Coverage:** `"$(python3 ~/.claude/lib/planner.py tools)/coverage-changed.sh" [<base>]` (default `origin/master`): runs pytest under coverage and Vitest with coverage, then `diff-cover` lists the changed lines no test runs, including uncommitted changes; reports go under the worktree's git dir. Takes about 2–3 minutes; exits non-zero only when a test run fails.
 
 **Commit style:** conventional commits, `feat:` / `fix:` / `test:` / `docs:` / `chore:` / `data:` + an imperative summary, e.g. `feat: add presidential map uncertainty and electoral vote tracker`. Builder and quick-build commits put their source in the scope, per `git.md`: `feat(<slug>): piece 3/5 — <summary>`, `fix(<slug>): review fixes — <summary>`, `chore(quick-build): <summary>`, then bullets.
 

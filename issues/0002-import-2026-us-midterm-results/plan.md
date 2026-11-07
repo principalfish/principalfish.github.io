@@ -286,10 +286,10 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [x] 8. Front end: uncalled, source line, specials (9ec98204)
 - [x] 9. Predict rollover + per-seat Senate baselines (2f87352b)
 - [x] 10. Derived Current Senate (cd7dbc43)
-- [ ] 11. Docs + live-data runbook (live steps on go-ahead)
+- [x] 11. Docs + live-data runbook (docs 613ac558; live steps: migration, imports bb86f47e, Current Senate cfc7f3c5, export c32e7ef2; browser check confirmed by the user)
 - [x] 12. US election list order; 2026 House/Senate forecasts switched off (91f4528e, re-export f54c40bd)
-- [ ] 13. Senate comparisons: same class, six years earlier
-- [ ] 14. Alaska 2026 Senate candidate override
+- [x] 13. Senate comparisons: same class, six years earlier (97e9f944, re-export 3efe8c83)
+- [x] 14. Alaska 2026 Senate candidate override (658262a8, re-export 3efe8c83)
 
 ## Verification
 After each piece:
@@ -481,3 +481,4 @@ No test touches the live DB (conftest guard).
 - 2026-11-07: piece 13 code committed (97e9f944) and pushed; checkpoint 13 stays unticked until the re-export lands. The committed manifest has no Senate comparison ids and the Senate results have no `pv` until then. The `pv` was re-verified on the real DB export (FL 2026 hold, R -6.81/D +6.72; OH 2026 flip FROM Republican; OK 2022 and NE 2024 specials from their 2020 class-2 races; GA 2020 and MN/MS 2018 specials have none).
 - 2026-11-07 (piece 14, built on Sonnet) Alaska 2026 Senate candidate override: `data/scripts/export/seat_overrides.json` (keyed by election name then seat name: `{"2026 US Senate Election": {"Alaska": {"w": "democrat", "p": [[partyKey, votes, name], ...]}}}`; rows Mary Peltola D 102,962, Dan Sullivan R 102,325, Gerald Heikes R 4,846 (the importer's first + last name; NYT's snapshot gives Gerald), Daniel Sullivan Others 3,600) loaded by `seat_overrides.py` and applied in `_export_page` right after `build_result_payload`, before `pv`; a bad file raises `SeatOverridesError` before anything is written. The payload `p` then carries four rows (two republican); the front end already sums duplicate party rows, so tallies and the ± stay summed by party. Guard: applied only while the seat is still uncalled and each party's override rows sum to the seat's current merged totals, otherwise a WARNING and a skip (the numbers are static while live counts move; update or delete the file). `_validate_entry` requires `w` to be the party of the top row and rejects a tie for the top. Front end: `Seat.candidateRows` is set only when `p` repeats a party; renderSeatPopup lists those rows without deltas, `majorityStats()` and the second-place filter use the top two candidate rows (Alaska popup meta "Majority: 0.30% = 637"), `cloneBaselineSeat` clears `candidateRows`; the seat fills hatched Democratic (uncalled, `w` democrat), the list swatch is Democratic, the totals are unchanged (D 20, R 13, 2 uncalled). README documents the override and says to delete it (the file and its tests) once the ranked-choice final round is imported. Checks: `./run_tests.sh` 5267 passed (mypy clean), vitest 1458 passed, 3 skipped; jsdom: popup UNCALLED · 74.1% counted, Peltola 48.17%, Sullivan 47.88%, Heikes 2.27%, Daniel Sullivan 1.68%. The four uncommitted piece-13 re-export files are untouched; the re-export for both pieces is the next step.
 - 2026-11-07: piece 14 code committed (658262a8) and pushed (the four piece-13 generated files left out). User: keep the stale guard; name stays "Gerald Heikes". Checkpoints 13 and 14 stay unticked until the one re-export lands.
+- 2026-11-07: pieces 13 and 14 re-export committed (3efe8c83) and pushed; the user confirmed the browser check. All checkpoints (1–14) are ticked; state set to review.

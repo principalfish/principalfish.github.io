@@ -42,6 +42,8 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 
 - After the browser check (2026-11-07): US election lists are sorted in code, newest first, with pinned slots. House: 2026, Predict 2028, 2024, 2022, 2020, 2018. Senate: 2026, Current Senate, Predict 2028, 2024 … 2018. President unchanged. The House and Senate "2026 Prediction" entries are removed: export switched off by a flag (code kept), committed forecast files deleted. The presidential 2028 Prediction stays. This supersedes keeping the archived 2026 forecasts listed. New piece 12. (2026-11-07)
 
+- US page landing election: `2026-us-senate` (was the removed Senate forecast `current-us-senate`). Old `current-us-*` links fall back to the default. (2026-11-07)
+
 ## Open
 
 ## Assumed

@@ -22,6 +22,7 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 - Runoffs and RCV: store the decisive round (runoff or final RCV round) once available, falling back to the November first round until then. (2026-11-07)
 - Senate specials: standalone specials (FL/OH 2026, AZ 2020) take the state's map slot. Where a state has a regular and a special in the same year (GA 2020; MN, MS 2018; CA, OK 2022; NE, CA 2024), the map shows the regular race and the special goes in a separate per-year specials list in the export, shown in the state popup and counted in the chamber tally. (2026-11-07)
 - Local data console gets a US results tool to fetch the latest NYT files, convert them, preview the changes and import them (refresh in place), for any supported year and chamber. It follows the console's form → preview → confirm pattern (`console/blueprints/by_elections.py:22`, `:43`, `:83`) and shells out through `console/services/runner.py`. Per the console-transparency rule, the preview shows the intermediate numbers: seats changed, newly called, % counted per race, party mapping and warnings. (2026-11-07)
+- Same-party races (CA/WA top-two, LA jungle) keep today's merge: one vote row per party per seat, totals summed, top candidate named. A per-seat `sameParty` flag lets the popup say so. No vote-schema or payload-format change. (2026-11-07)
 
 ## Open
 

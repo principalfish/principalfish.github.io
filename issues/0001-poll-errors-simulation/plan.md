@@ -63,6 +63,12 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
      - `git grep -n -E "westminster_conversion|historical_transitions|uncertainty_conversion|historical_pair"` on the branch is empty;
      - `validate_westminster_uncertainty.py` still reproduces the committed `uncertainty_validation_report.json`;
      - full checks are green: mypy, pytest, `npm test`, export dry-run, console smoke (the `/uncertainty` validation page still renders).
+1c. **Regenerate the committed Westminster validation report** (Phil, 2026-11-07). Model: frontier. Depends on: 1b.
+   - What: one small commit containing only `data/models/westminster/uncertainty_validation_report.json`, regenerated with `./election_data/bin/python scripts/validate_westminster_uncertainty.py`. It fixes a gap that predates 1b: the report was never regenerated after `92743751` switched the replay to frozen inputs. Reads the live DB only; the one write is that repo file (Phil's go-ahead given 2026-11-07).
+   - Acceptance:
+     - against the committed version, the diff touches only `replay` and `identity.source_sha256`, with `historical`, `national`, `methods` and `limitations` unchanged (present the diff summary);
+     - a second run reproduces the new file byte-for-byte;
+     - `./run_tests.sh` stays green, and no other file is staged (`model_output_trends.json` in particular).
 2. **3a: Westminster display** (thread 4, Piece 3a). W-4: the MC median seat count as the headline or alongside it (Phil picks at the brief), with the deterministic count labelled "uniform-swing projection" and flagged when it falls outside its own 90% range. S-1: integer percentages, "<1%" and ">99%", stored to 3 dp. Westminster views only now.
    - Acceptance: `npm test`, `npm run minify:electionmaps`, the jsdom harness on both pages; screenshots or text dumps presented.
 3. **Style cleanup** (thread 4, Phase 6). One formatting-only commit; no behaviour change. Model: `claude-sonnet-5-5`. Depends on: 1, 1b, 2.
@@ -81,6 +87,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] US work moved to issue 0004; branch `us-poll-errors-uncertainty` at `44dd8336` pushed (2026-11-07).
 - [x] 1 · US work removed from this branch; checks green (`5a96e52c`).
 - [ ] 1b · Offline conversion experiment removed from this branch; checks green.
+- [ ] 1c · Westminster validation report regenerated and committed.
 - [ ] 2 · T4 Piece 3a: Westminster display changes.
 - [ ] 3 · T4 Phase 6: Style cleanup.
 - [ ] 4 · Branch self-review done and chosen fixes committed.

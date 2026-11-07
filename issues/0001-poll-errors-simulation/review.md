@@ -38,3 +38,5 @@ Sent to the builder 2026-11-07. Commit: `eeee25d0` (all seven, pushed; Phil appr
 - R2-3 · low · coverage · `data/model_support/trends.py:~292`: no test of an unpolled (dropped) run between runs with different identities. Fix: identities a, (unpolled, b), a; assert the middle run is excluded and doesn't change the surrounding decisions.
 - R2-4 · low · correctness · `data/console/blueprints/polls.py:188-190`: `poll_detail` still errors for a Westminster poll on a malformed config. Fix: catch `UncertaintyConfigError` and show no MoE with an alert, as `poll_list` now does.
 - R2-5 · nit · `test_tampered_inputs_raise_before_any_replay` claims more than it checks. Fix: rename it, or assert no replay ran.
+
+Round 2 choice (Phil, 2026-11-07): fix **R2-1** (jsdom@24 devDependency), **R2-2** and **R2-4** (console config guards). Skipped by Phil: R2-3 (unpolled-run test) and R2-5 (test-name nit). Commit: (pending).

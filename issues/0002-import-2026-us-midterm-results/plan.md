@@ -331,3 +331,14 @@ No test touches the live DB (conftest guard).
   - A warning flags a Senate special still in the DB that no file names.
   - Final: mypy clean, 4936 passed. The all-years trial converts and imports all 14 elections, with zero diffs on a `--refresh` pass and 0 winner changes vs 538.
 - 2026-11-07: piece 4 committed (0a9007e5) and pushed. Before piece 11: confirm map ids 24/25 are free in the live DB.
+- 2026-11-07 (piece 5) first build: routes GET `/us/results`; POST `/us/results/preview`, `/us/results/confirm/<token>`, `/us/results/export`.
+  - The out-dir and cache come from `app.config` (`US_RESULTS_OUT_DIR`, `US_RESULTS_CACHE_DIR`).
+  - Export runs `export_elections.py` under `model_run_slot`, the same as the site and by-election flows.
+  - CSRF is the app-wide same-origin hook.
+- Piece 5 review round 1. Security: no findings. Fixes routed:
+  - on any import failure, restore the old file bytes (a DB error had left the committed JSON overwritten);
+  - refuse stale tokens (an older preview after a newer one), and drop sibling tokens on confirm;
+  - pop the token inside the slot;
+  - a public `fetch.cached_snapshot_info` replaces the form's direct pointer reads (fetch.py added to piece 5's files);
+  - a separate "not imported (House special)" label;
+  - change-label tests, the files-checked count, line wrapping.

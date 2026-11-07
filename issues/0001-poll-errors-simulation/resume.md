@@ -17,4 +17,4 @@ No pending decision beyond the review choice below.
 
 In progress 2026-11-07: **Piece 4 review fixes.** Phil chose all seven findings (`review.md`). They went to the builder for its Review fixes step. When it reports back: ingest, confirm the fix commits with `git log master..poll-errors-simulation`, re-run correctness and coverage on the new diff, update `review.md` with the SHAs, then tick checkpoint 4. Next after that: Piece 5 (merge master in).
 
-Pending 2026-11-07 (planner chat): **self-review round 2.** All seven findings are resolved in `eeee25d0`. The re-check raised R2-1 to R2-5 (`review.md`), and Phil is choosing which to fix before Piece 5.
+In progress 2026-11-07: **self-review round 2 fixes** (R2-1, R2-2, R2-4; `review.md`) are with the builder. When it reports: ingest, confirm the commit, record the SHA in `review.md`. Then Piece 5 (merge master in), which needs Phil's go-ahead to push. After Piece 5 and Piece 6, regenerate `uncertainty_validation_report.json` if its hashed sources changed.

@@ -18,4 +18,7 @@ Westminster only. The US uncertainty work moved to its own branch, and the model
 - [x] Westminster backfill and export: 848 nowcasts rerun with uncertainty (`51c31966`)
 - [x] Main headline leads with the simulated outcome (`c7a85eab`)
 - [x] Second self-review fixes; tracker starts on the 2024 election-day result (`ae61f984`, `b2c33428`)
+- [x] Header: nowcast note below the latest poll (`950b22a2`)
+- [ ] Vote-totals table: one Seats column from the simulated median
+- [ ] Poll tracker Chances view: no blank space on the left
 - [ ] Final PR description

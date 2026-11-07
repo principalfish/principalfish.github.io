@@ -5,7 +5,7 @@
   "mode": "build",
   "state": "investigating",
   "branch": "refine-westminster-and-us-poll-error-models",
-  "base": "master",
+  "base": "poll-errors-simulation",
   "gh_issue": null,
   "build_model": null,
   "created": "2026-11-07 10:52",

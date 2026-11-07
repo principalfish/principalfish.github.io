@@ -21,3 +21,4 @@
 - 2026-11-07 13:22 · 3b1adc2f was already pushed, so its quick-build entry is restored
 - 2026-11-07 15:32 · poll-errors-simulation (0001) · PR #74
 - 2026-11-07 15:55 · import-2026-us-midterm-results (0002) · PR #80
+- 2026-11-07 19:24 · poll-errors-simulation (0001) · building → review

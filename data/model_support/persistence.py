@@ -25,7 +25,6 @@ from pathlib import Path
 
 from db import ensure_elections_sqlite_schema
 from electoral_votes import allocation_year
-from model_support.us_uncertainty import US_STORED_SCHEMA, validate_document
 
 _COMMITTED: ContextVar[tuple[tuple[Path, OutputScope, list[date]], ...]] = ContextVar(
     "committed_model_dates", default=()
@@ -101,7 +100,6 @@ class UncertaintyPayload:
     national: Mapping[str, object]
     regions: Mapping[str, object] | None = None
     seats: Mapping[str, object] | None = None
-    schema: str = UNCERTAINTY_SCHEMA
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,7 +117,6 @@ class StoredUncertainty:
     national: dict[str, object]
     regions: dict[str, object] | None
     seats: dict[str, object] | None
-    schema: str = UNCERTAINTY_SCHEMA
 
 
 @dataclass(frozen=True, slots=True)
@@ -228,13 +225,6 @@ def _delete_range(
             f"DELETE FROM {UNCERTAINTY_TABLE} WHERE election_id IN ({placeholders})",
             election_ids,
         )
-    if conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='model_context'"
-    ).fetchone():
-        conn.execute(
-            f"DELETE FROM model_context WHERE election_id IN ({placeholders})",
-            election_ids,
-        )
     deleted_votes = conn.execute(
         f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
     ).rowcount
@@ -274,7 +264,6 @@ def replace_output(
     *,
     target_election_year: int | None = None,
     uncertainty: UncertaintyPayload | None = None,
-    model_context: Mapping[str, object] | None = None,
 ) -> tuple[str, int]:
     """Commit deletion and insertion together, preserving old rows on failure.
 
@@ -298,8 +287,6 @@ def replace_output(
         votes: The run's vote rows.
         target_election_year: Target cycle; presidential outputs only.
         uncertainty: The run's Monte Carlo summary, if any.
-        model_context: Optional frozen deterministic counting inputs. The table
-            is created transactionally only when a context is saved.
 
     Returns:
         (election name, new election id).
@@ -310,12 +297,7 @@ def replace_output(
         UncertaintyStoreError: If ``uncertainty`` is given but the table has
             not been migrated; nothing is written.
     """
-    context_json = None if model_context is None else json.dumps(
-        dict(model_context), sort_keys=True, separators=(",", ":"), allow_nan=False
-    )
     encoded = None if uncertainty is None else _encode_payload(uncertainty)
-    if uncertainty is not None:
-        _validate_payload_scope(uncertainty, scope, as_of)
     if scope.date_from_name(election_name) != as_of:
         raise ValueError("Election name does not match the output date and scope")
     if scope.election_type == "us_presidential_model":
@@ -328,12 +310,6 @@ def replace_output(
         with conn:
             # Start before selection so concurrent changes cannot split the replacement.
             conn.execute("BEGIN IMMEDIATE")
-            if context_json is not None:
-                conn.execute(
-                    "CREATE TABLE IF NOT EXISTS model_context ("
-                    "election_id INTEGER PRIMARY KEY REFERENCES elections(id) "
-                    "ON DELETE CASCADE, payload_json TEXT NOT NULL)"
-                )
             has_uncertainty_table = _has_uncertainty_table(conn)
             if encoded is not None and not has_uncertainty_table:
                 raise UncertaintyStoreError(
@@ -380,12 +356,7 @@ def replace_output(
                     f"INSERT INTO {UNCERTAINTY_TABLE} "
                     "(election_id, schema, national_json, regions_json, seats_json) "
                     "VALUES (?, ?, ?, ?, ?)",
-                    (election_id, uncertainty.schema if uncertainty else "", *encoded),
-                )
-            if context_json is not None:
-                conn.execute(
-                    "INSERT INTO model_context (election_id, payload_json) "
-                    "VALUES (?, ?)", (election_id, context_json),
+                    (election_id, UNCERTAINTY_SCHEMA, *encoded),
                 )
             if has_uncertainty_table:
                 _prune_detail(conn, scope)
@@ -412,9 +383,6 @@ def _encode_block(block: Mapping[str, object]) -> str:
 
 
 def _encode_payload(payload: UncertaintyPayload) -> tuple[str, str | None, str | None]:
-    _check_schema(payload.schema, 0)
-    if payload.schema == US_STORED_SCHEMA:
-        validate_document(payload.national, public=False)
     try:
         return (
             _encode_block(payload.national),
@@ -451,32 +419,11 @@ def _prune_detail(conn: sqlite3.Connection, scope: OutputScope) -> int:
 
 
 def _check_schema(schema: object, election_id: int) -> None:
-    if schema not in (UNCERTAINTY_SCHEMA, US_STORED_SCHEMA):
+    if schema != UNCERTAINTY_SCHEMA:
         raise UncertaintyStoreError(
             f"Election {election_id}: stored format {schema!r}, "
             f"expected {UNCERTAINTY_SCHEMA!r}"
         )
-
-
-def _validate_payload_scope(
-    payload: UncertaintyPayload, scope: OutputScope, as_of: date,
-) -> None:
-    if payload.schema == US_STORED_SCHEMA:
-        context = validate_document(payload.national, public=False)
-        model_types = {
-            "house": "us_house_model", "senate": "us_senate_model",
-            "president": "us_presidential_model",
-        }
-        if (
-            scope.election_type != model_types[context.model]
-            or scope.map_id != context.map_id
-            or as_of.isoformat() != context.as_of_date
-        ):
-            raise ValueError(
-                "US uncertainty model, map or date mismatches output scope",
-            )
-    elif scope.election_type.startswith("us_"):
-        raise ValueError("US outputs require the explicit US uncertainty schema")
 
 
 def _decode_block(text: str, column: str, election_id: int) -> dict[str, object]:
@@ -515,41 +462,24 @@ def load_uncertainty(sqlite_path: Path, election_id: int) -> StoredUncertainty |
         if not _has_uncertainty_table(conn):
             return None
         row = conn.execute(
-            f"SELECT u.schema, u.national_json, u.regions_json, u.seats_json, "
-            "e.type, e.map_id, e.name "
-            f"FROM {UNCERTAINTY_TABLE} u JOIN elections e ON e.id=u.election_id "
-            "WHERE u.election_id = ?",
+            f"SELECT schema, national_json, regions_json, seats_json "
+            f"FROM {UNCERTAINTY_TABLE} WHERE election_id = ?",
             (election_id,),
         ).fetchone()
     if row is None:
         return None
-    schema, national, regions, seats, election_type, map_id, name = row
+    schema, national, regions, seats = row
     _check_schema(schema, election_id)
     region_block = seat_block = None
     if regions is not None:
         region_block = _decode_block(regions, "regions_json", election_id)
     if seats is not None:
         seat_block = _decode_block(seats, "seats_json", election_id)
-    national_block = _decode_block(national, "national_json", election_id)
-    if schema == US_STORED_SCHEMA:
-        try:
-            context = validate_document(national_block, public=False)
-            prefix, separator, suffix = str(name).partition(f" {context.as_of_date}")
-            if not separator or (suffix and not suffix.startswith(" ")):
-                raise ValueError("US uncertainty date differs from its election")
-            _validate_payload_scope(
-                UncertaintyPayload(national_block, schema=str(schema)),
-                OutputScope(str(election_type), int(map_id), prefix),
-                date.fromisoformat(context.as_of_date),
-            )
-        except ValueError as exc:
-            raise UncertaintyStoreError(f"Election {election_id}: {exc}") from exc
     return StoredUncertainty(
         election_id=election_id,
-        national=national_block,
+        national=_decode_block(national, "national_json", election_id),
         regions=region_block,
         seats=seat_block,
-        schema=str(schema),
     )
 
 
@@ -576,24 +506,13 @@ def iter_national_blocks(
     """
     if not _has_uncertainty_table(conn):
         return
-    dates_by_id = dict(scoped_elections(conn, scope))
     for election_id, schema, national in conn.execute(
         f"SELECT u.election_id, u.schema, u.national_json FROM {UNCERTAINTY_TABLE} u "
         "JOIN elections e ON e.id = u.election_id WHERE e.type = ? AND e.map_id = ?",
         (scope.election_type, scope.map_id),
     ):
         _check_schema(schema, election_id)
-        block = _decode_block(national, "national_json", election_id)
-        as_of = dates_by_id.get(int(election_id))
-        if as_of is None:
-            continue
-        try:
-            _validate_payload_scope(
-                UncertaintyPayload(block, schema=str(schema)), scope, as_of,
-            )
-        except ValueError as exc:
-            raise UncertaintyStoreError(f"Election {election_id}: {exc}") from exc
-        yield int(election_id), block
+        yield int(election_id), _decode_block(national, "national_json", election_id)
 
 
 def uncertainty_status(
@@ -616,18 +535,17 @@ def uncertainty_status(
             return None
         rows = conn.execute(
             "SELECT e.id, e.name, "
-            "u.regions_json IS NOT NULL OR u.seats_json IS NOT NULL, u.schema "
+            "u.regions_json IS NOT NULL OR u.seats_json IS NOT NULL "
             f"FROM {UNCERTAINTY_TABLE} u JOIN elections e ON e.id = u.election_id "
             "WHERE e.type = ? AND e.map_id = ?",
             (scope.election_type, scope.map_id),
         ).fetchall()
     stored = 0
     detailed: list[UncertaintyRun] = []
-    for election_id, name, has_detail, schema in rows:
+    for election_id, name, has_detail in rows:
         as_of = scope.date_from_name(str(name or ""))
         if as_of is None:
             continue
-        _check_schema(schema, election_id)
         stored += 1
         if has_detail:
             detailed.append(UncertaintyRun(int(election_id), str(name), as_of))

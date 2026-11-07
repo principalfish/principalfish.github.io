@@ -83,25 +83,17 @@ def test_full_reconstruction_ignores_cache_and_insertion_order(
     destination.write_text("malformed-cache")
     publish_trends(only_the_test_database, scope, destination)
     entries = json.loads(destination.read_text())
-    if model in {"us-house", "us-senate", "us-president"}:
-        assert entries["schema"] == "pf-us-model-trends-v1"
-        entries = entries["points"]
     assert [entry["as_of_date"] for entry in entries] == [
         "2026-06-01",
         "2026-06-02",
-        *(["2026-06-03"] if model in {"us-house", "us-senate", "us-president"} else []),
         "2026-06-04",
     ]
     assert entries[0]["election_id"] > entries[1]["election_id"]
     assert len(output_dates(only_the_test_database, scope)) == 4
     store(only_the_test_database, scope, 2, seats[0], parties, 70)
     publish_trends(only_the_test_database, scope, destination)
-    republished = json.loads(destination.read_text())
-    if model in {"us-house", "us-senate", "us-president"}:
-        republished = republished["points"]
-    assert [entry["as_of_date"] for entry in republished] == [
+    assert [entry["as_of_date"] for entry in json.loads(destination.read_text())] == [
         "2026-06-01",
-        *(["2026-06-02"] if model in {"us-house", "us-senate", "us-president"} else []),
         "2026-06-03",
         "2026-06-04",
     ]
@@ -110,8 +102,7 @@ def test_full_reconstruction_ignores_cache_and_insertion_order(
     assert [
         entry["as_of_date"]
         for entry in reconstruct_trends(only_the_test_database, scope)
-    ] == (["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04"]
-          if model in {"us-house", "us-senate", "us-president"} else ["2026-06-01"])
+    ] == ["2026-06-01"]
 
 
 @pytest.mark.parametrize("model", TREND_MODELS)
@@ -392,7 +383,7 @@ def test_identical_serialized_metrics_and_zero_totals(
             target_election_year=2028 if model == "us-president" else None,
         )
     entries = reconstruct_trends(only_the_test_database, scope)
-    assert len(entries) == (2 if model in {"us-house", "us-senate", "us-president"} else 1)
+    assert len(entries) == 1
     assert entries[0]["parties"][str(parties[1])]["v"] == 0.0
     assert ("e" in entries[0]["parties"][str(parties[0])]) == (model == "us-president")
 
@@ -651,6 +642,40 @@ def test_unknown_identity_never_proves_equal_bands_comparable(
     entries = reconstruct_trends(only_the_test_database, scope)
     assert len(entries) == 3
     assert all(e["segment_id"] is None for e in entries)
+
+
+# SHA-256 of '["c0ffee","pf-westminster-mc-v1"]', national_block's default identity.
+# Pinned so a change to the canonical encoding (which would split every published
+# trend into new segments) fails loudly.
+DEFAULT_SEGMENT_ID = "f9fd7580b43e72e4d81987c90b04441cff95d11c35d2983d0c474d013b25d293"
+
+
+def test_segment_id_is_sha256_of_canonical_config_and_kernel() -> None:
+    assert trends._segment_id("c0ffee", "pf-westminster-mc-v1") == DEFAULT_SEGMENT_ID
+    # Order matters: the pair is a JSON array, not a sorted set.
+    assert trends._segment_id("pf-westminster-mc-v1", "c0ffee") != DEFAULT_SEGMENT_ID
+
+
+def test_westminster_runs_order_compress_and_share_one_segment(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    # Stored out of date order; days 2 and 4 repeat their predecessor's projection.
+    for day, share in [(4, 65), (1, 60), (5, 60), (2, 60), (3, 65)]:
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, share,
+            national_block(parties, hung=round(0.1 * day, 1)),
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [
+        (e["as_of_date"], e["parties"][str(parties[0])]["v"], e["hung"])
+        for e in entries
+    ] == [
+        ("2026-06-01", 60.0, 0.1),
+        ("2026-06-03", 65.0, 0.3),
+        ("2026-06-05", 60.0, 0.5),
+    ]
+    assert [e["segment_id"] for e in entries] == [DEFAULT_SEGMENT_ID] * 3
 
 
 def polled_block(parties: list[int], counts: tuple[int, ...]) -> dict[str, object]:

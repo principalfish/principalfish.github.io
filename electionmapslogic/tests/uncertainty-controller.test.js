@@ -61,20 +61,21 @@ describe("optional uncertainty loading", () => {
   });
 
   it.each(["run", "unrelated-derived"])("rejects delayed results after a %s identity change", async (change) => {
-    manifest.parliamentFeatures.westminster.uncertaintyModel = "senate";
     let resolve;
     fetchJson.mockImplementation(() => new Promise((done) => { resolve = done; }));
     const original = state.electionData;
     const loading = activateUncertaintyView();
     if (change === "run") original.uncertaintyId = "new-run";
-    else {
-      const unrelated = new ElectionData({ seats: [], uncertaintyId: "saved-run" });
-      state.electionData = ElectionData.fromSeats([], null, unrelated);
-    }
+    // A different results object carrying the same run id must not adopt the summary either.
+    else state.electionData = new ElectionData({ seats: [], uncertaintyId: "saved-run" });
     resolve(payload());
     await loading;
     expect(original.uncertainty).toBeNull();
-    expect(renderVoteTotals).not.toHaveBeenCalled();
+    expect(state.electionData.uncertainty).toBeNull();
+    // The run id is matched when decoding, so a changed id re-renders the central result
+    // without uncertainty; only a replaced results object skips the render altogether.
+    if (change === "run") expect(renderVoteTotals).toHaveBeenCalledOnce();
+    else expect(renderVoteTotals).not.toHaveBeenCalled();
   });
 
   it.each([null, { ...payload(), uncertaintyId: "different-same-day-run" }, { schema: "unknown" }])(

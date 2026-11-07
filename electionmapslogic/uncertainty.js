@@ -1,5 +1,4 @@
 // Published uncertainty is optional. Keep decoding and display rules independent of the DOM.
-import { decodeUsUncertainty } from "./us-uncertainty.js";
 
 function finite(value, min = 0, max = Infinity) {
   return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
@@ -26,10 +25,7 @@ export function decodeSeatUncertainty(value, resolveParty) {
 }
 
 /** Decode public identifiers once, when a matching summary arrives. */
-export function decodeUncertainty(payload, identity, resolveParty, regionsById, options = {}) {
-  if (options.model || payload?.schema === "pf-us-public-uncertainty-v1") {
-    return decodeUsUncertainty(payload, identity, resolveParty, regionsById, options);
-  }
+export function decodeUncertainty(payload, identity, resolveParty, regionsById) {
   if (!identity || payload?.schema !== "pf-uncertainty-v1"
       || payload.uncertaintyId !== identity || !finite(payload.interval, 0, 1)
       || payload.interval === 0 || !Number.isInteger(payload.simulations)
@@ -58,18 +54,8 @@ export function decodeUncertainty(payload, identity, resolveParty, regionsById, 
 
 /** Only the saved model result can use its uncertainty, never a user-created scenario. */
 export function activeUncertainty(state) {
-  if (state.view !== "election" || !state.currentElection?.model) return null;
-  const data = state.electionData;
-  const source = data?.uncertaintySource;
-  const summary = source && source.uncertaintyId === data.uncertaintyId
-    ? source.uncertainty : data?.uncertainty;
-  if (summary?.descriptor?.model !== "senate" || data.uncertaintyScope !== "senate_full_seats") return summary ?? null;
-  // A mutable chamber snapshot must agree with the frozen full-chamber central tally.
-  const actual = data.summary.data.parties;
-  const expected = summary.full.central;
-  if (actual.some((row) => row.seats !== (expected[row.party] ?? 0))
-    || Object.entries(expected).some(([party, seats]) => seats !== (actual.find((row) => row.party === party)?.seats ?? 0))) return null;
-  return { ...summary, national: summary.full };
+  return state.view === "election" && state.currentElection?.model
+    ? state.electionData?.uncertainty ?? null : null;
 }
 
 /** Whole-country and exactly-one-region totals have stored ranges; arbitrary slices do not. */
@@ -100,23 +86,6 @@ export function seatUncertaintyText(band) {
 
 export function uncertaintyHeadline(summary, labelParty) {
   if (!summary) return "";
-  if (summary.descriptor?.model === "senate") {
-    const outcomes = summary.outcomes;
-    return `Democratic caucus control ${uncertaintyNumber(outcomes.control.democratic * 100)}% · `
-      + `Republican caucus control ${uncertaintyNumber(outcomes.control.republican * 100)}% · `
-      + `50–50 caucuses ${uncertaintyNumber(outcomes.tied * 100)}% · `
-      + `Unresolved control ${uncertaintyNumber(outcomes.residual * 100)}% (if an election were held today)`;
-  }
-  if (["house", "president"].includes(summary.descriptor?.model)) {
-    const leaders = Object.entries(summary.national.parties)
-      .filter(([, row]) => Number.isFinite(row.pm))
-      .sort((a, b) => b[1].pm - a[1].pm || labelParty(a[0]).localeCompare(labelParty(b[0])));
-    if (!leaders.length || !Number.isFinite(summary.national.residual)) return "";
-    const [party, row] = leaders[0];
-    return `${labelParty(party)} ${summary.descriptor.majorityLabel.toLowerCase()} ${uncertaintyNumber(row.pm * 100)}% · `
-      + `${summary.descriptor.residualLabel} ${uncertaintyNumber(summary.national.residual * 100)}% `
-      + "(if an election were held today)";
-  }
   const leaders = Object.entries(summary.national.parties)
     .filter(([, row]) => row.pl !== null && row.pm !== null)
     .sort((a, b) => b[1].pl - a[1].pl || labelParty(a[0]).localeCompare(labelParty(b[0])));

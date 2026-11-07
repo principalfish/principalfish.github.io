@@ -221,16 +221,8 @@
   "parliamentFeatures": {
     "us_house": {
       "features": [
-        "predict",
-        "pollTracker"
+        "predict"
       ],
-      "polltrackerDataPath": "results/us-house-trends.json",
-      "polltrackerDefaultParties": [
-        20,
-        21
-      ],
-      "uncertaintyDataPath": "results/us-house-uncertainty.json",
-      "uncertaintyModel": "house",
       "predictAnchorElectionId": "current-us-house",
       "predictBaselineElectionId": "2024-us-house",
       "nextElectionYear": 2026,
@@ -262,16 +254,8 @@
     },
     "us_presidential": {
       "features": [
-        "predict",
-        "pollTracker"
+        "predict"
       ],
-      "polltrackerDataPath": "results/us-president-trends.json",
-      "polltrackerDefaultParties": [
-        20,
-        21
-      ],
-      "uncertaintyDataPath": "results/us-president-uncertainty.json",
-      "uncertaintyModel": "president",
       "predictAnchorElectionId": "current-us-president",
       "predictBaselineElectionId": "2024-us-president",
       "nextElectionYear": 2028,
@@ -304,16 +288,8 @@
     },
     "us_senate": {
       "features": [
-        "predict",
-        "pollTracker"
+        "predict"
       ],
-      "polltrackerDataPath": "results/us-senate-trends.json",
-      "polltrackerDefaultParties": [
-        20,
-        21
-      ],
-      "uncertaintyDataPath": "results/us-senate-uncertainty.json",
-      "uncertaintyModel": "senate",
       "predictAnchorElectionId": "current-us-senate",
       "predictBaselineElectionId": "2020-us-senate",
       "nextElectionYear": 2026,

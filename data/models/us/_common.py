@@ -4,8 +4,7 @@
 This module is the US analogue of ``models/westminster/run_uns_model.py``, factored
 so the House / President / Senate runners differ only by a small
 :class:`UsModelSpec` (map, baseline election, persisted election type, output
-paths). Senate generic-ballot changes use a pinned House national reference
-for each race's baseline year; the final seat projection maths is shared.
+paths). The projection maths itself is identical across the three.
 
 Design — "national uniform swing, state-ready":
     US polling here is a single **national** series per election type (a
@@ -46,7 +45,7 @@ import re
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable, Literal
@@ -62,43 +61,6 @@ from config import DatabaseConfig
 from db import Database
 from electoral_votes import allocation_year, get_electoral_votes, positive_integer
 from model_support.history import HistoryRecomputationError
-from model_support.senate_cycles import (
-    SenateCycle,
-    resolve_senate_cycle,
-    senate_central_snapshot,
-)
-from model_support.us_house_anchors import HouseAnchorError
-from model_support.us_simulation import (
-    UsErrorConfig,
-    UsLocalAverage,
-    UsPollSnapshot,
-    UsSeatInput,
-    UsSimulationInputs,
-    build_us_simulation_inputs,
-    freeze_us_central_inputs,
-    run_us_simulations,
-    UsSimulationRun,
-)
-from model_support.us_release import (
-    HOUSE_RELEASE,
-    SENATE_RELEASE,
-    PRESIDENT_RELEASE, president_release, UsRelease,
-    senate_release,
-    UsReleaseError,
-    house_release,
-    house_target_cycle,
-)
-from model_support.us_run import (
-    house_context, house_payload, json_data, senate_context, senate_payload,
-    president_context, president_payload,
-)
-from model_support.us_senate_anchors import (
-    SENATE_ANCHOR_POLICY_SHA256,
-    SENATE_CENTRAL_ESTIMATOR,
-    SenateHouseAnchor,
-    resolve_senate_house_anchors,
-)
-from model_support.us_replay import stage_us_draws, us_raw_path
 from model_support.io import publish_json, validate_output_target
 from model_support.trends import (
     default_trend_path,
@@ -109,11 +71,9 @@ from model_support.trends import (
 from model_support.persistence import (
     OutputScope,
     OutputVote,
-    UncertaintyPayload,
     delete_outputs,
     output_dates,
     replace_output,
-    latest_saved_run,
 )
 from model_support.cli import (
     single_date_window,
@@ -137,7 +97,7 @@ from model_support.summaries import (
     summarize_votes,
 )
 from models import Election, Map, Region, Vote
-from polls.importers.us.us_geography import canonical_state, parent_seat_name
+from polls.importers.us.us_geography import parent_seat_name
 from polls.importers.us.us_polls_common import (
     MAJOR_PARTY_NAMES,
     MatchupCandidate,
@@ -208,13 +168,12 @@ class UsModelSpec:
         seat_baseline_overrides: Seat name → the **manifest id** of the election that
             seat's baseline comes from, for seats whose baseline is not
             ``baseline_election_name`` (the 2026 Senate specials, which swing from 2022
-            rather than 2020). Manifest ids let configured model baselines and
-            exported comparison files identify the same election;
-            :func:`resolve_special_baselines` turns them into rows.
+            rather than 2020). Manifest ids rather than election names, because the
+            source of truth is ``map-modes-shell.json``, which names elections the way
+            the exported manifest does; :func:`resolve_special_baselines` turns them
+            into rows. Consumed by the baseline loader.
         target_election_year: Presidential allocation year; other chambers leave it
             unset.
-        senate_cycle_config: Optional pinned Senate configuration, resolved per date.
-        senate_cycle: Resolved immutable Senate field and counting inputs.
     """
 
     map_name: str
@@ -231,23 +190,6 @@ class UsModelSpec:
     # every spec ever built.
     seat_baseline_overrides: Mapping[str, str] = field(default_factory=dict)
     target_election_year: int | None = None
-    senate_cycle_config: Path | None = None
-    senate_cycle: SenateCycle | None = None
-    uncertainty_release_config: Path | None = None
-
-
-def spec_for_date(spec: UsModelSpec, as_of: date) -> UsModelSpec:
-    """Bind a configured Senate runner to its dated field, preserving other models."""
-    if spec.senate_cycle_config is None:
-        return spec
-    if spec.election_type != "us_senate_model":
-        raise ValueError("Only Senate specifications support a Senate cycle config")
-    cycle = resolve_senate_cycle(as_of, spec.senate_cycle_config)
-    return replace(
-        spec, baseline_election_name=cycle.baseline_name,
-        seat_name_allowlist=cycle.states, seat_baseline_overrides=cycle.baseline_overrides,
-        senate_cycle=cycle,
-    )
 
 
 @dataclass
@@ -255,7 +197,7 @@ class UsSimulationConfig:
     """Configuration parameters for a single US forecast run.
 
     Attributes:
-        spec: Per-type configuration, bound to the as-of Senate cycle when configured.
+        spec: The static per-type configuration.
         as_of_date: Upper bound for poll fieldwork end dates; the projection reflects
             the state of play as of this date.
         since_date: Lower bound for poll fieldwork end dates.
@@ -281,25 +223,10 @@ class UsSimulationConfig:
     ignore_seat_polls: bool = False
     target_election_year: int | None = None
 
-    simulations: int | None = None
-    no_uncertainty: bool = False
-    keep_raw: bool = True
-
     def __post_init__(self) -> None:
-        self.spec = spec_for_date(self.spec, self.as_of_date)
         validate_half_life(self.half_life_days)
         validate_prior_weight(self.seat_prior_weight)
         validate_date_window(self.since_date, self.as_of_date)
-        if self.simulations is not None and (
-            type(self.simulations) is not int or not 1 <= self.simulations <= 1_000_000
-        ):
-            raise ValueError("--simulations must be an integer in [1, 1000000]")
-        if self.simulations is not None and self.no_uncertainty:
-            raise ValueError("--simulations cannot be combined with --no-uncertainty")
-        if self.simulations is not None and self.spec.election_type not in {
-            "us_house_model", "us_senate_model", "us_presidential_model",
-        }:
-            raise ValueError("unsupported US uncertainty runner")
         if self.spec.election_type == "us_presidential_model":
             self.target_election_year = allocation_year(
                 self.spec.election_type,
@@ -418,11 +345,6 @@ class PollReading:
     fieldwork_end: date
     candidate_count: int
     candidate_shares: Mapping[str, float]
-    evidence_kind: str | None = None
-    population_type: str | None = None
-    sample_size: int | None = None
-    evidence_source: str | None = None
-    source_url: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -504,19 +426,6 @@ def is_others_party(party_name: str) -> bool:
     polled seat.
     """
     return party_name.strip().casefold() in OTHERS_PARTY_NAMES
-
-
-def has_baseline_party_support(
-    baseline_votes: Mapping[int, float],
-    party_id: int,
-    party_name: str,
-) -> bool:
-    """Allow broad polling effects only where the party had baseline votes.
-
-    Others remains an aggregate bucket with its existing swing policy.
-    A newly polled candidate can still enter through that seat's own poll blend.
-    """
-    return baseline_votes.get(party_id, 0.0) > 0.0 or is_others_party(party_name)
 
 
 def decided_vote_shares(shares: Mapping[int, float]) -> dict[int, float]:
@@ -854,11 +763,6 @@ def collect_poll_readings(
                 fieldwork_start=poll.fieldwork_start,
                 fieldwork_end=poll.fieldwork_end,
                 candidate_count=candidate_count,
-                evidence_kind=poll.evidence_kind,
-                population_type=poll.population_type,
-                sample_size=poll.sample_size,
-                evidence_source=poll.evidence_source,
-                source_url=poll.source_url,
                 candidate_shares=dict(candidate_shares),
             )
         )
@@ -871,7 +775,6 @@ def aggregate_national(
     national_matchup: str | None,
     *,
     contributors: list[LatestPollUsage] | None = None,
-    evidence_contributors: list[PollReading] | None = None,
 ) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], LatestPollUsage | None]:
     """Aggregate the national series out of a map's readings.
 
@@ -899,8 +802,6 @@ def aggregate_national(
             continue
         if contributors is not None:
             contributors.append(poll_usage(reading))
-        if evidence_contributors is not None:
-            evidence_contributors.append(reading)
 
         for party_id, share in reading.shares.items():
             weighted_sums[(None, party_id)] += share * reading.weight
@@ -1200,7 +1101,6 @@ def aggregate_seat_polls(
     national_matchup: str | None,
     policy: SeatMatchupPolicy,
     contributors: list[LatestPollUsage] | None = None,
-    evidence_contributors: list[PollReading] | None = None,
 ) -> dict[int, SeatPollAverage]:
     """Average each seat's own polls into one :class:`SeatPollAverage`.
 
@@ -1297,8 +1197,6 @@ def aggregate_seat_polls(
 
         if contributors is not None:
             contributors.append(poll_usage(reading))
-        if evidence_contributors is not None:
-            evidence_contributors.append(reading)
         seat_weights[seat_id] += reading.weight
         seat_counts[seat_id] += 1
         latest = latest_by_seat.get(seat_id)
@@ -1381,7 +1279,6 @@ def blend_seat_swings(
     party_name_by_id: Mapping[int, str],
     parent_seat_by_id: Mapping[int, int],
     prior_weight: float,
-    seat_fallback_swings: Mapping[int, Mapping[int, float]] | None = None,
 ) -> dict[int, dict[int, float]]:
     """Blend each polled seat's own swing with its uniform-swing fallback.
 
@@ -1400,13 +1297,12 @@ def blend_seat_swings(
     * ``fallback`` is the parent state's blended swing for an ``X CD-n`` seat
       whose parent was itself blended, otherwise the seat's region swing from
       :func:`compute_region_diffs`. So Maine CD-2 rides Maine's polls until it
-      has polls of its own. Broad polling effects are zero for parties without
-      positive baseline votes in this seat, except for the Others bucket. A new
-      entrant's own local poll contribution is retained.
+      has polls of its own, and every unpolled seat keeps today's behaviour
+      exactly.
 
-    ``W = 0`` gives α = 0 and therefore the eligible fallback unchanged. A
-    district with no polls inherits its state's blend for baseline-supported
-    parties. An average with no contributing polls (every reading skipped as partial) is treated as no
+    ``W = 0`` gives α = 0 and therefore the fallback unchanged, which is how a
+    district with no polls inherits its state's blend verbatim. An average with
+    no contributing polls (every reading skipped as partial) is treated as no
     average at all, so the seat stays off the result and its districts keep their
     own region swing, exactly as if it had never been polled.
 
@@ -1421,8 +1317,6 @@ def blend_seat_swings(
         party_name_by_id: Party id → name, for the "Others" test.
         parent_seat_by_id: Child seat id → parent seat id (:func:`seat_parent_ids`).
         prior_weight: ``k``.
-        seat_fallback_swings: Explicit per-race broad swings. Senate references
-            use each race's House baseline year; absent maps retain region swings.
 
     Returns:
         Seat id → party id → swing, holding **only** the seats whose swing
@@ -1447,11 +1341,7 @@ def blend_seat_swings(
         fallbacks = (
             inherited
             if inherited is not None
-            else (
-                seat_fallback_swings[seat_id]
-                if seat_fallback_swings is not None and seat_id in seat_fallback_swings
-                else (region_swings.get(region_id, {}) if region_id is not None else {})
-            )
+            else (region_swings.get(region_id, {}) if region_id is not None else {})
         )
 
         alpha = poll_blend_alpha(average.total_weight if average is not None else 0.0, prior_weight)
@@ -1460,15 +1350,7 @@ def blend_seat_swings(
 
         swings: dict[int, float] = {}
         for party_id in parties:
-            fallback = (
-                fallbacks.get(party_id, 0.0)
-                if has_baseline_party_support(
-                    seat_party_vote_totals.get(seat_id, {}),
-                    party_id,
-                    party_name_by_id.get(party_id, ""),
-                )
-                else 0.0
-            )
+            fallback = fallbacks.get(party_id, 0.0)
             if alpha <= 0.0:
                 swings[party_id] = fallback
                 continue
@@ -1532,9 +1414,6 @@ def project_seat_votes(
     region_swings: dict[int, dict[int, float]],
     party_name_by_id: dict[int, str],
     seat_swings: Mapping[int, Mapping[int, float]] | None = None,
-    *,
-    seat_poll_averages: Mapping[int, SeatPollAverage] | None = None,
-    seat_fallback_swings: Mapping[int, Mapping[int, float]] | None = None,
 ) -> tuple[list[dict[str, Any]], Counter[str]]:
     """Apply swings to baseline seat shares and project a winner per seat.
 
@@ -1544,13 +1423,10 @@ def project_seat_votes(
     Seats with no positive baseline total are skipped.
 
     A seat present in ``seat_swings`` uses its own blended swing
-    (:func:`blend_seat_swings`); otherwise an explicit race fallback takes
-    precedence over the region's uniform swing,
+    (:func:`blend_seat_swings`); every other seat uses its region's uniform swing,
     which is what the whole map did before seat polls existed. Clamping,
     renormalisation and the winner rule are identical either way — blending only
-    changes which swing goes in. A party without positive baseline votes receives
-    no swing unless this seat's contributing polls name it. Inherited state polls
-    cannot admit a new district candidate. Others keeps its existing treatment.
+    changes which swing goes in.
 
     Returns ``(projected_votes, winners_by_party)`` — projected vote rows carry a
     ``vote_total`` vote count (turnout held at the baseline seat total) and an
@@ -1568,26 +1444,14 @@ def project_seat_votes(
         base_share_by_party = baseline_shares_for_seat(base_vote_totals)
 
         swing_for_seat = seat_swings.get(seat_id) if seat_swings is not None else None
-        if swing_for_seat is None and seat_fallback_swings is not None:
-            swing_for_seat = seat_fallback_swings.get(seat_id)
         if swing_for_seat is None:
             region_id = region_by_seat_id.get(seat_id)
             swing_for_seat = region_swings.get(region_id, {}) if region_id is not None else {}
 
         projection_raw: dict[int, float] = {}
-        average = seat_poll_averages.get(seat_id) if seat_poll_averages is not None else None
         for party_id in party_universe:
             baseline_share = base_share_by_party.get(party_id, 0.0)
-            local_entrant = (
-                average is not None
-                and average.n_polls > 0
-                and average.total_weight > 0.0
-                and party_id in average.shares
-            )
-            eligible = has_baseline_party_support(
-                base_vote_totals, party_id, party_name_by_id.get(party_id, "")
-            )
-            swing = swing_for_seat.get(party_id, 0.0) if eligible or local_entrant else 0.0
+            swing = swing_for_seat.get(party_id, 0.0)
             projection_raw[party_id] = max(0.0, baseline_share + swing)
 
         projection_sum = sum(projection_raw.values())
@@ -1854,8 +1718,6 @@ class SelectedPollWindow:
     seat_averages: dict[int, SeatPollAverage]
     national_contributors: tuple[LatestPollUsage, ...]
     seat_contributors: tuple[LatestPollUsage, ...]
-    national_evidence: tuple[PollReading, ...] = ()
-    seat_evidence: tuple[PollReading, ...] = ()
 
     @property
     def contributors(self) -> tuple[LatestPollUsage, ...]:
@@ -1905,13 +1767,10 @@ def collect_poll_window(
         source=source,
     )
     national_contributors: list[LatestPollUsage] = []
-    national_evidence: list[PollReading] = []
     weighted_sums, total_weights, _ = aggregate_national(
-        national_readings, scope.national_matchup, contributors=national_contributors,
-        evidence_contributors=national_evidence,
+        national_readings, scope.national_matchup, contributors=national_contributors
     )
     seat_contributors: list[LatestPollUsage] = []
-    seat_evidence: list[PollReading] = []
     seat_averages: dict[int, SeatPollAverage] = {}
     if include_seat_polls:
         seat_readings = (
@@ -1948,7 +1807,6 @@ def collect_poll_window(
             national_matchup=scope.national_matchup,
             policy=scope.seat_matchup_policy,
             contributors=seat_contributors,
-            evidence_contributors=seat_evidence,
         )
     return SelectedPollWindow(
         weighted_sums,
@@ -1956,8 +1814,6 @@ def collect_poll_window(
         seat_averages,
         tuple(national_contributors),
         tuple(seat_contributors),
-        tuple(national_evidence),
-        tuple(seat_evidence),
     )
 
 
@@ -2197,8 +2053,6 @@ def persist_projection(
     sqlite_path: Path | None = None,
     *,
     target_election_year: int | None = None,
-    uncertainty: UncertaintyPayload | None = None,
-    senate_anchor_context: Mapping[str, object] | None = None,
 ) -> tuple[str, int]:
     """Replace this model/map/date and all its vote rows in one transaction.
 
@@ -2233,10 +2087,6 @@ def persist_projection(
             for row in recorded_vote_rows(projected_votes)
         ),
         target_election_year=target_election_year,
-        uncertainty=uncertainty,
-        model_context=senate_central_snapshot(
-            spec.senate_cycle, senate_anchor_context,
-        ),
     )
 
 
@@ -2372,87 +2222,34 @@ def dates_to_run_for_cfg(
 # ── Orchestration ─────────────────────────────────────────────────────────────
 
 
-@dataclass(frozen=True, slots=True)
-class PreparedUsProjection:
-    """One selected central estimator, shared by runs and scratch diagnostics."""
-
-    map_id: int
-    seats: list[SeatRef]
-    party_ids: tuple[int, ...]
-    party_name_by_id: dict[int, str]
-    seat_party_vote_totals: dict[int, dict[int, float]]
-    region_by_seat_id: dict[int, int | None]
-    region_swings: dict[int, dict[int, float]]
-    seat_swings: dict[int, dict[int, float]]
-    seat_averages: dict[int, SeatPollAverage]
-    projected_votes: list[dict[str, Any]]
-    region_diff_rows: list[dict[str, Any]]
-    winners_by_party: Counter[str]
-    latest_poll_usage: LatestPollUsage | None
-    popular_vote_seat_ids: set[int] | None
-    seat_poll_diagnostics: list[str]
-    poll_window: SelectedPollWindow
-    seat_fallback_swings: dict[int, dict[int, float]] = field(default_factory=dict)
-    senate_anchor_context: dict[str, object] | None = None
-
-
-def senate_fallback_swings(
-    *,
-    anchor_shares_by_seat: Mapping[int, Mapping[str, float]],
-    region_by_seat_id: Mapping[int, int | None],
-    region_swings: Mapping[int, Mapping[int, float]],
-    weighted_sums: Mapping[tuple[int | None, int], float],
-    total_weights: Mapping[tuple[int | None, int], float],
-    party_name_by_id: Mapping[int, str],
-    party_universe: Iterable[int],
-) -> dict[int, dict[int, float]]:
-    """Use matching-year House levels, preserving a region's own poll swing.
-
-    The reference never depends on which Senate races or turnouts are selected.
-    National observations absent for a party imply zero broad swing. A named
-    minor party cannot borrow the aggregate Other component of the reference.
-    """
-    result: dict[int, dict[int, float]] = {}
-    parties = tuple(party_universe)
-    for seat_id, anchor in anchor_shares_by_seat.items():
-        region_id = region_by_seat_id.get(seat_id)
-        swings: dict[int, float] = {}
-        for party in parties:
-            name = party_name_by_id.get(party, "")
-            component = "Others" if is_others_party(name) else name
-            national = weighted_average(
-                weighted_sums.get((None, party), 0.0),
-                total_weights.get((None, party), 0.0),
-            )
-            if national is not None and component not in anchor:
-                raise HouseAnchorError(
-                    f"No approved House reference component for national party "
-                    f"{name or party!r}; repair or exclude that national evidence",
-                )
-            regional = weighted_average(
-                weighted_sums.get((region_id, party), 0.0),
-                total_weights.get((region_id, party), 0.0),
-            ) if region_id is not None else None
-            if regional is not None:
-                swings[party] = (
-                    region_swings.get(region_id, {}).get(party, 0.0)
-                    if region_id is not None else 0.0
-                )
-            else:
-                swings[party] = (
-                    national - anchor[component] if national is not None else 0.0
-                )
-        result[seat_id] = swings
-    return result
-
-
-def prepare_us_projection(
+def run_simulation(
     db: Database,
     cfg: UsSimulationConfig,
     *,
     poll_window: SelectedPollWindow | None = None,
-) -> PreparedUsProjection:
-    """Prepare the existing deterministic result without any writes."""
+) -> tuple[
+    str,
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    Counter[str],
+    LatestPollUsage | None,
+    dict[str, int],
+    list[str],
+]:
+    """Run one projection for a single ``as_of_date``.
+
+    Resolves scope, loads reference + baseline data, aggregates polls, computes
+    region swings, blends in each seat's own polls, projects seats, and (unless
+    dry-run) deletes any prior run for the date, persists the new model election,
+    and updates the trend JSON.
+
+    Returns ``(election_name, projected_votes, region_diff_rows, winners_by_party,
+    latest_poll_usage, electoral_votes_by_party, seat_poll_diagnostics)``.
+    ``electoral_votes_by_party`` is party-name → EV won, non-zero only for the
+    President, using the configured target's database allocation.
+    ``seat_poll_diagnostics`` holds the ``SEAT_POLL`` lines, returned rather than
+    printed so a 365-day backfill does not emit one per seat per day.
+    """
     spec = cfg.spec
     poll_map, baseline = resolve_simulation_scope(db, spec)
     scope = resolve_poll_scope(db, spec)
@@ -2489,7 +2286,6 @@ def prepare_us_projection(
         resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
         popular_vote_parent_ids=popular_vote_parent_ids,
     )
-    _validate_senate_field(spec, seats, seat_party_vote_totals)
     popular_vote_seat_ids = (
         usable_popular_vote_seat_ids(seat_party_vote_totals, popular_vote_parent_ids)
         if popular_vote_parent_ids is not None
@@ -2521,49 +2317,6 @@ def prepare_us_projection(
         baseline_region_shares,
     )
 
-    seat_fallbacks: dict[int, dict[int, float]] = {}
-    anchor_context: dict[str, object] | None = None
-    if spec.election_type == "us_senate_model":
-        anchors = _resolve_projection_anchors(spec, baseline, seats, seat_party_vote_totals)
-        seat_fallbacks = senate_fallback_swings(
-            anchor_shares_by_seat={
-                seat: anchor.shares for seat, anchor in anchors.items()
-            },
-            region_by_seat_id=region_by_seat_id, region_swings=region_swings,
-            weighted_sums=weighted_sums, total_weights=total_weights,
-            party_name_by_id=party_name_by_id, party_universe=party_universe,
-        )
-        region_diff_rows = [
-            {
-                "region_id": region_by_seat_id.get(seat.id),
-                "region_name": seat.seat_name,
-                "seat_id": seat.id,
-                "seat_name": seat.seat_name,
-                "scope": "senate-race-fallback",
-                "baseline_election_id": anchors[seat.id].baseline_id,
-                "house_anchor_share": anchors[seat.id].shares.get(
-                    "Others" if is_others_party(party_name_by_id.get(party, ""))
-                    else party_name_by_id.get(party, ""),
-                ),
-                "party_id": party,
-                "party_name": party_name_by_id.get(party, str(party)),
-                "baseline_share": baseline_shares_for_seat(
-                    seat_party_vote_totals[seat.id],
-                ).get(party, 0.0),
-                "weighted_share": baseline_shares_for_seat(
-                    seat_party_vote_totals[seat.id],
-                ).get(party, 0.0) + seat_fallbacks[seat.id].get(party, 0.0),
-                "swing": seat_fallbacks[seat.id].get(party, 0.0),
-            }
-            for seat in seats if seat.id in anchors
-            for party in sorted(party_universe)
-        ]
-        anchor_context = {
-            "estimator": SENATE_CENTRAL_ESTIMATOR,
-            "policy_sha256": SENATE_ANCHOR_POLICY_SHA256,
-            "races": {str(seat): anchor.snapshot() for seat, anchor in anchors.items()},
-        }
-
     # Seat-level polls, blended over the uniform swing they just fell out of.
     seat_name_by_id = {seat.id: seat.seat_name for seat in seats}
     seat_swings: dict[int, dict[int, float]] = {}
@@ -2589,7 +2342,6 @@ def prepare_us_projection(
             party_name_by_id=party_name_by_id,
             parent_seat_by_id=seat_parent_ids(seats),
             prior_weight=cfg.seat_prior_weight,
-            seat_fallback_swings=seat_fallbacks,
         )
         seat_poll_diagnostics = format_seat_poll_diagnostics(
             seat_averages, seat_name_by_id, cfg.seat_prior_weight
@@ -2602,370 +2354,7 @@ def prepare_us_projection(
         region_swings,
         party_name_by_id,
         seat_swings=seat_swings,
-        seat_poll_averages=seat_averages,
-        seat_fallback_swings=seat_fallbacks,
     )
-
-    return PreparedUsProjection(
-        poll_map.id, seats, tuple(party_universe), party_name_by_id,
-        seat_party_vote_totals, region_by_seat_id, region_swings, seat_swings,
-        seat_averages, projected_votes, region_diff_rows, winners_by_party,
-        latest_poll_usage, popular_vote_seat_ids, seat_poll_diagnostics, poll_window,
-        seat_fallbacks, anchor_context,
-    )
-
-
-US_UNCERTAINTY_MODELS = {
-    "us_house_model": "house", "us_senate_model": "senate",
-    "us_presidential_model": "president",
-}
-
-
-def us_release_loader(
-    election_type: str,
-) -> tuple[Callable[[Path], UsRelease], Path]:
-    return {
-        "us_house_model": (house_release, HOUSE_RELEASE),
-        "us_senate_model": (senate_release, SENATE_RELEASE),
-        "us_presidential_model": (president_release, PRESIDENT_RELEASE),
-    }[election_type]
-
-
-def freeze_house_central_inputs(
-    prepared: PreparedUsProjection, cfg: UsSimulationConfig,
-) -> UsSimulationInputs:
-    """Check exact central parity independently of unresolved polling evidence.
-
-    This exposes no stochastic sources and does not waive evidence checks for
-    an uncertainty run. The ordinary central estimator needs no polling N.
-    """
-    if cfg.spec.election_type not in US_UNCERTAINTY_MODELS:
-        raise ValueError("unsupported US uncertainty adapter")
-    parties = prepared.party_ids
-    names = tuple(prepared.party_name_by_id.get(party, str(party)) for party in parties)
-    refs = {seat.id: seat for seat in prepared.seats}
-    parents = (seat_parent_ids(prepared.seats)
-               if cfg.spec.election_type == "us_presidential_model" else {})
-    frozen: list[UsSeatInput] = []
-    for seat_id, votes in prepared.seat_party_vote_totals.items():
-        turnout = sum(votes.values())
-        if turnout <= 0:
-            continue
-        ref = refs[seat_id]
-        state_name = (
-            parent_seat_name(ref.seat_name) or ref.seat_name
-            if cfg.spec.election_type == "us_presidential_model"
-            else ref.seat_name.split("-", 1)[0]
-        )
-        state = canonical_state(state_name, allow_postal=True)
-        if state is None:
-            raise ValueError(f"cannot resolve US state for {ref.seat_name!r}")
-        baseline = baseline_shares_for_seat(votes)
-        swing = prepared.seat_swings.get(seat_id)
-        if swing is None:
-            swing = prepared.seat_fallback_swings.get(seat_id)
-        if swing is None:
-            swing = (
-                prepared.region_swings.get(ref.region_id, {})
-                if ref.region_id is not None else {}
-            )
-        average = prepared.seat_averages.get(seat_id)
-        active = (
-            average is not None and average.n_polls > 0 and average.total_weight > 0
-        )
-        broad = tuple(
-            has_baseline_party_support(votes, party, names[j])
-            for j, party in enumerate(parties)
-        )
-        eligible = tuple(
-            broad[j] or bool(active and average is not None and party in average.shares)
-            for j, party in enumerate(parties)
-        )
-        frozen.append(UsSeatInput(
-            seat_id=seat_id, name=ref.seat_name, state=state, turnout=turnout,
-            baseline=tuple(baseline.get(party, 0.0) for party in parties),
-            central_raw=tuple(
-                baseline.get(party, 0.0)
-                + (swing.get(party, 0.0) if eligible[j] else 0.0)
-                for j, party in enumerate(parties)
-            ),
-            broad_mask=broad, eligible=eligible, parent_id=parents.get(seat_id),
-            alpha=(
-                poll_blend_alpha(average.total_weight, cfg.seat_prior_weight)
-                if active and average is not None else 0.0
-            ),
-            single_party_baseline=sum(value > 0 for value in votes.values()) == 1,
-            region_id=ref.region_id,
-        ))
-    return freeze_us_central_inputs(
-        model=f"us-{US_UNCERTAINTY_MODELS[cfg.spec.election_type]}",
-        as_of_date=cfg.as_of_date, party_ids=parties,
-        party_names=names, seats=tuple(frozen), central_rows=prepared.projected_votes,
-        reference_seat_ids=(tuple(sorted(prepared.popular_vote_seat_ids))
-                            if prepared.popular_vote_seat_ids is not None else None),
-    )
-
-
-def build_house_simulation_inputs(
-    prepared: PreparedUsProjection,
-    cfg: UsSimulationConfig,
-    error_config: UsErrorConfig,
-) -> UsSimulationInputs:
-    """Freeze actual selected evidence; reject unsupported contributors first."""
-    central = freeze_house_central_inputs(prepared, cfg)
-    window = prepared.poll_window
-    actual_ids = {usage.poll_id for usage in window.contributors}
-    evidence = {
-        poll.poll_id: poll
-        for poll in (*window.national_evidence, *window.seat_evidence)
-    }
-    if actual_ids != set(evidence):
-        raise ValueError("selected poll window lacks its admitted evidence snapshot")
-    snapshots = tuple(
-        UsPollSnapshot(
-            poll.poll_id, poll.seat_id, poll.weight, tuple(poll.shares.items()),
-            poll.evidence_kind, poll.population_type, poll.sample_size,
-            poll.evidence_source, poll.source_url,
-            fieldwork_start=poll.fieldwork_start, fieldwork_end=poll.fieldwork_end,
-            matchup=poll.matchup,
-        )
-        for poll in evidence.values()
-    )
-    averages = tuple(
-        UsLocalAverage(
-            seat.seat_id, seat.alpha,
-            tuple(prepared.seat_averages[seat.seat_id].shares.items()),
-        )
-        for seat in central.seats
-        if seat.seat_id in prepared.seat_averages
-        and prepared.seat_averages[seat.seat_id].n_polls > 0
-        and prepared.seat_averages[seat.seat_id].total_weight > 0
-    )
-    return build_us_simulation_inputs(
-        model=central.model, as_of_date=central.as_of_date,
-        party_ids=central.party_ids, party_names=central.party_names,
-        seats=central.seats, averages=averages, polls=snapshots,
-        config=error_config, central_rows=prepared.projected_votes,
-        reference_seat_ids=central.reference_seat_ids,
-    )
-
-
-def house_central_diagnostics(
-    prepared: PreparedUsProjection, cfg: UsSimulationConfig,
-) -> dict[str, object]:
-    """Retain actual central blend inputs before later database changes."""
-    parents = seat_parent_ids(prepared.seats)
-    rows: dict[str, object] = {}
-    for seat in freeze_house_central_inputs(prepared, cfg).seats:
-        region_id = prepared.region_by_seat_id.get(seat.seat_id)
-        region = prepared.region_swings.get(region_id, {}) if region_id else {}
-        inherited = prepared.seat_swings.get(parents.get(seat.seat_id, -1))
-        fallback = (
-            inherited if inherited is not None
-            else prepared.seat_fallback_swings.get(seat.seat_id, region)
-        )
-        average = prepared.seat_averages.get(seat.seat_id)
-        active = (
-            average is not None and average.n_polls > 0 and average.total_weight > 0
-        )
-        parties: dict[str, object] = {}
-        for j, party in enumerate(prepared.party_ids):
-            broad = fallback.get(party, 0.0) if seat.broad_mask[j] else 0.0
-            target = average.shares.get(party, 0.0) if active and average else None
-            keeps_fallback = bool(
-                active and average and party not in average.shares
-                and is_others_party(prepared.party_name_by_id.get(party, ""))
-            )
-            local = (
-                seat.alpha * (float(target) - seat.baseline[j])
-                if target is not None and not keeps_fallback else 0.0
-            )
-            broad_contribution = broad * (
-                1.0 if keeps_fallback else 1.0 - seat.alpha
-            )
-            if not math.isclose(
-                broad_contribution + local,
-                seat.central_raw[j] - seat.baseline[j], abs_tol=1e-10,
-            ):
-                raise ValueError("House central diagnostics differ from actual swing")
-            parties[str(party)] = {
-                "region_swing": (
-                    region.get(party, 0.0)
-                    if prepared.senate_anchor_context is None
-                    or prepared.poll_window.total_weights.get(
-                        (region_id, party), 0.0,
-                    ) > 0 else 0.0
-                ),
-                "inherited_swing": (
-                    inherited.get(party, 0.0) if inherited is not None else None
-                ),
-                "fallback": broad, "local_average": target,
-                "fallback_contribution": broad_contribution,
-                "local_contribution": local,
-                "central_change": seat.central_raw[j] - seat.baseline[j],
-            }
-        rows[str(seat.seat_id)] = {
-            "parties": parties, "alpha": seat.alpha,
-            **({"fallback_kind": SENATE_CENTRAL_ESTIMATOR}
-               if prepared.senate_anchor_context is not None else {}),
-        }
-    return {"schema": "pf-us-central-diagnostics-v1", "seats": rows}
-
-
-def _house_uncertainty(
-    prepared: PreparedUsProjection, cfg: UsSimulationConfig,
-    *, allocation: Mapping[int, int] | None = None,
-) -> tuple[UncertaintyPayload, UsSimulationRun] | None:
-    # Calibration shares the deterministic adapters in this module. Defer the
-    # numerical conversion import to avoid a module-initialization cycle.
-    from model_support.us_calibration import national_source_scale
-
-    if cfg.no_uncertainty or cfg.spec.election_type not in US_UNCERTAINTY_MODELS:
-        return None
-    is_senate = cfg.spec.election_type == "us_senate_model"
-    is_president = cfg.spec.election_type == "us_presidential_model"
-    load_release, default_release = us_release_loader(cfg.spec.election_type)
-    release = load_release(cfg.spec.uncertainty_release_config or default_release)
-    if not release.enabled and cfg.simulations is None:
-        return None
-    release.require_enabled()
-    state = release.state
-    if (
-        cfg.spec.map_name != state["map_name"]
-        or cfg.spec.baseline_election_name != state["baseline_name"]
-        or (cfg.target_election_year if is_president
-            else house_target_cycle(cfg.as_of_date)) != state["target_cycle"]
-    ):
-        raise UsReleaseError(
-            "US release geography, baseline or cycle mismatches run",
-        )
-    config = release.error_config()
-    inputs = build_house_simulation_inputs(prepared, cfg, config)
-    national = next(source for source in inputs.sources if source.kind == "national")
-    try:
-        dem = inputs.party_names.index("Democratic")
-        rep = inputs.party_names.index("Republican")
-    except ValueError as exc:
-        raise ValueError(
-            "US national error requires Democratic/Republican inputs",
-        ) from exc
-    # The calibration contrast is D-minus-R; the deterministic party order is
-    # retained for exact winner/tie parity, including when IDs order differently.
-    shape = (national.proportions[dem], national.proportions[rep], *(
-        value for j, value in enumerate(national.proportions) if j not in (dem, rep)
-    ))
-    scale = national_source_scale(
-        float(release.calibration["national_margin_sigma"]), shape,
-    )
-    inputs = replace(
-        inputs, config=replace(config, national_scale=scale),
-        sources=tuple(replace(source, scale=scale) if source.kind == "national"
-                      else source for source in inputs.sources),
-    )
-    options: dict[str, object] = {
-        "lookback_days": (cfg.as_of_date - cfg.since_date).days,
-        "half_life_days": cfg.half_life_days,
-        "seat_prior_weight": cfg.seat_prior_weight,
-        "ignore_seat_polls": cfg.ignore_seat_polls,
-        "seat_matchup_policy": cfg.spec.seat_matchup_policy,
-        "baseline_name": cfg.spec.baseline_election_name,
-    }
-    if is_senate:
-        options["senate_house_anchor"] = prepared.senate_anchor_context
-    if is_president:
-        if allocation is None or cfg.target_election_year is None:
-            raise ValueError("President requires its resolved electoral allocation")
-        matchups = {poll.matchup for poll in inputs.polls}
-        if len(matchups) != 1 or None in matchups:
-            raise ValueError("President contributors require one tracked matchup")
-        options["tracked_matchup"] = next(iter(matchups))
-        options["target_election_year"] = cfg.target_election_year
-        context = president_context(
-            inputs, map_id=prepared.map_id, target_cycle=cfg.target_election_year,
-            allocation=allocation, options=options,
-            comparability_id=str(state["comparability_id"]),
-        )
-    elif is_senate:
-        if cfg.spec.senate_cycle is None:
-            raise ValueError("Senate uncertainty requires its pinned cycle")
-        context = senate_context(
-            inputs, map_id=prepared.map_id, cycle=cfg.spec.senate_cycle,
-            options=options, comparability_id=str(state["comparability_id"]),
-        )
-    else:
-        context = house_context(
-            inputs, map_id=prepared.map_id, target_cycle=int(state["target_cycle"]),
-            options=options, comparability_id=str(state["comparability_id"]),
-        )
-    if cfg.dry_run:
-        return None
-    run = run_us_simulations(inputs, simulations=cfg.simulations or 10_000)
-    provenance: dict[str, object] = {
-        "release": dict(state), "calibration": dict(release.calibration),
-        "central_diagnostics": house_central_diagnostics(prepared, cfg),
-        "selected_polls": json_data([
-            asdict(poll) for poll in (
-                *prepared.poll_window.national_evidence,
-                *prepared.poll_window.seat_evidence,
-            )
-        ]),
-    }
-    if is_president:
-        assert allocation is not None
-        return president_payload(
-            run, context, allocation=allocation, options=options,
-            provenance=provenance,
-        ), run
-    if is_senate:
-        assert cfg.spec.senate_cycle is not None
-        return senate_payload(
-            run, context, cycle=cfg.spec.senate_cycle,
-            party_names=prepared.party_name_by_id,
-            options=options, provenance=provenance,
-        ), run
-    return house_payload(run, context, options=options, provenance=provenance), run
-
-
-def run_simulation(
-    db: Database,
-    cfg: UsSimulationConfig,
-    *,
-    poll_window: SelectedPollWindow | None = None,
-) -> tuple[
-    str,
-    list[dict[str, Any]],
-    list[dict[str, Any]],
-    Counter[str],
-    LatestPollUsage | None,
-    dict[str, int],
-    list[str],
-]:
-    """Run one projection for a single ``as_of_date``.
-
-    Resolves scope, loads reference + baseline data, aggregates polls, computes
-    region swings, blends in each seat's own polls, projects seats, and (unless
-    dry-run) deletes any prior run for the date, persists the new model election,
-    and updates the trend JSON.
-
-    Returns ``(election_name, projected_votes, region_diff_rows, winners_by_party,
-    latest_poll_usage, electoral_votes_by_party, seat_poll_diagnostics)``.
-    ``electoral_votes_by_party`` is party-name → EV won, non-zero only for the
-    President, using the configured target's database allocation.
-    ``seat_poll_diagnostics`` holds the ``SEAT_POLL`` lines, returned rather than
-    printed so a 365-day backfill does not emit one per seat per day.
-    """
-    spec = cfg.spec
-    if spec.senate_cycle is not None:
-        print(spec.senate_cycle.log_description())
-    prepared = prepare_us_projection(db, cfg, poll_window=poll_window)
-    seats = prepared.seats
-    projected_votes = prepared.projected_votes
-    region_diff_rows = prepared.region_diff_rows
-    winners_by_party = prepared.winners_by_party
-    latest_poll_usage = prepared.latest_poll_usage
-    party_name_by_id = prepared.party_name_by_id
-    popular_vote_seat_ids = prepared.popular_vote_seat_ids
-    seat_poll_diagnostics = prepared.seat_poll_diagnostics
 
     election_name = _election_name_pattern(spec, cfg.as_of_date)
 
@@ -2990,8 +2379,6 @@ def run_simulation(
     for party_id, electoral_votes in summary.electoral_votes_by_party.items():
         ev_by_party[party_name_by_id.get(party_id, str(party_id))] += electoral_votes
 
-    uncertainty = _house_uncertainty(prepared, cfg, allocation=seat_ev_by_id or None)
-
     if cfg.dry_run:
         return (
             election_name,
@@ -3006,42 +2393,18 @@ def run_simulation(
     sqlite_path = database_file(db)
     validate_trend_scope(
         sqlite_path,
-        OutputScope(spec.election_type, prepared.map_id, spec.election_name_prefix),
+        OutputScope(spec.election_type, poll_map.id, spec.election_name_prefix),
     )
-    output_scope = OutputScope(
-        spec.election_type, prepared.map_id, spec.election_name_prefix,
+    persisted_name, persisted_election_id = persist_projection(
+        spec,
+        poll_map.id,
+        cfg.as_of_date,
+        election_name,
+        projected_votes,
+        party_name_by_id,
+        sqlite_path,
+        target_election_year=cfg.target_election_year,
     )
-    latest = latest_saved_run(sqlite_path, output_scope)
-    staged = None
-    if uncertainty is not None and cfg.keep_raw and (
-        latest is None or cfg.as_of_date >= latest[1]
-    ):
-        raw_path = us_raw_path(
-            Path(DatabaseConfig.from_env().simulations_path),
-            US_UNCERTAINTY_MODELS[spec.election_type],
-        )
-        validate_output_target(raw_path, database=sqlite_path)
-        if any(raw_path.resolve() == path.resolve() for path in (
-            spec.trend_cache_json, spec.trend_cache_meta_json,
-            Path(DatabaseConfig.from_env().simulations_path),
-        )):
-            raise ValueError("House raw destination overlaps a protected output")
-        staged = stage_us_draws(raw_path, uncertainty[1], uncertainty[0])
-    try:
-        persisted_name, persisted_election_id = persist_projection(
-            spec, prepared.map_id, cfg.as_of_date, election_name, projected_votes,
-            party_name_by_id, sqlite_path,
-            target_election_year=cfg.target_election_year,
-            uncertainty=uncertainty[0] if uncertainty is not None else None,
-            senate_anchor_context=prepared.senate_anchor_context,
-        )
-        if staged is not None and latest_saved_run(sqlite_path, output_scope) == (
-            persisted_election_id, cfg.as_of_date,
-        ):
-            staged.publish(persisted_election_id)
-    finally:
-        if staged is not None:
-            staged.discard()
     update_trend_cache_json(
         spec,
         persisted_election_id,
@@ -3051,7 +2414,7 @@ def run_simulation(
         seat_ev_by_id,
         popular_vote_seat_ids,
         sqlite_path=database_file(db),
-        map_id=prepared.map_id,
+        map_id=poll_map.id,
     )
 
     return (
@@ -3131,54 +2494,13 @@ def _validate_history_inputs(db: Database, spec: UsModelSpec) -> None:
     poll_map, baseline = resolve_simulation_scope(db, spec)
     resolve_poll_scope(db, spec)
     seats = fetch_seat_refs(db, poll_map.id, spec.seat_name_allowlist)
-    vote_totals, _, _, _ = build_baseline_vote_state(
+    build_baseline_vote_state(
         db,
         baseline.id,
         {seat.id: seat.region_id for seat in seats},
         {seat.id for seat in seats} if spec.seat_name_allowlist is not None else None,
         resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
     )
-    _validate_senate_field(spec, seats, vote_totals)
-    if spec.election_type == "us_senate_model":
-        _resolve_projection_anchors(spec, baseline, seats, vote_totals)
-
-
-def _resolve_projection_anchors(
-    spec: UsModelSpec, baseline: Election, seats: Sequence[SeatRef],
-    votes: Mapping[int, Mapping[int, float]],
-) -> dict[int, SenateHouseAnchor]:
-    baseline_id = manifest_id_for_election(baseline)
-    return resolve_senate_house_anchors({
-        seat.id: spec.seat_baseline_overrides.get(seat.seat_name, baseline_id)
-        for seat in seats if seat.id in votes
-    })
-
-
-def _validate_senate_field(
-    spec: UsModelSpec, seats: Sequence[SeatRef], votes: Mapping[int, Mapping[int, float]]
-) -> None:
-    if spec.senate_cycle is None:
-        return
-    present = {seat.seat_name for seat in seats if sum(votes.get(seat.id, {}).values()) > 0}
-    missing = spec.senate_cycle.states - present
-    if missing:
-        raise ValueError(
-            "Pinned Senate field is missing baseline votes: "
-            f"{', '.join(sorted(missing))}"
-        )
-
-
-def _preflight_dated_specs(
-    db: Database, spec: UsModelSpec, dates: Iterable[date]
-) -> None:
-    """Validate every distinct cycle before any dates in a batch are replaced."""
-    seen: set[str | None] = set()
-    for as_of in dates:
-        resolved = spec_for_date(spec, as_of)
-        identity = resolved.senate_cycle.identity if resolved.senate_cycle else None
-        if identity not in seen:
-            _validate_history_inputs(db, resolved)
-            seen.add(identity)
 
 
 def run_retrospective_range(
@@ -3211,11 +2533,7 @@ def run_retrospective_range(
     validate_half_life(args.half_life_days)
     validate_prior_weight(args.seat_prior_weight)
 
-    _preflight_dated_specs(
-        db, spec,
-        (start_date + timedelta(days=i)
-         for i in range((end_date - start_date).days + 1)),
-    )
+    _validate_history_inputs(db, spec)
 
     with trend_batch(
         database_file(db),
@@ -3248,11 +2566,6 @@ def run_retrospective_range(
                     seat_prior_weight=args.seat_prior_weight,
                     ignore_seat_polls=args.ignore_seat_polls,
                     target_election_year=getattr(args, "target_election_year", None),
-                    simulations=getattr(args, "simulations", None),
-                    no_uncertainty=getattr(args, "no_uncertainty", False),
-                    keep_raw=(
-                        current == end_date and not getattr(args, "no_raw_sims", False)
-                    ),
                 )
                 election_name, projected_votes, _, _, _, _, _ = run_simulation(db, cfg)
                 success_count += 1
@@ -3321,9 +2634,6 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
     parser.add_argument(
         "--dry-run", action="store_true", help="Compute without database or file writes"
     )
-    parser.add_argument("--simulations", type=int, default=None)
-    parser.add_argument("--no-uncertainty", action="store_true")
-    parser.add_argument("--no-raw-sims", action="store_true")
     # Single-date flags
     parser.add_argument(
         "--as-of-date", default=None, help="Upper-bound poll date (YYYY-MM-DD)"
@@ -3388,9 +2698,6 @@ def _build_config_from_args(spec: UsModelSpec, args: argparse.Namespace) -> UsSi
         seat_prior_weight=args.seat_prior_weight,
         ignore_seat_polls=args.ignore_seat_polls,
         target_election_year=getattr(args, "target_election_year", None),
-        simulations=getattr(args, "simulations", None),
-        no_uncertainty=getattr(args, "no_uncertainty", False),
-        keep_raw=not getattr(args, "no_raw_sims", False),
     )
 
 
@@ -3429,7 +2736,7 @@ def _rebuild_history(
         print("REBUILD-HISTORY skipped for dry-run mode")
         return
 
-    _validate_history_inputs(db, cfg.spec)
+    _validate_history_inputs(db, spec)
     sqlite_path = database_file(db)
     map_id = _output_map_id(db, spec)
     existing = existing_trend_dates(spec, sqlite_path, map_id=map_id)
@@ -3558,36 +2865,14 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
                 )
     try:
         validate_run_arguments(args, date.today())
-        if args.simulations is not None:
-            if not 1 <= args.simulations <= 1_000_000:
-                raise ValueError("--simulations must be in [1, 1000000]")
-            if args.no_uncertainty:
-                raise ValueError(
-                    "--simulations cannot be combined with --no-uncertainty",
-                )
-            if spec.election_type not in US_UNCERTAINTY_MODELS:
-                raise ValueError(
-                    "unsupported US uncertainty runner",
-                )
-            load_release, default_release = us_release_loader(spec.election_type)
-            release_path = spec.uncertainty_release_config or default_release
-            load_release(release_path).require_enabled()
     except ValueError as err:
         parser.error(str(err))
     db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
 
-    # Bind the dated field before selecting contributors or the as-of endpoint.
-    # A president with no matchup still writes no outputs.
-    cfg = (
-        None if args.start_date and args.end_date
-        else _build_config_from_args(spec, args)
-    )
-    scope_spec = (
-        spec_for_date(spec, date.fromisoformat(args.start_date))
-        if cfg is None else cfg.spec
-    )
+    # Resolved first, so a president with no matchup writes no election, no trend
+    # entry and no meta file.
     try:
-        scope = resolve_poll_scope(db, scope_spec)
+        scope = resolve_poll_scope(db, spec)
     except TrackedMatchupMissing as exc:
         print(f"ERROR {exc}", file=sys.stderr)
         return 2
@@ -3601,7 +2886,8 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
         run_retrospective(db, spec, args)
         return 0
 
-    assert cfg is not None
+    cfg = _build_config_from_args(spec, args)
+
     first_poll, latest_end, selected_polls = candidate_poll_date_bounds(
         db,
         scope,
@@ -3612,13 +2898,6 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
         include_earliest=args.rebuild_history,
     )
     if latest_end is not None and cfg.as_of_date > latest_end:
-        if cfg.spec.senate_cycle is not None:
-            capped_spec = spec_for_date(spec, latest_end)
-            if capped_spec.senate_cycle != cfg.spec.senate_cycle:
-                raise ValueError(
-                    "Latest usable poll is outside the requested Senate cycle; "
-                    "choose an as-of date in that cycle or provide current-cycle polls"
-                )
         print(f"CAPPING as_of_date {cfg.as_of_date.isoformat()} → {latest_end.isoformat()}")
         cfg = UsSimulationConfig(
             spec=spec,
@@ -3629,9 +2908,6 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             seat_prior_weight=cfg.seat_prior_weight,
             ignore_seat_polls=cfg.ignore_seat_polls,
             target_election_year=cfg.target_election_year,
-            simulations=cfg.simulations,
-            no_uncertainty=cfg.no_uncertainty,
-            keep_raw=cfg.keep_raw,
         )
 
     lookback_days = max(0, (cfg.as_of_date - cfg.since_date).days)
@@ -3669,9 +2945,6 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
     if len(run_dates) > 1:
         print(f"AUTO-BACKFILL missing_dates={len(run_dates)} from={run_dates[0]} to={run_dates[-1]}")
 
-    if spec.senate_cycle_config is not None:
-        _preflight_dated_specs(db, spec, run_dates)
-
     latest_poll_usage: LatestPollUsage | None = None
 
     with trend_batch(
@@ -3692,9 +2965,6 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
                 seat_prior_weight=cfg.seat_prior_weight,
                 ignore_seat_polls=cfg.ignore_seat_polls,
                 target_election_year=cfg.target_election_year,
-                simulations=cfg.simulations,
-                no_uncertainty=cfg.no_uncertainty,
-                keep_raw=cfg.keep_raw and run_date == run_dates[-1],
             )
             (
                 election_name,
@@ -3750,23 +3020,12 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             seat_prior_weight=cfg.seat_prior_weight,
             ignore_seat_polls=cfg.ignore_seat_polls,
             target_election_year=cfg.target_election_year,
-            simulations=cfg.simulations,
-            no_uncertainty=cfg.no_uncertainty,
-            keep_raw=False,
         )
         _, _, _, _, latest_poll_usage, _, _ = run_simulation(
             db, meta_cfg, poll_window=selected_polls
         )
 
-    latest_meta_run = latest_saved_run(
-        database_file(db),
-        OutputScope(
-            spec.election_type, _output_map_id(db, spec), spec.election_name_prefix,
-        ),
-    ) if not cfg.dry_run else None
-    if not cfg.dry_run and (
-        latest_meta_run is None or latest_meta_run[1] <= cfg.as_of_date
-    ):
+    if not cfg.dry_run:
         write_trend_cache_meta(
             spec,
             cfg.as_of_date,

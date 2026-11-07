@@ -29,11 +29,10 @@ describe('buildSenateChamber', () => {
       seat.members.forEach((member, memberIndex) => {
         const original = chamber[index].members[memberIndex];
         if (original.class === contestedClass && projectedParty) {
-          expect(member.forecastStatus).toBe("contested");
           expect(member.party).toBe(projectedParty);
           expect(member.name).toBe(`${manifest.labelParty(projectedParty)} (projected)`);
         } else {
-          expect(member).toEqual({ ...original, forecastStatus: "holdover" });
+          expect(member).toEqual(original);
         }
       });
       expect(seat.votes).toEqual({});
@@ -51,12 +50,12 @@ describe('buildSenateChamber', () => {
       const projected = result.find((seat) => seat.seat === name);
       expect(projected.members.find((member) => member.class === 3).party).toBe('democrat');
       expect(projected.members.find((member) => member.class === 1)).toEqual(
-        { ...original.members.find((member) => member.class === 1), forecastStatus: "holdover" },
+        original.members.find((member) => member.class === 1),
       );
       expect(projected.winner).toBe('split');
     });
     expect(result.find((seat) => seat.seat === 'Alabama').members).toEqual(
-      chamber.find((seat) => seat.seat === 'Alabama').members.map((member) => ({ ...member, forecastStatus: "holdover" })),
+      chamber.find((seat) => seat.seat === 'Alabama').members,
     );
   });
 
@@ -82,27 +81,6 @@ describe('buildSenateChamber', () => {
     result[0].members.forEach((member, index) => expect(member).not.toBe(chamber[0].members[index]));
     result[0].members[0].party = 'independent';
     expect(JSON.stringify(chamber)).toBe(beforeChamber);
-  });
-
-  it("substitutes the saved Class 3 while retaining holdovers and special overrides", () => {
-    const chamber = [
-      new Seat({ seat: "Alabama", members: [
-        { class: 1, party: "democrat", name: "Holdover" },
-        { class: 3, party: "republican", name: "Outgoing" },
-      ], votes: {} }),
-      new Seat({ seat: "Alaska", members: [
-        { class: 2, party: "republican", name: "Special outgoing" },
-        { class: 3, party: "republican", name: "Special holdover" },
-      ], votes: {} }),
-    ];
-    const contested = chamber.map((seat) => new Seat({ seat: seat.seat, winner: "democrat", votes: {} }));
-    const result = buildSenateChamber(chamber, contested, new Map([["alaska", 2]]), 3);
-    expect(result[0].members[0]).toMatchObject({ name: "Holdover", party: "democrat", forecastStatus: "holdover" });
-    expect(result[0].members[1]).toMatchObject({ party: "democrat", forecastStatus: "contested" });
-    expect(result[1].members[0]).toMatchObject({ party: "democrat", forecastStatus: "contested" });
-    expect(result[1].members[1]).toMatchObject({ name: "Special holdover", party: "republican", forecastStatus: "holdover" });
-    expect(result.flatMap((seat) => seat.members).map((member) => member.party))
-      .toEqual(["democrat", "democrat", "democrat", "republican"]);
   });
 
   it('falls back to the contested seats when the chamber snapshot is unavailable', () => {

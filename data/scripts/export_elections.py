@@ -48,9 +48,7 @@ from sqlalchemy.orm import joinedload, Session
 
 from db import Database
 from electoral_votes import allocation_year, get_electoral_votes
-from model_support.persistence import UncertaintyStoreError, load_uncertainty
-from model_support.trends import reconstruct_trends, trend_document
-from model_support.persistence import OutputScope
+from model_support.persistence import load_uncertainty
 from models import Election, ElectionType, Map, Party, Region, Seat, Vote
 from scripts.export.naming import (
     PARTY_NAME_TO_KEY,
@@ -79,13 +77,6 @@ from scripts.export.serialize import (
     write_json,
     write_manifest,
 )
-from scripts.export.senate import (
-    configure_senate_forecast,
-    latest_senate_run,
-    pinned_roster_payload,
-    public_senate_forecast,
-    senate_cycle_for_election,
-)
 from scripts.export.manifest import (
     build_manifest_party_settings,
     build_manifest_regions_by_map_id,
@@ -109,10 +100,6 @@ from scripts.export.uncertainty import (
     link_uncertainty_payload,
     model_run_uncertainty,
     sync_uncertainty_file,
-)
-from scripts.export.us_uncertainty import (
-    HOUSE_MAP_NAME, HOUSE_PREFIX, house_uncertainty_export, latest_us_model_run,
-    senate_uncertainty_export, president_uncertainty_export,
 )
 
 DEM_PARTY_ID = 20   # Democratic — see uselectionmaps/data/map-modes.json parties[]
@@ -140,9 +127,7 @@ PAGE_PARLIAMENTS = {
 # elections filtered to the ones the next Senate election holds). A ``--metadata-only`` refresh therefore has to
 # re-copy them from the rebuilt mode — and drop the key when the rebuild no longer produces it,
 # so a removed shell entry (or a special whose cycle has passed) disappears from the manifest.
-DERIVED_MODE_KEYS: tuple[str, ...] = (
-    "senateClassNextElection", "senateSpecialElections", "senateForecastYear",
-)
+DERIVED_MODE_KEYS: tuple[str, ...] = ("senateClassNextElection", "senateSpecialElections")
 
 
 def refresh_manifest_modes(
@@ -379,13 +364,6 @@ def main() -> None:
             # Falls back to raw regions with no shell.
             shell_path = page_root / "map-modes-shell.json"
             shell = json.loads(shell_path.read_text(encoding="utf-8")) if shell_path.exists() else {}
-            if "senateForecast" in manifest:
-                shell = configure_senate_forecast(
-                    shell or manifest, manifest["senateForecast"]
-                )
-                manifest["parliamentFeatures"] = shell.get("parliamentFeatures", {})
-            elif "parliamentFeatures" in shell:
-                manifest["parliamentFeatures"] = shell["parliamentFeatures"]
             rebuilt_modes = build_map_modes_with_regions(
                 shell.get("mapModes", {}),
                 manifest_regions_by_map_id,
@@ -549,17 +527,6 @@ def main() -> None:
                     .order_by(Election.id.desc())
                     .limit(1)
                 ).scalars().first()
-                if _us_model_type == ElectionType.us_senate_model:
-                    latest_us_model = latest_senate_run(session)
-                elif _us_model_type == ElectionType.us_house_model:
-                    latest_us_model = latest_us_model_run(
-                        session, _us_model_type, HOUSE_MAP_NAME, HOUSE_PREFIX,
-                    )
-                elif _us_model_type == ElectionType.us_presidential_model:
-                    latest_us_model = latest_us_model_run(
-                        session, _us_model_type, "US Presidential 2024",
-                        "US President UNS",
-                    )
                 if latest_us_model is not None:
                     latest_us_models.append(latest_us_model)
             if latest_us_models:
@@ -633,17 +600,6 @@ def _export_page(
     written_map_ids: set[int] = set()
     manifest_id_by_db_id: dict[int, str] = {}
     pending_by_election_rows: list[dict[str, Any]] = []
-
-    senate_election = next(
-        (e for e in elections if e.type == ElectionType.us_senate_model), None
-    )
-    senate_cycle = (
-        senate_cycle_for_election(session, senate_election) if senate_election else None
-    )
-    senate_forecast = (
-        public_senate_forecast(senate_cycle, senate_election.map_id)
-        if senate_cycle and senate_election else None
-    )
 
     for election in elections:
         map_row = election.map
@@ -720,25 +676,6 @@ def _export_page(
         published: ModelUncertaintyExport | None = None
         if election.type == ElectionType.model_uns:
             published = model_uncertainty or ModelUncertaintyExport(None, None)
-        elif election.type in {
-            ElectionType.us_house_model, ElectionType.us_senate_model,
-            ElectionType.us_presidential_model,
-        }:
-            try:
-                stored = load_uncertainty(
-                    Path(str(session.get_bind().engine.url.database)), election.id,
-                )
-            except (ValueError, UncertaintyStoreError):
-                stored = None
-            if election.type == ElectionType.us_presidential_model:
-                published = president_uncertainty_export(
-                    election, stored, votes, seats, allocation=ev_by_unit or {},
-                )
-            else:
-                adapter = (senate_uncertainty_export
-                           if election.type == ElectionType.us_senate_model
-                           else house_uncertainty_export)
-                published = adapter(election, stored, votes, seats)
         result_payload = build_result_payload(
             seats,
             votes,
@@ -747,8 +684,7 @@ def _export_page(
             seat_uncertainty=published.seat_bands if published is not None else None,
         )
         uncertainty_document = link_uncertainty_payload(
-            result_payload, published.document if published is not None else None,
-            run_identity=published.run_identity if published is not None else None,
+            result_payload, published.document if published is not None else None
         )
 
         if election.type == ElectionType.us_presidential:
@@ -854,16 +790,7 @@ def _export_page(
                     write_json(map_path, map_payload)
 
         if published is not None:
-            sync_uncertainty_file(
-                results_dir, uncertainty_document, dry_run=args.dry_run,
-                filename=("us-house-uncertainty.json"
-                          if election.type == ElectionType.us_house_model
-                          else "us-senate-uncertainty.json"
-                          if election.type == ElectionType.us_senate_model
-                          else "us-president-uncertainty.json"
-                          if election.type == ElectionType.us_presidential_model
-                          else "prediction-uncertainty.json"),
-            )
+            sync_uncertainty_file(results_dir, uncertainty_document, dry_run=args.dry_run)
 
         map_files_by_id[str(election.map_id)] = map_relpath
         written_map_ids.add(election.map_id)
@@ -900,8 +827,6 @@ def _export_page(
             ElectionType.us_senate_model,
         ):
             manifest_entry["model"] = True
-        if election.type == ElectionType.us_senate_model and senate_cycle is not None:
-            manifest_entry["baselineElectionId"] = senate_cycle.baseline_id
         manifest_entries.append(manifest_entry)
 
         if default_election_id is None and election.type == ElectionType.uk_general:
@@ -933,19 +858,6 @@ def _export_page(
         manifest_regions_by_map_id=manifest_regions_by_map_id,
         parliaments=parliaments,
     )
-
-    if senate_forecast and senate_forecast["rosterElectionId"] and senate_cycle:
-        roster_id = senate_forecast["rosterElectionId"]
-        roster_filename = f"{roster_id}.json"
-        if not args.dry_run:
-            write_json(results_dir / roster_filename, pinned_roster_payload(senate_cycle))
-        data_files_by_election_id[roster_id] = f"results/{roster_filename}"
-        manifest_entries.append({
-            "id": roster_id,
-            "name": f"Senate {senate_cycle.target_year} forecast baseline",
-            "type": ElectionType.us_senate.value, "mapId": senate_forecast["mapId"],
-            "parliament": "us_senate", "multiMember": True,
-        })
 
     if default_election_id is None:
         default_election_id = manifest_entries[0]["id"]
@@ -1035,40 +947,6 @@ def _export_page(
             insert_current_parliament_entry(manifest_entries, composite_entry)
             default_election_id = composite_manifest_id
 
-    house_election = next(
-        (e for e in elections if e.type == ElectionType.us_house_model), None,
-    )
-    if house_election is not None:
-        house_scope = OutputScope(
-            "us_house_model", house_election.map_id, HOUSE_PREFIX,
-        )
-        source = Path(str(session.get_bind().engine.url.database))
-        house_trends = trend_document(
-            house_scope, reconstruct_trends(source, house_scope),
-        )
-        assert isinstance(house_trends, dict)
-        if not args.dry_run:
-            write_json(results_dir / "us-house-trends.json", house_trends)
-    elif "us_house" in parliaments and not single_election_mode:
-        sync_uncertainty_file(
-            results_dir, None, dry_run=args.dry_run,
-            filename="us-house-uncertainty.json",
-        )
-
-    if (senate_election is None and "us_senate" in parliaments
-            and not single_election_mode):
-        sync_uncertainty_file(
-            results_dir, None, dry_run=args.dry_run,
-            filename="us-senate-uncertainty.json",
-        )
-
-    if (not any(e.type == ElectionType.us_presidential_model for e in elections)
-            and "us_presidential" in parliaments and not single_election_mode):
-        sync_uncertainty_file(
-            results_dir, None, dry_run=args.dry_run,
-            filename="us-president-uncertainty.json",
-        )
-
     expected_map_filenames = {Path(path).name for path in map_files_by_id.values()}
     if maps_dir.exists():
         for existing_map in maps_dir.glob("*.topo.json"):
@@ -1089,8 +967,6 @@ def _export_page(
     shell_path = output_root / "map-modes-shell.json"
     shell = json.loads(shell_path.read_text(encoding="utf-8")) if shell_path.exists() else {}
     config = shell if shell else existing
-    if senate_election is not None:
-        config = configure_senate_forecast(config, senate_forecast)
 
     # model/poll-tracker meta files are keyed by parliament; keep only those belonging to
     # this page. Defaults cover every parliament with a forecast model (the front end
@@ -1192,9 +1068,6 @@ def _export_page(
         "files": files,
         "parties": manifest_parties,
     }
-
-    if senate_election is not None:
-        manifest_payload["senateForecast"] = senate_forecast
 
     if args.dry_run:
         print(f"Would write manifest: {manifest_path} ({len(manifest_entries)} elections)")

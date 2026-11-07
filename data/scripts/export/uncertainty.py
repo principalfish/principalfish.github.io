@@ -36,8 +36,7 @@ UNCERTAINTY_FILENAME = "prediction-uncertainty.json"
 
 
 def link_uncertainty_payload(
-    result_payload: dict[str, object], document: dict[str, object] | None,
-    *, run_identity: str | None = None,
+    result_payload: dict[str, object], document: dict[str, object] | None
 ) -> dict[str, object] | None:
     """Pair public results and ranges so mixed cached exports cannot show stale odds.
 
@@ -53,11 +52,8 @@ def link_uncertainty_payload(
     public_summary = {
         key: value for key, value in document.items() if key != "uncertaintyId"
     }
-    identity_parts: list[object] = [public_results, public_summary]
-    if run_identity is not None:
-        identity_parts.append(run_identity)
     encoded = json.dumps(
-        identity_parts,
+        [public_results, public_summary],
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
@@ -81,7 +77,6 @@ class ModelUncertaintyExport:
 
     seat_bands: dict[int, dict[int, SeatBand]] | None
     document: dict[str, object] | None
-    run_identity: str | None = None
 
 
 def model_uncertainty_export(
@@ -102,9 +97,6 @@ def model_uncertainty_export(
         PublicUncertaintyError: A published field is missing or malformed.
     """
     if stored is None:
-        return ModelUncertaintyExport(None, None)
-    if stored.schema != "pf-model-uncertainty-v1":
-        # This exporter is scoped to Westminster; US sidecars have their own adapter.
         return ModelUncertaintyExport(None, None)
     bands = None if stored.seats is None else seat_bands(stored.seats)
     document = (
@@ -177,8 +169,7 @@ def model_run_uncertainty(
 
 
 def sync_uncertainty_file(
-    results_dir: Path, document: dict[str, object] | None, *, dry_run: bool,
-    filename: str = UNCERTAINTY_FILENAME,
+    results_dir: Path, document: dict[str, object] | None, *, dry_run: bool
 ) -> None:
     """Write the uncertainty file, or remove a stale one when there is none.
 
@@ -190,12 +181,9 @@ def sync_uncertainty_file(
         document: The document to publish, or None.
         dry_run: Print the action instead of taking it.
     """
-    path = results_dir / filename
+    path = results_dir / UNCERTAINTY_FILENAME
     if document is not None:
-        regions = document.get("regions", {})
-        regional_bands = document.get("regional_bands")
-        if isinstance(regional_bands, dict):
-            regions = regional_bands.get("regions", {})
+        regions = document["regions"]
         count = len(regions) if isinstance(regions, dict) else 0
         if dry_run:
             print(f"Would write uncertainty: {path} ({count} regions)")

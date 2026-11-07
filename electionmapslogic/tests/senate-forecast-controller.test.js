@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../dom.js", () => ({
   renderHeader: vi.fn(),
-  renderVoteTotals: vi.fn(),
   renderMap: vi.fn(),
   renderMapControlOptions: vi.fn(),
   syncRightPanelHeight: vi.fn(),
@@ -16,8 +15,6 @@ vi.mock("../features/senate-forecast-view.js", () => ({
   renderSenateForecastComparison: vi.fn(),
 }));
 
-import { activateUncertaintyView } from "../uncertainty-controller.js";
-import { activeUncertainty } from "../uncertainty.js";
 import { activateSenateForecastView } from "../features/senate-forecast-controller.js";
 import { renderSenateForecastComparison, renderSenateForecastTabs } from "../features/senate-forecast-view.js";
 import { renderMap, refreshOpenSeatPopup } from "../dom.js";
@@ -58,7 +55,7 @@ function expectedChamberTallies() {
   chamber.forEach((seat) => seat.members.forEach((member) => add(member.party, 1)));
   new ElectionData(forecastData).currentSeats.forEach((seat) => {
     const key = seatLookupKey(seat.seat);
-    const contestedClass = specialClass.get(key) ?? manifest.parliamentConfig("us_senate").predict.regularClass ?? 2;
+    const contestedClass = specialClass.get(key) ?? 2;
     add(chamber.get(key).members.find((member) => Number(member.class) === contestedClass).party, -1);
     add(seat.winner, 1);
   });
@@ -121,69 +118,6 @@ describe("activateSenateForecastView", () => {
     expect(florida.members.find((member) => member.class === 3).name).toBe("Republican (projected)");
     expect(florida.members.find((member) => member.class === 1).name).toBe("Rick Scott");
     expect(manifest.getElectionFromId("current-us-senate").multiMember).toBeUndefined();
-  });
-
-  it("threads the saved Class 3 into the full chamber instead of replacing Class 2 holdovers", async () => {
-    const config = manifest.parliamentConfig("us_senate");
-    config.predict.regularClass = 3;
-    const syntheticChamber = structuredClone(chamberData);
-    // Swap the regular class in the fixture while preserving the 100-member ledger.
-    syntheticChamber.seats.forEach((seat) => seat.members.forEach((member) => {
-      if (member.class === 2) member.class = 3;
-      else if (member.class === 3) member.class = 2;
-    }));
-    activeMapMode().senateSpecialElections.forEach((special) => { special.class = 2; });
-    fetchJson.mockImplementation((url) => url.endsWith("senate-current.json")
-      ? Promise.resolve(syntheticChamber) : fetchResults(url));
-    await activateSenateForecastView();
-    latestTabs().onTabChange("chamber");
-    const alabama = state.electionData.currentSeats.find((seat) => seat.seat === "Alabama");
-    expect(alabama.members.find((member) => member.class === 3).forecastStatus).toBe("contested");
-    expect(alabama.members.find((member) => member.class === 2).forecastStatus).toBe("holdover");
-    const forecast = new ElectionData(forecastData).currentSeats;
-    const cycleOverrides = new Map(activeMapMode().senateSpecialElections.map((special) => [special.seat, special.class]));
-    const expected = {};
-    syntheticChamber.seats.forEach((seat) => seat.members.forEach((member) => {
-      const result = forecast.find((race) => race.seat === seat.n);
-      const party = result && member.class === (cycleOverrides.get(seat.n) ?? 3)
-        ? result.winner : member.party;
-      expected[party] = (expected[party] || 0) + 1;
-    }));
-    expect(tallies(state.filteredSeatsSummary)).toEqual(expected);
-    expect(state.filteredSeatsSummary.totalSeats).toBe(100);
-  });
-
-  it.each(["seatsup", "chamber"])("attaches after a tab switch when loading starts from %s", async (startingTab) => {
-    const source = state.electionData;
-    source.uncertaintyId = "same-run";
-    await activateSenateForecastView();
-    if (startingTab === "chamber") latestTabs().onTabChange("chamber");
-    let resolve;
-    fetchJson.mockImplementation(() => new Promise((done) => { resolve = done; }));
-    const loading = activateUncertaintyView();
-    latestTabs().onTabChange(startingTab === "chamber" ? "seatsup" : "chamber");
-    latestTabs().onTabChange("chamber");
-    const chamber = state.electionData;
-    expect(chamber.uncertaintyId).toBe("same-run");
-    expect(chamber.uncertaintySource).toBe(source);
-    const value = JSON.parse(readFileSync(new URL("../../data/tests/fixtures/us_uncertainty/senate-public.json", import.meta.url)));
-    value.uncertaintyId = "same-run";
-    value.context.map_id = state.currentElection.mapId;
-    const byKey = manifest.partiesByKey;
-    const counts = expectedChamberTallies();
-    const central = Object.fromEntries(Object.entries(counts).map(([key, count]) => [byKey[key].id, count]));
-    value.summary.metrics.senate_full_seats.central = central;
-    value.summary.metrics.senate_full_seats.ranges = Object.fromEntries(Object.entries(central).map(([key, count]) => [key, [count, count, count]]));
-    resolve(value);
-    await loading;
-    expect(source.uncertainty).not.toBeNull();
-    expect(activeUncertainty(state).national).toEqual(source.uncertainty.full);
-    expect(state.voteTotals.columns.votePct).toBe(false);
-    expect(chamber.currentSeats.every((seat) => Object.keys(seat.u).length === 0)).toBe(true);
-    expect(chamber.currentSeats.flatMap((seat) => seat.members).filter((member) => member.forecastStatus === "holdover")).toHaveLength(65);
-    latestTabs().onTabChange("seatsup");
-    expect(activeUncertainty(state).national).toEqual(source.uncertainty.national);
-    expect(state.electionData).toBe(source);
   });
 
   it("repeatedly restores the original 35-seat forecast, vote shares and completed comparison", async () => {

@@ -198,3 +198,13 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
   - **Checks:** mypy 246 clean; pytest 5781; Vitest 1449 / 3 skipped; console smoke OK; `git diff --check` clean.
   - **Re-check:** correctness and coverage clean after two comment-accuracy fixes.
 - 2026-11-07: Round-2 review fixes committed as `a832137d` and pushed. Next: Piece 6, the Westminster backfill and export (each live step needs Phil's go-ahead).
+- 2026-11-07 (builder, Piece 6 brief, read-only):
+  - **Live DB:** 848 `model_uns` runs, 2024-07-05 → 2026-10-30. 840 have uncertainty (all config `730a3349d3836bc6`, 10,000 sims, through 2026-10-22). The 8 runs 2026-10-23 → 10-30 have none, because master's console made them. The latest Westminster fieldwork end is 2026-10-30.
+  - **Backups:** the DB is unchanged since its newest backup (`elections-2026-11-03-090450.db.gz`).
+  - **Dry run 2026-10-22 under HEAD** (no writes; DB and sims-file mtimes checked):
+    - It takes about 6 s per date with 10k sims.
+    - It gives Labour 322 / 220–298–369, P(maj) 27.5% and hung 72.5%, against the stored run's 300 / 199–282–359, 18.9% and 81.0%.
+    - Cause: More in Common 10-16→19 and Find Out Now 10-21→22 (ids 2025/2026) were imported after that run, so the stored late-October history is out of date. A rerun moves it.
+  - **Estimate:** a full rerun is about 85–100 min.
+  - **Running processes:** `server.sh` and `http.server` are running in this builder worktree (since about 13:20).
+- 2026-11-07 (builder, Piece 6): Phil gave the go-ahead for the backup and the full rerun. Step 1: `backup_db.py` copied the DB and found it identical to `elections-2026-11-03-090450.db.gz`, so it made no new archive; that one is the backup. Step 2 started 15:20Z: `run_uns_model.py --start-date 2024-07-05 --end-date 2026-10-30 --continue-on-error` from the builder worktree (log in the builder scratchpad).

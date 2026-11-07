@@ -1,25 +1,28 @@
 # Resume point: read this first
 
-Updated 2026-10-30 (builder, Piece 2a-H1 at its review pause). Issue state: `building`.
+Updated 2026-11-07 (planner resume). Issue state: `building`.
 
 ## Where we are
 
-**2a-H3 ran (2026-10-30, ~57 min) and failed the gate: best 15/20, candidate 14/20, decision `stop_before_engine`.** The report file is written but uncommitted, waiting on Phil. See `plan.md` Notes (2026-10-30, H3) for the numbers.
+**2a-H1, H2 and H3 are done. H3 failed the gate:** best 15/20, candidate 14/20, decision `stop_before_engine`. Phil had the failed report committed as evidence (`44dd8336`), and it's pushed. Numbers are in `plan.md` Notes (2026-10-30, H3).
 
-Check: HEAD `88bfc2a0`; untracked `data/models/westminster/uncertainty_conversion_historical_report.json` sha256 `0893389afce7babd00c69e98bdea9331113e0ffe900568c64ce1d602ebc59ab4`.
+State checks:
+- `git rev-parse poll-errors-simulation origin/poll-errors-simulation` → both `44dd8336514cb20953b76f0c8d24b87df814aa95`.
+- `git show 44dd8336:data/models/westminster/uncertainty_conversion_historical_report.json | sha256sum` → `0893389afce7babd00c69e98bdea9331113e0ffe900568c64ce1d602ebc59ab4` (the file's hash; the report's internal `report_hash` is `50f2f5ea…`).
+- `git log --oneline poll-errors-simulation..master | wc -l` → 32 on 2026-11-07 (master last merged in at `35e527a1`, 2026-10-22).
 
 ## Pending decision (Phil)
 
-1. Commit the failed six-transition report as evidence (as was done for the 15/20 report)? Recommended: yes.
-2. The fail branch: replan the conversion model with explicitly new assumptions (e.g. a Labour-lead/efficiency or regime term, which the 1997→2001 and 2024 misses both point to), or add 1983–92 history first, or defer 2a (build off-by-default infrastructure and move on). Not decided.
+**The fail branch for Piece 2a.** What the evidence says: the misses are directional, not just too narrow. In held-out 2024 Labour is 322–358 vs 411 and Con 188–237 vs 121. In the report-only 1997→2001 fold, Labour is 376–407 vs 411 and Con 168–205 vs 166, the same direction. Adding two low/moderate-change transitions tightened the cluster scales and dropped the candidate from 15/20 to 14/20.
 
-## Decisions taken in this session (2026-10-30)
+Options:
+1. **Replan the conversion model with explicitly new assumptions**, e.g. a Labour-lead/efficiency or regime term. It's the only option aimed at the visible cause. Caveat: with two landslide transitions, any term fitted to them will look good in LOO, and LOO is already retrospective. It needs a pre-registered term before fitting.
+2. **Add 1983–92 history first.** 1983→87 and 87→92 likely share the 1983 boundaries (unverified, as is source coverage). But both are Con-led, moderate-change elections, so H3 suggests they'd tighten the scales further.
+3. **Park 2a.** Leave Westminster without correlated conversion error and move on to the pieces that don't depend on it: Phase 3 (3a, display) and Phase 4 (4a–4d, US model). 2b–2f stay blocked. Come back to option 1 later.
 
-- Source for 1997, 2001 and Scotland 2005: Parliament's psephology.db behind api.parliament.uk at a pinned commit (accepted instead of scraping ~1,377 HTML pages; 3 index + 10 sampled pages matched exactly).
-- Referendum Party → other (not UKIP). NI Conservatives → con; Green (NI) and Scottish Greens → green.
-- 2005n unknown_other limitation accepted and recorded in the fixture audit (NI Alliance and unnamed minors in unknown_other; Greens named in 190 seats).
-- Zero-vote party entries (5 seats in 2005n): option (a), dropped by the builder and rejected by the loader.
-- Not retrieved: Commons Library CBP-8647 (403). No independent published national totals exist in the retrieved sources; the fixture records `independent: false`.
+Planner recommendation (2026-11-07): 3 now, with 1 as a later, separately briefed experiment. Not decided.
+
+If 3 is chosen, update `plan.md` `## Pieces` order and checkpoints so 3a/4a come next (Resume step 5) before `/builder`.
 
 ## The test 2a has to pass
 
@@ -41,38 +44,7 @@ Check: HEAD `88bfc2a0`; untracked `data/models/westminster/uncertainty_conversio
    - **storage:** a frozen, hashed in-repo fixture; no DB write, no export.
 
    The risk was stated and accepted: both are low/moderate-change elections, and they could lower the training cluster scales.
-
-## Next open point
-
-**Piece 2a-H1, not started.** Acquire and audit both transitions into `data/models/westminster/historical-transitions-v1.json`, built by `data/scripts/build_westminster_historical_fixture.py`, with loader/fingerprint tests. Then pause and show Phil the audit before any fitting.
-
-After that:
-- **2a-H2:** revise the experiment contract with equal weights across six and report-only new folds (decided 2026-10-30). Write a new report file; the committed 15/20 report stays untouched. Pause before the batch.
-- **2a-H3:** run the checkpointed batch (the 15/20 run took ~28 min on 2026-10-29; six transitions estimated 45–90 min) and report.
-
-The approved plan for H1–H3 is in this issue's `plan.md` Notes (2026-10-30) and the thread 4 Notes.
-
-### What's known about each candidate transition (from read-only research; nothing written to disk)
-
-- **1997→2001:** 659 matching normalised constituency index names; common boundaries confirmed in Commons briefing CBP-8647. Still needed: a full audit of candidate totals, party mapping and geography.
-- **2005→2010:** Parliament's new CSV has 591 notional constituencies, all matching 2010 by code and region, and every candidate-vote sum reconciles. The missing 59 Scottish seats were all retrieved from the older historical results site (382 candidate rows; 2,333,887 valid votes). Still needed: a persisted boundary/code crosswalk and party-quality checks. The old site's constituency IDs don't encode boundary changes.
-- **Source limits:**
-  - 349 rows in the 2005 notional file are unnamed minor-party aggregates. Don't split them, and don't turn unknown values into zeros.
-  - Labour Co-op and Speaker labels need explicit handling.
-  - The Commons unified CSV/XLSX endpoints returned 403.
-  - The Norris 1992–2005 workbook has missing or error-valued 2005 fields, so it isn't a verified replacement.
-- **Earlier decades (option B):** not researched beyond that. They'd need their own boundary and notional-results work.
-- **Sources:**
-  - https://electionresults.parliament.uk/general-elections/7 (candidate CSV `/candidacies.csv`)
-  - https://api.parliament.uk/uk-general-elections/general-elections/42 (1997), /43 (2001), /44 (2005)
-  - https://commonslibrary.parliament.uk/research-briefings/cbp-8647/
-  - https://api.parliament.uk/uk-general-elections/constituencies (boundary-identity warning)
-
-## What the next session does
-
-1. `/planner resume poll-errors-simulation`, or `/builder`, for H1. Run the checks under **Where we are**.
-2. Brief 2a-H1 to Phil: sources, crosswalks, party mapping, audit checks, and the files it writes. Then implement it, check it, and pause for review before the commit.
-3. Don't start H2 or H3 unasked.
+6. **2026-10-30.** H1 (`eaa73607`) and H2 (`88bfc2a0`) committed; Phil gave the go-ahead for the H3 batch. H3 failed (best 15/20, candidate 14/20). Question: commit the failed report as evidence? → **Yes; committed as `44dd8336` and pushed.**
 
 ## Don't (standing constraints from thread 4)
 

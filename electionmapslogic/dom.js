@@ -8,11 +8,12 @@ import { manifest, state, page, seatComparisonHidden, Seat } from './state.js';
 import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR, buildStateTrendSeries } from './utils.js';
 import { fetchJson } from './files.js';
 import {
-  activeUncertainty, uncertaintyForTotals, uncertaintyNumber,
-  uncertaintyRange, seatUncertaintyText,
+  activeUncertainty, uncertaintyForTotals, uncertaintyLabel,
+  uncertaintyRange, seatMedianRange, seatUncertaintyText,
 } from "./uncertainty.js";
 import {
-  renderUncertaintyHeader, renderUncertaintyToggle, wireUncertaintyToggle,
+  outsideRangeMarker, renderSeatsHeader, renderUncertaintyHeader, renderUncertaintyToggle,
+  wireUncertaintyToggle,
 } from "./uncertainty-view.js";
 
 // ─── Page title ───────────────────────────────────────────────────────────────
@@ -621,9 +622,7 @@ export function renderVoteTotals(
   });
 
   voteTotalsBody.innerHTML = '';
-  // The "Seats" column counts electoral votes on EV-tally maps (presidential), so relabel it.
-  const seatsHeader = voteTotalsTable.querySelector('th[data-sort-key="seats"]');
-  if (seatsHeader) seatsHeader.textContent = state.mapConfig?.tally === 'electoralVotes' ? 'EV' : 'Seats';
+  renderSeatsHeader(voteTotalsTable.querySelector('th[data-sort-key="seats"]'), state);
   voteTotalsTable.classList.toggle('hide-vote-total-col', !state.voteTotalsColumnVisible('votes'));
   voteTotalsTable.classList.toggle('hide-vote-pct-col', !state.voteTotalsColumnVisible('votePct'));
   const uncertainty = uncertaintyForTotals(state);
@@ -632,7 +631,7 @@ export function renderVoteTotals(
   voteTotalsTable.classList.toggle("hide-uncertainty-cols", !showUncertainty);
   voteTotalsTable.querySelectorAll("[data-uncertainty-label]").forEach((element) => {
     element.textContent = showUncertainty
-      ? `${uncertaintyNumber(uncertaintySummary.interval * 100)}% ${element.dataset.uncertaintyLabel}` : "";
+      ? uncertaintyLabel(element.dataset.uncertaintyLabel, uncertaintySummary.interval) : "";
   });
   const descriptions = ["mapsSenateForecastComparison"];
   if (uncertaintySummary?.basis) descriptions.push("mapsUncertaintyBasis");
@@ -679,9 +678,9 @@ export function renderVoteTotals(
     const band = showUncertainty ? uncertainty.parties[partyRow.party] : null;
     tr.innerHTML = `
       <td><span class="maps-party-cell"><span class="maps-party-swatch" style="background:${manifest.colourParty(partyRow.party)}"></span>${escapeHtml(manifest.labelParty(partyRow.party))}</span></td>
-      <td>${formatInt(partyRow.seats)}</td>
+      <td>${formatInt(partyRow.seats)}${band ? outsideRangeMarker(partyRow.seats, band.s, uncertaintySummary.interval) : ""}</td>
       <td class="comparison-col ${showComparison ? deltaClass(partyRow.seatsDelta) : ''}">${showComparison ? formatSigned(partyRow.seatsDelta, 0) : ''}</td>
-      <td class="uncertainty-col">${uncertaintyRange(band?.s)}</td>
+      <td class="uncertainty-col">${seatMedianRange(band?.s)}</td>
       <td class="vote-total-col">${formatInt(partyRow.votes)}</td>
       <td class="vote-pct-col">${formatPct(partyRow.votePct)}</td>
       <td class="uncertainty-col vote-pct-col">${uncertaintyRange(band?.v, "%")}</td>
@@ -1465,7 +1464,7 @@ function renderSeatPopup(seatName) {
     const deltaHtml = row.delta == null ? '' : `<span class="${deltaClass(row.delta)}">${formatSigned(row.delta, 2)}</span>`;
     const band = state.view === "election" && state.currentElection.model ? seat.u[row.party] : null;
     const bandHtml = band
-      ? `<span class="maps-popup-uncertainty">${seatUncertaintyText(band)}</span>` : "";
+      ? `<span class="maps-popup-uncertainty">${escapeHtml(seatUncertaintyText(band))}</span>` : "";
     return `<span>${formatPct(row.pct)}%</span>${deltaHtml}${bandHtml}`;
   });
 

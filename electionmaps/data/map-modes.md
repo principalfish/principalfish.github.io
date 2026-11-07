@@ -159,7 +159,7 @@ previous day, so use a bare date when that is unsuitable. The text is
 
 The file at `uncertaintyDataPath` describes the run exported as the model
 election (for Westminster, `current-prediction`): the latest-dated model run. Vote shares are percentage
-points to 1 dp; probabilities are fractions from 0 to 1 to 4 dp; seats are
+points to 1 dp; probabilities are fractions from 0 to 1 to 3 dp (the site shows whole percentages, with "<1%" and ">99%" at the extremes); seats are
 integers. Parties and regions are keyed by numeric ID strings, as in `parties`
 and `mapModes[mapId].regions`.
 

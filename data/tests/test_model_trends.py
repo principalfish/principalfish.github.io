@@ -435,8 +435,8 @@ def national_block(
     *,
     bands: tuple[tuple[float, float], ...] = ((55.86, 64.04), (35.95, 44.14)),
     pm: tuple[float, ...] | None = None,
-    pl: tuple[float, ...] = (0.9999, 0.0001),
-    hung: float = 0.2688,
+    pl: tuple[float, ...] = (0.999, 0.001),
+    hung: float = 0.269,
 ) -> dict[str, object]:
     """A stored national block: published fields plus private diagnostics.
 
@@ -444,7 +444,7 @@ def national_block(
     up as the export requires.
     """
     if pm is None:
-        pm = (round(1 - hung, 4), 0.0)
+        pm = (round(1 - hung, 3), 0.0)
     return {
         "budget": {"parties": {"secret": 1}},
         "config_hash": "c0ffee",
@@ -502,12 +502,12 @@ def test_summary_adds_rounded_bands_nonzero_odds_and_hung(
     assert entry["parties"] == {
         # 55.86 -> 55.9 and 44.14 -> 44.1: rounded to 1 dp, not truncated.
         str(parties[0]): {
-            "s": 1, "v": 60.0, "vl": 55.9, "vh": 64.0, "sl": 0, "sh": 1, "pm": 0.7312, "pl": 0.9999,
+            "s": 1, "v": 60.0, "vl": 55.9, "vh": 64.0, "sl": 0, "sh": 1, "pm": 0.731, "pl": 0.999,
         },
-        # A zero probability is left out; 0.0001 is kept.
-        str(parties[1]): {"s": 0, "v": 40.0, "vl": 36.0, "vh": 44.1, "sl": 0, "sh": 1, "pl": 0.0001},
+        # A zero probability is left out; 0.001 is kept.
+        str(parties[1]): {"s": 0, "v": 40.0, "vl": 36.0, "vh": 44.1, "sl": 0, "sh": 1, "pl": 0.001},
     }
-    assert entry["hung"] == 0.2688
+    assert entry["hung"] == 0.269
     text = json.dumps(entry)
     for private in ("budget", "config_hash", "input_hash", "seed", "hist", "739901"):
         assert private not in text
@@ -575,7 +575,7 @@ def test_first_summary_is_kept_after_an_equal_run_without_one(
     entries = reconstruct_trends(only_the_test_database, scope)
     assert [(e["as_of_date"], e.get("hung")) for e in entries] == [
         ("2026-06-01", None),
-        ("2026-06-02", 0.2688),
+        ("2026-06-02", 0.269),
     ]
 
 
@@ -596,7 +596,7 @@ def test_equal_runs_preserve_summary_gaps(
     store_with_summary(only_the_test_database, scope, 4, seats[0], parties, 65, None)
     entries = reconstruct_trends(only_the_test_database, scope)
     assert [(e["as_of_date"], e.get("hung")) for e in entries] == [
-        ("2026-06-01", 0.2688),
+        ("2026-06-01", 0.269),
         ("2026-06-02", None),
         ("2026-06-03", 0.5),
         ("2026-06-04", None),

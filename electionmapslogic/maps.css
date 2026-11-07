@@ -1124,6 +1124,20 @@ a {
   white-space: nowrap;
 }
 
+.maps-outside-range {
+  margin-inline-start: 0.1em;
+  cursor: help;
+}
+
+.maps-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .maps-table th,
 .maps-table td {
   padding: 0.22rem 0.3rem;

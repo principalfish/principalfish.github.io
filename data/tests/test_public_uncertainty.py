@@ -103,15 +103,16 @@ class TestPublicDocument:
                     "2": {
                         "v": [22.8, 30.6],
                         "s": [220, 301, 376],
+                        # Stored to 4 dp, published to 3.
                         "pm": 0.306,
-                        "pl": 0.9697,
+                        "pl": 0.97,
                         "hist": {"start": 218, "counts": HIST_2},
                     },
                     "10": {
                         "v": [0.4, 0.4],
                         "s": [0, 1, 2],
                         "pm": 0.0,
-                        "pl": 0.0303,
+                        "pl": 0.03,
                         "hist": {"start": 0, "counts": [50, 100, 50]},
                     },
                 },
@@ -124,11 +125,11 @@ class TestPublicDocument:
                         "2": {
                             "v": [17.3, 26.4],
                             "s": [19, 29, 40],
-                            "pm": 0.0123,
+                            "pm": 0.012,
                             "pl": 1.0,
                         }
                     },
-                    "hung": 0.9877,
+                    "hung": 0.988,
                 },
                 "14": {"parties": {"2": {"v": [17.3, 26.4], "s": [19, 29, 40]}}},
             },
@@ -163,8 +164,8 @@ class TestPublicDocument:
             (lambda n: n["parties"]["2"]["hist"].update(counts=[*HIST_2, 0]),
              "does not span"),
             # Exclusive outcomes: rounding allows half a unit per term, no more.
-            (lambda n: n.update(hung=0.6942), r"P\(majority\) \+ P\(hung\) sums"),
-            (lambda n: n["parties"]["10"].update(pl=0.0305), r"P\(largest\) sums"),
+            (lambda n: n.update(hung=0.696), r"P\(majority\) \+ P\(hung\) sums"),
+            (lambda n: n["parties"]["10"].update(pl=0.032), r"P\(largest\) sums"),
             (lambda n: n["parties"]["2"].update(s=[301, 220, 376]), "out of order"),
             (lambda n: n["parties"]["2"].update(s=[220.0, 301, 376]), "integer"),
             (lambda n: n["parties"]["2"].update(v=[22.8]), r"\[lo, hi\]"),
@@ -184,8 +185,8 @@ class TestPublicDocument:
 
     def test_rounding_slack_is_accepted(self) -> None:
         stored = national()
-        # 0.30604 + 0.6941 = 1.00014, within three terms' 0.00015.
-        stored["hung"] = 0.6941
+        # Published 0.306 + 0.695 = 1.001, within three terms' 0.0015.
+        stored["hung"] = 0.6951
         public_document(stored, regions(), election_name="x", as_of_date=None)
 
     def test_region_odds_must_add_up_when_stored(self) -> None:
@@ -221,8 +222,8 @@ class TestTrendUncertainty:
     def test_bands_rounded_zero_odds_dropped(self) -> None:
         result = trend_uncertainty(national())
         assert result.parties == {
-            "2": {"vl": 22.8, "vh": 30.6, "sl": 220, "sh": 376, "pm": 0.306, "pl": 0.9697},
-            "10": {"vl": 0.4, "vh": 0.4, "sl": 0, "sh": 2, "pl": 0.0303},
+            "2": {"vl": 22.8, "vh": 30.6, "sl": 220, "sh": 376, "pm": 0.306, "pl": 0.97},
+            "10": {"vl": 0.4, "vh": 0.4, "sl": 0, "sh": 2, "pl": 0.03},
         }
         assert list(result.parties) == ["2", "10"]
         assert result.hung == 0.694
@@ -236,14 +237,34 @@ class TestTrendUncertainty:
 
     def test_smallest_probability_is_kept(self) -> None:
         stored = national()
-        stored["parties"]["10"]["pl"] = 0.0001
-        stored["parties"]["2"]["pl"] = 0.9999
-        assert trend_uncertainty(stored).parties["10"]["pl"] == 0.0001
+        stored["parties"]["10"]["pl"] = 0.001
+        stored["parties"]["2"]["pl"] = 0.999
+        assert trend_uncertainty(stored).parties["10"]["pl"] == 0.001
 
     def test_dust_below_the_precision_counts_as_zero(self) -> None:
         stored = national()
-        stored["parties"]["10"]["pm"] = 0.00004
+        stored["parties"]["10"]["pm"] = 0.0004
         assert "pm" not in trend_uncertainty(stored).parties["10"]
+
+    @pytest.mark.parametrize(("majorities", "accepted"), [(11, True), (12, False)])
+    def test_slack_covers_rounding_twice(self, majorities: int, accepted: bool) -> None:
+        # 20 terms (19 parties and hung) may each be off by 0.0005 from
+        # publishing at 3 dp plus 0.00005 from storing at 4 dp: 0.011 in all.
+        stored = national()
+        stored["parties"] = {
+            str(party): {
+                "v": [0.1, 0.2], "s": [0, 0, 1],
+                "pm": 0.001 if party < majorities else 0.0,
+                "pl": 1.0 if party == 0 else 0.0,
+            }
+            for party in range(19)
+        }
+        stored["hung"] = 1.0
+        if accepted:
+            trend_uncertainty(stored)
+        else:
+            with pytest.raises(PublicUncertaintyError, match="sums to 1.012"):
+                trend_uncertainty(stored)
 
     def test_odds_must_add_up(self) -> None:
         stored = national()
@@ -265,7 +286,7 @@ class TestSeatBands:
             7: {2: SeatBand(40.0, 60.0, 1.0)},
             # Python's round, as the trend file's v: the float 0.95 is just
             # under 0.95, so it rounds down.
-            1000: {1: SeatBand(31.3, 49.6, 0.9752), 15: SeatBand(0.9, 10.2, 0.0)},
+            1000: {1: SeatBand(31.3, 49.6, 0.975), 15: SeatBand(0.9, 10.2, 0.0)},
         }
 
     @pytest.mark.parametrize(

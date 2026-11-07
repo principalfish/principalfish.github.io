@@ -1,3 +1,4 @@
+import { formatProbability } from "../uncertainty.js";
 import { formatInt, formatPct } from "../utils.js";
 
 /** Model updates averaged per drawn band step; the tooltip keeps each day's own range. */
@@ -25,15 +26,21 @@ export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes
     : `Uncertainty describes an election held today, conditional on current polls and the model's error assumptions.`;
 }
 
-/** Reuse the percentage plotting axis for odds, while retaining the underlying series. */
+/**
+ * Reuse the percentage plotting axis for odds, while retaining the underlying series. The 0–1
+ * odds stay beside the plotted percentages so the tooltip formats the published value itself.
+ */
 export function chanceSeries(series, metric, hung) {
   const percent = (values) => values.map((value) => Number.isFinite(value) ? value * 100 : null);
   const label = metric === "pLargest" ? "Largest-party chance" : "Majority chance";
   return [
-    ...series.map((row) => ({ ...row, votePct: percent(row[metric] || []), chanceLabel: label })),
+    ...series.map((row) => {
+      const chance = row[metric] || [];
+      return { ...row, votePct: percent(chance), chance, chanceLabel: label };
+    }),
     {
       partyKey: "hung", partyName: "Hung parliament", colour: "#475569", isHung: true,
-      votePct: percent(hung), chanceLabel: "Hung-parliament chance",
+      votePct: percent(hung), chance: hung, chanceLabel: "Hung-parliament chance",
     },
   ];
 }
@@ -44,7 +51,10 @@ export function chanceSeries(series, metric, hung) {
  */
 export function pollTrackerTooltipValues(series, index, { ranges = true } = {}) {
   const percent = (value) => Number.isFinite(value) ? `${formatPct(value)}%` : "Unavailable";
-  if (series.chanceLabel) return [[series.chanceLabel, percent(series.votePct[index])]];
+  if (series.chanceLabel) {
+    const chance = series.chance[index];
+    return [[series.chanceLabel, Number.isFinite(chance) ? formatProbability(chance) : "Unavailable"]];
+  }
   const values = [
     ["Seats", Number.isFinite(series.seats[index]) ? formatInt(series.seats[index]) : "Unavailable"],
     ["Vote share", percent(series.votePct[index])],

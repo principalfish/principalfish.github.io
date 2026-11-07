@@ -6,8 +6,10 @@ This module is the one whitelist of what is published. Each function copies
 named fields only, validates them, and rounds them to the published precision:
 
 * vote shares: percentage points, 1 dp (as the trend file's ``v``);
-* probabilities: fractions 0-1, 4 dp (as stored; 1 in 10,000 is one
-  simulation at the default count);
+* probabilities: fractions 0-1, 3 dp (stored at 4 dp, but at the default
+  10,000 simulations a probability's Monte Carlo standard error reaches half
+  a percentage point, so the fourth place is noise; the site shows whole
+  percentages);
 * seats: integers.
 
 Anything malformed raises :class:`PublicUncertaintyError` (a ``ValueError``)
@@ -22,7 +24,9 @@ from dataclasses import dataclass
 
 PUBLIC_SCHEMA = "pf-uncertainty-v1"
 SHARE_DIGITS = 1
-PROBABILITY_DIGITS = 4
+PROBABILITY_DIGITS = 3
+# Places a stored summary rounds probabilities to (monte_carlo's own rounding).
+_STORED_PROBABILITY_DIGITS = 4
 
 # The whitelist: the only stored fields ever published, per block. Anything
 # else a stored block holds (the error budget, seed, hashes) is withheld.
@@ -34,9 +38,10 @@ PUBLIC_SEAT_PARTY_FIELDS: tuple[str, ...] = ("v", "w")
 # Regional odds (and a region's hung) were added after the first stored
 # summaries, so a region copies them only when stored.
 _OPTIONAL_REGION_PARTY_FIELDS = frozenset({"pm", "pl"})
-# Half a unit in the last published place: the most rounding can move one
-# probability.
-_ROUNDING = 0.5 * 10**-PROBABILITY_DIGITS
+# The most rounding can move one published probability: half a unit in the
+# last published place, after half a unit in the last stored place (the
+# published value is rounded again from an already rounded stored one).
+_ROUNDING = 0.5 * 10**-PROBABILITY_DIGITS + 0.5 * 10**-_STORED_PROBABILITY_DIGITS
 
 
 class PublicUncertaintyError(ValueError):
@@ -310,8 +315,9 @@ def _check_odds(
     """Majorities and hung are exclusive and exhaustive; so are largest shares.
 
     Checked on the published (rounded) values: each sum may be off by the
-    rounding of its terms, half a unit in the last place each. Skipped for a
-    sum whose terms are not all stored (older regional summaries).
+    rounding of its terms, ``_ROUNDING`` each (stored, then published).
+    Skipped for a sum whose terms are not all stored (older regional
+    summaries).
     """
     majorities = [party.get("pm") for party in parties.values()]
     largest = [party.get("pl") for party in parties.values()]
@@ -324,7 +330,9 @@ def _check_odds(
             continue
         total = sum(term for term in terms if isinstance(term, float))
         if abs(total - 1.0) > len(terms) * _ROUNDING + 1e-12:
-            raise PublicUncertaintyError(f"{where}: {label} sums to {total:.4f}, not 1")
+            raise PublicUncertaintyError(
+                f"{where}: {label} sums to {total:.{PROBABILITY_DIGITS}f}, not 1"
+            )
 
 
 def public_document(

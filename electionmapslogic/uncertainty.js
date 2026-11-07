@@ -73,17 +73,55 @@ export function uncertaintyNumber(value) {
   return Number(value.toFixed(2)).toString();
 }
 
+/** An interval level such as 0.9 as "90%". */
+export function intervalPercent(interval) {
+  return `${uncertaintyNumber(interval * 100)}%`;
+}
+
 export function uncertaintyRange(values, suffix = "") {
   if (!Array.isArray(values) || values.length < 2) return "—";
   return `${uncertaintyNumber(values[0])}–${uncertaintyNumber(values.at(-1))}${suffix}`;
 }
 
+/**
+ * A published probability as a whole percentage. At the default 10,000 simulations its Monte
+ * Carlo standard error reaches half a percentage point, so finer figures are noise; and no run
+ * proves an outcome certain or impossible, so the ends read "<1%" and ">99%", never "0%" or "100%".
+ */
+export function formatProbability(value) {
+  // Strip float noise before rounding: value * 100 lands just below an exact half-percent
+  // (0.145 * 100 is 14.499...). Rounding to 12 significant digits fixes that without rounding
+  // twice, so inputs at any published precision (3 dp now, 4 dp in older files) round correctly.
+  const percent = Math.round(Number((value * 100).toPrecision(12)));
+  if (percent < 1) return "<1%";
+  if (percent > 99) return ">99%";
+  return `${percent}%`;
+}
+
+/** Seats as "median (lo–hi)"; text only. */
+export function seatMedianRange(values) {
+  if (!Array.isArray(values) || values.length !== 3) return "—";
+  return `${uncertaintyNumber(values[1])} (${uncertaintyRange(values)})`;
+}
+
+/** The uniform-swing count can fall outside the simulated range, whose median it need not match. */
+export function outsideSeatRange(seats, values) {
+  return Array.isArray(values) && values.length === 3
+    && (seats < values[0] || seats > values[2]);
+}
+
+/** A column label template from shell.html, with "{interval}" as e.g. "90%". */
+export function uncertaintyLabel(template, interval) {
+  return template.replace("{interval}", intervalPercent(interval));
+}
+
 /** Text only: the caller escapes it or assigns textContent. */
 export function seatUncertaintyText(band) {
   if (!band) return "";
-  return `(${uncertaintyRange(band.slice(0, 2))}%) · win ${uncertaintyNumber(band[2] * 100)}%`;
+  return `(${uncertaintyRange(band.slice(0, 2))}%) · win ${formatProbability(band[2])}`;
 }
 
+/** The most likely largest party's simulated seats, then the outcome odds. */
 export function uncertaintyHeadline(summary, labelParty) {
   if (!summary) return "";
   const leaders = Object.entries(summary.national.parties)
@@ -91,7 +129,8 @@ export function uncertaintyHeadline(summary, labelParty) {
     .sort((a, b) => b[1].pl - a[1].pl || labelParty(a[0]).localeCompare(labelParty(b[0])));
   if (!leaders.length || summary.national.hung === null) return "";
   const [party, row] = leaders[0];
-  return `${labelParty(party)} largest party ${uncertaintyNumber(row.pl * 100)}% · `
-    + `${labelParty(party)} majority ${uncertaintyNumber(row.pm * 100)}% · `
-    + `Hung ${uncertaintyNumber(summary.national.hung * 100)}% (if an election were held today)`;
+  return `${labelParty(party)} ${uncertaintyNumber(row.s[1])} seats (${uncertaintyRange(row.s)}) · `
+    + `largest party ${formatProbability(row.pl)} · `
+    + `majority ${formatProbability(row.pm)} · `
+    + `hung ${formatProbability(summary.national.hung)} (if an election were held today)`;
 }

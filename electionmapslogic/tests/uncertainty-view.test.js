@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { state as defaultState } from "../state.js";
 import {
-  renderUncertaintyHeader, renderUncertaintyToggle, wireUncertaintyToggle,
+  outsideRangeMarker, renderSeatsHeader, renderUncertaintyHeader, renderUncertaintyToggle,
+  wireUncertaintyToggle,
 } from "../uncertainty-view.js";
 
 function element() {
@@ -102,7 +103,48 @@ describe("uncertainty display controls", () => {
   it("places the toggle beside Show all and the seat range after the seat change", () => {
     const shell = readFileSync(new URL("../shell.html", import.meta.url), "utf8");
     expect(shell).toMatch(/id="mapsVoteTotalsToggle"[^>]*>Show all<\/button>\s*<button[^>]*id="mapsUncertaintyToggle"[^>]*aria-pressed="false"/);
-    expect(shell).toMatch(/data-sort-key="seats"[^>]*>Seats<\/th>\s*<th class="comparison-col">±<\/th>\s*<th[^>]*data-uncertainty-label="seats"/);
+    expect(shell).toMatch(/data-sort-key="seats"[^>]*>Seats<\/th>\s*<th class="comparison-col">±<\/th>\s*<th[^>]*data-uncertainty-label="Simulated \(\{interval\}\)"/);
+    expect(shell).toContain('data-uncertainty-label="{interval} vote range"');
     expect(shell).not.toContain('id="mapsUncertaintyBasis"');
+  });
+
+  it("names the deterministic seats column only for a saved run with uncertainty", () => {
+    const header = element();
+    renderSeatsHeader(header, state);
+    expect(header.textContent).toBe("Uniform swing");
+    expect(header.attributes.title).toBe("Uniform-swing projection. Sort by seats");
+    state.currentElection.model = false;
+    renderSeatsHeader(header, state);
+    expect(header.textContent).toBe("Seats");
+    expect(header.attributes.title).toBe("Sort by seats");
+    state.currentElection.model = true;
+    state.view = "predict";
+    renderSeatsHeader(header, state);
+    expect(header.textContent).toBe("Seats");
+    state.view = "election";
+    state.electionData.uncertainty = null;
+    state.mapConfig = { tally: "electoralVotes" };
+    renderSeatsHeader(header, state);
+    expect(header.textContent).toBe("EV");
+    expect(header.attributes.title).toBe("Sort by seats");
+    expect(() => renderSeatsHeader(null, state)).not.toThrow();
+  });
+
+  it.each([[282, false], [199, false], [359, false], [198, true], [360, true]])(
+    "marks a uniform-swing count of %s outside 199–359: %s",
+    (seats, outside) => {
+      const marker = outsideRangeMarker(seats, [199, 282, 359], 0.9);
+      if (!outside) {
+        expect(marker).toBe("");
+        return;
+      }
+      expect(marker).toContain('aria-hidden="true">†</span>');
+      expect(marker).toContain('title="Uniform-swing count outside its 90% simulated range"');
+      expect(marker).toContain('<span class="maps-visually-hidden"> (outside its 90% simulated range)</span>');
+    },
+  );
+
+  it("marks nothing without a band", () => {
+    expect(outsideRangeMarker(300, undefined, 0.9)).toBe("");
   });
 });

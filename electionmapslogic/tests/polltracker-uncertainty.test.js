@@ -28,15 +28,20 @@ describe("poll tracker uncertainty display", () => {
     expect(series.votePct).toEqual([40.12345, null, 0]);
   });
 
-  it("shows vote intervals and chance tooltips at two decimals without inventing missing values", () => {
+  it("shows vote intervals at two decimals and chances as whole percentages without inventing missing values", () => {
     expect(pollTrackerTooltipValues(series, 0)).toEqual([
       ["Seats", "300"], ["Vote share", "40.12%"], ["90% vote range", "35.12–45.99%"],
     ]);
     expect(pollTrackerTooltipValues(series, 1)).toEqual([["Seats", "Unavailable"], ["Vote share", "Unavailable"]]);
     expect(pollTrackerTooltipValues(chanceSeries([series], "pMaj", [0])[0], 0))
-      .toEqual([["Majority chance", "12.35%"]]);
+      .toEqual([["Majority chance", "12%"]]);
     expect(pollTrackerTooltipValues(chanceSeries([series], "pLargest", [0])[0], 2))
-      .toEqual([["Largest-party chance", "0.00%"]]);
+      .toEqual([["Largest-party chance", "<1%"]]);
+    expect(pollTrackerTooltipValues(chanceSeries([series], "pLargest", [0])[0], 0))
+      .toEqual([["Largest-party chance", ">99%"]]);
+    const hung = chanceSeries([series], "pMaj", [0.876544, null, 1])[1];
+    expect([0, 1, 2].map((index) => pollTrackerTooltipValues(hung, index)[0][1]))
+      .toEqual(["88%", "Unavailable", ">99%"]);
   });
 
   it("draws separated band paths and visible isolated ranges without joining missing days", () => {

@@ -107,7 +107,7 @@ def build_result_payload(
             ``p`` party the block has (it leaves out parties below its compact
             floor, so a row can be missing); ``lo``/``hi`` are the share
             interval in points (1 dp) and ``win`` the win probability (0-1,
-            4 dp). Without one, or with no matching party, ``u`` is omitted.
+            3 dp). Without one, or with no matching party, ``u`` is omitted.
 
     Returns:
         Dict with ``{"schema": "pf-results-v4", "seats": [...]}`` where

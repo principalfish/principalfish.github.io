@@ -4,7 +4,7 @@ Each entry is one run's national seats ``s`` and vote share ``v`` per party.
 A run with a stored Monte Carlo summary also carries, per party, its vote band
 ``vl``/``vh`` (the summary's vote interval, 90%; 1 dp), ``sl``/``sh``
 (integer seat bounds), and P(majority) ``pm`` /
-P(largest) ``pl`` (fractions, 4 dp; left out when zero), plus an entry-level
+P(largest) ``pl`` (fractions, 3 dp; left out when zero), plus an entry-level
 ``hung``. A run without one gets none of these keys, so its entry is exactly
 as before. In an entry with ``hung``, a party lacking ``pm``/``pl`` has
 probability 0, and a party lacking ``vl``/``vh`` was not in the summary.

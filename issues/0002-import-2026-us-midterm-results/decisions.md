@@ -21,10 +21,12 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 - Raw NYT downloads go to a gitignored local cache; only the converted per-seat election JSON is committed. (2026-11-07)
 - Runoffs and RCV: store the decisive round (runoff or final RCV round) once available, falling back to the November first round until then. (2026-11-07)
 - Senate specials: standalone specials (FL/OH 2026, AZ 2020) take the state's map slot. Where a state has a regular and a special in the same year (GA 2020; MN, MS 2018; CA, OK 2022; NE, CA 2024), the map shows the regular race and the special goes in a separate per-year specials list in the export, shown in the state popup and counted in the chamber tally. (2026-11-07)
+- Local data console gets a US results tool to fetch the latest NYT files, convert them, preview the changes and import them (refresh in place), for any supported year and chamber. It follows the console's form → preview → confirm pattern (`console/blueprints/by_elections.py:22`, `:43`, `:83`) and shells out through `console/services/runner.py`. Per the console-transparency rule, the preview shows the intermediate numbers: seats changed, newly called, % counted per race, party mapping and warnings. (2026-11-07)
 
 ## Open
 
 ## Assumed
+- The console import step does not export automatically. Export to the site stays a separate, explicit action (a button on the result page, as with the existing US model run).
 - Runoff results (GA 2021-01-05, GA 2022-12-06, LA-5 2026) are located on NYT during the build. Where none is found, the seat keeps its first-round result and is flagged.
 - In the derived Current Senate, uncalled 2026 seats (AK, MS now) show as uncalled, not as the leader. `run_us_senate_model.py:55` reads the same file, so the model's chamber baseline changes with it.
 - Re-runs are manual CLI invocations (no scheduler).

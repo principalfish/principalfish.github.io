@@ -9,8 +9,10 @@ Brief (2026-11-07, from issue 0001): split the model-refinement research and tes
 - The branch is based on `poll-errors-simulation`, because the engine, the validation harness, the frozen fixtures and the failed 2a reports all live there. Once 0001 merges into master, merge master into this branch. (2026-11-07, planner default, not raised with Phil)
 - Everything already settled in 0001 thread 4 for these pieces still stands: the 17/20 gate on the original 20 cells, equal transition weights, training-only fits, λ centred at 0, the off-by-default config pattern, parity invariants, and the console transparency rule. (Carried over 2026-11-07.)
 
+- **2a route: (a), a pre-registered landslide/efficiency term**, written down before any fit and judged by a new offline evidence gate (same 17/20 on the original 20 cells, RMS, stability, drift and attribution guards). Not (b) 1983–92 history first (unverified boundaries and sources; moderate Con-led elections that tightened the scales in H3), not (c) deferring 2a. Phil accepted the risk that one training landslide per fold (1997→2001 when 2024 is held out) is thin evidence. This decision explicitly authorises a regime/lead-dependent term for 2a only; no cluster-scale prior, regional balancing or exact-regional-total projection. (Phil, 2026-11-07)
+
 ## Open
-- **2a's direction after the failed gate.** H3 gave best 15/20 and candidate 14/20, with misses all in one direction (landslides under-called). Options: replan with explicitly new assumptions (a landslide or Labour-lead efficiency/regime term, pre-registered before fitting); add 1983–92 history first; or skip 2a and do 2c/2d/2e first. This decides whether 2b, 2c's λ part and 2f can start.
+- **2a's term: directional or spread?** A directional landslide/efficiency term shifts expected seats (a change to the seat projection, so the central forecast moves too); a lead-dependent spread term widens conversion error in high-lead elections. Also: whether to run a miss-decomposition diagnostic before choosing.
 - The order of the US pieces relative to the Westminster ones. They're independent; recommendation: Westminster first, US before the 2028 cycle starts.
 - 4d's data source for state correlations: historical presidential state swings, or census regions.
 

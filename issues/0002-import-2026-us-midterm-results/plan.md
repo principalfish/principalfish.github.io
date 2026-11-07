@@ -254,6 +254,17 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
     - Tests: the sort order for House, Senate and President lists (pinned Current Senate and Predict slots, newest first, an imported older year landing in place); the export flag off drops the House/Senate model entries and files and leaves the presidential forecast.
     - Acceptance: the lists read as above on the served page (jsdom harness, and Phil's browser check); the manifest has no `current-us-house` / `current-us-senate`; the presidential forecast is unaffected; checks green.
 
+13. **Senate comparisons: same class, six years earlier**
+    - Files: `data/scripts/export/manifest.py` (`assign_comparison_elections`, `NO_AUTO_COMPARISON_TYPES`), the front end's comparison totals and popup path where Senate specials need their own comparison (`electionmapslogic/state.js`, `dom.js`), README/map-modes.md, tests
+    - What (user decisions after the browser check, 2026-11-07):
+      - Each US Senate result compares with the Senate result six years earlier (same class) when it exists: 2026 → 2020 and 2024 → 2018 today; 2022, 2020 and 2018 have none yet. Later imports pick it up automatically. It replaces the blanket "Senate never auto-chains" rule.
+      - Totals seat and vote ±: matching states only, i.e. states up in both elections. Off-cycle specials (FL/OH 2026, AZ 2020 in the regular file, folded specials) are left out of the ±, so it compares like for like. This overrides piece 8's whole-comparison-election rule for the Senate only; the House keeps it.
+      - Specials' popups compare with their own class's last election seat by seat (FL/OH 2026 Class 3 → 2022), in the popup only.
+      - Then, on its own go-ahead: re-export and commit only the files it should change.
+    - Depends on: 12
+    - Tests: the comparison rule (2026→2020, 2024→2018, none where the year isn't there, specials not matched across classes); the Senate totals ± over matching states only (FL/OH 2026 and AZ 2020 excluded); a special's popup comparing with its class's previous election; House comparisons and totals unchanged.
+    - Acceptance: on the served page the 2026 Senate shows seat ±, vote % ± and per-state vote % ± against 2020 for the Class 2 states, and FL/OH popups against 2022; 2024 against 2018; House unchanged; checks green.
+
 ## Checkpoints
 - [x] 1. Seat status/source schema + migration (ec682969)
 - [x] 2. NYT fetch + cache (2a8f90e5)
@@ -266,6 +277,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [x] 9. Predict rollover + per-seat Senate baselines (2f87352b)
 - [x] 10. Derived Current Senate (cd7dbc43)
 - [ ] 11. Docs + live-data runbook (live steps on go-ahead)
+- [ ] 13. Senate comparisons: same class, six years earlier
 - [x] 12. US election list order; 2026 House/Senate forecasts switched off (91f4528e, re-export f54c40bd)
 
 ## Verification

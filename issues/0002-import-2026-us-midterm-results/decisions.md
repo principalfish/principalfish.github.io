@@ -44,6 +44,8 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 
 - US page landing election: `2026-us-senate` (was the removed Senate forecast `current-us-senate`). Old `current-us-*` links fall back to the default. (2026-11-07)
 
+- Senate comparisons (after the browser check, 2026-11-07): each Senate result compares with the one six years earlier (same class) where present (2026→2020, 2024→2018). The totals ± cover matching states only, with specials excluded. Specials' popups compare with their own class's previous election (FL/OH 2026 → 2022). This replaces master's "Senate never auto-chains" rule. New piece 13. (2026-11-07)
+
 ## Open
 
 ## Assumed

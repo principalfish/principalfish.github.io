@@ -129,7 +129,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 5 · Master merged in; checks green (`af4405fb`).
 - [x] 6a · Westminster weighting defaults: 15-day half-life, 60-day window (`a5cdf8e0`).
 - [x] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation (`51c31966`).
-- [ ] 6b · Main headline line leads with the simulation.
+- [x] 6b · Main headline line leads with the simulation (`c7a85eab`).
 - [ ] 7 · PR text drafted.
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
@@ -251,3 +251,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (planner): the step-5 trial export showed the main subtitle line (uniform swing, "Labour majority: 58") contradicting the MC line (majority 44%, hung 56%). Phil chose to change it in a new piece, **6b**, and picked "Lead with the simulation" over "Label it uniform swing" and "Hide the main line". Order: the step-7 data commit first, then 6b, then the PR text.
 - 2026-11-07: Piece 6 finished. The 15/60 rerun (848/848), backup `elections-2026-11-07-183903.db.gz`, trends rebuild (383 points), staged and real export, and the data commit `51c31966` were each pushed or run with Phil's go-ahead. Next: 6b (main headline line), once its go-ahead comes.
 - 2026-11-07 (builder, Piece 6b): `uncertainty.js` gains `probabilityPercent` (the one rounding helper; `formatProbability`, the likely/most-likely cut-off and both tie tests use it), `headlineOutlook` (shared by both lines), `uncertaintyOutcomeLine` and `simulatedSubtitle`. `uncertaintyHeadline` now follows the largest-party favourite and adds "· hung N%" when the main line doesn't name hung. `dom.js` picks the main line, and `state.js` gets a doc note only. Ties are listed by party name; outcome ties put hung first. A US-style config test stands in for booting the real US page in Vitest; the jsdom harness covers the real US page. The `election-load-view` afterEach now stops the d3 zoom left over from a seat click. That fixes an "SVGElement is not defined" unhandled error that already happened on HEAD. Analysis loop: round 1 had 5 verified findings, all fixed (tie order, US test, afterEach order, 2 docstrings), and 2 dropped. Round 2 was clean on all five checks. No changed-lines coverage report: the Vitest coverage plugin isn't installed in this worktree.
+- 2026-11-07: Piece 6b committed as `c7a85eab` and pushed with Phil's approval ("Approve, commit and push"). The builder's work is done; Piece 7 is `/publish poll-errors-simulation` in the planner chat.

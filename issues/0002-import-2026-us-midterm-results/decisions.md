@@ -31,6 +31,10 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 
 - Predict baseline uncalled seats (2026 House, 22 at 2026-11-07): project each from its votes counted so far as if final and mark the projection called; a zero-vote seat stays neutral and uncounted; the 2026 result (anchor) view keeps the uncalled flag. (2026-11-07)
 
+- Senate baseline overrides carry a class: `{seat, class, baselineElectionId}`, applied only when that class is up (the builder's deviation, accepted at the piece 9 review). (2026-11-07)
+- The archived 2026 Senate forecast after the rollover (FL/OH comparison unavailable; Full Senate merges into the current chamber) is left to the future forecast-scoring issue, which needs per-forecast archives anyway. (2026-11-07)
+- The 2028 model-run follow-ups go into piece 11's runbook as a "before you start" list. (2026-11-07)
+
 ## Open
 
 ## Assumed

@@ -228,6 +228,11 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
     - Files: `README.md` (runbook section), `AGENTS.md` if a command changes
     - What:
       - Document the CLI, the console tool, cache location, migration, map builds and the refresh cadence.
+      - Add a "2028 model run: before you start" list to the runbook (user decision, piece 9 review), with the four items from piece 9's open items in Notes:
+        - bump `US_MODEL_COMPARISON_IDS` (manifest.py) to 2026-us-house / 2022-us-senate, since it is per type, not per cycle;
+        - the House runner moving from map 21 to 24 makes `publish_trends` drop the archived 2026 House trend series;
+        - House district polls are stored on map-21 seats, so repoint the poll importers before the 2028 House run;
+        - every Senate forecast exports as `current-us-senate` / "2026 Prediction", so a 2028 run collides with the 2026 one.
       - Then, only with go-ahead, run against the live DB:
         - the migration;
         - imports for 2018–2026 House + Senate, with the NYT-vs-538 diff reported for 2020–24;
@@ -235,7 +240,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
         - the export.
       - Commit only the files the piece owns. Never `git add -A`: the test suite dirties `model_output_trends.json`.
     - Depends on: 1–10
-    - Acceptance: the runbook is reviewed; each live step is run only after approval, and its output (counts, diff summary) is reported.
+    - Acceptance: the runbook is reviewed and has the 2028 list; each live step is run only after approval, and its output (counts, diff summary) is reported.
 
 ## Checkpoints
 - [x] 1. Seat status/source schema + migration (ec682969)

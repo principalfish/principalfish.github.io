@@ -30,8 +30,10 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - Westminster poll weighting becomes a 15-day half-life with a 60-day window, for the console's daily run and the CLI defaults alike (Piece 6a), followed by a full rerun of 2024-07-05 → 2026-10-30. Holyrood and US unchanged (Phil, 2026-11-07).
 - Main subtitle line leads with the simulation when uncertainty is shown: most likely outcome and its odds plus the largest party's odds, then the leader's median, range and majority odds. Uniform swing stays in the table (Phil, 2026-11-07; Piece 6b). Supersedes Piece 2's leave-the-main-line-unchanged choice.
 - 6b wording: keep the prefix; majority case uses the same shape and adds hung to the second line; ties name both; it shows whenever uncertainty exists; the cut-off uses the rounded %; the second line follows the largest-party favourite (Phil, 2026-11-07).
+- Self-review 2: fix all three verified doc items, and keep the 2024-07-05 election-day point at the start of the poll tracker, as master has it (Phil, 2026-11-07; Piece 6c).
 
 ## Open
+- 6c: whether the election point joins the first polled point, the exact keep rule in `trends.py`, and which live steps are needed (builder's look-ahead, then Phil).
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.
 - The go-ahead for each live step of the Westminster backfill and export (Piece 6).
 

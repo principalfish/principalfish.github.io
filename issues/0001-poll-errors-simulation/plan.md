@@ -110,6 +110,20 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
      - ties: name both. An outcome tie reads "Hung parliament or Labour majority equally likely (50%)"; a largest-party tie reads "Labour and Reform UK level as largest party (50%)", and the second line shows both parties' medians;
      - show it whenever the run has uncertainty (`activeUncertainty`), toggle or not;
      - builder's recommendations taken: the likely/most likely cut-off uses the displayed (rounded) %, from one shared rounding helper for both lines; the second line always follows the largest-party favourite; historical elections, US, predict view, user scenarios, the poll tracker and `document.title` are unchanged.
+6c. **Self-review 2 fixes, and keep the election-day point in the tracker** (Phil, 2026-11-07; `reviews/02-2026-11-07.md`). Model: frontier. Depends on: 6b.
+   - What:
+     - Review fixes 1–3:
+       - the `electionmapslogic/dom.js:59-60` subtitle comment names `simulatedSubtitle`;
+       - `dom.js:67-71` `renderHeader` `@param text` says it's replaced by the simulated line when the run has uncertainty;
+       - `README.md:745-747` says the 60-day lookback matches the single-date `--since-days-back` default.
+       - Rebuild the bundles.
+     - Election-day point: master's `model_output_trends.json` starts on 2024-07-05 with the unpolled election-result point (Lab 411 seats, 33.7%); the branch's starts on 2024-08-07, because `data/model_support/trends.py` drops runs with no national polls. Keep the history's first (election-day) run even when unpolled, with no uncertainty, so the tracker starts on 2024-07-05 as it does now. Later unpolled runs stay dropped.
+   - Open, for the builder's look-ahead and Phil's decision before building:
+     - (a) the tracker's break rule breaks a line where uncertainty appears, so the election point would sit alone before 2024-08-07. Should the election point join the first polled point, as master's tracker draws it, with bands starting on 2024-08-07?
+     - (b) the exact rule in `trends.py`: is it "first run of the history" or "the baseline election's own date"?
+     - (c) which live steps are needed: the trends rebuild (`rebuild_model_trends.py --model westminster --map-id 2`, writing only the tracked trends file), and whether a re-export is needed too.
+   - Tests: `trends.py` keeps the unpolled election-day run and still drops later unpolled runs; the tracker parse of the rebuilt file shows the chosen behaviour at 2024-07-05 → 2024-08-07, with no other breaks.
+   - Acceptance: `./run_tests.sh` (then restore any test-written trends file), `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, and the tracker parse of the rebuilt file. The live steps each need Phil's go-ahead, relayed through the planner chat. The code and data commits are separate.
 7. **PR text.** `/publish poll-errors-simulation`, run from the planner chat: it drafts the final description into `pr.md` and, once Phil approves, puts it on PR #74 (opened by Phil 2026-10-13). Merging is Phil's.
 
 ## Checkpoints
@@ -130,6 +144,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6a · Westminster weighting defaults: 15-day half-life, 60-day window (`a5cdf8e0`).
 - [x] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation (`51c31966`).
 - [x] 6b · Main headline line leads with the simulation (`c7a85eab`).
+- [ ] 6c · Self-review 2 fixes and the election-day tracker point.
 - [ ] 7 · PR text drafted.
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
@@ -252,3 +267,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07: Piece 6 finished. The 15/60 rerun (848/848), backup `elections-2026-11-07-183903.db.gz`, trends rebuild (383 points), staged and real export, and the data commit `51c31966` were each pushed or run with Phil's go-ahead. Next: 6b (main headline line), once its go-ahead comes.
 - 2026-11-07 (builder, Piece 6b): `uncertainty.js` gains `probabilityPercent` (the one rounding helper; `formatProbability`, the likely/most-likely cut-off and both tie tests use it), `headlineOutlook` (shared by both lines), `uncertaintyOutcomeLine` and `simulatedSubtitle`. `uncertaintyHeadline` now follows the largest-party favourite and adds "· hung N%" when the main line doesn't name hung. `dom.js` picks the main line, and `state.js` gets a doc note only. Ties are listed by party name; outcome ties put hung first. A US-style config test stands in for booting the real US page in Vitest; the jsdom harness covers the real US page. The `election-load-view` afterEach now stops the d3 zoom left over from a seat click. That fixes an "SVGElement is not defined" unhandled error that already happened on HEAD. Analysis loop: round 1 had 5 verified findings, all fixed (tie order, US test, afterEach order, 2 docstrings), and 2 dropped. Round 2 was clean on all five checks. No changed-lines coverage report: the Vitest coverage plugin isn't installed in this worktree.
 - 2026-11-07: Piece 6b committed as `c7a85eab` and pushed with Phil's approval ("Approve, commit and push"). The builder's work is done; Piece 7 is `/publish poll-errors-simulation` in the planner chat.
+- 2026-11-07 (planner): self-review 2 on `a832137d..c7a85eab`: correctness and security clean, coverage 38/38, three low doc items verified. The planner noted that master's tracker starts on 2024-07-05 with the election-result point, which the branch drops as unpolled. Phil chose all three fixes and to keep the election-day point: new Piece **6c**.

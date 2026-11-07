@@ -11,7 +11,7 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Pieces 1–10 and the piece 11 docs (`613ac558`) committed and pushed; PR #80 ticked. Merge order revised by Phil: don't wait for #74. Master merged in as `b51ab61c` and pushed. `/review self` 01 done: findings 1, 3, 4, 5 fixed in `98269358` (pushed); see `reviews/01-2026-11-07.md`. Pending for Phil: go-ahead for the live steps (README §12: back up, migrate, confirm map ids 24/25 free, imports, Current Senate, export), each on its own go-ahead. The hatch look needs a real-browser check after the piece 11 export.
+Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Pieces 1–10 and the piece 11 docs (`613ac558`) committed and pushed; PR #80 ticked. Merge order revised by Phil: don't wait for #74. Master merged in as `b51ab61c` and pushed. `/review self` 01 done: findings 1, 3, 4, 5 fixed in `98269358` (pushed); see `reviews/01-2026-11-07.md`. Live steps (README §12) under way, each on its own go-ahead: Phil approved ("Go ahead") the backup and the migration dry run only; the builder is running them. Next go-aheads: real migration; confirm map ids 24/25 free; imports; Current Senate; export. The hatch look needs a real-browser check after the piece 11 export.
 
 Next step: checkpoint 11's live steps, then `/publish`. See `plan.md`.
 

@@ -3,12 +3,12 @@
   "slug": "import-2026-us-midterm-results",
   "title": "Import 2018\u20132026 US House and Senate results from NYT data",
   "mode": "build",
-  "state": "planned",
+  "state": "building",
   "branch": "import-2026-us-midterm-results",
   "base": "master",
   "gh_issue": 79,
   "build_model": "claude-opus-5-5",
   "created": "2026-11-07 10:25",
-  "updated": "2026-11-07 11:48",
+  "updated": "2026-11-07 11:51",
   "done": null
 }

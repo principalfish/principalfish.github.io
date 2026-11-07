@@ -13,7 +13,8 @@ Done: **1b** (`39610fb9`), **1c** (`2618c0dd`), **2** (`860b0d85`), **3** (`000f
 
 Settled 2026-11-07: **W-4**, Phil confirmed the MC median seat count as the headline for Piece 2 (3a). The deterministic count stays, labelled "uniform-swing projection", and is flagged when it falls outside its own 90% range.
 
-No pending decision; the round-2 picks are made (`review.md`).
+Piece 6 (go-ahead given in the builder chat; full rerun chosen). Steps: (1) backup; (2) rerun 2024-07-05 → 2026-10-30 from the builder worktree; (3) backup; (4) `rebuild_model_trends.py`; (5) staged export to scratch and sanity checks; (6) real export; (7) commit the data files. Each of steps 3–7 needs Phil's go-ahead, relayed through this chat.
+- **Precondition:** no poll imports or model runs from the main checkout's console until this branch merges, or the new runs come out without uncertainty.
 
 Self-review closed 2026-11-07 (`review.md`). Rounds 1 and 2 are fixed in `eeee25d0` and `a832137d`. The validation report's source hashes match the branch at `a832137d` (check: hash each file listed in `identity.source_sha256` with `git show poll-errors-simulation:<file> | sha256sum`). Regenerate it if Piece 6 changes any of them.
 

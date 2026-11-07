@@ -30,4 +30,11 @@ Sent to the builder 2026-11-07. Commit: `eeee25d0` (all seven, pushed; Phil appr
 - Builder's analysis loop on the fixes: correctness found that `trends.py` decided boundaries using runs it then dropped (fixed before commit), a non-existent `sigma_seat` key in the new wording (fixed), and a weak interval test (strengthened).
 - Outside the brief, kept: `poll_list.html` (the error alert) and `services/uncertainty_explorer.py` (the shared `outcome_tail()` now lives there).
 - Correction to finding 5: `poll_detail` (`polls.py:188-190`) doesn't catch the config error; it only skips loading the config for non-Westminster polls. A Westminster poll's detail page still errors on a malformed uncertainty config. Possible follow-up; not fixed here.
-- Planner re-check of `000fbd9f..eeee25d0` (correctness opus, coverage sonnet): pending.
+- Planner re-check of `000fbd9f..eeee25d0` (correctness claude-opus-5-5, coverage claude-sonnet-5-5): **all seven resolved.** The branch's `parsePollTrackerData` on the committed trends file gives 0 boundaries (was 439). The load-view tests ran under jsdom 24 and fail if the `app.js` guards are removed.
+
+## Round 2 (from the re-check; verified)
+- R2-1 · medium · coverage · `package.json`: `jsdom` isn't a devDependency, so `npm test` silently skips every `describe.skipIf(!JSDOM)` suite (`election-load-view`, `vote-totals-view`, `polltracker-view`, the "3 skipped"). They only ran with `PF_TEST_JSDOM` pointing at a scratch jsdom 24. Fix: add `jsdom@24` (pinned; later majors fail on Node 21 per `AGENTS.md`) as a devDependency.
+- R2-2 · low · correctness · `data/console/templates/poll_list.html:46`: `ref_pct` is only set inside `{% if config is not none %}` (`:12-13`), so with a malformed config the header reads "MoE at %". Fix: guard the header text, and assert on it in the malformed-config test.
+- R2-3 · low · coverage · `data/model_support/trends.py:~292`: no test of an unpolled (dropped) run between runs with different identities. Fix: identities a, (unpolled, b), a; assert the middle run is excluded and doesn't change the surrounding decisions.
+- R2-4 · low · correctness · `data/console/blueprints/polls.py:188-190`: `poll_detail` still errors for a Westminster poll on a malformed config. Fix: catch `UncertaintyConfigError` and show no MoE with an alert, as `poll_list` now does.
+- R2-5 · nit · `test_tampered_inputs_raise_before_any_replay` claims more than it checks. Fix: rename it, or assert no replay ran.

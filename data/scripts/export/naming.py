@@ -165,6 +165,17 @@ def map_filename_for_map_id(map_id: int) -> str:
     return f"map-{map_id}.topo.json"
 
 
+def is_folded_senate_special(election: Election) -> bool:
+    """True for a Senate special stored as a child of that year's regular election.
+
+    A special held the same day as the state's regular race is its own ``us_senate``
+    election with ``parent_election_id`` set. The export folds it into the parent's
+    payload as ``specials`` and gives it no result file or manifest entry of its own.
+    A standalone special is an ordinary seat of the regular election, not a child.
+    """
+    return election.type == ElectionType.us_senate and election.parent_election_id is not None
+
+
 def file_stem_for_election(election: Election) -> str:
     """Derive the output JSON filename stem for an election.
 
@@ -172,6 +183,9 @@ def file_stem_for_election(election: Election) -> str:
     - ``model_uns`` elections → ``"prediction-simulation"``
     - ``us_{house,presidential,senate}_model`` elections → the type's fixed
       forecast stem (``"us-house-forecast"`` etc.).
+    - US results elections → ``"us-{chamber}-{year}"``; a folded Senate special
+      (see :func:`is_folded_senate_special`) → ``"us-senate-{year}-special"``, so
+      it never shares its parent's stem.
     - UK general elections matching ``"{year} General Election"`` →
       ``"uk-general-{year}"``
     - All others → ``"{type}-{year}-{name}"`` slugified.
@@ -202,6 +216,9 @@ def file_stem_for_election(election: Election) -> str:
     if election.type == ElectionType.us_presidential:
         return f"us-president-{election.year}"
 
+    if is_folded_senate_special(election):
+        return f"us-senate-{election.year}-special"
+
     if election.type == ElectionType.us_senate:
         return f"us-senate-{election.year}"
 
@@ -228,6 +245,9 @@ def manifest_id_for_election(election: Election) -> str:
     - ``model_uns`` elections → ``"current-prediction"``
     - ``us_{house,presidential,senate}_model`` elections → the type's fixed
       forecast anchor id (``"current-us-house"`` etc.).
+    - US results elections → ``"{year}-us-{chamber}"``; a folded Senate special
+      → ``"{year}-us-senate-special"``, so resolving an id over the Senate map's
+      elections never picks the special in place of its parent.
     - UK general elections matching ``"{year} General Election"`` →
       ``"{year}-general"``
     - All others → ``"{year}-{name}"`` slugified.
@@ -257,6 +277,9 @@ def manifest_id_for_election(election: Election) -> str:
 
     if election.type == ElectionType.us_presidential:
         return f"{election.year}-us-president"
+
+    if is_folded_senate_special(election):
+        return f"{election.year}-us-senate-special"
 
     if election.type == ElectionType.us_senate:
         return f"{election.year}-us-senate"

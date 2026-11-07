@@ -1,22 +1,34 @@
 """Tests for scripts.export.manifest — mapMode region/override/Senate-cycle building.
 
-Pure functions; no DB needed. Covers the region attachment, ``regionNameOverride``
-application (and stripping), and the durable ``senateClassCycle`` → concrete
-``senateClassNextElection`` resolution that the full export and the ``--metadata-only``
-refresh both rely on.
+Covers the region attachment, ``regionNameOverride`` application (and stripping), and
+the durable ``senateClassCycle`` → concrete ``senateClassNextElection`` resolution that
+the full export and the ``--metadata-only`` refresh both rely on. These are pure
+functions. ``TestUsResultsExport`` runs a whole US page export on a temp DB to cover
+the manifest entry's ``sourceNote`` and the folding of Senate specials.
 """
 
 from __future__ import annotations
 
+import argparse
+import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
+import pytest
+from sqlalchemy import select, update
+from sqlalchemy.orm import joinedload
+
+from db import Database, SeatStatus
+from export_elections import DEM_PARTY_ID, REP_PARTY_ID, export_pages, missing_export_inputs
+from models import Election, ElectionType, Party
 from scripts.export.manifest import (
     _senate_class_next_election,
+    assign_comparison_elections,
     build_map_modes_with_regions,
 )
 
@@ -178,3 +190,437 @@ class TestSenateSpecialElections:
         )
         assert len(modes["23"]["senateSpecialElections"]) == 1
         assert result["23"]["senateSpecialElections"] == []
+
+
+class TestUsResultsExport:
+    """A full US Senate page export: status fields, ``sourceNote``, folded specials.
+
+    Seeds a temp DB with a 2020 Senate election (credited, one uncalled seat) and its
+    same-day special as a child election, an uncredited 2018 Senate election with no
+    status rows, and a Senate forecast, then runs the page export into a temp root.
+    """
+
+    _NOTE = "Results: The New York Times / AP. Provisional until certified."
+
+    @staticmethod
+    def _seed(db: Database, tmp_path: Path) -> Path:
+        senate_map = db.add_map("us-senate", parliament="us_senate")
+        with db.session() as s:
+            s.add(Party(id=DEM_PARTY_ID, name="Democratic", colour="#1375E1"))
+            s.add(Party(id=REP_PARTY_ID, name="Republican", colour="#E81B23"))
+        region = db.add_region(senate_map.id, "South")
+        seat_ids = {
+            name: db.add_seat(senate_map.id, name, region_id=region.id).id
+            for name in ("Alabama", "Georgia", "Ohio", "Texas")
+        }
+
+        def votes(election_id: int, seat: str, dem: int, rep: int, *, winner: int | None) -> None:
+            db.add_vote(
+                election_id, seat_ids[seat], party_id=DEM_PARTY_ID, vote_total=dem,
+                candidate_name=f"{seat} D", elected=winner == DEM_PARTY_ID,
+            )
+            db.add_vote(
+                election_id, seat_ids[seat], party_id=REP_PARTY_ID, vote_total=rep,
+                candidate_name=f"{seat} R", elected=winner == REP_PARTY_ID,
+            )
+
+        regular = db.add_election(senate_map.id, 2020, "2020 US Senate Election", ElectionType.us_senate)
+        votes(regular.id, "Georgia", 480, 500, winner=None)
+        votes(regular.id, "Texas", 400, 600, winner=REP_PARTY_ID)
+        db.set_seat_statuses(regular.id, [
+            SeatStatus(seat_id=seat_ids["Georgia"], called=False, pct_counted=97.26, senate_class=2),
+            SeatStatus(seat_id=seat_ids["Texas"], called=True, pct_counted=99.0, senate_class=2),
+        ])
+        with db.session() as s:
+            s.execute(update(Election).where(Election.id == regular.id).values(source_note=TestUsResultsExport._NOTE))
+
+        special = db.add_election(
+            senate_map.id, 2020, "2020 US Senate Special Election", ElectionType.us_senate,
+            parent_election_id=regular.id,
+        )
+        votes(special.id, "Georgia", 700, 650, winner=DEM_PARTY_ID)
+        db.set_seat_statuses(special.id, [
+            SeatStatus(seat_id=seat_ids["Georgia"], called=True, senate_class=3, decisive_round="runoff"),
+        ])
+
+        older = db.add_election(senate_map.id, 2018, "2018 US Senate Election", ElectionType.us_senate)
+        votes(older.id, "Ohio", 550, 450, winner=DEM_PARTY_ID)
+
+        forecast = db.add_election(
+            senate_map.id, 2026, "US Senate UNS 2026-11-01", ElectionType.us_senate_model
+        )
+        votes(forecast.id, "Georgia", 520, 480, winner=DEM_PARTY_ID)
+
+        output_root = tmp_path / "uselectionmaps" / "data"
+        (output_root / "maps").mkdir(parents=True)
+        (output_root / "maps" / f"map-{senate_map.id}.topo.json").write_text("{}", encoding="utf-8")
+        # The supplemental Current Senate entry needs its prebuilt result file.
+        (output_root / "results").mkdir()
+        (output_root / "results" / "senate-current.json").write_text("{}", encoding="utf-8")
+        # A stale note on the uncredited 2018 entry: sourceNote is DB-derived, so it must
+        # not survive regeneration.
+        stale = {"elections": [{"id": "2018-us-senate", "sourceNote": "stale"}]}
+        (output_root / "map-modes.json").write_text(json.dumps(stale), encoding="utf-8")
+        shell = {"mapModes": {str(senate_map.id): {"projection": "albersUsa"}}}
+        (output_root / "map-modes-shell.json").write_text(json.dumps(shell), encoding="utf-8")
+        return output_root
+
+    @staticmethod
+    def _export(
+        db: Database,
+        output_root: Path,
+        tmp_path: Path,
+        *,
+        dry_run: bool = False,
+        names: tuple[str, ...] | None = None,
+        output_file: Path | None = None,
+        page_roots: dict[str, Path] | None = None,
+    ) -> None:
+        """Export the seeded elections (or just ``names``, as a single-election run)."""
+        args = argparse.Namespace(dry_run=dry_run, output_file=output_file, legacy_files_dir=tmp_path)
+        with db.session() as session:
+            query = (
+                select(Election)
+                .options(joinedload(Election.map))
+                .order_by(Election.year.desc(), Election.name.asc())
+            )
+            if names is not None:
+                query = query.where(Election.name.in_(names))
+            export_pages(
+                session=session,
+                elections=list(session.execute(query).scalars().all()),
+                page_roots=page_roots or {"uselectionmaps": output_root},
+                args=args,
+                manifest_parties=[],
+                manifest_regions_by_map_id={},
+                has_electorate=True,
+                single_election_mode=names is not None,
+            )
+
+    @staticmethod
+    def _election_id(db: Database, name: str) -> int:
+        election = db.get_election_by_name(name)
+        assert election is not None
+        return int(election.id)
+
+    @staticmethod
+    def _read(path: Path) -> Any:
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def test_special_is_folded_into_its_parent(self, db: Database, tmp_path: Path) -> None:
+        output_root = self._seed(db, tmp_path)
+        self._export(db, output_root, tmp_path)
+
+        results = output_root / "results"
+        assert sorted(path.name for path in results.iterdir()) == [
+            "senate-current.json",
+            "us-president-trends-by-state.json",  # the whole US page runs, presidential included
+            "us-senate-2018.json",
+            "us-senate-2020.json",
+            "us-senate-forecast.json",
+        ]
+        manifest = self._read(output_root / "map-modes.json")
+        ids = [entry["id"] for entry in manifest["elections"]]
+        assert "2020-us-senate-special" not in ids
+        assert "2020-us-senate-special" not in manifest["files"]["elections"]["electionsById"]
+
+        payload = self._read(results / "us-senate-2020.json")
+        assert payload["specials"] == [
+            {"n": "Georgia", "cl": 3, "w": DEM_PARTY_ID,
+             "p": [[DEM_PARTY_ID, 700, "Georgia D"], [REP_PARTY_ID, 650, "Georgia R"]], "rd": "runoff"},
+        ]
+
+    def test_regular_seats_carry_status_fields(self, db: Database, tmp_path: Path) -> None:
+        output_root = self._seed(db, tmp_path)
+        self._export(db, output_root, tmp_path)
+
+        seats = {seat["n"]: seat for seat in self._read(output_root / "results" / "us-senate-2020.json")["seats"]}
+        # Uncalled: coloured by its leader (Republican), flagged, with its count.
+        assert seats["Georgia"]["w"] == REP_PARTY_ID
+        assert seats["Georgia"]["c"] is False
+        assert seats["Georgia"]["pc"] == 97.3
+        # Called: no status fields at all.
+        assert set(seats["Texas"]) == {"n", "r", "w", "p"}
+
+    def test_election_without_status_rows_is_unchanged(self, db: Database, tmp_path: Path) -> None:
+        output_root = self._seed(db, tmp_path)
+        self._export(db, output_root, tmp_path)
+
+        payload = self._read(output_root / "results" / "us-senate-2018.json")
+        region_id = payload["seats"][0]["r"]
+        assert payload == {
+            "schema": "pf-results-v4",
+            "seats": [{
+                "n": "Ohio", "r": region_id, "w": DEM_PARTY_ID,
+                "p": [[DEM_PARTY_ID, 550, "Ohio D"], [REP_PARTY_ID, 450, "Ohio R"]],
+            }],
+        }
+
+    def test_source_note_is_recomputed_from_the_db(self, db: Database, tmp_path: Path) -> None:
+        output_root = self._seed(db, tmp_path)
+        self._export(db, output_root, tmp_path)
+
+        entries = {entry["id"]: entry for entry in self._read(output_root / "map-modes.json")["elections"]}
+        assert entries["2020-us-senate"]["sourceNote"] == self._NOTE
+        assert "sourceNote" not in entries["2018-us-senate"]
+        assert "sourceNote" not in entries["current-us-senate"]
+
+    def test_archived_forecast_stays_listed(self, db: Database, tmp_path: Path) -> None:
+        output_root = self._seed(db, tmp_path)
+        self._export(db, output_root, tmp_path)
+
+        manifest = self._read(output_root / "map-modes.json")
+        forecast = next(entry for entry in manifest["elections"] if entry["id"] == "current-us-senate")
+        assert forecast["model"] is True
+        assert manifest["files"]["elections"]["electionsById"]["current-us-senate"] == "results/us-senate-forecast.json"
+
+    def test_dry_run_reports_a_missing_map_and_mode(
+        self, db: Database, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        output_root = self._seed(db, tmp_path)
+        for path in (output_root / "maps").iterdir():
+            path.unlink()
+        (output_root / "map-modes-shell.json").write_text(json.dumps({"mapModes": {}}), encoding="utf-8")
+
+        self._export(db, output_root, tmp_path, dry_run=True)
+
+        out = capsys.readouterr().out
+        assert "Missing (a real export would fail): pre-built map " in out
+        assert "map-1.topo.json (needed by 'US Senate UNS 2026-11-01', '2020 US Senate Election'," in out
+        assert "Warning: no mapModes entry for map id(s)" in out
+        assert "Folding '2020 US Senate Special Election'" in out
+        assert f"Would write results: {output_root / 'results' / 'us-senate-2020.json'} (2 seats)" in out
+        assert "us-senate-2020-special" not in out
+        assert [path.name for path in (output_root / "results").iterdir()] == ["senate-current.json"]
+
+    def test_missing_map_writes_nothing_on_any_page(self, db: Database, tmp_path: Path) -> None:
+        # A complete Westminster page goes first; the US page's map is missing. The
+        # preflight must refuse before the Westminster page is written.
+        output_root = self._seed(db, tmp_path)
+        uk_map = db.add_map("Westminster 2010", parliament="westminster")
+        uk_seat = db.add_seat(uk_map.id, "Aberavon", region_id=db.add_region(uk_map.id, "Wales").id)
+        uk_election = db.add_election(uk_map.id, 2019, "2019 General Election", ElectionType.uk_general)
+        db.add_vote(uk_election.id, uk_seat.id, party_id=DEM_PARTY_ID, vote_total=10, elected=True)
+        (tmp_path / "650map.json").write_text("{}", encoding="utf-8")
+        (tmp_path / "2019election_new.json").write_text("{}", encoding="utf-8")
+        uk_root = tmp_path / "electionmaps" / "data"
+
+        for path in (output_root / "maps").iterdir():
+            path.unlink()
+        before = {path: path.read_bytes() for path in output_root.rglob("*") if path.is_file()}
+
+        with pytest.raises(FileNotFoundError, match=r"nothing was written[\s\S]*map-\d+\.topo\.json"):
+            self._export(
+                db, output_root, tmp_path,
+                page_roots={"electionmaps": uk_root, "uselectionmaps": output_root},
+            )
+
+        assert not uk_root.exists()
+        after = {path: path.read_bytes() for path in output_root.rglob("*") if path.is_file()}
+        assert after == before
+
+    def test_output_file_export_skips_the_preflight(self, db: Database, tmp_path: Path) -> None:
+        # No map and no supplemental files: --output-file writes one payload and needs neither.
+        output_root = self._seed(db, tmp_path)
+        for path in (output_root / "maps").iterdir():
+            path.unlink()
+        (output_root / "results" / "senate-current.json").unlink()
+        output_file = tmp_path / "out.json"
+
+        self._export(db, output_root, tmp_path, names=("2020 US Senate Election",), output_file=output_file)
+
+        assert [special["n"] for special in self._read(output_file)["specials"]] == ["Georgia"]
+
+    def test_dry_run_reports_a_missing_supplemental(
+        self, db: Database, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        output_root = self._seed(db, tmp_path)
+        (output_root / "results" / "senate-current.json").unlink()
+
+        # The supplemental pass itself still refuses later on, as before the preflight.
+        with pytest.raises(FileNotFoundError, match="Prebuilt result file not found"):
+            self._export(db, output_root, tmp_path, dry_run=True)
+
+        assert (
+            "Missing (a real export would fail): supplemental 'current-senate' file "
+            f"{output_root / 'results' / 'senate-current.json'}"
+        ) in capsys.readouterr().out
+
+    @pytest.mark.parametrize("to_file", [False, True])
+    def test_single_export_of_a_folded_special_is_refused(
+        self, db: Database, tmp_path: Path, to_file: bool
+    ) -> None:
+        output_root = self._seed(db, tmp_path)
+        output_file = tmp_path / "special.json" if to_file else None
+
+        with pytest.raises(RuntimeError, match="folded Senate special.*export its parent election"):
+            self._export(
+                db, output_root, tmp_path,
+                names=("2020 US Senate Special Election",), output_file=output_file,
+            )
+        assert output_file is None or not output_file.exists()
+
+    def test_single_export_of_the_parent_carries_its_specials(self, db: Database, tmp_path: Path) -> None:
+        output_root = self._seed(db, tmp_path)
+        self._export(db, output_root, tmp_path, names=("2020 US Senate Election",))
+
+        payload = self._read(output_root / "results" / "us-senate-2020.json")
+        assert [special["n"] for special in payload["specials"]] == ["Georgia"]
+
+    def test_specials_from_two_children_are_merged_by_name(self, db: Database, tmp_path: Path) -> None:
+        output_root = self._seed(db, tmp_path)
+        election = db.get_election_by_name("2020 US Senate Election")
+        assert election is not None
+        # Added after the Georgia special, but Alabama sorts first.
+        later = db.add_election(
+            election.map_id, 2020, "2020 US Senate Special Election (Alabama)", ElectionType.us_senate,
+            parent_election_id=election.id,
+        )
+        alabama = next(seat for seat in db.get_seats_for_map(election.map_id) if seat.seat_name == "Alabama")
+        db.add_vote(later.id, alabama.id, party_id=REP_PARTY_ID, vote_total=900, elected=True)
+
+        self._export(db, output_root, tmp_path)
+
+        specials = self._read(output_root / "results" / "us-senate-2020.json")["specials"]
+        assert [special["n"] for special in specials] == ["Alabama", "Georgia"]
+        assert specials[0] == {"n": "Alabama", "w": REP_PARTY_ID, "p": [[REP_PARTY_ID, 900]]}
+
+    def test_special_on_another_map_raises(self, db: Database, tmp_path: Path) -> None:
+        output_root = self._seed(db, tmp_path)
+        other_map = db.add_map("elsewhere", parliament="us_senate")
+        special_id = self._election_id(db, "2020 US Senate Special Election")
+        with db.session() as s:
+            s.execute(update(Election).where(Election.id == special_id).values(map_id=other_map.id))
+
+        with pytest.raises(RuntimeError, match="is on map .* but its parent"):
+            self._export(db, output_root, tmp_path, names=("2020 US Senate Election",))
+
+
+class TestMissingExportInputs:
+    """The export preflight: every branch of ``missing_export_inputs``, on temp dirs."""
+
+    @staticmethod
+    def _election(
+        name: str, type: ElectionType, map_id: int, parliament: str, map_name: str = "Westminster 2010"
+    ) -> Any:
+        return SimpleNamespace(
+            name=name, type=type, map_id=map_id, parent_election_id=None,
+            map=SimpleNamespace(name=map_name, parliament=parliament),
+        )
+
+    def test_missing_westminster_template(self, tmp_path: Path) -> None:
+        election = self._election("2019 General Election", ElectionType.uk_general, 1, "westminster")
+        missing = missing_export_inputs(
+            {"electionmaps": [election]}, {"electionmaps": tmp_path / "uk"}, tmp_path,
+            single_election_mode=True,
+        )
+        assert missing == [f"map template {tmp_path / '650map.json'} (needed by '2019 General Election')"]
+
+    def test_by_election_is_skipped(self, tmp_path: Path) -> None:
+        election = self._election("Some By-Election", ElectionType.by_election, 1, "westminster")
+        assert missing_export_inputs(
+            {"electionmaps": [election]}, {"electionmaps": tmp_path / "uk"}, tmp_path,
+            single_election_mode=True,
+        ) == []
+
+    def test_missing_prebuilt_supplemental_result(self, tmp_path: Path) -> None:
+        root = tmp_path / "us"
+        missing = missing_export_inputs({}, {"uselectionmaps": root}, tmp_path, single_election_mode=False)
+        assert missing == [f"supplemental 'current-senate' file {root / 'results' / 'senate-current.json'}"]
+
+    def test_missing_supplemental_source_file(self, tmp_path: Path) -> None:
+        missing = missing_export_inputs(
+            {}, {"electionmaps": tmp_path / "uk"}, tmp_path, single_election_mode=False
+        )
+        assert missing == [
+            f"supplemental '2019-general-changed-boundaries' file {tmp_path / '2019election_new.json'}"
+        ]
+
+    def test_single_election_mode_skips_supplementals(self, tmp_path: Path) -> None:
+        roots = {"electionmaps": tmp_path / "uk", "uselectionmaps": tmp_path / "us"}
+        assert missing_export_inputs({}, roots, tmp_path, single_election_mode=True) == []
+
+    def test_a_shared_missing_map_is_reported_once(self, tmp_path: Path) -> None:
+        root = tmp_path / "us"
+        elections = [
+            self._election(f"{year} US House Election", ElectionType.us_house, 24, "us_house")
+            for year in (2026, 2028)
+        ]
+        missing = missing_export_inputs(
+            {"uselectionmaps": elections}, {"uselectionmaps": root}, tmp_path, single_election_mode=True
+        )
+        assert missing == [
+            f"pre-built map {root / 'maps' / 'map-24.topo.json'} "
+            "(needed by '2026 US House Election', '2028 US House Election')"
+        ]
+
+    def test_present_files_report_nothing(self, tmp_path: Path) -> None:
+        root = tmp_path / "us"
+        (root / "maps").mkdir(parents=True)
+        (root / "maps" / "map-24.topo.json").write_text("{}", encoding="utf-8")
+        election = self._election("2026 US House Election", ElectionType.us_house, 24, "us_house")
+        assert missing_export_inputs(
+            {"uselectionmaps": [election]}, {"uselectionmaps": root}, tmp_path, single_election_mode=True
+        ) == []
+
+
+class TestHouseComparisonAcrossDistrictSets:
+    """US House compares against the previous House election across maps; others do not."""
+
+    def test_a_reordered_list_never_compares_with_a_newer_year(self) -> None:
+        # A hand edit put 2018 above the newer elections; it must still get none.
+        entries = [self._house(2018, 25), self._house(2026, 24), self._house(2024, 21)]
+        assign_comparison_elections(entries)
+
+        comparisons = {entry["id"]: entry.get("comparisonElectionId") for entry in entries}
+        assert comparisons == {"2018-us-house": None, "2026-us-house": "2024-us-house", "2024-us-house": None}
+
+    @staticmethod
+    def _house(year: int, map_id: int) -> dict[str, Any]:
+        return {"id": f"{year}-us-house", "type": "us_house", "mapId": map_id, "parliament": "us_house"}
+
+    def test_each_house_year_compares_with_the_previous_one_across_maps(self) -> None:
+        # Newest first, as the export builds them: 2026 on map 24, 2022-24 on 21, 2018-20 on 25.
+        entries = [
+            self._house(2026, 24), self._house(2024, 21), self._house(2022, 21),
+            self._house(2020, 25), self._house(2018, 25),
+        ]
+        assign_comparison_elections(entries)
+
+        comparisons = {entry["id"]: entry.get("comparisonElectionId") for entry in entries}
+        assert comparisons == {
+            "2026-us-house": "2024-us-house",
+            "2024-us-house": "2022-us-house",
+            "2022-us-house": "2020-us-house",
+            "2020-us-house": "2018-us-house",
+            "2018-us-house": None,
+        }
+
+    def test_house_never_compares_across_parliaments_or_types(self) -> None:
+        entries = [
+            self._house(2026, 24),
+            {"id": "2024-us-president", "type": "us_presidential", "mapId": 22, "parliament": "us_presidential"},
+            {"id": "2024-us-senate", "type": "us_senate", "mapId": 23, "parliament": "us_senate"},
+        ]
+        assign_comparison_elections(entries)
+
+        assert all("comparisonElectionId" not in entry for entry in entries)
+
+    def test_holyrood_and_westminster_still_need_the_same_map(self) -> None:
+        entries: list[dict[str, Any]] = [
+            {"id": "2026-holyrood", "type": "holyrood_general", "mapId": 30, "parliament": "holyrood"},
+            {"id": "2021-holyrood", "type": "holyrood_general", "mapId": 31, "parliament": "holyrood"},
+            {"id": "2024-general", "type": "uk_general", "mapId": 2, "parliament": "westminster"},
+            {"id": "2019-general", "type": "uk_general", "mapId": 1, "parliament": "westminster"},
+            {"id": "2017-general", "type": "uk_general", "mapId": 1, "parliament": "westminster"},
+        ]
+        assign_comparison_elections(entries)
+
+        comparisons = {entry["id"]: entry.get("comparisonElectionId") for entry in entries}
+        assert comparisons == {
+            "2026-holyrood": None,
+            "2021-holyrood": None,
+            "2024-general": None,
+            "2019-general": "2017-general",
+            "2017-general": None,
+        }

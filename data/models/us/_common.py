@@ -105,7 +105,7 @@ from polls.importers.us.us_polls_common import (
     matchup_candidates,
     matchup_stored_candidate_count,
 )
-from scripts.export.naming import manifest_id_for_election
+from scripts.export.naming import is_folded_senate_special, manifest_id_for_election
 
 # US polls insert Democrat/Republican rows directly, so no party-id merge is
 # needed (contrast the Westminster model, which aliases "Other" → "Others").
@@ -1606,7 +1606,13 @@ def resolve_special_baselines(
     if not wanted:
         return {}
 
-    elections = db.get_elections_for_map(map_id)
+    # A folded Senate special has no result file of its own (the export folds it into
+    # its parent's payload), so it is never a baseline the front end could load.
+    elections = [
+        election
+        for election in db.get_elections_for_map(map_id)
+        if not is_folded_senate_special(election)
+    ]
     manifest_ids = {election: manifest_id_for_election(election) for election in elections}
     resolved = {
         manifest_id: int(election.id)

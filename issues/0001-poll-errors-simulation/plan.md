@@ -104,6 +104,12 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
    - Files: `electionmapslogic/uncertainty.js` (headline text), `electionmapslogic/dom.js` (main-line choice), the bundles via `npm run minify:electionmaps`, and tests in `electionmapslogic/tests/`.
    - Tests: the main line from the simulation on a saved model with uncertainty (likely, most likely, majority-leader cases); the unchanged UNS line without uncertainty, in predict view and on the US page; escaping by `textContent`.
    - Acceptance: `npm test` with jsdom suites running (0 jsdom skips), `npm run minify:electionmaps`, and the jsdom harness on both pages against the step-6 data. Show the rendered subtitle text.
+   - **Decisions (Phil, 2026-11-07, at the 6b briefing):**
+     - keep the election-name prefix ("Current prediction · Hung parliament likely (56%) · Labour largest party (99%)");
+     - majority case: keep the same shape, "Labour majority likely (72%) · Labour largest party (99%)", and the second line adds "· hung N%" whenever the main line doesn't name hung;
+     - ties: name both. An outcome tie reads "Hung parliament or Labour majority equally likely (50%)"; a largest-party tie reads "Labour and Reform UK level as largest party (50%)", and the second line shows both parties' medians;
+     - show it whenever the run has uncertainty (`activeUncertainty`), toggle or not;
+     - builder's recommendations taken: the likely/most likely cut-off uses the displayed (rounded) %, from one shared rounding helper for both lines; the second line always follows the largest-party favourite; historical elections, US, predict view, user scenarios, the poll tracker and `document.title` are unchanged.
 7. **PR text.** `/builder poll-errors-simulation finish`. Phil opens and merges the PR.
 
 ## Checkpoints

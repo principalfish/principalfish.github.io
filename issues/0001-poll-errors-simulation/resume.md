@@ -18,3 +18,5 @@ No pending decision; the round-2 picks are made (`review.md`).
 Self-review closed 2026-11-07 (`review.md`). Rounds 1 and 2 are fixed in `eeee25d0` and `a832137d`. The validation report's source hashes match the branch at `a832137d` (check: hash each file listed in `identity.source_sha256` with `git show poll-errors-simulation:<file> | sha256sum`). Regenerate it if Piece 6 changes any of them.
 
 After Piece 6: Piece 7, `/publish poll-errors-simulation` from the planner chat. The plan's `/builder … finish` wording is outdated.
+
+2026-11-07 (planner chat): **switched to relaying.** The builder now sends every question, review request and live-step go-ahead to this chat. Put each one to Phil and relay his answer, quoting his words. PR #74, opened by Phil on 2026-10-13, is this issue's PR: not a draft, title "Poll errors simulation". Its body now carries `pr.md`'s progress checklist. The builder is running the Piece 6 rerun (~1.5 h, background); its next request is the go-ahead for the second backup.

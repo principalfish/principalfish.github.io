@@ -286,3 +286,9 @@ No test touches the live DB (conftest guard).
   - No LA December House runoffs were found for 2018, 2022 or 2024. The 2024-12-07 Louisiana file holds only constitutional amendments.
 - 2026-11-07 (pieces 1+2): one analysis pass ran over the combined diff, with findings routed per piece. Piece 1: only a missing CLI test. Piece 2: a batch of network-error, redirect-allowlist, pointer-validation and test fixes. `.env_example` gained `NYT_CACHE_DIR` (added to piece 2's files). The README migration step is left to piece 11.
 - 2026-11-07: pieces 1 and 2 committed separately (ec682969, 2a8f90e5) and pushed to `origin/import-2026-us-midterm-results`. Final checks: mypy clean, 4667 passed, plus a re-run of the touched files after the last two review fixes (158 passed).
+- 2026-11-07 (piece 3): user decisions:
+  - California's partial-term Senate specials (Padilla 2022, Schiff 2024) are absent from NYT's files. Accept the gap; the same candidate won the regular race. Piece 7/8 mention it in those years' source line.
+  - LA-05 2026, pending its December runoff, stays plain uncalled, with no runoff-pending flag.
+  - State Green affiliates (e.g. Pacific Green) map to usgreen.
+  - Also noted: the 2026 RCV races (AK, ME) have no NYT `rounds` yet, so they store the first round until NYT publishes the final round. Already-decided runoffs sit inside the 2020 (B) and 2022 (A2 Senate) general files, so those races carry `decisive_round="runoff"` even with kind "general".
+- 2026-11-07 (piece 3) real-sample counts: House 435 every year. Senate 35/34/35/35/35 (2026→2018; 2024 is 34 because of the CA gap). 2026 has 22 House and 2 Senate races uncalled. NC-09 2018 is uncalled, which is correct: it was never certified.

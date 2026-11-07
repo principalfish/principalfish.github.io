@@ -40,6 +40,7 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - 6g: seats are the simulated **mean** (not median) in the table and headline, national and regional; the note goes; no history rerun. Queued after 6f (Phil, 2026-11-07: "Mean everywhere").
 - 6g rounding: show the mean seats as whole numbers by largest remainder, so they add up exactly to 650 (or the region's total). No map-colours label (Phil had no preference) (Phil, 2026-11-07).
 - 6g: store the mean in the simulation summary and rerun 2026-10-30 only; largest-remainder ties go to the larger party; exporting a run with no stored mean fails; the poll tracker's seat line becomes the simulated mean, from stored distributions (Phil, 2026-11-07).
+- 6g loop: UK and region whole seats may differ by one (accepted); the tracker always keeps the latest run; keep the note "Map colours show each seat's uniform-swing winner." (Phil, 2026-11-07).
 
 ## Open
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.

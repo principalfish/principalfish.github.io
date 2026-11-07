@@ -29,6 +29,8 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 - Mid-count seat ± (totals table): uncalled current seats and their same-key comparison seats are left out of the seat delta, so it compares called seats only; comparison seats with no current key still count (reapportionment). Vote totals and vote ± unchanged. Added to piece 8 before its commit. (2026-11-07)
 - Piece 9 must settle with the user how predict treats uncalled seats in the 2026 baseline before building it. (2026-11-07)
 
+- Predict baseline uncalled seats (2026 House, 22 at 2026-11-07): project each from its votes counted so far as if final and mark the projection called; a zero-vote seat stays neutral and uncounted; the 2026 result (anchor) view keeps the uncalled flag. (2026-11-07)
+
 ## Open
 
 ## Assumed

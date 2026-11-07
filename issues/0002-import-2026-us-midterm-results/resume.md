@@ -11,7 +11,7 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"). Pending for Phil: how predict treats the 22 uncalled House baseline seats. Options: A, project from votes so far and mark called (builder recommends); B, leave unprojected; C, fall back to 2024 (rejected: 15 of 22 are in redrawn states); D, A at 90% counted or more, B below. The Senate side is moot for the 2028 class-3 baseline. The builder is building the rest of piece 9 meanwhile. The hatch look needs a real-browser check after the piece 11 export.
+Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"). Uncalled baseline seats decided: option A ("A: project from leader (Recommended)"). The builder is building all of piece 9, then pauses for review. The hatch look needs a real-browser check after the piece 11 export.
 
 Next step: checkpoint 9 (starts by raising the uncalled-baseline options). See `plan.md`.
 

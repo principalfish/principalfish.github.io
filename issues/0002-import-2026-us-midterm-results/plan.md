@@ -212,10 +212,10 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
      - Add a `senateBaselineOverrides: [{seat, baselineElectionId}]` key (FL, OH → 2026-us-senate), consumed through `loadSenateSpecialBaseline`'s grouping.
      - Expire `senateSpecialElections` entries for 2026.
      - Model scripts' baseline names follow, but the models are not re-run.
-     - Uncalled seats in the baseline (the 2026 result has 22 House and 2 Senate seats uncalled at 2026-11-07): decide with the user how predict treats them, e.g. project from the leader, or leave unprojected. `predict.js` builds `new Seat({...baseSeat})`, so `called:false` carries through today. Raise the options before building.
+     - Uncalled seats in the baseline (22 House at 2026-11-07; the Senate ones, AK and MS, are class 2 and moot for 2028): decided with the user, option A. Project each from its votes counted so far as if final and mark the projected seat called. A zero-vote seat stays neutral and uncounted. The 2026 result (anchor) view keeps `called:false`.
    - Functions: `loadSenateSpecialBaseline` (generalised), predict baseline loading, manifest passthrough
    - Depends on: 7, 8
-   - Acceptance: tests show the 2028 class-3 seat list with FL/OH swinging from 2026 and the rest from 2022; the predict view opens on the 2026 result in the jsdom harness; the 2026 forecasts are still listed; a test covers the chosen treatment of uncalled baseline seats.
+   - Acceptance: tests show the 2028 class-3 seat list with FL/OH swinging from 2026 and the rest from 2022; the predict view opens on the 2026 result in the jsdom harness; the 2026 forecasts are still listed; tests show an uncalled baseline seat projecting from its leader and coming out called, a zero-vote seat staying unprojected, and the anchor view keeping `called:false`.
 
 10. **Derived Current Senate**
     - Files: `data/scripts/us_results/current_senate.py` (new), `data/scripts/export/legacy.py` (if the entry needs a note), `data/tests/test_us_results_current_senate.py` (new)

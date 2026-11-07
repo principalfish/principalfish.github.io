@@ -74,7 +74,27 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 3. **Style cleanup** (thread 4, Phase 6). One formatting-only commit; no behaviour change. Model: `claude-sonnet-5-5`. Depends on: 1, 1b, 2.
 4. **Self-review of the branch.** `/review self poll-errors-simulation` on the UK-only diff. Fix what Phil picks. Depends on: 3.
 5. **Merge master in.** `git merge master`; regenerate the generated files rather than hand-merging them. Needs Phil's go-ahead to push. Depends on: 4. Acceptance: full checks green; `export_elections.py --dry-run` clean.
-6. **Westminster backfill and export** (thread 4 Phase 5; thread 1 "Full backfill published"). Backup → rerun 2024-07-05 to the latest date under the current config → backup → `rebuild_model_trends.py` → staged export to `--output-base` and sanity checks → the real export with approval → commit the data files separately. Live uncertainty rows stop at 2026-10-22. Each live step needs Phil's go-ahead at the time. Depends on: 5. Do it last before the merge.
+6a. **Westminster poll weighting: 15-day half-life, 60-day window** (Phil, 2026-11-07). Model: frontier. Depends on: 5.
+   - What: one commit changing the Westminster defaults so the console's daily run and the backfill use the same weighting.
+     - `data/console/blueprints/westminster.py:142-143`: the form defaults `since_days_back` "30" → "60" and `half_life_days` "30.0" → "15.0", with 15.0 added to the `half_life_days` menu (`:79`, now 7/14/21/30/45/60/90).
+     - `data/models/westminster/run_uns_model.py`: CLI defaults `--half-life-days` 30.0 → 15.0 (`:299`), `--since-days-back` 30 → 60 (`:319`), `--lookback-days` 365 → 60 (`:338`); docstrings to match (`:274-283`).
+     - `README.md` (e.g. `:746` "`--lookback-days 365`", "`--half-life-days 30`") and any other Westminster doc or console text stating the old values.
+     - Tests that pin these defaults.
+     - Holyrood, US and other models are untouched.
+   - Acceptance:
+     - `git grep` finds no Westminster default of 30-day half-life, 30-day since or 365-day lookback left in code or docs;
+     - console smoke: the Westminster form shows 60 and 15.0 selected;
+     - the validation harness (`validate_westminster_uncertainty.py`) still reproduces `uncertainty_validation_report.json`, or, if its replay depends on these defaults or its hashed sources change, regenerate it in this commit and show which fields moved;
+     - full checks green.
+6. **Westminster backfill and export** (thread 4 Phase 5; thread 1 "Full backfill published"). Depends on: 6a. Steps, each with Phil's go-ahead at the time, relayed through the planner chat:
+   1. backup (done 2026-11-07, pre-first-rerun);
+   2. rerun 2024-07-05 → 2026-10-30 with `--half-life-days 15 --lookback-days 60` passed explicitly, plus `--continue-on-error`. The first rerun (2026-11-07, 365-day window and 30-day half-life by mistake) is superseded; its state is in backup `elections-2026-11-07-164913.db.gz`;
+   3. backup;
+   4. `rebuild_model_trends.py --model westminster --map-id 2`;
+   5. staged export to `--output-base` in scratch, with sanity checks;
+   6. the real export;
+   7. commit the data files separately.
+   - Precondition: no poll imports or model runs from the main checkout's console until this branch merges (master's console still has the old defaults and no uncertainty).
 7. **PR text.** `/builder poll-errors-simulation finish`. Phil opens and merges the PR.
 
 ## Checkpoints
@@ -92,6 +112,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 3 · T4 Phase 6: Style cleanup (`000fbd9f`).
 - [x] 4 · Branch self-review done and chosen fixes committed (`eeee25d0`).
 - [x] 5 · Master merged in; checks green (`af4405fb`).
+- [ ] 6a · Westminster weighting defaults: 15-day half-life, 60-day window.
 - [ ] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation.
 - [ ] 7 · PR text drafted.
 
@@ -208,3 +229,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
   - **Estimate:** a full rerun is about 85–100 min.
   - **Running processes:** `server.sh` and `http.server` are running in this builder worktree (since about 13:20).
 - 2026-11-07 (builder, Piece 6): Phil gave the go-ahead for the backup and the full rerun. Step 1: `backup_db.py` copied the DB and found it identical to `elections-2026-11-03-090450.db.gz`, so it made no new archive; that one is the backup. Step 2 started 15:20Z: `run_uns_model.py --start-date 2024-07-05 --end-date 2026-10-30 --continue-on-error` from the builder worktree (log in the builder scratchpad).
+- 2026-11-07 (planner): the first Piece 6 rerun used range mode's `--lookback-days 365`, whereas the history and the console use 30. Read-only dry runs for 2026-10-30 reproduced both exactly (30 days: Lab 358; 365 days: Lab 317), so the window was the whole difference. Phil then chose a **15-day half-life and a 60-day cutoff**, with the console and CLI defaults changed to match (Piece 6a), then a full rerun. Calibration isn't affected: the national error is fitted on final-poll errors (3-day window, `build_final_poll_errors.py:73`), and sampling error follows the actual weights (`monte_carlo.py:679`).

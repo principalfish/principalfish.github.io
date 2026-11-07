@@ -27,6 +27,7 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - 0003's branch `refine-westminster-and-us-poll-error-models` was cut locally at `44dd8336`, so it keeps the experiment (not pushed). 0003's and 0004's plans now say what to do after merging this branch or master in: 0003 reverts 1b's removal commit, and 0004 reverts `5a96e52c` but leaves 1b applied (Phil, 2026-11-07).
 - Regenerate the stale `uncertainty_validation_report.json` in its own commit straight after 1b, as Piece 1c. Reads the live DB only and writes that one repo file (Phil, 2026-11-07).
 - W-4 (3a): the MC median seat count is the headline. The deterministic count stays, labelled "uniform-swing projection" and flagged when it falls outside its own 90% range. Confirmed 2026-11-07, as first chosen 2026-10-28 (Phil).
+- Westminster poll weighting becomes a 15-day half-life with a 60-day window, for the console's daily run and the CLI defaults alike (Piece 6a), followed by a full rerun of 2024-07-05 → 2026-10-30. Holyrood and US unchanged (Phil, 2026-11-07).
 
 ## Open
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.

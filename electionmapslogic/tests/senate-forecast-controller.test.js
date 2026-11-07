@@ -30,11 +30,15 @@ const readData = (file) => JSON.parse(readFileSync(new URL(`../../uselectionmaps
 function cycle2026Manifest(exported) {
   const cycle = structuredClone(exported);
   for (const entry of [
-    { id: "current-us-house", name: "2026 Prediction", type: "us_house_model", mapId: 24, parliament: "us_house", model: true },
-    { id: "current-us-senate", name: "2026 Prediction", type: "us_senate_model", mapId: 23, parliament: "us_senate", model: true },
+    { id: "current-us-house", name: "2026 Prediction", type: "us_house_model", mapId: 21, parliament: "us_house", model: true, comparisonElectionId: "2024-us-house" },
+    { id: "current-us-senate", name: "2026 Prediction", type: "us_senate_model", mapId: 23, parliament: "us_senate", model: true, comparisonElectionId: "2020-us-senate" },
   ]) {
     if (!cycle.elections.some((election) => election.id === entry.id)) cycle.elections.push(entry);
   }
+  // The forecast files are no longer exported, so the manifest has no data-file entries for them.
+  const files = cycle.files.elections.electionsById;
+  files["current-us-house"] ??= "results/us-house-forecast.json";
+  files["current-us-senate"] ??= "results/us-senate-forecast.json";
   const senate = cycle.parliamentFeatures.us_senate;
   senate.nextElectionYear = 2026;
   senate.predictAnchorElectionId = "current-us-senate";

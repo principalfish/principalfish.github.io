@@ -1,15 +1,6 @@
 {
-  "defaultElection": "current-us-senate",
+  "defaultElection": "2026-us-senate",
   "elections": [
-    {
-      "id": "current-us-house",
-      "name": "2026 Prediction",
-      "type": "us_house_model",
-      "mapId": 21,
-      "parliament": "us_house",
-      "model": true,
-      "comparisonElectionId": "2024-us-house"
-    },
     {
       "id": "2026-us-house",
       "name": "2026 Election",
@@ -72,13 +63,12 @@
       "comparisonElectionId": "2016-us-president"
     },
     {
-      "id": "current-us-senate",
-      "name": "2026 Prediction",
-      "type": "us_senate_model",
+      "id": "2026-us-senate",
+      "name": "2026 Election",
+      "type": "us_senate",
       "mapId": 23,
       "parliament": "us_senate",
-      "model": true,
-      "comparisonElectionId": "2020-us-senate"
+      "sourceNote": "Results: The New York Times / AP. Provisional until certified."
     },
     {
       "id": "current-senate",
@@ -88,14 +78,6 @@
       "parliament": "us_senate",
       "multiMember": true,
       "upcomingElections": true
-    },
-    {
-      "id": "2024-us-senate",
-      "name": "2024 Election",
-      "type": "us_senate",
-      "mapId": 23,
-      "parliament": "us_senate",
-      "sourceNote": "Results: The New York Times / AP. California's partial-term special election is not included."
     },
     {
       "id": "2016-us-president",
@@ -146,20 +128,20 @@
       "comparisonElectionId": "1992-us-president"
     },
     {
-      "id": "2022-us-senate",
-      "name": "2022 Election",
+      "id": "2024-us-senate",
+      "name": "2024 Election",
       "type": "us_senate",
       "mapId": 23,
       "parliament": "us_senate",
       "sourceNote": "Results: The New York Times / AP. California's partial-term special election is not included."
     },
     {
-      "id": "2020-us-senate",
-      "name": "2020 Election",
+      "id": "2022-us-senate",
+      "name": "2022 Election",
       "type": "us_senate",
       "mapId": 23,
       "parliament": "us_senate",
-      "sourceNote": "Results: The New York Times / AP."
+      "sourceNote": "Results: The New York Times / AP. California's partial-term special election is not included."
     },
     {
       "id": "1992-us-president",
@@ -225,12 +207,12 @@
       "parliament": "us_presidential"
     },
     {
-      "id": "2026-us-senate",
-      "name": "2026 Election",
+      "id": "2020-us-senate",
+      "name": "2020 Election",
       "type": "us_senate",
       "mapId": 23,
       "parliament": "us_senate",
-      "sourceNote": "Results: The New York Times / AP. Provisional until certified."
+      "sourceNote": "Results: The New York Times / AP."
     },
     {
       "id": "2018-us-house",
@@ -621,16 +603,14 @@
   "files": {
     "elections": {
       "mapsById": {
-        "21": "maps/map-21.topo.json",
         "22": "maps/map-22.topo.json",
-        "23": "maps/map-23.topo.json",
         "24": "maps/map-24.topo.json",
+        "23": "maps/map-23.topo.json",
+        "21": "maps/map-21.topo.json",
         "25": "maps/map-25.topo.json"
       },
       "electionsById": {
-        "current-us-house": "results/us-house-forecast.json",
         "current-us-president": "results/us-president-forecast.json",
-        "current-us-senate": "results/us-senate-forecast.json",
         "2026-us-house": "results/us-house-2026.json",
         "2026-us-senate": "results/us-senate-2026.json",
         "2024-us-house": "results/us-house-2024.json",

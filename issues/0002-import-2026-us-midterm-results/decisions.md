@@ -7,7 +7,6 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 - Import provisional results now, using re-runnable tools that refresh in place as counts finish. (2026-11-07)
 
 ## Open
-- Disclaimer: wording and where it shows (map page footer, results popup, export metadata).
 - Geometry sources: 2026 shapes for the 9 redrawn states (Census 120th-Congress files likely not out until 2027), and the 2012-cycle set for 2018/2020. Note that NC's 2020 map (court remedial) differs from 2018's, and PA's 2018 court map differs from 2016's; whether Census cd116 covers both is unchecked.
 - Senate specials: `convert_538_senate.py:20` skips specials; FL and OH 2026 are specials (configured in `senateSpecialElections` in the US manifest shell). How do they enter the 2026 Senate file?
 - Downstream: after import, what moves? `current-us-house` / `current-us-senate` anchors, `predictBaselineElectionId`, `nextElectionYear` (2028), `senate-current.json` (chamber changes 2027-01-03), the US forecast and poll pages.

@@ -141,7 +141,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
    - Acceptance: hand-made fixtures for each schema cover a called race, an uncalled race, a same-party race, RCV with rounds, a jungle/runoff race, a standalone special and a clashing special; all parse to the expected `Race`s.
 
 4. **Converter and importer**
-   - Files: `data/scripts/us_results/convert.py` (new), `data/scripts/us_results/cli.py` (new), `old_data/scripts/usa/us_import.py`, `old_data/scripts/usa/import_{house,senate}_elections.py`, `data/scripts/rebuild_database.py`, `data/tests/test_us_results_convert.py` (new), `data/tests/test_usa_house.py`, `data/tests/test_usa_senate.py`
+   - Files: `data/scripts/us_results/convert.py` (new), `data/scripts/us_results/cli.py` (new), `old_data/scripts/usa/us_import.py`, `old_data/scripts/usa/import_{house,senate}_elections.py`, `data/scripts/rebuild_database.py`, `data/tests/test_us_results_convert.py` (new), `data/tests/test_us_results_cli.py` (new), `data/tests/test_usa_house.py`, `data/tests/test_usa_senate.py`, `data/tests/test_rebuild_database.py`; follow-ups also touch `data/models.py`, `data/db.py`, `data/scripts/migrate_add_us_result_status.py`, `data/tests/test_migrate_us_result_status.py` (senate_class column) and `data/scripts/us_results/races.py`, `data/tests/test_us_results_adapters.py` (unaffiliated → independent)
    - What: turn `Race`s into the election-JSON shape, extended per seat with `seatInfo.called`, `pct`, `sameParty`, `round`, and top-level `meta` (source note, retrieved/updated times, year, chamber, map id).
      - Write to `old_data/files/usa/{house,senate}-<year>.json` (committed) and, for clashing specials, `senate-<year>-special.json`.
      - Extend `import_us_election`: map id per year (House 2018/20 → 25, 2022/24 → 21, 2026 → 24; Senate → 23), the real election date, status rows, source_note, and special elections with `parent_election_id`. Same-party merge as today.
@@ -298,3 +298,13 @@ No test touches the live DB (conftest guard).
 - Note for piece 8: candidate names and party codes are stored as NYT sends them. Render them through the front end's existing escape helper, never raw `innerHTML`.
 - 2026-11-07: piece 3 committed (9f17c51d) and pushed. Round 2 closed `certified` (A/A2 only; B's `edison_certified` doesn't mean certification), the B pct fallback, the B/C special-class table, bounds checks, ASCII-only ints and duplicate-id refusal. Checks: mypy clean, 4796 passed.
 - Piece 3 Green-affiliate mapping: PAG / `pacific-green` (OR) and `mountain` (WV, 2018) → usgreen. GPJ, GRP/Grp, PRG/progressive and liberty-union stay others. Mountain Party's 2018 Green affiliation is unverified.
+- 2026-11-07 (piece 4): first build passed (4849 tests). Trial run over every year: NYT and the committed 538 files agree on every winner for Senate 2020/22/24 and House 2022/24 (there's no 538 House 2020 file).
+  - 538's AK Senate 2022 summed RCV rounds (777k against NYT's final-round 254k); NYT is right.
+  - NE 2024's Osborn is IND in NYT, D in 538; NYT is right.
+  - The importer refuses to refresh an election onto a different map, or to reuse a map id that belongs to another parliament. Confirm 24/25 are free in the live DB before piece 11.
+  - CLI: `python scripts/us_results/cli.py <fetch|convert|import|all>` from data/.
+- 2026-11-07 (piece 4) user decisions:
+  - "Provisional until certified" applies only to the current cycle (the newest year in sources), while anything there is uncalled or uncertified. NYT's 2024 files still carry stale uncertified flags.
+  - Uncontested seats backfill real totals from the 538 file when it has them and the winner matches, with `votesSource` flagged. Otherwise they get the nominal 100. Re-converting must stay idempotent after the 538 file is overwritten.
+  - Unaffiliated-type codes (NPA, UNA, McMullin's) map to independent.
+  - A special's Senate class gets a nullable `senate_class` column on election_seat_status, amended into piece 1's migration in place, since it hasn't run live.

@@ -248,7 +248,7 @@ No behaviour change. The full suite must pass unchanged.
 - [ ] Piece 2d: House effects and sparse windows.
 - [ ] Piece 2e: Nation-only parties and lead calibration.
 - [ ] Piece 2f: Joint recalibration.
-- [ ] Piece 3a: Westminster and US display changes.
+- [x] Piece 3a: Westminster display changes (`860b0d85`; US display moved to issue 0004).
 - [ ] Piece 4a: Small US model fixes.
 - [ ] Piece 4b: US national parameter uncertainty.
 - [ ] Piece 4c: Senate state/race allocation.

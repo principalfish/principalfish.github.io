@@ -88,7 +88,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 1 · US work removed from this branch; checks green (`5a96e52c`).
 - [x] 1b · Offline conversion experiment removed from this branch; checks green (`39610fb9`).
 - [x] 1c · Westminster validation report regenerated and committed (`2618c0dd`).
-- [ ] 2 · T4 Piece 3a: Westminster display changes.
+- [x] 2 · T4 Piece 3a: Westminster display changes (`860b0d85`).
 - [ ] 3 · T4 Phase 6: Style cleanup.
 - [ ] 4 · Branch self-review done and chosen fixes committed.
 - [ ] 5 · Master merged in; checks green.
@@ -142,3 +142,22 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07: Piece 1b committed as `39610fb9` and pushed (21 files, −529,284 lines). Next: Piece 1c.
 - 2026-11-07 (builder, Piece 1c): report regenerated, paused for review (uncommitted). The diff touches only `identity.source_sha256` (four hashes updated, plus `westminster_validation_inputs.py`, which was missing) and `replay`, which gains six metadata fields for the frozen-input source. `report_hash` goes 08266bae → 6c36090c. No number changed: `variants`, `seed_spread`, `historical`, `national`, `methods` and `limitations` are identical. A second run is byte-identical. Correctness check clean (hashes match HEAD files and the fixture; `read_report()` verifies). mypy 246 clean, pytest 5668 passed, `git diff --check` clean, console `/westminster/uncertainty/validation` 200 showing "Input source: committed frozen inputs". Only the report file is modified.
 - 2026-11-07: Piece 1c committed as `2618c0dd` and pushed. Next: Piece 2 (3a); W-4 is settled (MC median headline).
+- 2026-11-07 (builder, Piece 2 brief): Phil chose the following.
+  - **Table:** the "90% seats" column becomes "median (lo–hi)", headed "Simulated (90%)". The Seats header reads "Uniform swing" (tooltip "uniform-swing projection") for saved models with uncertainty. A uniform-swing count outside its own 90% range gets a † marker, with a tooltip and visually hidden text. Map colours, sorting and ± stay on the uniform-swing count, because medians don't sum to 650.
+  - **Subtitle headline:** leads with the leader's median and range, then the odds: "Labour 282 seats (199–359) · largest party >99% · majority 19% · hung 81% (if an election were held today)".
+  - **S-1:** whole percentages, with "<1%" for anything that rounds to 0 (exact 0 included) and ">99%" for anything that rounds to 100 (exact 1 included).
+  - Follow-up (Piece 2 build): Phil chose to leave the main subtitle ("Hung parliament - largest party Labour with 300 seats", uniform swing) unchanged above the new MC headline.
+- 2026-11-07 (builder, Piece 2): implemented and paused for Phil's review (uncommitted).
+  - **Checks:** mypy clean; pytest 5670 passed; Vitest 621 passed / 3 skipped with jsdom (`PF_TEST_JSDOM`); bundles rebuilt; `git diff --check` clean; jsdom harness shows 0 errors on both pages, and the US page is byte-identical to a HEAD build.
+  - **Analysis loop, first pass:**
+    - security: clean, with an optional escape suggestion;
+    - style and common-mistakes: `map-modes.md` still said 4 dp (fixed);
+    - correctness: popup escaping, half-percent float rounding, and the `_ROUNDING` slack for double rounding (stored 4 dp, published 3 dp) (all fixed);
+    - coverage: no `renderVoteTotals` test (new `tests/vote-totals-view.test.js`).
+  - **Second pass:** the tenths-first rounding misrounded 4 dp inputs, which the committed data still holds. It now uses `Math.round(Number((value * 100).toPrecision(12)))`, verified exact against half-up rounding for every 3 dp and 4 dp value. One low coverage gap remains: no jsdom popup test asserts that "<1%" is escaped. The escape itself is verified in the harness dump.
+  - **Open note:** on a map with both uncertainty and an electoral-vote tally, "Uniform swing" would replace "EV". No such map exists.
+- 2026-11-07: Piece 2 committed as `860b0d85` and pushed. Next: Piece 3 (style cleanup, Sonnet).
+- 2026-11-07 (builder, Piece 3 brief): Phil chose the following.
+  - **Tooling:** `ruff` (pinned 0.8.4) in a throwaway scratch venv; the project venv and requirements are untouched.
+  - **Scope:** `ruff format` whole only on the 50 `.py` files this branch adds. In the 55 modified files, fix only the review's §E items (I001 import order, unused imports, comments on function-level imports, `Mapping` import), so master's code isn't churned.
+  - **TypeError:** `console/services/trends.py:58` becomes `TypeError` only if no caller catches `ValueError` on that path. The other listed cases were US-only and are gone.

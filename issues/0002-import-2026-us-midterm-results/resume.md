@@ -11,7 +11,7 @@ Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `l
 
 Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
 
-Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"). Uncalled baseline seats decided: option A ("A: project from leader (Recommended)"). The builder is building all of piece 9, then pauses for review. The hatch look needs a real-browser check after the piece 11 export.
+Piece 8 committed `9ec98204` and pushed; PR #80 ticked. Piece 9 started on Phil's go-ahead ("Start piece 9"); uncalled baseline seats are option A. Pending: piece 9 built, uncommitted, in `.claude/worktrees/great-nightingale-9085bc`, waiting on Phil's review. Open for Phil: the class-keyed override deviation; the archived 2026 Senate forecast (FL/OH comparison unavailable, Full Senate merges into the current chamber; builder suggests leaving it to the scoring issue); where the 2028 model-run follow-ups go (plan.md Notes, piece 9 open items). The hatch look needs a real-browser check after the piece 11 export.
 
 Next step: checkpoint 9 (starts by raising the uncalled-baseline options). See `plan.md`.
 

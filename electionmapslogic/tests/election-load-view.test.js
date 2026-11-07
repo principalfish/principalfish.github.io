@@ -27,8 +27,10 @@ const header = `<header class="maps-header"><h1 class="maps-title"></h1>
   <p id="mapsSubtitle" class="maps-subtitle"></p><p id="mapsElectionCountdown" hidden></p></header>`;
 const shell = header + readFileSync(new URL("../shell.html", import.meta.url), "utf8");
 
-const HEADLINE = "Labour 282 seats (199–359) · largest party 94% · majority 19% · "
-  + "hung 81% (if an election were held today)";
+const HEADLINE = "Labour 282 seats (199–359) · majority 19% (if an election were held today)";
+const SIMULATED = "Current prediction · Hung parliament likely (81%) · Labour largest party (94%)";
+// The one-seat uniform-swing projection the main line shows without uncertainty.
+const UNIFORM_SWING = "Current prediction · Labour majority: 1";
 
 function mapModes() {
   return {
@@ -108,6 +110,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
   let state;
   let startApp;
   let consoleError;
+  let d3;
 
   async function boot(search = "") {
     dom = new JSDOM(shell, { url: `http://localhost/electionmaps/${search}` });
@@ -133,6 +136,8 @@ describe.skipIf(!JSDOM)("actual election load", () => {
     vi.stubGlobal("IntersectionObserver", Observer);
     ({ state } = await import("../state.js"));
     ({ startApp } = await import("../app.js"));
+    // The same d3 instance dom.js loaded, so afterEach can stop its zoom transitions.
+    d3 = await import("../../site/vendor/d3.v7.esm.js");
   }
 
   beforeEach(() => {
@@ -141,14 +146,21 @@ describe.skipIf(!JSDOM)("actual election load", () => {
     serve();
   });
   afterEach(() => {
-    expect(consoleError?.mock.calls ?? []).toEqual([]);
+    const errors = consoleError?.mock.calls ?? [];
     consoleError?.mockRestore();
+    // Clicking a seat starts a 1.5 s zoom; left running, it ticks after the globals it reads
+    // (SVGElement) are unstubbed and fails the run with an unhandled error.
+    if (dom) d3?.selectAll(dom.window.document.querySelectorAll("svg")).interrupt();
+    d3 = null;
     dom?.window.close();
     vi.unstubAllGlobals();
     vi.doUnmock("../uncertainty.js");
+    // Last, so a failure here cannot skip the cleanup above.
+    expect(errors).toEqual([]);
   });
 
   const headline = () => document.querySelector("#mapsSubtitle .maps-subtitle-uncertainty");
+  const mainLine = () => document.querySelector("#mapsSubtitle .maps-subtitle-main");
   const popupBands = () => [...document.querySelectorAll("#mapsSeatPopupList .maps-popup-uncertainty")];
   const openSeatPopup = () => document.querySelector("#mapsSeatList .maps-seat-row").click();
 
@@ -158,6 +170,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       await startApp();
       expect(state.electionData.uncertainty.national.hung).toBe(0.81);
       expect(headline().textContent).toBe(HEADLINE);
+      expect(mainLine().textContent).toBe(SIMULATED);
       expect(document.querySelectorAll("#mapContent .maps-region-path")).toHaveLength(1);
       expect(dom.window.location.search).toBe("?view=election&election=current-prediction");
     });
@@ -190,8 +203,82 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       await loading;
       expect(loaded.uncertainty).toBeNull();
       expect(headline()).toBeNull();
-      expect(document.querySelector("#mapsSubtitle .maps-subtitle-main").textContent).not.toBe("");
+      expect(mainLine().textContent).toBe(UNIFORM_SWING);
       expect(dom.window.location.search).toBe("");
+    });
+  });
+
+  describe("main subtitle line", () => {
+    it("keeps the uniform-swing line for a saved model without uncertainty", async () => {
+      serve({ "data/results/uncertainty.json": () => Promise.reject(new Error("missing")) });
+      await boot();
+      await startApp();
+      expect(state.electionData.uncertainty).toBeNull();
+      expect(mainLine().textContent).toBe(UNIFORM_SWING);
+      expect(headline()).toBeNull();
+    });
+
+    it("keeps the uniform-swing line for a historical election", async () => {
+      await boot("?parliament=westminster&election=2024-general");
+      await startApp();
+      expect(mainLine().textContent).toBe("2024 General Election · Labour majority: 1");
+      expect(headline()).toBeNull();
+    });
+
+    it("returns to the uniform-swing line in predict view", async () => {
+      await boot();
+      await startApp();
+      expect(mainLine().textContent).toBe(SIMULATED);
+      state.view = "predict";
+      const { renderHeader } = await import("../dom.js");
+      renderHeader(state.electionData.summary.text);
+      expect(mainLine().textContent).toBe(UNIFORM_SWING);
+      expect(headline()).toBeNull();
+    });
+
+    it("keeps the summary line on a US-style model election with no uncertainty path", async () => {
+      serve({
+        "data/map-modes.json": {
+          misc: { title: "US Elections" },
+          defaultElection: "current-us-house",
+          parties: [
+            { id: 1, key: "democrat", name: "Democratic", colour: "#3333ff" },
+            { id: 2, key: "republican", name: "Republican", colour: "#e81b23" },
+          ],
+          elections: [{
+            id: "current-us-house", name: "2026 Prediction", mapId: 21, parliament: "us_house", model: true,
+          }],
+          mapModes: { 21: { name: "us-house-2024", regions: [{ id: 17, name: "California" }] } },
+          files: { elections: {
+            mapsById: { 21: "maps/map-21.topo.json" },
+            electionsById: { "current-us-house": "results/us-house.json" },
+          } },
+          parliamentFeatures: { us_house: { predictAnchorElectionId: "current-us-house" } },
+        },
+        "data/maps/map-21.topo.json": { type: "Topology", objects: { seats: { type: "GeometryCollection", geometries: [] } }, arcs: [] },
+        "data/results/us-house.json": results(),
+      });
+      await boot();
+      await startApp();
+      expect(state.electionData.uncertainty).toBeFalsy();
+      expect(fetchJson).not.toHaveBeenCalledWith(expect.stringContaining("uncertainty"));
+      expect(mainLine().textContent).toBe(state.electionData.summary.text);
+      expect(mainLine().textContent).toBe("2026 Prediction · Democratic majority: 1");
+      expect(headline()).toBeNull();
+    });
+
+    it("inserts party names as text, not markup", async () => {
+      const modes = mapModes();
+      modes.parties[0].name = "<b>Labour</b> & co";
+      serve({ "data/map-modes.json": modes });
+      await boot();
+      await startApp();
+      expect(mainLine().textContent).toBe(
+        "Current prediction · Hung parliament likely (81%) · <b>Labour</b> & co largest party (94%)",
+      );
+      expect(mainLine().children).toHaveLength(0);
+      expect(headline().textContent.startsWith("<b>Labour</b> & co 282 seats")).toBe(true);
+      expect(headline().children).toHaveLength(0);
     });
   });
 

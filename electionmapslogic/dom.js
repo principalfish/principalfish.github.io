@@ -8,7 +8,7 @@ import { manifest, state, page, seatComparisonHidden, Seat } from './state.js';
 import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR, buildStateTrendSeries } from './utils.js';
 import { fetchJson } from './files.js';
 import {
-  activeUncertainty, uncertaintyForTotals, uncertaintyLabel,
+  activeUncertainty, simulatedSubtitle, uncertaintyForTotals, uncertaintyLabel,
   uncertaintyRange, seatMedianRange, seatUncertaintyText,
 } from "./uncertainty.js";
 import {
@@ -79,8 +79,10 @@ export function renderHeader(text = '', error = false) {
 
 /**
  * Renders the subtitle element. Derives snippet behaviour from current state:
- * poll tracker view uses a fixed label with snippet; election view uses the provided
- * text (falling back to the election name before results load) with snippet for model elections.
+ * poll tracker view uses a fixed label with snippet; election view leads with
+ * `simulatedSubtitle` (election name, most likely outcome, largest party) for a saved run with
+ * uncertainty, and otherwise uses the provided text (falling back to the election name before
+ * results load), with snippet for model elections.
  * @param {string} [text=''] - Subtitle string; omit on early init to fall back to election name.
  * @param {boolean} [error=false] - When true, displays a load-failure message instead.
  * @returns {void}
@@ -98,7 +100,11 @@ function renderSubtitleText(text = '', error = false) {
     baseText = 'Poll tracker · model output trends';
     includeSnippet = true;
   } else {
-    baseText = text || state.currentElection?.name || '';
+    // A saved run with uncertainty leads with its simulated odds; everything else keeps the
+    // uniform-swing line built with the election summary.
+    const electionName = state.electionData?.electionName || state.currentElection?.name || '';
+    baseText = simulatedSubtitle(electionName, activeUncertainty(state), (party) => manifest.labelParty(party))
+      || text || state.currentElection?.name || '';
     includeSnippet = Boolean(state.currentElection?.model);
   }
 

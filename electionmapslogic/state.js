@@ -849,6 +849,10 @@ export class ElectionSummary {
    * render as their human display names. A missing winner falls back to the `'others'`
    * label rather than throwing or producing an empty string.
    *
+   * A saved model run with uncertainty shows the simulated odds in place of this line
+   * (uncertainty.js `simulatedSubtitle`, chosen in dom.js), since the uniform-swing count can
+   * contradict them; the count stays in the totals table's "Uniform swing" column.
+   *
    * @param {{parties: Array<{party: string, seats: number}>, totalSeats: number}} data - Structured summary aggregate.
    * @param {string} electionName - Display label prefix for the subtitle.
    * @returns {string} Pre-formatted subtitle string ready to pass to `renderHeader`.

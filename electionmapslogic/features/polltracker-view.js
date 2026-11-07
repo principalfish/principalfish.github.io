@@ -11,7 +11,7 @@ import { escapeHtml, DEFAULT_PARTY_COLOUR } from '../utils.js';
 import { fetchJson } from '../files.js';
 import { parsePollTrackerData } from './polltracker.js';
 import {
-  chanceSeries, drawPollTrackerBands, pollTrackerCapabilities, pollTrackerTooltipValues,
+  chanceSeries, drawPollTrackerBands, firstChanceIndex, pollTrackerCapabilities, pollTrackerTooltipValues,
   pollTrackerUncertaintyNote,
 } from "./polltracker-uncertainty.js";
 
@@ -26,6 +26,9 @@ const POLLTRACKER_LINE_STROKE_WIDTH = 2.1;
 const POLLTRACKER_HIT_STROKE_WIDTH = 14;
 const POLLTRACKER_EMPTY_CLASS = 'maps-polltracker-empty';
 const POLLTRACKER_GRID_LINE_CLASS = 'maps-polltracker-grid-line';
+// How far a rotated, end-anchored date label ("2026-10-01" at the axis font) reaches left of
+// its tick; a tick nearer the SVG's left edge than this would have its label clipped.
+const POLLTRACKER_X_LABEL_OVERHANG = 56;
 
 // Wrapper element that the poll tracker SVG chart and tooltip overlay are mounted into.
 const pollTrackerChartWrap = document.getElementById('mapsPollTrackerChartWrap');
@@ -191,10 +194,10 @@ function renderPollTrackerChart() {
   }
 
   // Slice the visible window from the back of the full timeline based on the user range selection.
-  const { visibleTimeline, windowStart } = pollTrackerWindow();
+  const { visibleTimeline, windowStart } = pollTrackerWindow(chances);
 
   // Resolve responsive SVG dimensions and reserved margins.
-  const { width, height, margin, innerWidth, innerHeight } = pollTrackerDimensions();
+  const { width, height, margin, innerWidth, innerHeight } = pollTrackerDimensions(seatsEnabled);
 
   // Build the SVG canvas, plot group, tooltip overlay, and the crosshair line.
   const { svg, plot, tooltip, crosshairLine } = pollTrackerScaffold(width, height, margin, innerHeight);
@@ -211,7 +214,7 @@ function renderPollTrackerChart() {
 
   // Paint background grid and axes.
   pollTrackerDrawGrid(plot, { seatsEnabled, ySeats, yVotePct, innerWidth });
-  pollTrackerDrawXAxis(plot, { x, useTimeScale, visibleTimeline, innerHeight });
+  pollTrackerDrawXAxis(plot, { x, useTimeScale, visibleTimeline, innerHeight, marginLeft: margin.left });
   pollTrackerDrawYAxes(plot, { seatsEnabled, votePctEnabled, ySeats, yVotePct, innerWidth, innerHeight, chances });
 
   // Construct tooltip handlers closed over the current render's scales and DOM refs.
@@ -240,22 +243,31 @@ function renderPollTrackerChart() {
  * The active [data-polltracker-range] button's value is either 'all' (whole timeline) or a
  * numeric day count; Number('all') is NaN so the isFinite guard naturally falls through to the
  * full length.
+ *
+ * The chances view then starts no earlier than the first date with any chance, so central-only
+ * history before the first simulated run (such as the election-day result) leaves no empty
+ * stretch; a range window that already starts later is unaffected.
+ * @param {boolean} [chances=false] - Whether the chances view is drawn.
  * @returns {{visibleTimeline: Array<{dateKey: string, dateValue: Date}>, windowStart: number}}
  */
-function pollTrackerWindow() {
+function pollTrackerWindow(chances = false) {
   const timeline = state.pollTrackerData.timeline;
   const activeBtn = document.querySelector(`[${POLLTRACKER_RANGE_ATTR}].is-active`);
   const requested = Number(activeBtn?.getAttribute(POLLTRACKER_RANGE_ATTR));
   const windowSize = Number.isFinite(requested) && requested > 0
     ? Math.min(requested, timeline.length)
     : timeline.length;
-  const windowStart = timeline.length - windowSize;
+  const firstChance = chances ? firstChanceIndex(state.pollTrackerData) : -1;
+  const windowStart = Math.max(timeline.length - windowSize, firstChance);
   return { visibleTimeline: timeline.slice(windowStart), windowStart };
 }
 
 /**
  * Resolves chart dimensions: responsive width (760px floor, 8px gutter), fixed height,
- * and reserved margins for axes/labels.
+ * and reserved margins for axes/labels. Only the Seats axis is drawn on the left, so without it
+ * (vote % only, or the chances view) the left margin is a small gutter rather than an empty
+ * axis column.
+ * @param {boolean} seatsEnabled - Whether the left Seats axis is drawn.
  * @returns {{
  *   width: number,
  *   height: number,
@@ -264,10 +276,10 @@ function pollTrackerWindow() {
  *   innerHeight: number
  * }}
  */
-function pollTrackerDimensions() {
+function pollTrackerDimensions(seatsEnabled) {
   const width = Math.max(760, pollTrackerChartWrap.clientWidth - 8);
   const height = 520;
-  const margin = { top: 14, right: 84, bottom: 58, left: 70 };
+  const margin = { top: 14, right: 84, bottom: 58, left: seatsEnabled ? 70 : 16 };
   return {
     width,
     height,
@@ -387,13 +399,14 @@ function pollTrackerLineGenerators({ useTimeScale, x, visibleTimeline, ySeats, y
 
 /**
  * Paints the background grid. Uses whichever Y axis is currently enabled — extends its tick marks
- * across the full plot width as horizontal grid lines (no tick labels).
+ * across the full plot width as horizontal grid lines (no tick labels). The grid is always a
+ * left axis at x = 0 with inward ticks, so its lines run from 0 to innerWidth for either scale.
  * @param {object} plot - d3 selection for the plot group
  * @param {{seatsEnabled: boolean, ySeats: object, yVotePct: object, innerWidth: number}} args
  * @returns {void}
  */
 function pollTrackerDrawGrid(plot, { seatsEnabled, ySeats, yVotePct, innerWidth }) {
-  const gridAxis = seatsEnabled ? d3.axisLeft(ySeats).ticks(6) : d3.axisRight(yVotePct).ticks(6);
+  const gridAxis = d3.axisLeft(seatsEnabled ? ySeats : yVotePct).ticks(6);
   plot.append('g')
     .attr('class', POLLTRACKER_AXIS_CLASS)
     .call(gridAxis.tickSize(-innerWidth).tickFormat(''))
@@ -404,19 +417,27 @@ function pollTrackerDrawGrid(plot, { seatsEnabled, ySeats, yVotePct, innerWidth 
 /**
  * Paints the X axis with rotated date labels. Tick density caps at ~105px per tick.
  * The 1-entry fallback emits a single tick reading the only date.
+ * With the narrow left gutter (no Seats axis), ticks whose label would run past the SVG's left
+ * edge are dropped rather than clipped; the wide Seats gutter always has room for them.
  * @param {object} plot
- * @param {{x: object, useTimeScale: boolean, visibleTimeline: Array<{dateKey: string}>, innerHeight: number}} args
+ * @param {{x: object, useTimeScale: boolean, visibleTimeline: Array<{dateKey: string}>, innerHeight: number, marginLeft: number}} args
  * @returns {void}
  */
-function pollTrackerDrawXAxis(plot, { x, useTimeScale, visibleTimeline, innerHeight }) {
+function pollTrackerDrawXAxis(plot, { x, useTimeScale, visibleTimeline, innerHeight, marginLeft }) {
   const innerWidth = x.range()[1];
   const maxTicksByWidth = Math.max(4, Math.floor(innerWidth / 105));
+  const timeAxis = d3.axisBottom(x);
+  if (marginLeft < POLLTRACKER_X_LABEL_OVERHANG) {
+    timeAxis.tickValues(x.ticks(maxTicksByWidth)
+      .filter((tick) => marginLeft + x(tick) >= POLLTRACKER_X_LABEL_OVERHANG));
+  } else {
+    timeAxis.ticks(maxTicksByWidth);
+  }
   const xAxisGroup = plot.append('g')
     .attr('class', POLLTRACKER_AXIS_CLASS)
     .attr('transform', `translate(0,${innerHeight})`)
     .call(useTimeScale
-      ? d3.axisBottom(x)
-        .ticks(maxTicksByWidth)
+      ? timeAxis
         .tickFormat((value) => d3.timeFormat('%Y-%m-%d')(value))
       : d3.axisBottom(x)
         .tickValues([0])

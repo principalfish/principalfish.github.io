@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as d3 from "../../site/vendor/d3.v7.esm.js";
 import {
-  chanceSeries, drawPollTrackerBands, pollTrackerCapabilities, pollTrackerTooltipValues,
+  chanceSeries, drawPollTrackerBands, firstChanceIndex, pollTrackerCapabilities, pollTrackerTooltipValues,
   pollTrackerUncertaintyNote, pollTrackerBandRibbons, smoothPollTrackerBand,
 } from "../features/polltracker-uncertainty.js";
 
@@ -17,6 +17,16 @@ describe("poll tracker uncertainty display", () => {
       .toEqual({ bands: true, seatBands: false, voteBands: true, chances: true });
     expect(pollTrackerCapabilities({ seriesByParty: new Map([["1", { seats: [2], votePct: [3] }]]), hung: [] }))
       .toEqual({ bands: false, seatBands: false, voteBands: false, chances: false });
+  });
+
+  it("finds the first entry with any hung, majority or largest-party chance", () => {
+    const party = (values) => ({ seats: [1, 1, 1, 1], votePct: [1, 1, 1, 1], ...values });
+    const at = (hung, ...rows) => firstChanceIndex({ hung, seriesByParty: new Map(rows.map((row, i) => [String(i), row])) });
+    expect(at([null, null, 0.4, 0.4], party({}))).toBe(2);
+    expect(at([null, null, null, null], party({ pLargest: [null, null, null, 0] }))).toBe(3);
+    expect(at([null, null, null, null], party({ pMaj: [null, 0.1] }), party({ pLargest: [null, null, 1] }))).toBe(1);
+    expect(at([], party({}))).toBe(-1);
+    expect(at(undefined, party({ pMaj: [null, null] }))).toBe(-1);
   });
 
   it("converts odds once to percentages, switches measure and preserves missing days", () => {

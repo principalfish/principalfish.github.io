@@ -4,6 +4,23 @@ import { formatInt, formatPct } from "../utils.js";
 /** Model updates averaged per drawn band step; the tooltip keeps each day's own range. */
 const BAND_SMOOTHING_POINTS = 5;
 
+/**
+ * Index of the first entry with a hung, majority or largest-party chance, or -1 when the data has
+ * none: the one presence test behind both the Chances view's availability and its start date.
+ * @param {{seriesByParty: Map, hung?: Array<number|null>}} data
+ * @returns {number}
+ */
+export function firstChanceIndex(data) {
+  const series = Array.from(data.seriesByParty.values());
+  const length = Math.max(data.hung?.length ?? 0,
+    ...series.flatMap((row) => [row.pMaj?.length ?? 0, row.pLargest?.length ?? 0]));
+  for (let i = 0; i < length; i += 1) {
+    if (Number.isFinite(data.hung?.[i])
+      || series.some((row) => Number.isFinite(row.pMaj?.[i]) || Number.isFinite(row.pLargest?.[i]))) return i;
+  }
+  return -1;
+}
+
 export function pollTrackerCapabilities(data) {
   const series = Array.from(data.seriesByParty.values());
   const hasBands = (loKey, hiKey) => series.some((row) => row[loKey]?.some((lo, index) => Number.isFinite(lo) && Number.isFinite(row[hiKey][index])));
@@ -11,7 +28,7 @@ export function pollTrackerCapabilities(data) {
   const voteBands = hasBands("voteLo", "voteHi");
   return {
     bands: seatBands || voteBands, seatBands, voteBands,
-    chances: data.hung?.some(Number.isFinite) || series.some((row) => [...(row.pMaj || []), ...(row.pLargest || [])].some(Number.isFinite)),
+    chances: firstChanceIndex(data) >= 0,
   };
 }
 

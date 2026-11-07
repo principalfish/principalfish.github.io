@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as d3 from "../../site/vendor/d3.v7.esm.js";
 
 const fetchJson = vi.hoisted(() => vi.fn());
 vi.mock("../files.js", () => ({ fetchJson }));
@@ -27,6 +28,21 @@ function history() {
       21: { s: 180, v: 27, sl: 140, sh: 220, vl: 24, vh: 30, pm: 0.05, pl: 0.2 },
     },
   }));
+}
+
+/** Forty simulated daily runs from Saturday 2026-08-29, so the first weekly tick is a day in. */
+function historyFromSaturday() {
+  return history().map((run, index) => ({
+    ...run, as_of_date: new Date(Date.UTC(2026, 7, 29 + index)).toISOString().slice(0, 10),
+  }));
+}
+
+/** A central-only election-day run a month before the simulated history begins on 09-01. */
+function historyWithElectionDay() {
+  return [
+    { as_of_date: "2026-08-01", parties: { 20: { s: 411, v: 34 }, 21: { s: 121, v: 24 } } },
+    ...history(),
+  ];
 }
 
 describe.skipIf(!JSDOM)("actual poll tracker view", () => {
@@ -118,6 +134,139 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
     await loading;
     expect(state.pollTrackerData.timeline).toEqual([]);
     expect(document.querySelectorAll("#mapsPollTrackerChartWrap svg")).toHaveLength(0);
+  });
+
+  describe("chart layout", () => {
+    // jsdom has no layout, so the chart is drawn at its 760px floor with an 84px right margin.
+    const WIDTH = 760;
+    const RIGHT = 84;
+    const plot = () => document.querySelector("#mapsPollTrackerChartWrap svg > g");
+    const change = (selector, checked = true) => {
+      const input = document.querySelector(selector);
+      input.checked = checked;
+      input.dispatchEvent(new window.Event("change"));
+    };
+    const MODES = {
+      "Seats only": () => {},
+      "Seats and Vote %": () => change("#mapsPollTrackerMetricVotes"),
+      "Vote % only": () => {
+        change("#mapsPollTrackerMetricVotes");
+        change("#mapsPollTrackerMetricSeats", false);
+      },
+      "Chances, majority": () => change('[data-polltracker-view="chances"]'),
+      "Chances, largest party": () => {
+        change('[data-polltracker-view="chances"]');
+        change('[data-polltracker-chance="pLargest"]');
+      },
+    };
+    const LEFT = {
+      "Seats only": 70, "Seats and Vote %": 70, "Vote % only": 16,
+      "Chances, majority": 16, "Chances, largest party": 16,
+    };
+
+    it.each(Object.keys(MODES))("keeps the gridlines inside the plot and the gutter to its axes: %s", async (mode) => {
+      await view.activatePollTrackerMode();
+      MODES[mode]();
+      const left = LEFT[mode];
+      const innerWidth = WIDTH - left - RIGHT;
+      expect(plot().getAttribute("transform")).toBe(`translate(${left},14)`);
+      const grid = document.querySelector(".maps-polltracker-grid-line").closest("g.maps-polltracker-axis");
+      expect(grid.getAttribute("transform")).toBeNull();
+      const lines = [...grid.querySelectorAll(".maps-polltracker-grid-line")];
+      expect(lines.length).toBeGreaterThan(2);
+      for (const line of lines) {
+        expect(Number(line.getAttribute("x1") ?? 0)).toBe(0);
+        expect(Number(line.getAttribute("x2"))).toBe(innerWidth);
+      }
+      // A left axis label is drawn only with the Seats axis that the wide gutter holds.
+      const labels = [...document.querySelectorAll(".maps-polltracker-axis-label")].map((node) => node.textContent);
+      expect(labels.includes("Seats")).toBe(left === 70);
+    });
+
+    const timelineStart = () => state.pollTrackerData.timeline[0].dateKey;
+    const hungPath = () => document.querySelector('#mapsPollTrackerChartWrap path[stroke="#475569"]');
+    const labourPath = () => document.querySelector('#mapsPollTrackerChartWrap path[stroke="#e4003b"]');
+
+    it.each(["Chances, majority", "Chances, largest party"])(
+      "starts the %s timeline on the first date with chances",
+      async (mode) => {
+        fetchJson.mockResolvedValue(historyWithElectionDay());
+        await view.activatePollTrackerMode();
+        expect(timelineStart()).toBe("2026-08-01");
+        MODES[mode]();
+        // The 40 simulated days fill the plot from its left edge.
+        expect(hungPath().__data__).toHaveLength(40);
+        expect(hungPath().getAttribute("d")).toMatch(/^M0,/);
+        expect(labourPath().__data__).toHaveLength(40);
+        expect(labourPath().getAttribute("d")).toMatch(/^M0,/);
+        const ticks = [...document.querySelectorAll(".maps-polltracker-axis .tick text")].map((node) => node.textContent);
+        expect(ticks.filter((tick) => /^\d{4}-/.test(tick)).every((tick) => tick >= "2026-09-01")).toBe(true);
+      },
+    );
+
+    it("leaves a range window that starts after the first chance unchanged", async () => {
+      fetchJson.mockResolvedValue(historyWithElectionDay());
+      await view.activatePollTrackerMode();
+      MODES["Chances, majority"]();
+      document.querySelector('[data-polltracker-range="30"]').click();
+      expect(hungPath().__data__).toHaveLength(30);
+      expect(hungPath().__data__).toEqual(state.pollTrackerData.hung.slice(-30).map((value) => value * 100));
+    });
+
+    const xTicks = () => [...document.querySelectorAll(".maps-polltracker-axis .tick")]
+      .filter((tick) => /^\d{4}-/.test(tick.textContent))
+      .map((tick) => [tick.textContent, Number(tick.getAttribute("transform").match(/translate\(([-\d.]+)/)[1])]);
+
+    it("keeps the natural date ticks under the wide Seats gutter, even one a day in", async () => {
+      fetchJson.mockResolvedValue(historyFromSaturday());
+      await view.activatePollTrackerMode();
+      const innerWidth = WIDTH - 70 - RIGHT;
+      const natural = d3.scaleTime()
+        .domain(d3.extent(state.pollTrackerData.timeline, (entry) => entry.dateValue)).range([0, innerWidth])
+        .ticks(Math.floor(innerWidth / 105)).map((tick) => d3.timeFormat("%Y-%m-%d")(tick));
+      expect(xTicks().map(([date]) => date)).toEqual(natural);
+      expect(xTicks()[0][0]).toBe("2026-08-30");
+      expect(xTicks()[0][1]).toBeLessThan(40);
+    });
+
+    it.each(["Vote % only", "Chances, majority", "Chances, largest party"])(
+      "drops a date tick whose label would run off the narrow gutter: %s",
+      async (mode) => {
+        fetchJson.mockResolvedValue(historyFromSaturday());
+        await view.activatePollTrackerMode();
+        MODES[mode]();
+        const ticks = xTicks();
+        expect(ticks.map(([date]) => date)).not.toContain("2026-08-30");
+        expect(ticks.length).toBeGreaterThan(2);
+        // A rotated label reaches about 56px left of its tick; the gutter is 16px.
+        for (const [, x] of ticks) expect(16 + x).toBeGreaterThanOrEqual(56);
+      },
+    );
+
+    it("starts the chances timeline at the first largest-party chance when no hung odds exist", async () => {
+      await view.activatePollTrackerMode();
+      const data = state.pollTrackerData;
+      data.hung = data.hung.map(() => null);
+      for (const series of data.seriesByParty.values()) {
+        series.pMaj = series.pMaj.map(() => null);
+        series.pLargest = series.pLargest.map((value, index) => (index < 15 ? null : value));
+      }
+      MODES["Chances, largest party"]();
+      expect(labourPath().__data__).toHaveLength(data.timeline.length - 15);
+      expect(labourPath().getAttribute("d")).toMatch(/^M0,/);
+      expect(xTicks().every(([date]) => date >= data.timeline[15].dateKey)).toBe(true);
+    });
+
+    it("keeps the Seats & votes timeline from the election-day point", async () => {
+      fetchJson.mockResolvedValue(historyWithElectionDay());
+      await view.activatePollTrackerMode();
+      MODES["Seats and Vote %"]();
+      const length = state.pollTrackerData.timeline.length;
+      expect(length).toBeGreaterThan(40);
+      expect(labourPath().__data__).toHaveLength(length);
+      expect(labourPath().__data__[0]).toBe(411);
+      expect(labourPath().getAttribute("d")).toMatch(/^M0,/);
+    });
   });
 
   it("draws separate Westminster segments and restarts trailing smoothing at each boundary", async () => {

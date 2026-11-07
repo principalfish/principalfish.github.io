@@ -3,3 +3,4 @@
 - 2026-10-30 10:52 · planner branch 'planner' started
 - 2026-10-30 10:54 · poll-errors-simulation (0001) · created (build): Poll-error uncertainty for Westminster and US forecasts
 - 2026-10-30 10:56 · poll-errors-simulation (0001) · investigating → building
+- 2026-11-07 10:25 · import-2026-us-midterm-results (0002) · created (build): Import 2026 US midterm results

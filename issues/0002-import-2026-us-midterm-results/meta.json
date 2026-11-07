@@ -1,0 +1,14 @@
+{
+  "id": 2,
+  "slug": "import-2026-us-midterm-results",
+  "title": "Import 2026 US midterm results",
+  "mode": "build",
+  "state": "investigating",
+  "branch": "import-2026-us-midterm-results",
+  "base": "master",
+  "gh_issue": null,
+  "build_model": null,
+  "created": "2026-11-07 10:25",
+  "updated": "2026-11-07 10:25",
+  "done": null
+}

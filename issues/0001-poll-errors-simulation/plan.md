@@ -125,6 +125,15 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
      - Commits: code (review fixes 1–3, the `trends.py` rule, tests, bundles), then data (the trends file).
    - Tests: `trends.py` keeps the unpolled election-day run and still drops later unpolled runs; the tracker parse of the rebuilt file shows the chosen behaviour at 2024-07-05 → 2024-08-07, with no other breaks.
    - Acceptance: `./run_tests.sh` (then restore any test-written trends file), `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, and the tracker parse of the rebuilt file. The live steps each need Phil's go-ahead, relayed through the planner chat. The code and data commits are separate.
+6d. **Header reading note: below the latest poll, smaller, with the nowcast sentence** (Phil, 2026-11-07, after the manual check). Model: frontier. Depends on: 6c.
+   - What:
+     - Move the basis note (`#mapsUncertaintyBasis`, `.maps-subtitle-basis`, built in `electionmapslogic/uncertainty-view.js:15-22`) so it renders **below** "Latest poll used". Today it sits under the simulation line.
+     - Stop stripping the exported "Nowcast: if an election were held today." sentence (`uncertainty-view.js:19-21`), so the note reads in full: "Nowcast: if an election were held today. 90% ranges and probabilities from 10,000 simulations, conditional on current polls and the model's error assumptions."
+     - Drop "(if an election were held today)" from the second line (`uncertaintyHeadline` / `uncertaintyOutcomeLine` in `electionmapslogic/uncertainty.js`), since the note now says it.
+     - Style the note smaller and not bold: about 0.85rem, normal weight, muted colour (`electionmapslogic/maps.css`, `.maps-subtitle-basis`).
+     - Keep the `aria-describedby` hook (`dom.js:645`) working. Front end only: no export change, no re-export, no live step. Rebuild the bundles (`maps.min.css` too).
+   - Tests: the note follows the latest-poll line in DOM order and contains the nowcast sentence; line 2 no longer ends "(if an election were held today)", in every headline case; pages without uncertainty show no note and are unchanged.
+   - Acceptance: `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, the jsdom harness on both pages, and the rendered header text shown in order.
 7. **PR text.** `/publish poll-errors-simulation`, run from the planner chat: it drafts the final description into `pr.md` and, once Phil approves, puts it on PR #74 (opened by Phil 2026-10-13). Merging is Phil's.
 
 ## Checkpoints
@@ -146,6 +155,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation (`51c31966`).
 - [x] 6b · Main headline line leads with the simulation (`c7a85eab`).
 - [x] 6c · Self-review 2 fixes and the election-day tracker point (`ae61f984`, `b2c33428`).
+- [ ] 6d · Header reading note below the latest poll, smaller, with the nowcast sentence.
 - [ ] 7 · PR text drafted.
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
@@ -272,3 +282,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (builder, Piece 6c code): review fixes 1–3 are in (`dom.js` comments, README lookback wording). In `trends.py`, a `seen_polled` flag means unpolled runs before the first polled run are published central-only (no summary or segment), so equal ones collapse to the first. Unpolled runs after it are dropped. Runs with no stored block, or a non-Westminster budget, count as polled. The bundles are unchanged, because the minifier drops comments. A read-only rebuild to scratch gives 384 points from 2024-07-05 (Lab 411, 33.7%, central-only), and the tracker breaks once, at 2024-08-07. Analysis loop: round 1 had 2 verified findings (a 90-column assert; two missing tests: different-central leading runs and an all-unpolled history), both fixed. Round 2 was clean on all five checks. Changed-lines coverage on `trends.py` is 100% (7/7).
 - 2026-11-07: Piece 6c code committed as `ae61f984` and pushed with Phil's approval ("Approve, commit and push"). Next: the trends rebuild live step, then the data commit.
 - 2026-11-07: Piece 6c data committed as `b2c33428` and pushed with Phil's approval ("Approve, commit and push"). All builder pieces are done; Piece 7 is `/publish` in the planner chat.
+- 2026-11-07 (planner): Phil's manual check of the header led to new Piece **6d**: the basis note moves below "Latest poll used", smaller and not bold, with the exported nowcast sentence no longer stripped; line 2 drops "(if an election were held today)". Phil chose "Nowcast, today" (not "tomorrow", which would need a re-export) and "Smaller, not bold".

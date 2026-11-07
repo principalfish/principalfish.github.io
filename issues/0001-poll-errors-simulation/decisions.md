@@ -32,6 +32,7 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - 6b wording: keep the prefix; majority case uses the same shape and adds hung to the second line; ties name both; it shows whenever uncertainty exists; the cut-off uses the rounded %; the second line follows the largest-party favourite (Phil, 2026-11-07).
 - Self-review 2: fix all three verified doc items, and keep the 2024-07-05 election-day point at the start of the poll tracker, as master has it (Phil, 2026-11-07; Piece 6c).
 - 6c: the election-day point is kept without bands and separate from the nowcast line (break at 2024-08-07); keep rule = leading unpolled runs; live step = trends rebuild only (Phil, 2026-11-07).
+- 6d: the header note goes below "Latest poll used", smaller and not bold, and leads with "Nowcast: if an election were held today."; line 2 drops its "(if an election were held today)" (Phil, 2026-11-07). Front end only.
 
 ## Open
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.

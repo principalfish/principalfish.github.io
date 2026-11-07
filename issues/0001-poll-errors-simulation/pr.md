@@ -19,6 +19,6 @@ Westminster only. The US uncertainty work moved to its own branch, and the model
 - [x] Main headline leads with the simulated outcome (`c7a85eab`)
 - [x] Second self-review fixes; tracker starts on the 2024 election-day result (`ae61f984`, `b2c33428`)
 - [x] Header: nowcast note below the latest poll (`950b22a2`)
-- [ ] Vote-totals table: one Seats column from the simulated median
+- [x] Vote-totals table: one Seats column from the simulated median (`b788ae28`)
 - [ ] Poll tracker Chances view: no blank space on the left
 - [ ] Final PR description

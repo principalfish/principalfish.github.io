@@ -1,0 +1,197 @@
+{
+  "meta": {"version": "1", "timestamp": "2021-03-11T14:06:02Z"},
+  "data": {
+    "races": [
+      {
+        "race_id": "US-G-P-2020-11-03",
+        "race_type": "president",
+        "election_type": "general",
+        "election_date": "2020-11-03",
+        "runoff": false,
+        "officeid": "P",
+        "seat": "",
+        "state_id": "US",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": 100,
+        "candidates": [
+          {"candidate_id": "ward-1", "first_name": "Al", "last_name": "Ward", "party_id": "democrat", "winner": true, "votes": 81000000}
+        ]
+      },
+      {
+        "race_id": "AK-G-H-1-2020-11-03",
+        "race_type": "house",
+        "election_type": "general",
+        "election_date": "2020-11-03",
+        "runoff": false,
+        "officeid": "H",
+        "seat": "1",
+        "seat_name": "At-Large",
+        "state_id": "AK",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": 100,
+        "candidates": [
+          {"candidate_id": "young-513", "first_name": "Don", "last_name": "Young", "party_id": "republican", "winner": true, "runoff": false, "votes": 192000},
+          {"candidate_id": "galvin-67552", "first_name": "Alyse", "last_name": "Galvin", "party_id": "independent", "winner": false, "runoff": false, "votes": 159000},
+          {"candidate_id": "write-ins", "first_name": "", "last_name": "Write-ins", "name_display": "Write-ins", "party_id": "write-ins", "winner": false, "runoff": false, "votes": 1000}
+        ]
+      },
+      {
+        "race_id": "NY-G-H-22-2020-11-03",
+        "race_type": "house",
+        "election_type": "general",
+        "election_date": "2020-11-03",
+        "runoff": false,
+        "officeid": "H",
+        "seat": "22",
+        "state_id": "NY",
+        "uncontested": false,
+        "result": "",
+        "eevp": 95,
+        "candidates": [
+          {"candidate_id": "tenney-1", "first_name": "Cleo", "last_name": "Tenn", "party_id": "republican", "winner": false, "runoff": false, "votes": 155000},
+          {"candidate_id": "brind-2", "first_name": "Ant", "last_name": "Brind", "party_id": "democrat", "winner": false, "runoff": false, "votes": 154900},
+          {"candidate_id": "blank_votes", "first_name": null, "last_name": "Blank Votes", "party_id": "other", "winner": false, "runoff": false, "votes": 300}
+        ]
+      },
+      {
+        "race_id": "FL-G-H-25-2020-11-03",
+        "race_type": "house",
+        "election_type": "general",
+        "election_date": "2020-11-03",
+        "runoff": false,
+        "officeid": "H",
+        "seat": "25",
+        "state_id": "FL",
+        "uncontested": true,
+        "result": "winner",
+        "eevp": null,
+        "candidates": [
+          {"candidate_id": "diaz-3", "first_name": "Mario", "last_name": "Diaz", "party_id": "republican", "winner": true, "runoff": false, "votes": 0}
+        ]
+      },
+      {
+        "race_id": "CA-G-H-34-2020-11-03",
+        "race_type": "house",
+        "election_type": "general",
+        "election_date": "2020-11-03",
+        "runoff": false,
+        "officeid": "H",
+        "seat": "34",
+        "state_id": "CA",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": 99,
+        "candidates": [
+          {"candidate_id": "gomez-4", "first_name": "Jimmy", "last_name": "Gomez", "party_id": "democrat", "winner": true, "runoff": false, "votes": 108000},
+          {"candidate_id": "kim-5", "first_name": "David", "last_name": "Kim", "party_id": "democrat", "winner": false, "runoff": false, "votes": 96000}
+        ]
+      },
+      {
+        "race_id": "LA-G-H-5-2020-12-05",
+        "race_type": "house",
+        "election_type": "general-election-runoff",
+        "election_date": "2020-12-05",
+        "runoff": true,
+        "officeid": "H",
+        "seat": "5",
+        "state_id": "LA",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": null,
+        "precincts_reporting": 825,
+        "precincts_total": 825,
+        "candidates": [
+          {"candidate_id": "letlow-6", "first_name": "Luke", "last_name": "Letlow", "party_id": "republican", "winner": true, "runoff": false, "votes": 49182},
+          {"candidate_id": "harris-7", "first_name": "Lance", "last_name": "Harris", "party_id": "republican", "winner": false, "runoff": false, "votes": 30124}
+        ]
+      },
+      {
+        "race_id": "GU-G-H-1-2020-11-03",
+        "race_type": "house",
+        "election_type": "general",
+        "election_date": "2020-11-03",
+        "runoff": false,
+        "officeid": "H",
+        "seat": "1",
+        "state_id": "GU",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": 100,
+        "candidates": [
+          {"candidate_id": "moy-8", "first_name": "Mike", "last_name": "Moy", "party_id": "republican", "winner": true, "runoff": false, "votes": 20000}
+        ]
+      },
+      {
+        "race_id": "AL-G-S-2020-11-03",
+        "race_type": "senate",
+        "election_type": "general",
+        "election_date": "2020-11-03",
+        "runoff": false,
+        "officeid": "S",
+        "seat": "",
+        "state_id": "AL",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": 100,
+        "candidates": [
+          {"candidate_id": "tub-9", "first_name": "Tom", "last_name": "Tub", "party_id": "republican", "winner": true, "runoff": false, "votes": 1390000},
+          {"candidate_id": "jon-10", "first_name": "Doug", "last_name": "Jon", "party_id": "democrat", "winner": false, "runoff": false, "votes": 920000}
+        ]
+      },
+      {
+        "race_id": "AZ-S-S-2020-11-03",
+        "race_type": "senate",
+        "election_type": "special-general",
+        "election_date": "2020-11-03",
+        "runoff": false,
+        "officeid": "S",
+        "seat": "",
+        "state_id": "AZ",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": 99,
+        "candidates": [
+          {"candidate_id": "kell-11", "first_name": "Mark", "last_name": "Kell", "party_id": "democrat", "winner": true, "runoff": false, "votes": 1716000},
+          {"candidate_id": "mcs-12", "first_name": "Martha", "last_name": "Mcs", "party_id": "republican", "winner": false, "runoff": false, "votes": 1637000},
+          {"candidate_id": "grn-13", "first_name": "Gil", "last_name": "Grn", "party_id": "green", "winner": false, "runoff": false, "votes": 1200}
+        ]
+      },
+      {
+        "race_id": "GA-G-S-2021-01-05",
+        "race_type": "senate",
+        "election_type": "general-election-runoff",
+        "election_date": "2021-01-05",
+        "runoff": true,
+        "officeid": "S",
+        "seat": "",
+        "state_id": "GA",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": 100,
+        "candidates": [
+          {"candidate_id": "oss-14", "first_name": "Jon", "last_name": "Oss", "party_id": "democrat", "winner": true, "runoff": false, "votes": 2269000},
+          {"candidate_id": "per-15", "first_name": "Dave", "last_name": "Per", "party_id": "republican", "winner": false, "runoff": false, "votes": 2214000}
+        ]
+      },
+      {
+        "race_id": "GA-S-S-2021-01-05",
+        "race_type": "senate",
+        "election_type": "special-general-election-runoff",
+        "election_date": "2021-01-05",
+        "runoff": true,
+        "officeid": "S",
+        "seat": "",
+        "state_id": "GA",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": 100,
+        "candidates": [
+          {"candidate_id": "war-16", "first_name": "Ray", "last_name": "War", "party_id": "democrat", "winner": true, "runoff": false, "votes": 2288000},
+          {"candidate_id": "loe-17", "first_name": "Kel", "last_name": "Loe", "party_id": "republican", "winner": false, "runoff": false, "votes": 2195000}
+        ]
+      }
+    ]
+  }
+}

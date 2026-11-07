@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Import US Results (NYT)</h2>
+    <p>
+      Reads The New York Times' results files (AP calls) for one cycle and chamber, converts
+      them and shows a preview: every race, the party mapping, warnings and what changes
+      against the committed file and the database. Nothing is written until you confirm, and
+      confirming never exports; the site export is a separate button afterwards.
+    </p>
+    <form method="post" action="{{ url_for('us_results.us_results_preview') }}" class="form">
+      <label for="year">Cycle year</label>
+      <select name="year" id="year" required>
+        {% for year in years %}
+          <option value="{{ year }}" {{ 'selected' if year == selected_year }}>{{ year }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="chamber">Chamber</label>
+      <select name="chamber" id="chamber" required>
+        {% for value, label in chambers %}
+          <option value="{{ value }}" {{ 'selected' if value == selected_chamber }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <fieldset>
+        <legend>Source</legend>
+        <label class="checkbox">
+          <input type="radio" name="source" value="fetch" {{ 'checked' if selected_mode == 'fetch' }}>
+          Fetch the latest files from NYT (adds a snapshot to the cache)
+        </label>
+        <label class="checkbox">
+          <input type="radio" name="source" value="cache" {{ 'checked' if selected_mode == 'cache' }}>
+          Use the newest cached snapshot (offline)
+        </label>
+      </fieldset>
+
+      <button type="submit" class="button primary">Preview Import</button>
+    </form>
+    <p>Cache: <code>{{ cache_dir }}</code>. Converted files go to <code>{{ out_dir }}</code>.</p>
+  </section>
+
+  <section class="card">
+    <h3>Cached snapshots</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Year</th>
+            <th scope="col">Chamber</th>
+            <th scope="col">Kind</th>
+            <th scope="col">Retrieved (UTC)</th>
+            <th scope="col">NYT updated</th>
+            <th scope="col">URL</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in cache %}
+            <tr>
+              <td>{{ entry.year }}</td>
+              <td>{{ entry.chamber }}</td>
+              <td>{{ entry.kind }}</td>
+              <td>
+                {% if entry.pending %}pending (not yet held)
+                {% elif entry.problem %}{{ entry.problem }}
+                {% elif entry.retrieved_at %}{{ entry.retrieved_at }}
+                {% else %}not cached{% endif %}
+              </td>
+              <td>{{ entry.source_updated_at or "" }}</td>
+              <td>{% if entry.url %}<code>{{ entry.url }}</code>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

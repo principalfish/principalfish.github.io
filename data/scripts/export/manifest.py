@@ -6,6 +6,7 @@ from collections import defaultdict
 from datetime import date
 import json
 import math
+import re
 from typing import Any, Sequence
 
 from models import Election, ElectionType, Party, Region
@@ -16,6 +17,13 @@ from scripts.export.naming import party_key_for_party
 # staggered classes contest a different ~third of the states each cycle, so a delta against
 # the preceding cycle would compare unrelated seats. See ``assign_comparison_elections``.
 NO_AUTO_COMPARISON_TYPES: frozenset[str] = frozenset({ElectionType.us_senate.value})
+
+# Election types that chain to the preceding election of the same type and parliament even
+# across a boundary change (a different mapId). US House districts are redrawn each census
+# and mid-decade, but every cycle contests the same district keys (``ST-NN``), so a seat is
+# compared with the same-numbered district of the previous House election — knowingly
+# comparing a redrawn district against its old namesake. See ``assign_comparison_elections``.
+CROSS_MAP_COMPARISON_TYPES: frozenset[str] = frozenset({ElectionType.us_house.value})
 
 # Each US forecast entry compares against the same baseline its model swings from
 # (``models/us/run_us_*_model.py``), so gains / comparison columns read against the
@@ -276,7 +284,13 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
       ``type`` stops a general election from comparing against a same-map
       election of another kind (e.g. the EU referendum); and the ``parliament``
       check prevents cross-parliament comparisons.
-    - The last entry of each (parliament, mapId, type) receives no comparison.
+    - Types in ``CROSS_MAP_COMPARISON_TYPES`` (US House) drop the ``mapId`` match:
+      each House election compares against the previous House election whatever its
+      district map (2026 on map 24 against 2024 on map 21, 2020 on map 25 against
+      2018), seat by seat through the shared district keys. The match must be from
+      an earlier year (read from the id), whatever the list order.
+    - The last entry of each (parliament, mapId, type) receives no comparison (for
+      US House, the oldest House election).
     - Types in ``NO_AUTO_COMPARISON_TYPES`` (US Senate) never auto-chain: their
       staggered classes contest different states each cycle, so a delta against
       the preceding cycle would compare unrelated seats.
@@ -319,17 +333,37 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
             parliament = entry.get("parliament")
             map_id = entry.get("mapId")
             entry_type = entry.get("type")
+            any_map = entry_type in CROSS_MAP_COMPARISON_TYPES
+            entry_year = _entry_year(entry)
             for later_entry in manifest_entries[index + 1:]:
                 if (
                     later_entry.get("parliament") == parliament
-                    and later_entry.get("mapId") == map_id
                     and later_entry.get("type") == entry_type
+                    and (
+                        later_entry.get("mapId") == map_id
+                        if not any_map
+                        # Across maps nothing else ties the pair, so only an earlier
+                        # year may serve: a hand-reordered manifest must never give
+                        # the oldest House election a newer one.
+                        else _is_earlier(_entry_year(later_entry), entry_year)
+                    )
                 ):
                     comparison_id = later_entry["id"]
                     break
 
         if comparison_id:
             entry["comparisonElectionId"] = comparison_id
+
+
+def _entry_year(entry: dict[str, Any]) -> int | None:
+    """Return the year leading an entry's id (``"2024-us-house"`` → 2024), or ``None``."""
+    match = re.match(r"(\d{4})-", str(entry.get("id") or ""))
+    return int(match.group(1)) if match else None
+
+
+def _is_earlier(candidate_year: int | None, year: int | None) -> bool:
+    """True when both years are known and ``candidate_year`` comes before ``year``."""
+    return candidate_year is not None and year is not None and candidate_year < year
 
 
 def remove_comparison_for_supplemental_entries(manifest_entries: list[dict[str, Any]]) -> None:

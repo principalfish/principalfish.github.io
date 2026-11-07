@@ -6,6 +6,7 @@ Imported via ``export_elections`` (re-exports the ``scripts.export`` package), l
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -13,9 +14,11 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
+from db import SeatStatus
 from export_elections import (
     SeatRow,
     build_result_payload,
+    build_special_entries,
     choose_winner,
     compact_votes_to_dict,
     convert_legacy_seatinfo_to_v4,
@@ -211,6 +214,206 @@ class TestBuildResultPayload:
         ]
         payload = build_result_payload(seats, votes)
         assert payload["seats"][0]["p"] == [[1, 100, "High"]]
+
+
+class TestSeatStatusFields:
+    """Optional per-seat status fields: emitted only for a non-default status row."""
+
+    _DEM = _Party(20, "Democratic")
+    _REP = _Party(21, "Republican")
+
+    def _two_seat_election(self) -> tuple[list[SeatRow], list[_Vote]]:
+        seats = [_seat(1, "GA-01", region_id=3), _seat(2, "GA-02", region_id=3)]
+        votes = [
+            _Vote(1, 600.0, party=self._REP, elected=True, candidate_name="Carter"),
+            _Vote(1, 400.0, party=self._DEM, candidate_name="Hall"),
+            _Vote(2, 550.0, party=self._DEM, elected=True, candidate_name="Bishop"),
+            _Vote(2, 450.0, party=self._REP),
+        ]
+        return seats, votes
+
+    # The payload these seats produced before status rows existed, kept verbatim so a
+    # change that alters elections without status rows fails here.
+    _SNAPSHOT = (
+        '{"schema": "pf-results-v4", "seats": ['
+        '{"n": "GA-01", "r": 3, "w": 21, "p": [[21, 600, "Carter"], [20, 400, "Hall"]]}, '
+        '{"n": "GA-02", "r": 3, "w": 20, "p": [[20, 550, "Bishop"], [21, 450]]}]}'
+    )
+
+    def test_no_status_rows_matches_the_snapshot(self) -> None:
+        set_others_party_id(0)
+        seats, votes = self._two_seat_election()
+        no_statuses: tuple[dict[int, SeatStatus] | None, ...] = (None, {})
+        for statuses in no_statuses:
+            payload = build_result_payload(seats, votes, statuses=statuses)
+            assert json.dumps(payload) == self._SNAPSHOT
+
+    def test_default_status_rows_add_nothing(self) -> None:
+        # A called, first-round, mixed-party seat with a count still adds no field.
+        set_others_party_id(0)
+        seats, votes = self._two_seat_election()
+        statuses = {
+            1: SeatStatus(seat_id=1, called=True, pct_counted=99.5),
+            2: SeatStatus(seat_id=2, senate_class=2),
+        }
+        payload = build_result_payload(seats, votes, statuses=statuses)
+        assert json.dumps(payload) == self._SNAPSHOT
+
+    def test_uncalled_seat_has_c_false_and_pc(self) -> None:
+        set_others_party_id(0)
+        seats = [_seat(1, "AZ-06")]
+        votes = [_Vote(1, 1200.0, party=self._DEM), _Vote(1, 1100.0, party=self._REP)]
+        statuses = {1: SeatStatus(seat_id=1, called=False, pct_counted=87.349)}
+        seat = build_result_payload(seats, votes, statuses=statuses)["seats"][0]
+        assert seat["c"] is False
+        assert seat["pc"] == 87.3
+        assert seat["w"] == 20
+
+    def test_whole_pc_is_an_int(self) -> None:
+        set_others_party_id(0)
+        statuses = {1: SeatStatus(seat_id=1, called=False, pct_counted=100.0)}
+        seat = build_result_payload(
+            [_seat(1, "AZ-06")], [_Vote(1, 5.0, party=self._DEM)], statuses=statuses
+        )["seats"][0]
+        assert seat["pc"] == 100
+        assert isinstance(seat["pc"], int)
+
+    def test_uncalled_seat_without_a_count_omits_pc(self) -> None:
+        set_others_party_id(0)
+        statuses = {1: SeatStatus(seat_id=1, called=False)}
+        seat = build_result_payload(
+            [_seat(1, "AZ-06")], [_Vote(1, 5.0, party=self._DEM)], statuses=statuses
+        )["seats"][0]
+        assert seat["c"] is False
+        assert "pc" not in seat
+
+    def test_called_seat_omits_c_and_pc(self) -> None:
+        set_others_party_id(0)
+        statuses = {1: SeatStatus(seat_id=1, called=True, pct_counted=72.0)}
+        seat = build_result_payload(
+            [_seat(1, "AZ-06")], [_Vote(1, 5.0, party=self._DEM, elected=True)], statuses=statuses
+        )["seats"][0]
+        assert "c" not in seat
+        assert "pc" not in seat
+
+    def test_uncalled_winner_is_the_party_leader(self) -> None:
+        # Two Republican rows (300 + 300) lead one Democratic row (500). Without a status
+        # row the winner falls back to the single highest row (Democratic); an uncalled
+        # status row colours the seat by the leading party instead.
+        set_others_party_id(0)
+        seats = [_seat(1, "CA-13")]
+        votes = [
+            _Vote(1, 500.0, party=self._DEM),
+            _Vote(1, 300.0, party=self._REP),
+            _Vote(1, 300.0, party=self._REP),
+        ]
+        assert build_result_payload(seats, votes)["seats"][0]["w"] == 20
+        statuses = {1: SeatStatus(seat_id=1, called=False, pct_counted=60.0)}
+        seat = build_result_payload(seats, votes, statuses=statuses)["seats"][0]
+        assert seat["p"][0][0] == 21
+        assert seat["w"] == 21
+
+    def test_uncalled_seat_with_no_votes_has_no_winner(self) -> None:
+        set_others_party_id(0)
+        seats = [_seat(1, "AK-01")]
+        votes = [_Vote(1, 0.0, party=self._DEM), _Vote(1, 0.0, party=self._REP)]
+        statuses = {1: SeatStatus(seat_id=1, called=False, pct_counted=0.0)}
+        seat = build_result_payload(seats, votes, statuses=statuses)["seats"][0]
+        assert seat == {"n": "AK-01", "r": 0, "p": [], "c": False, "pc": 0}
+
+    def test_uncalled_seat_with_a_tied_lead_has_no_winner(self) -> None:
+        set_others_party_id(0)
+        seats = [_seat(1, "AK-01")]
+        votes = [_Vote(1, 500.0, party=self._REP), _Vote(1, 500.0, party=self._DEM), _Vote(1, 20.0, party=None)]
+        statuses = {1: SeatStatus(seat_id=1, called=False)}
+        seat = build_result_payload(seats, votes, statuses=statuses)["seats"][0]
+        assert "w" not in seat
+        assert seat["p"] == [[20, 500], [21, 500], [0, 20]]
+        # A called seat keeps its winner even on equal totals.
+        statuses = {1: SeatStatus(seat_id=1, called=True)}
+        assert "w" in build_result_payload(seats, votes, statuses=statuses)["seats"][0]
+
+    def test_uncalled_status_overrides_a_stray_elected_flag(self) -> None:
+        set_others_party_id(0)
+        seats = [_seat(1, "CA-13")]
+        votes = [_Vote(1, 400.0, party=self._DEM, elected=True), _Vote(1, 500.0, party=self._REP)]
+        statuses = {1: SeatStatus(seat_id=1, called=False)}
+        assert build_result_payload(seats, votes, statuses=statuses)["seats"][0]["w"] == 21
+
+    def test_same_party_seat_has_sp(self) -> None:
+        set_others_party_id(0)
+        statuses = {1: SeatStatus(seat_id=1, same_party=True)}
+        seat = build_result_payload(
+            [_seat(1, "CA-34")], [_Vote(1, 5.0, party=self._DEM, elected=True)], statuses=statuses
+        )["seats"][0]
+        assert seat["sp"] is True
+        assert "c" not in seat
+
+    def test_decisive_round_seat_has_rd(self) -> None:
+        set_others_party_id(0)
+        for label in ("rcv-final", "runoff"):
+            statuses = {1: SeatStatus(seat_id=1, decisive_round=label)}
+            seat = build_result_payload(
+                [_seat(1, "ME-02")], [_Vote(1, 5.0, party=self._DEM, elected=True)], statuses=statuses
+            )["seats"][0]
+            assert seat["rd"] == label
+
+    def test_fields_follow_the_existing_keys(self) -> None:
+        set_others_party_id(0)
+        statuses = {
+            1: SeatStatus(seat_id=1, called=False, pct_counted=50.0, same_party=True, decisive_round="runoff")
+        }
+        seat = build_result_payload(
+            [_seat(1, "LA-05")], [_Vote(1, 5.0, party=self._REP)], statuses=statuses
+        )["seats"][0]
+        assert list(seat) == ["n", "r", "w", "p", "c", "pc", "sp", "rd"]
+
+    def test_seat_without_a_status_row_is_untouched(self) -> None:
+        set_others_party_id(0)
+        seats, votes = self._two_seat_election()
+        statuses = {1: SeatStatus(seat_id=1, called=False, pct_counted=40.0)}
+        payload = build_result_payload(seats, votes, statuses=statuses)
+        assert payload["seats"][1] == {"n": "GA-02", "r": 3, "w": 20, "p": [[20, 550, "Bishop"], [21, 450]]}
+
+
+class TestBuildSpecialEntries:
+    """Same-day Senate specials, reshaped for the parent payload's ``specials`` list."""
+
+    def test_entries_carry_class_and_status_but_no_region(self) -> None:
+        set_others_party_id(0)
+        dem, rep = _Party(20, "Democratic"), _Party(21, "Republican")
+        seats = [_seat(1, "Minnesota", region_id=4), _seat(2, "Georgia", region_id=5), _seat(3, "Ohio", region_id=6)]
+        votes = [
+            _Vote(2, 1000.0, party=dem, candidate_name="Warnock"),
+            _Vote(2, 900.0, party=rep, candidate_name="Loeffler"),
+            _Vote(1, 600.0, party=dem, elected=True, candidate_name="Smith"),
+            _Vote(1, 500.0, party=rep, candidate_name="Housley"),
+        ]
+        statuses = {
+            1: SeatStatus(seat_id=1, senate_class=2),
+            2: SeatStatus(seat_id=2, called=False, pct_counted=95.0, senate_class=3, decisive_round="runoff"),
+        }
+        entries = build_special_entries(seats, votes, statuses, election_year=2020)
+        # Seats with no special votes (Ohio) are left out; the rest sort by name.
+        assert entries == [
+            {
+                "n": "Georgia",
+                "cl": 3,
+                "w": 20,
+                "p": [[20, 1000, "Warnock"], [21, 900, "Loeffler"]],
+                "c": False,
+                "pc": 95,
+                "rd": "runoff",
+            },
+            {"n": "Minnesota", "cl": 2, "w": 20, "p": [[20, 600, "Smith"], [21, 500, "Housley"]]},
+        ]
+
+    def test_class_is_omitted_when_unknown(self) -> None:
+        set_others_party_id(0)
+        entries = build_special_entries(
+            [_seat(1, "Georgia")], [_Vote(1, 5.0, party=_Party(20, "Democratic"), elected=True)], {}
+        )
+        assert entries == [{"n": "Georgia", "w": 20, "p": [[20, 5]]}]
 
 
 class TestCompactVotesToDict:

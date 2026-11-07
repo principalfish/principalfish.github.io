@@ -2635,6 +2635,19 @@ class TestResolveSpecialBaselines:
         assert "2018-us-senate" in message
         assert "2020-us-senate, 2022-us-senate" in message
 
+    def test_a_folded_special_is_not_a_baseline(self, db: Database) -> None:
+        senate_map, e2020, _e2022 = _senate_elections(db)
+        db.add_election(
+            senate_map.id, 2020, "2020 US Senate Special Election", ElectionType.us_senate,
+            parent_election_id=e2020,
+        )
+
+        # The regular election still resolves; the special has no result file to load.
+        assert resolve_special_baselines(db, senate_map.id, ["2020-us-senate"]) == {"2020-us-senate": e2020}
+        with pytest.raises(ValueError, match="2020-us-senate-special") as excinfo:
+            resolve_special_baselines(db, senate_map.id, ["2020-us-senate-special"])
+        assert "Known ids: 2020-us-senate, 2022-us-senate" in str(excinfo.value)
+
     def test_an_election_on_another_map_does_not_resolve(self, db: Database) -> None:
         senate_map, _e2020, _e2022 = _senate_elections(db)
         other_map = db.add_map("Elsewhere", parliament="us_senate")

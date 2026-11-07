@@ -45,3 +45,24 @@ class DatabaseConfig(BaseSettings):
             DatabaseConfig: A new instance populated from the current environment.
         """
         return cls()
+
+
+class NytCacheConfig(BaseSettings):
+    """Where downloaded New York Times results JSON is cached.
+
+    Set ``NYT_CACHE_DIR`` to choose the folder (defaults to
+    ``/home/philiph/dbs/nyt-cache``, outside the repo, beside the live
+    database). ``.env`` is loaded with ``override=True`` above, so a value
+    there beats one exported in the shell.
+    """
+
+    model_config = SettingsConfigDict(extra="ignore")
+
+    nyt_cache_dir: Path = Field(
+        default=Path("/home/philiph/dbs/nyt-cache"),
+        validation_alias="NYT_CACHE_DIR",
+    )
+
+
+# Resolved once at import, after .env has been loaded.
+NYT_CACHE_DIR: Path = NytCacheConfig().nyt_cache_dir

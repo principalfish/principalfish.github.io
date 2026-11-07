@@ -1,0 +1,219 @@
+{
+  "generated": "2019-05-15T19:08:52.339Z",
+  "dates": ["2018-11-06"],
+  "races": [
+    {
+      "race_id": "ak-2015-2018-11-06",
+      "race_slug": "ak-house-general-district-001-2018-11-06",
+      "race_type": "house",
+      "election_type": "general",
+      "election_date": "2018-11-06",
+      "runoff": false,
+      "office": "U.S. House",
+      "seat": 1,
+      "seat_name": "At-Large",
+      "state_id": "AK",
+      "uncontested": false,
+      "result": "winner",
+      "precincts_reporting": 442,
+      "precincts_total": 442,
+      "candidates": [
+        {"candidate_id": "young-513", "candidate_key": "youngd", "first_name": "Don", "last_name": "Young", "order": 1, "party_id": "republican", "runoff": false, "winner": true, "votes": 149779},
+        {"candidate_id": "galvin-67552", "candidate_key": "galvina", "first_name": "Alyse", "last_name": "Galvin", "order": "1", "party_id": "independent", "runoff": false, "winner": false, "votes": 131199}
+      ],
+      "counties": [{"fips": "02001", "name": "District 1", "votes": 1000, "results": {"youngd": 600, "galvina": 400}}]
+    },
+    {
+      "race_id": "me-20645-2018-11-06",
+      "race_slug": "me-house-general-district-002-2018-11-06",
+      "race_type": "house",
+      "election_type": "general",
+      "election_date": "2018-11-06",
+      "runoff": false,
+      "office": "U.S. House",
+      "seat": 2,
+      "state_id": "ME",
+      "uncontested": false,
+      "result": "winner",
+      "precincts_reporting": 418,
+      "precincts_total": 418,
+      "candidates": [
+        {"candidate_id": "golden-66383", "first_name": "Jared", "last_name": "Golden", "party_id": "democrat", "runoff": false, "winner": true, "votes": 131954, "ranked_choice": [{"votes": 139231, "percent": 50.5}]},
+        {"candidate_id": "poliquin-60410", "first_name": "Bruce", "last_name": "Poliquin", "party_id": "republican", "runoff": false, "winner": false, "votes": 134061, "ranked_choice": [{"votes": 136326, "percent": 49.5}]},
+        {"candidate_id": "bond-67787", "first_name": "Tiffany", "last_name": "Bond", "party_id": "independent", "runoff": false, "winner": false, "votes": 16452, "ranked_choice": [{"votes": 0, "percent": 0}]}
+      ]
+    },
+    {
+      "race_id": "nc-34975-2018-11-06",
+      "race_slug": "nc-house-general-district-009-2018-11-06",
+      "race_type": "house",
+      "election_type": "general",
+      "election_date": "2018-11-06",
+      "runoff": false,
+      "office": "U.S. House",
+      "seat": 9,
+      "state_id": "NC",
+      "uncontested": false,
+      "result": "",
+      "precincts_reporting": 200,
+      "precincts_total": 250,
+      "candidates": [
+        {"candidate_id": "harris-63306", "first_name": "Mark", "last_name": "Harris", "party_id": "republican", "runoff": false, "winner": false, "votes": 139246},
+        {"candidate_id": "mccready-66321", "first_name": "Dan", "last_name": "McCready", "party_id": "democrat", "runoff": false, "winner": false, "votes": 138341},
+        {"candidate_id": "scott-66337", "first_name": "Jeff", "last_name": "Scott", "party_id": "libertarian", "runoff": false, "winner": false, "votes": 5130},
+        {"candidate_id": "blank_votes", "first_name": "", "last_name": "Blank Votes", "party_id": "other", "runoff": false, "winner": false, "votes": 200}
+      ]
+    },
+    {
+      "race_id": "fl-10025-2018-11-06",
+      "race_slug": "fl-house-general-district-010-2018-11-06",
+      "race_type": "house",
+      "election_type": "general",
+      "election_date": "2018-11-06",
+      "runoff": false,
+      "office": "U.S. House",
+      "seat": 10,
+      "state_id": "FL",
+      "uncontested": true,
+      "result": "winner",
+      "precincts_reporting": 0,
+      "precincts_total": 0,
+      "candidates": [
+        {"candidate_id": "demings-1", "first_name": "Val", "last_name": "Demings", "party_id": "democrat", "runoff": false, "winner": true, "votes": 0}
+      ]
+    },
+    {
+      "race_id": "dc-9001-2018-11-06",
+      "race_slug": "dc-house-general-district-001-2018-11-06",
+      "race_type": "house",
+      "election_type": "general",
+      "election_date": "2018-11-06",
+      "runoff": false,
+      "office": "U.S. House",
+      "seat": 1,
+      "state_id": "DC",
+      "uncontested": false,
+      "result": "winner",
+      "precincts_reporting": 143,
+      "precincts_total": 143,
+      "candidates": [
+        {"candidate_id": "norton-1", "first_name": "Eleanor", "last_name": "Norton", "party_id": "democrat", "runoff": false, "winner": true, "votes": 199000}
+      ]
+    },
+    {
+      "race_id": "ga-11000-2018-11-06",
+      "race_slug": "ga-governor-general-2018-11-06",
+      "race_type": "governor",
+      "election_type": "general",
+      "election_date": "2018-11-06",
+      "runoff": false,
+      "office": "Governor",
+      "seat": "",
+      "state_id": "GA",
+      "uncontested": false,
+      "result": "winner",
+      "precincts_reporting": 2634,
+      "precincts_total": 2634,
+      "candidates": [
+        {"candidate_id": "kemp-1", "first_name": "Brian", "last_name": "Kemp", "party_id": "republican", "runoff": false, "winner": true, "votes": 1978000}
+      ]
+    },
+    {
+      "race_id": "ca-8619-2018-11-06",
+      "race_slug": "ca-senate-general-2018-11-06",
+      "race_type": "senate",
+      "election_type": "general",
+      "election_date": "2018-11-06",
+      "runoff": false,
+      "office": "U.S. Senate",
+      "seat": "",
+      "state_id": "CA",
+      "uncontested": false,
+      "result": "winner",
+      "precincts_reporting": 24312,
+      "precincts_total": 24312,
+      "candidates": [
+        {"candidate_id": "feinstein-1704", "first_name": "Dianne", "last_name": "Feinstein", "party_id": "democrat", "runoff": false, "winner": true, "votes": 6019422},
+        {"candidate_id": "de-leon-66485", "first_name": "Kevin", "last_name": "de León", "party_id": "democrat", "runoff": false, "winner": false, "votes": 5093942}
+      ]
+    },
+    {
+      "race_id": "mn-25150-2018-11-06",
+      "race_slug": "mn-senate-general-2018-11-06",
+      "race_type": "senate",
+      "election_type": "general",
+      "election_date": "2018-11-06",
+      "runoff": false,
+      "office": "U.S. Senate",
+      "seat": "",
+      "state_id": "MN",
+      "uncontested": false,
+      "result": "winner",
+      "precincts_reporting": 4113,
+      "precincts_total": 4113,
+      "candidates": [
+        {"candidate_id": "klobuchar-1", "first_name": "Amy", "last_name": "Klobuchar", "party_id": "democrat", "runoff": false, "winner": true, "votes": 1566000},
+        {"candidate_id": "newberger-2", "first_name": "Jim", "last_name": "Newberger", "party_id": "republican", "runoff": false, "winner": false, "votes": 940000}
+      ]
+    },
+    {
+      "race_id": "mn-25151-2018-11-06",
+      "race_slug": "mn-senate-general-special-2018-11-06",
+      "race_type": "senate",
+      "election_type": "special-general",
+      "election_date": "2018-11-06",
+      "runoff": false,
+      "office": "U.S. Senate",
+      "seat": "",
+      "state_id": "MN",
+      "uncontested": false,
+      "result": "winner",
+      "precincts_reporting": 3990,
+      "precincts_total": 4000,
+      "candidates": [
+        {"candidate_id": "smith-3", "first_name": "Tina", "last_name": "Smith", "party_id": "democrat", "runoff": false, "winner": true, "votes": 1370540},
+        {"candidate_id": "housley-4", "first_name": "Karin", "last_name": "Housley", "party_id": "republican", "runoff": false, "winner": false, "votes": 1095777},
+        {"candidate_id": "wellington-5", "first_name": "Sarah", "last_name": "Wellington", "party_id": "legal-marijuana-now", "runoff": false, "winner": false, "votes": 95614}
+      ]
+    },
+    {
+      "race_id": "ms-27180-2018-11-06",
+      "race_slug": "ms-senate-general-2018-11-06",
+      "race_type": "senate",
+      "election_type": "general",
+      "election_date": "2018-11-06",
+      "runoff": false,
+      "office": "U.S. Senate",
+      "seat": "",
+      "state_id": "MS",
+      "uncontested": false,
+      "result": "winner",
+      "precincts_reporting": 1797,
+      "precincts_total": 1797,
+      "candidates": [
+        {"candidate_id": "wicker-6", "first_name": "Roger", "last_name": "Wicker", "party_id": "republican", "runoff": false, "winner": true, "votes": 547000},
+        {"candidate_id": "baria-7", "first_name": "David", "last_name": "Baria", "party_id": "democrat", "runoff": false, "winner": false, "votes": 369000}
+      ]
+    },
+    {
+      "race_id": "ms-27182-2018-11-06",
+      "race_slug": "ms-senate-general-special-2018-11-06",
+      "race_type": "senate",
+      "election_type": "special-general",
+      "election_date": "2018-11-06",
+      "runoff": false,
+      "office": "U.S. Senate",
+      "seat": "",
+      "state_id": "MS",
+      "uncontested": false,
+      "result": "runoff",
+      "precincts_reporting": 1797,
+      "precincts_total": 1797,
+      "candidates": [
+        {"candidate_id": "hyde-smith-28529", "first_name": "Cindy", "last_name": "Hyde-Smith", "party_id": "republican", "runoff": true, "winner": false, "votes": 389995},
+        {"candidate_id": "espy-66875", "first_name": "Mike", "last_name": "Espy", "party_id": "democrat", "runoff": true, "winner": false, "votes": 386742},
+        {"candidate_id": "mcdaniel-63538", "first_name": "Chris", "last_name": "McDaniel", "party_id": "republican", "runoff": false, "winner": false, "votes": 154878}
+      ]
+    }
+  ]
+}

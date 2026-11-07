@@ -974,12 +974,20 @@ Dry-run:
 ./election_data/bin/python scripts/export_elections.py --dry-run
 ```
 
+The export checks its inputs (pre-built maps, map templates, supplemental files) before
+writing anything: a real run with any missing fails with nothing written, and a dry run
+prints each as "Missing (a real export would fail): …" and carries on.
+
 ### Targeted exports
 
 ```bash
 ./election_data/bin/python scripts/export_elections.py --election-name "2019 General Election" --output-file /tmp/2019.json
 ./election_data/bin/python scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
 ```
+
+`--election-name` on a folded Senate special (a same-day special such as
+"2020 US Senate Special Election") is refused: its results ship inside the parent
+election's payload, so export the parent instead.
 
 ### Metadata-only manifest refresh
 
@@ -1013,6 +1021,16 @@ for supported fields, selection rules, and shell transformations.
 	- top-level: `{"schema":"pf-results-v4","seats":[...]}`
 	- seat keys: `n` (seat name), `r` (region), `w` (winner), `e` (electorate), `m` (majority), `t` (turnout), `p` (party rows)
 	- party row: `[partyKey, total, name]`
+	- optional seat keys, emitted only when they apply (older payloads have none of them):
+		- `ev`: Electoral College votes (presidential seats only)
+		- `c`: `false` for an uncalled seat (absent when called)
+		- `pc`: percent of the expected vote counted, to one decimal place; uncalled seats only, when known
+		- `sp`: `true` when the top candidates share a party (top-two / jungle races, merged into one row)
+		- `rd`: the decisive round, `"rcv-final"` or `"runoff"`, when the first round did not decide the seat
+	- an uncalled seat's `w` is the party leading on votes; with no positive votes or a tie for the lead, `w` is omitted
+	- optional top-level `specials` (US Senate): same-day special elections held alongside a state's regular race, one
+	  `{n, cl, w, p, c, pc, sp, rd}` per state, sorted by name. `cl` is the seat's Senate class; the other keys follow
+	  the seat rules above, and there is no `r`. The special has no result file or manifest entry of its own.
 - Frontend loader supports both compact and legacy result formats.
 
 ### Topo output behavior

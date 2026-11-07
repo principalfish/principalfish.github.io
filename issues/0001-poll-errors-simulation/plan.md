@@ -95,6 +95,15 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
    6. the real export;
    7. commit the data files separately.
    - Precondition: no poll imports or model runs from the main checkout's console until this branch merges (master's console still has the old defaults and no uncertainty).
+6b. **Westminster main headline line leads with the simulation** (Phil, 2026-11-07). Model: frontier. Depends on: 6 (its data commit can land first; this piece doesn't touch data).
+   - Why: with the 15/60 data, the main subtitle line built from the uniform swing ("Labour majority: 58", 354 seats) contradicts the Monte Carlo line beneath it (319 seats, majority 44%, hung 56%). In Piece 2, Phil had chosen to leave the main line unchanged, when both lines said hung.
+   - What: when uncertainty is shown (`activeUncertainty(state)`, so Westminster model runs only), the main line (`.maps-subtitle-main`, `electionmapslogic/dom.js:108-110`, text from `state.js`'s subtitle builder) leads with the simulation: the most likely outcome and its probability, then the largest party's probability, e.g. "Hung parliament likely (56%) · Labour largest party (99%)". The second line becomes the leader's median, range and majority odds: "Labour 319 seats (238–389) · majority 44% (if an election were held today)".
+     - Most likely outcome: the highest probability among each party's majority and hung. Use "likely" when it is ≥50%, "most likely" when below. Ties and edge wording go to Phil at review.
+     - Without uncertainty (historical elections, US page, poll tracker, predict view), the main line is unchanged.
+     - The uniform-swing count stays in the table's "Uniform swing" column.
+   - Files: `electionmapslogic/uncertainty.js` (headline text), `electionmapslogic/dom.js` (main-line choice), the bundles via `npm run minify:electionmaps`, and tests in `electionmapslogic/tests/`.
+   - Tests: the main line from the simulation on a saved model with uncertainty (likely, most likely, majority-leader cases); the unchanged UNS line without uncertainty, in predict view and on the US page; escaping by `textContent`.
+   - Acceptance: `npm test` with jsdom suites running (0 jsdom skips), `npm run minify:electionmaps`, and the jsdom harness on both pages against the step-6 data. Show the rendered subtitle text.
 7. **PR text.** `/builder poll-errors-simulation finish`. Phil opens and merges the PR.
 
 ## Checkpoints
@@ -113,6 +122,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 4 · Branch self-review done and chosen fixes committed (`eeee25d0`).
 - [x] 5 · Master merged in; checks green (`af4405fb`).
 - [x] 6a · Westminster weighting defaults: 15-day half-life, 60-day window (`a5cdf8e0`).
+- [ ] 6b · Main headline line leads with the simulation.
 - [ ] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation.
 - [ ] 7 · PR text drafted.
 
@@ -232,3 +242,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (planner): the first Piece 6 rerun used range mode's `--lookback-days 365`, whereas the history and the console use 30. Read-only dry runs for 2026-10-30 reproduced both exactly (30 days: Lab 358; 365 days: Lab 317), so the window was the whole difference. Phil then chose a **15-day half-life and a 60-day cutoff**, with the console and CLI defaults changed to match (Piece 6a), then a full rerun. Calibration isn't affected: the national error is fitted on final-poll errors (3-day window, `build_final_poll_errors.py:73`), and sampling error follows the actual weights (`monte_carlo.py:679`).
 - 2026-11-07 (builder, Piece 6a): defaults changed in `data/console/blueprints/westminster.py` (form: 60 / 15.0, 15.0 added to the menu) and `data/models/westminster/run_uns_model.py` (CLI: half-life 15.0, since 60, lookback 60, docstring), plus README and the pinned tests, and a new GET test that the form preselects 60 and 15.0. The console's daily run after a poll import (`console/blueprints/poll_import.py:101`) calls `run_uns_model.py` with no flags, so it picks up the new defaults too. The validation report is unaffected: none of its hashed sources changed, and a scratch regeneration was byte-identical. `monte_carlo.py:318` still says "30-day averages since 2024"; that describes a past measurement, and editing it would change a hashed source, so it's left alone. Checks: mypy clean, pytest 5782 passed, Vitest 1449 passed, console smoke and `git diff --check` clean, changed-lines coverage 100% (3 lines). All five analysis checks were clean on round 1, so no verifier ran. The 365-day trends file was restored to HEAD (a copy is in builder scratch).
 - 2026-11-07: Piece 6a committed as `a5cdf8e0` and pushed with Phil's approval ("Approve, commit and push"). Next: Piece 6 step 2, the 15/60 full rerun, which needs its own go-ahead.
+- 2026-11-07 (planner): the step-5 trial export showed the main subtitle line (uniform swing, "Labour majority: 58") contradicting the MC line (majority 44%, hung 56%). Phil chose to change it in a new piece, **6b**, and picked "Lead with the simulation" over "Label it uniform swing" and "Hide the main line". Order: the step-7 data commit first, then 6b, then the PR text.

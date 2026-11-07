@@ -308,3 +308,18 @@ No test touches the live DB (conftest guard).
   - Uncontested seats backfill real totals from the 538 file when it has them and the winner matches, with `votesSource` flagged. Otherwise they get the nominal 100. Re-converting must stay idempotent after the 538 file is overwritten.
   - Unaffiliated-type codes (NPA, UNA, McMullin's) map to independent.
   - A special's Senate class gets a nullable `senate_class` column on election_seat_status, amended into piece 1's migration in place, since it hasn't run live.
+- 2026-11-07 (piece 4) review round 1. Security: no findings. Correctness verified on temp DBs:
+  - refresh keeps election ids and replaces status rows;
+  - specials keep their parent links, and rebuild orders them after their regular year;
+  - map-id guards fire;
+  - 538-format files import unchanged;
+  - re-convert is byte-identical, so the backfill survives;
+  - provisional appears on 2026 only.
+- Piece 4 fixes routed:
+  - validate the file before clearing a refresh's votes (a bad file had emptied the election);
+  - main() turns importer SystemExit into exit 1;
+  - refuse a stale `senate-<year>-special.json` rather than import it (the operator removes it by hand; no automatic deletion);
+  - no empty Map row from a refused import;
+  - the House `all` no longer checks the Senate special;
+  - extra error-path tests; explicit raises instead of asserts.
+- Note for piece 8: render `sourceNote` (and candidate names and party codes) with textContent or the escape helper, never innerHTML.

@@ -255,7 +255,7 @@ No behaviour change. The full suite must pass unchanged.
 - [ ] Piece 4d: Correlated US state errors.
 - [ ] Piece 4e: Approved anchored Senate rerun.
 - [ ] Phase 5: Approved Westminster backfill and publish.
-- [ ] Phase 6: Style cleanup.
+- [x] Phase 6: Style cleanup (`000fbd9f`).
 
 ## Verification (every piece)
 

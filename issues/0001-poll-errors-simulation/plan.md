@@ -89,7 +89,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 1b · Offline conversion experiment removed from this branch; checks green (`39610fb9`).
 - [x] 1c · Westminster validation report regenerated and committed (`2618c0dd`).
 - [x] 2 · T4 Piece 3a: Westminster display changes (`860b0d85`).
-- [ ] 3 · T4 Phase 6: Style cleanup.
+- [x] 3 · T4 Phase 6: Style cleanup (`000fbd9f`).
 - [ ] 4 · Branch self-review done and chosen fixes committed.
 - [ ] 5 · Master merged in; checks green.
 - [ ] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation.
@@ -161,3 +161,12 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
   - **Tooling:** `ruff` (pinned 0.8.4) in a throwaway scratch venv; the project venv and requirements are untouched.
   - **Scope:** `ruff format` whole only on the 50 `.py` files this branch adds. In the 55 modified files, fix only the review's §E items (I001 import order, unused imports, comments on function-level imports, `Mapping` import), so master's code isn't churned.
   - **TypeError:** `console/services/trends.py:58` becomes `TypeError` only if no caller catches `ValueError` on that path. The other listed cases were US-only and are gone.
+- 2026-11-07 (builder, Piece 3): style cleanup done, paused for Phil's review (uncommitted). 47 files, +2184/−860.
+  - **Branch-added `.py` files (50):** `ruff format` and `ruff check --select I001,F401 --fix` applied. ruff ran with a scratch config `src = ["data", "data/tests"]` so first-party imports group correctly. Two `app` fixture imports are kept with `# noqa: F401`, and one `# isort: skip` stays where it is because the sys.path it needs is set by an earlier test import. 14 long prose-string lines are left as they are.
+  - **Master-existing files:** one line changed in each of 4 (import order, plus `Pollster` removed from 2 importers).
+  - **Other changes:** `monte_carlo.py` function-level imports now carry a comment (a real import cycle with `simulation_replay`). `uncertainty_explorer.py` takes `Mapping` from `collections.abc`. The two one-line console templates are reflowed.
+  - **Not done, and why:** TypeError (the type checks are caught as ValueError); `style.css` tokens (the file has none, and master hard-codes the colour); `.uncertainty-col` naming (it matches its neighbours).
+  - **Evidence of no behaviour change:** an AST comparison of all 45 changed `.py` files shows identical bodies, differing only in import order and six unused imports removed. Both templates are byte-identical to HEAD with whitespace removed.
+  - **Checks:** mypy 246 clean; pytest 5670 (unchanged); Vitest 621 / 3 skipped (unchanged); export dry-run and console smoke OK; `git diff --check` clean.
+  - **Analysis loop:** all clean except two template-indentation nits, both fixed.
+- 2026-11-07: Piece 3 committed as `000fbd9f` and pushed. Next: Piece 4, `/review self poll-errors-simulation` in the planner chat.

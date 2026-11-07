@@ -243,6 +243,16 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
     - Depends on: 1–10
     - Acceptance: the runbook is reviewed and has the 2028 list; each live step is run only after approval, and its output (counts, diff summary) is reported.
 
+12. **US election list order, and the 2026 House/Senate forecasts switched off**
+    - Files: the left-bar election list (`electionmapslogic/dom.js` / `state.js`, wherever the list and the Predict entry are ordered) or the manifest export (`data/scripts/export/manifest.py`, `export_elections.py`), whichever owns ordering; the export's model-forecast path; `uselectionmaps/data/results/us-house-forecast.json` and `us-senate-forecast.json` (deleted); README/map-modes.md where they describe these; tests
+    - What (user decisions after the browser check, 2026-11-07):
+      - Sort each US chamber's election list in code, newest first, so future imports land in place. Pinned slots: House: 2026 Election, Predict 2028, 2024, 2022, 2020, 2018. Senate: 2026 Election, Current Senate, Predict 2028, 2024, 2022, 2020, 2018. In general: the newest result first, then Current Senate (Senate only), then Predict, then the older results newest first. President unchanged.
+      - Remove the House and Senate "2026 Prediction" entries (`current-us-house`, `current-us-senate`, types `us_house_model` / `us_senate_model`): an export flag switches their export off, with the code kept for re-enabling. Delete their committed data files (`us-house-forecast.json`, `us-senate-forecast.json`). Check for anything else that depends on them (poll trackers, trends meta, `US_MODEL_COMPARISON_IDS`, the archived-forecast tabs) and raise it before removing anything else. The presidential "2028 Prediction" stays.
+      - Then, on its own go-ahead: re-run the export and commit only the files it should change.
+    - Depends on: 11
+    - Tests: the sort order for House, Senate and President lists (pinned Current Senate and Predict slots, newest first, an imported older year landing in place); the export flag off drops the House/Senate model entries and files and leaves the presidential forecast.
+    - Acceptance: the lists read as above on the served page (jsdom harness, and Phil's browser check); the manifest has no `current-us-house` / `current-us-senate`; the presidential forecast is unaffected; checks green.
+
 ## Checkpoints
 - [x] 1. Seat status/source schema + migration (ec682969)
 - [x] 2. NYT fetch + cache (2a8f90e5)
@@ -255,6 +265,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [x] 9. Predict rollover + per-seat Senate baselines (2f87352b)
 - [x] 10. Derived Current Senate (cd7dbc43)
 - [ ] 11. Docs + live-data runbook (live steps on go-ahead)
+- [ ] 12. US election list order; 2026 House/Senate forecasts switched off
 
 ## Verification
 After each piece:

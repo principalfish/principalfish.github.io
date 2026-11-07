@@ -9,7 +9,7 @@ Owned by the planner chat `planner: import-2026-us-midterm-results` (main checko
 
 Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `local_33a550dd-f3e8-4148-865d-3673210013ae`; `list_sessions` with `linked: true`). Open for Phil: merge order with 0001 — conflicts already exist (see plan.md Notes, overlap check); suggested: merge master in after #74 lands, before piece 8.
 
-Piece 6 approved by Phil ("Approve, commit", which also confirms the Census cd120 source change) and relayed to the builder to commit and push. Check: `git log --oneline -1 origin/import-2026-us-midterm-results`. Once pushed, tick piece 6 in pr.md and `gh pr edit 80`.
+Piece 6 committed `bfe5dc77` and pushed; PR #80 ticked. Pending for Phil: start piece 8 now, or wait for #74 (0001; open, not merged — `gh pr view 74 --json state`) to merge, then merge master into this branch before piece 8 (overlap in plan.md Notes). Pieces 9 and 10 depend on 8, so nothing else can run meanwhile.
 
 Next step after that: checkpoint 8. See `plan.md`.
 

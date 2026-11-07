@@ -9,7 +9,9 @@ Owned by the planner chat `planner: import-2026-us-midterm-results` (main checko
 
 Builder `builder: import-2026-us-midterm-results` started 2026-11-07 (session `local_33a550dd-f3e8-4148-865d-3673210013ae`; `list_sessions` with `linked: true`). Open for Phil: merge order with 0001 — conflicts already exist (see plan.md Notes, overlap check); suggested: merge master in after #74 lands, before piece 8.
 
-Piece 6 committed `bfe5dc77` and pushed; PR #80 ticked. Piece 8 started on Phil's go-ahead ("ok continue with piece 8"), without merging master first. Merge order decided: merge master into this branch after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
+Piece 6 committed `bfe5dc77`. Merge order: merge master in after #74 lands, before piece 11 and the final review, then re-run the jsdom harness on both pages.
+
+Pending: piece 8 built, uncommitted, in `.claude/worktrees/great-nightingale-9085bc` (`git -C <that> status --short`), waiting on Phil's review. Open for Phil: (1) mid-count ± in the totals table (leave / label provisional / credit leaders; builder recommends leave); (3) whether piece 9's brief should decide how a predict baseline treats uncalled seats (builder suggests adding it). The hatch look needs a real-browser check once 2026 data is exported (piece 11).
 
 Next step: checkpoint 8 (in progress). See `plan.md`.
 

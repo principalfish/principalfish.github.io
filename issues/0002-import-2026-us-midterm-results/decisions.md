@@ -50,6 +50,8 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 
 - Multiple same-party candidates in one race (e.g. Alaska 2026 Senate: Sullivan + Heikes, R): keep the existing one-row-per-party merge, with summed votes and the top candidate named. Uncalled shading follows the party total. Phil first chose to accept it, then changed his mind the same day: a one-seat export override for Alaska 2026 (NYT's candidate rows, shaded by the individual leader, Peltola D), removed once the ranked-choice final round is imported. New piece 14. Raised at the browser check, where the merged row read as 'Dan Sullivan 107,171' against NYT's 102,325. (2026-11-07)
 
+- Alaska override stale guard kept: it applies only while the seat is uncalled and its rows sum to the current imported party totals; otherwise the export warns and skips it. The name stays 'Gerald Heikes'. (2026-11-07)
+
 ## Open
 
 ## Assumed

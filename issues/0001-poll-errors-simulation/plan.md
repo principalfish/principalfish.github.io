@@ -361,3 +361,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
     - Round 3: 2 verified findings, fixed (a rigged bool test; comments).
     - Round 4 re-checked only those test and comment edits, with coverage, style and common-mistakes: clean.
   - Changed-lines coverage 99%: one line, an accepted type guard.
+- 2026-11-07: Piece 6g code committed as `be4222f5` and pushed with Phil's approval ("Approve, commit and push"). Next: live steps backup → 10-30 rerun → trends rebuild → re-export → data commit, each with its own go-ahead.

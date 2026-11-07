@@ -23,3 +23,8 @@ CT and MA (NYT reports towns, not counties; CT's FIPS changed to planning region
 
 ## Notable
 MO scores 0.00, so 2026 ran on the 2024 map there, despite the 2025 redraw.
+
+## 2012-cycle geometry for House 2018/2020 (Census probe, 2026-11-07)
+- Census cartographic files: `GENZ2016/shp/cb_2016_us_cd115_*` (115th, 2016 elections) and `cb_{2018,2019,2020,2021}_us_cd116_*` (116th). There is no cd117 file in any vintage; TIGER2020/2021 also carry only cd116.
+- PA: the 2018 court map is in cd116 (all 18 PA district bounding boxes differ from cd115), so cd116 is right for 2018.
+- NC: the 2019 remedial map used in 2020 is not in any Census file. The cb_2020 cd116 NC districts are byte-identical in bounds to cb_2018. So 2020 needs NC's enacted 2019 plan from the NC General Assembly.

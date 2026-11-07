@@ -356,6 +356,8 @@ class ElectionSeatStatus(Base):
         decisive_round: Optional label of the round that decides the seat
             (e.g. ``"runoff"`` or ``"rcv-final"``). ``None`` when the first
             round is decisive.
+        senate_class: Optional Senate class (1-3) of the seat contested, for
+            US Senate results; ``None`` for other chambers or when unknown.
         election: The owning ``Election`` instance.
         seat: The ``Seat`` this status describes.
     """
@@ -378,6 +380,7 @@ class ElectionSeatStatus(Base):
     pct_counted: Mapped[float | None] = mapped_column(Float, nullable=True)
     same_party: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
     decisive_round: Mapped[str | None] = mapped_column(Text, nullable=True)
+    senate_class: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     election: Mapped["Election"] = relationship("Election", back_populates="seat_statuses")
     seat: Mapped["Seat"] = relationship("Seat", back_populates="seat_statuses")

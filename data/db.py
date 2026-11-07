@@ -103,6 +103,9 @@ class SeatStatus:
         decisive_round: Label of the round that decides the seat (e.g.
             ``"runoff"`` or ``"rcv-final"``), or None when the first round is
             decisive.
+        senate_class: Senate class (1-3) of the seat contested, for US Senate
+            results; None otherwise. A state's regular and same-day special
+            races share one seat, so the class tells them apart.
     """
 
     seat_id: int
@@ -110,6 +113,7 @@ class SeatStatus:
     pct_counted: float | None = None
     same_party: bool = False
     decisive_round: str | None = None
+    senate_class: int | None = None
 
 
 def ensure_elections_sqlite_schema(conn: sqlite3.Connection) -> None:
@@ -847,6 +851,7 @@ class Database:
                     pct_counted=status.pct_counted,
                     same_party=status.same_party,
                     decisive_round=status.decisive_round,
+                    senate_class=status.senate_class,
                 )
                 for status in statuses
             ]
@@ -877,6 +882,7 @@ class Database:
                     pct_counted=row.pct_counted,
                     same_party=row.same_party,
                     decisive_round=row.decisive_round,
+                    senate_class=row.senate_class,
                 )
                 for row in rows
             }

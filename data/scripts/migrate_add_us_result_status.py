@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS election_seat_status (
     pct_counted    FLOAT,
     same_party     BOOLEAN DEFAULT 0 NOT NULL,
     decisive_round TEXT,
+    senate_class   INTEGER,
     PRIMARY KEY (id),
     FOREIGN KEY (election_id) REFERENCES elections (id),
     FOREIGN KEY (seat_id) REFERENCES seats (id)

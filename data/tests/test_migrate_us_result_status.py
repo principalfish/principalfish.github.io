@@ -240,10 +240,10 @@ class TestMigrate:
             "INSERT INTO election_seat_status (election_id, seat_id) VALUES (1, 1)"
         )
         row = migrated_conn.execute(
-            "SELECT called, pct_counted, same_party, decisive_round"
+            "SELECT called, pct_counted, same_party, decisive_round, senate_class"
             " FROM election_seat_status"
         ).fetchone()
-        assert row == (1, None, 0, None)
+        assert row == (1, None, 0, None, None)
 
     def test_orm_reads_and_writes_migrated_database(
         self, migrated_conn: sqlite3.Connection, legacy_path: Path
@@ -256,7 +256,7 @@ class TestMigrate:
             assert election is not None and election.source_note is None
             statuses = [
                 SeatStatus(1, called=False, pct_counted=62.5),
-                SeatStatus(2, decisive_round="rcv-final"),
+                SeatStatus(2, decisive_round="rcv-final", senate_class=3),
             ]
             assert database.set_seat_statuses(1, statuses) == 2
             assert database.get_seat_statuses(1) == {s.seat_id: s for s in statuses}
@@ -409,6 +409,7 @@ class TestSeatStatusHelpers:
             "pct_counted",
             "same_party",
             "decisive_round",
+            "senate_class",
         }
         assert "source_note" in _columns(orm_conn, "elections")
 
@@ -416,7 +417,7 @@ class TestSeatStatusHelpers:
         election_id, first, second = race
         statuses = [
             SeatStatus(first, called=False, pct_counted=48.0, same_party=True),
-            SeatStatus(second, decisive_round="runoff"),
+            SeatStatus(second, decisive_round="runoff", senate_class=2),
         ]
         assert db.set_seat_statuses(election_id, statuses) == 2
         assert db.get_seat_statuses(election_id) == {
@@ -428,7 +429,12 @@ class TestSeatStatusHelpers:
         election_id, first, _ = race
         db.set_seat_statuses(election_id, [SeatStatus(first)])
         assert db.get_seat_statuses(election_id)[first] == SeatStatus(
-            first, called=True, pct_counted=None, same_party=False, decisive_round=None
+            first,
+            called=True,
+            pct_counted=None,
+            same_party=False,
+            decisive_round=None,
+            senate_class=None,
         )
 
     def test_replaces_previous_rows(

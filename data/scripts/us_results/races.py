@@ -59,6 +59,20 @@ _PARTY_KEYS: dict[str, PartyKey] = {
     "MOUNTAIN": "usgreen",
     "IND": "independent",
     "INDEPENDENT": "independent",
+    # Candidates on no party's line, under each state's label for it: No Party
+    # Affiliation (FL), Unaffiliated (NC, CO, UT), No Party / Nonpartisan (AK,
+    # NE, HI), No Party Preference (CA), Unenrolled (MA, ME). Nevada's "None of
+    # these candidates" ballot line also comes as NPD / no-party-designation, so
+    # those two stay ``others``, as do named parties with "independent" in the
+    # name (Independence, Independent American, Alaskan Independence).
+    "NPA": "independent",
+    "NO-PARTY-AFFILIATION": "independent",
+    "UNA": "independent",
+    "NP": "independent",
+    "NPT": "independent",
+    "NONPARTISAN": "independent",
+    "NPP": "independent",
+    "UNR": "independent",
 }
 
 

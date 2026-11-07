@@ -213,5 +213,5 @@ export function uncertaintyHeadline(summary, labelParty) {
   if (!outlook.outcomes.some(({ party }) => party === null)) {
     parts.push(`hung ${formatProbability(outlook.hung)}`);
   }
-  return `${parts.join(" · ")} (if an election were held today)`;
+  return parts.join(" · ");
 }

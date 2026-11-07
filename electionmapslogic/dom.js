@@ -12,7 +12,8 @@ import {
   uncertaintyRange, seatMedianRange, seatUncertaintyText,
 } from "./uncertainty.js";
 import {
-  outsideRangeMarker, renderSeatsHeader, renderUncertaintyHeader, renderUncertaintyToggle,
+  outsideRangeMarker, renderSeatsHeader, renderUncertaintyBasis, renderUncertaintyHeader,
+  renderUncertaintyToggle,
   wireUncertaintyToggle,
 } from "./uncertainty-view.js";
 
@@ -117,16 +118,20 @@ function renderSubtitleText(text = '', error = false) {
   mainSpan.textContent = String(baseText || '').trim();
   subtitle.appendChild(mainSpan);
 
-  renderUncertaintyHeader(subtitle, error ? null : activeUncertainty(state), (party) => manifest.labelParty(party));
+  const uncertainty = error ? null : activeUncertainty(state);
+  renderUncertaintyHeader(subtitle, uncertainty, (party) => manifest.labelParty(party));
 
   const latestPollSnippet = includeSnippet ? state.predictionSnippet : '';
   subtitle.classList.toggle('maps-subtitle-has-latest', Boolean(latestPollSnippet));
-  if (!latestPollSnippet) return;
+  if (latestPollSnippet) {
+    const latestSpan = document.createElement('span');
+    latestSpan.className = 'maps-subtitle-latest';
+    latestSpan.textContent = latestPollSnippet;
+    subtitle.appendChild(latestSpan);
+  }
 
-  const latestSpan = document.createElement('span');
-  latestSpan.className = 'maps-subtitle-latest';
-  latestSpan.textContent = latestPollSnippet;
-  subtitle.appendChild(latestSpan);
+  // The reading note comes last: it qualifies every figure above it, the latest poll included.
+  renderUncertaintyBasis(subtitle, uncertainty);
 }
 
 /**

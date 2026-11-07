@@ -2,25 +2,28 @@ import {
   activeUncertainty, intervalPercent, outsideSeatRange, uncertaintyForTotals, uncertaintyHeadline,
 } from "./uncertainty.js";
 
-/** Append the odds and their explanation once, in the headline area. */
+/** Append the simulated seats and odds line, in the headline area. */
 export function renderUncertaintyHeader(container, summary, labelParty) {
-  if (!summary) return;
   const odds = uncertaintyHeadline(summary, labelParty);
-  if (odds) {
-    const span = document.createElement("span");
-    span.className = "maps-subtitle-uncertainty";
-    span.textContent = odds;
-    container.appendChild(span);
-  }
-  if (typeof summary.basis === "string" && summary.basis) {
-    const basis = document.createElement("span");
-    basis.id = "mapsUncertaintyBasis";
-    basis.className = "maps-subtitle-basis";
-    basis.textContent = odds
-      ? summary.basis.replace(/^Nowcast: if an election were held today\.\s*/, "")
-      : summary.basis;
-    container.appendChild(basis);
-  }
+  if (!odds) return;
+  const span = document.createElement("span");
+  span.className = "maps-subtitle-uncertainty";
+  span.textContent = odds;
+  container.appendChild(span);
+}
+
+/**
+ * Append the exported reading note in full, nowcast sentence included: it is the one place the
+ * header says the odds are "if an election were held today". The totals table names it in
+ * aria-describedby by its id.
+ */
+export function renderUncertaintyBasis(container, summary) {
+  if (typeof summary?.basis !== "string" || !summary.basis) return;
+  const basis = document.createElement("span");
+  basis.id = "mapsUncertaintyBasis";
+  basis.className = "maps-subtitle-basis";
+  basis.textContent = summary.basis;
+  container.appendChild(basis);
 }
 
 export function renderUncertaintyToggle(button, state) {

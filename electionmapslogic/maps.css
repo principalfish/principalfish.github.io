@@ -225,6 +225,13 @@ a {
   content: none;
 }
 
+/* The reading note under the headline figures: a quieter footnote, not another headline. */
+.maps-subtitle-basis {
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
 .maps-election-countdown {
   margin: 0.3rem 0 0;
   color: #16a34a;

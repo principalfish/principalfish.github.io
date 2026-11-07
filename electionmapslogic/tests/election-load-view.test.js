@@ -27,7 +27,10 @@ const header = `<header class="maps-header"><h1 class="maps-title"></h1>
   <p id="mapsSubtitle" class="maps-subtitle"></p><p id="mapsElectionCountdown" hidden></p></header>`;
 const shell = header + readFileSync(new URL("../shell.html", import.meta.url), "utf8");
 
-const HEADLINE = "Labour 282 seats (199–359) · majority 19% (if an election were held today)";
+const HEADLINE = "Labour 282 seats (199–359) · majority 19%";
+const BASIS = "Nowcast: if an election were held today. 90% ranges and probabilities from 10,000 "
+  + "simulations, conditional on current polls and the model's error assumptions.";
+const LATEST = "Latest poll used: Opinium (2026-10-28 to 2026-10-30)";
 const SIMULATED = "Current prediction · Hung parliament likely (81%) · Labour largest party (94%)";
 // The one-seat uniform-swing projection the main line shows without uncertainty.
 const UNIFORM_SWING = "Current prediction · Labour majority: 1";
@@ -69,6 +72,7 @@ function results(u = [[1, 48.5, 61.25, 0.87], [2, 30, 41, 0]]) {
 function uncertainty() {
   return {
     schema: "pf-uncertainty-v1", uncertaintyId: "saved-run", interval: 0.9, simulations: 10000,
+    basis: BASIS,
     national: {
       parties: {
         1: { v: [21.7, 29.3], s: [199, 282, 359], pm: 0.19, pl: 0.94 },
@@ -161,6 +165,9 @@ describe.skipIf(!JSDOM)("actual election load", () => {
 
   const headline = () => document.querySelector("#mapsSubtitle .maps-subtitle-uncertainty");
   const mainLine = () => document.querySelector("#mapsSubtitle .maps-subtitle-main");
+  const basisNote = () => document.getElementById("mapsUncertaintyBasis");
+  const subtitleLines = () => [...document.getElementById("mapsSubtitle").children]
+    .map((node) => [node.className, node.textContent]);
   const popupBands = () => [...document.querySelectorAll("#mapsSeatPopupList .maps-popup-uncertainty")];
   const openSeatPopup = () => document.querySelector("#mapsSeatList .maps-seat-row").click();
 
@@ -208,6 +215,49 @@ describe.skipIf(!JSDOM)("actual election load", () => {
     });
   });
 
+  describe("reading note", () => {
+    it("follows the latest poll, reads in full and describes the totals table", async () => {
+      serve({ "data/results/meta.json": { latest_poll_snippet: LATEST } });
+      await boot();
+      await startApp();
+      expect(subtitleLines()).toEqual([
+        ["maps-subtitle-main", SIMULATED],
+        ["maps-subtitle-uncertainty", HEADLINE],
+        ["maps-subtitle-latest", LATEST],
+        ["maps-subtitle-basis", BASIS],
+      ]);
+      const described = document.getElementById("mapsVoteTotalsTable").getAttribute("aria-describedby");
+      expect(described.split(" ")).toContain("mapsUncertaintyBasis");
+      expect(basisNote().textContent).toBe(BASIS);
+    });
+
+    it("still comes last without a latest-poll line", async () => {
+      await boot();
+      await startApp();
+      expect(subtitleLines()).toEqual([
+        ["maps-subtitle-main", SIMULATED],
+        ["maps-subtitle-uncertainty", HEADLINE],
+        ["maps-subtitle-basis", BASIS],
+      ]);
+    });
+
+    it("is absent, with the subtitle unchanged, without uncertainty", async () => {
+      serve({
+        "data/results/meta.json": { latest_poll_snippet: LATEST },
+        "data/results/uncertainty.json": () => Promise.reject(new Error("missing")),
+      });
+      await boot();
+      await startApp();
+      expect(subtitleLines()).toEqual([
+        ["maps-subtitle-main", UNIFORM_SWING],
+        ["maps-subtitle-latest", LATEST],
+      ]);
+      expect(basisNote()).toBeNull();
+      expect(document.getElementById("mapsVoteTotalsTable").getAttribute("aria-describedby"))
+        .not.toContain("mapsUncertaintyBasis");
+    });
+  });
+
   describe("main subtitle line", () => {
     it("keeps the uniform-swing line for a saved model without uncertainty", async () => {
       serve({ "data/results/uncertainty.json": () => Promise.reject(new Error("missing")) });
@@ -223,6 +273,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       await startApp();
       expect(mainLine().textContent).toBe("2024 General Election · Labour majority: 1");
       expect(headline()).toBeNull();
+      expect(basisNote()).toBeNull();
     });
 
     it("returns to the uniform-swing line in predict view", async () => {
@@ -265,6 +316,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       expect(mainLine().textContent).toBe(state.electionData.summary.text);
       expect(mainLine().textContent).toBe("2026 Prediction · Democratic majority: 1");
       expect(headline()).toBeNull();
+      expect(basisNote()).toBeNull();
     });
 
     it("inserts party names as text, not markup", async () => {

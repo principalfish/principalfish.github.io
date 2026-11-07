@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { state as defaultState } from "../state.js";
 import {
-  outsideRangeMarker, renderSeatsHeader, renderUncertaintyHeader, renderUncertaintyToggle,
-  wireUncertaintyToggle,
+  outsideRangeMarker, renderSeatsHeader, renderUncertaintyBasis, renderUncertaintyHeader,
+  renderUncertaintyToggle, wireUncertaintyToggle,
 } from "../uncertainty-view.js";
 
 function element() {
@@ -78,23 +78,27 @@ describe("uncertainty display controls", () => {
     expect(state.electionData.uncertainty).toEqual(original);
     const header = element();
     renderUncertaintyHeader(header, summary, () => "Labour");
+    renderUncertaintyBasis(header, summary);
     expect(header.children.map((child) => child.className))
       .toEqual(["maps-subtitle-uncertainty", "maps-subtitle-basis"]);
-    const text = header.children.map((child) => child.textContent).join(" ");
-    expect(text.match(/if an election were held today/g)).toHaveLength(1);
-    expect(text).toContain("90% ranges and probabilities from 10,000 simulations");
+    expect(header.children[0].textContent).toBe("Labour 300 seats (200–400) · majority 30%");
+    // The note carries the nowcast sentence in full; the odds line no longer repeats it.
+    expect(header.children[1].textContent).toBe(summary.basis);
     expect(header.children[1].id).toBe("mapsUncertaintyBasis");
   });
 
   it("renders no explanation for elections without uncertainty", () => {
     const header = element();
     renderUncertaintyHeader(header, null, () => "Labour");
+    renderUncertaintyBasis(header, null);
     expect(header.children).toEqual([]);
   });
 
   it("retains the full basis when no outcome odds are available", () => {
     const header = element();
-    renderUncertaintyHeader(header, { basis: summary.basis, national: { parties: {} } }, () => "Labour");
+    const noOdds = { basis: summary.basis, national: { parties: {} } };
+    renderUncertaintyHeader(header, noOdds, () => "Labour");
+    renderUncertaintyBasis(header, noOdds);
     expect(header.children).toHaveLength(1);
     expect(header.children[0].id).toBe("mapsUncertaintyBasis");
     expect(header.children[0].textContent).toBe(summary.basis);

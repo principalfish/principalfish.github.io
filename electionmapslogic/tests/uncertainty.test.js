@@ -130,7 +130,7 @@ describe("uncertainty totals and headline", () => {
   it("keeps national odds under geographic filters and chooses the most likely largest party", () => {
     state.mapFilters.region = "northeast";
     expect(uncertaintyHeadline(activeUncertainty(state), (party) => manifest.labelParty(party)))
-      .toBe("Labour 301 seats (220–376) · majority 31% (if an election were held today)");
+      .toBe("Labour 301 seats (220–376) · majority 31%");
     expect(uncertaintyOutcomeLine(activeUncertainty(state), (party) => manifest.labelParty(party)))
       .toBe("Hung parliament likely (69%) · Labour largest party (97%)");
   });
@@ -143,13 +143,13 @@ describe("uncertainty totals and headline", () => {
     const label = (party) => manifest.labelParty(party);
     expect(uncertaintyOutcomeLine(summary, label)).toBe("Hung parliament likely (81%) · Labour largest party (>99%)");
     expect(uncertaintyHeadline(summary, label)).toBe(
-      "Labour 282 seats (199–359) · majority 19% (if an election were held today)",
+      "Labour 282 seats (199–359) · majority 19%",
     );
     summary.national.parties.labour.pm = 0.004;
     summary.national.hung = 0.996;
     expect(uncertaintyOutcomeLine(summary, label)).toBe("Hung parliament likely (>99%) · Labour largest party (>99%)");
     expect(uncertaintyHeadline(summary, label)).toBe(
-      "Labour 282 seats (199–359) · majority <1% (if an election were held today)",
+      "Labour 282 seats (199–359) · majority <1%",
     );
   });
 
@@ -178,7 +178,6 @@ describe("uncertainty totals and headline", () => {
 describe("simulated headline lines", () => {
   const NAMES = { labour: "Labour", reform: "Reform UK", conservative: "Conservative" };
   const label = (party) => NAMES[party];
-  const TODAY = "(if an election were held today)";
 
   /** A decoded national summary; each party row is [lo, median, hi, pm, pl]. */
   function national(rows, hung) {
@@ -197,7 +196,7 @@ describe("simulated headline lines", () => {
     const summary = national({ labour: [238, 319, 389, 0.44, 0.99], reform: [100, 150, 200, 0, 0.01] }, 0.56);
     expect(lines(summary)).toEqual([
       "Current prediction · Hung parliament likely (56%) · Labour largest party (99%)",
-      `Labour 319 seats (238–389) · majority 44% ${TODAY}`,
+      `Labour 319 seats (238–389) · majority 44%`,
     ]);
   });
 
@@ -207,7 +206,7 @@ describe("simulated headline lines", () => {
     }, 0.45);
     expect(lines(summary)).toEqual([
       "Current prediction · Hung parliament most likely (45%) · Labour largest party (70%)",
-      `Labour 300 seats (250–340) · majority 30% ${TODAY}`,
+      `Labour 300 seats (250–340) · majority 30%`,
     ]);
   });
 
@@ -215,7 +214,7 @@ describe("simulated headline lines", () => {
     const summary = national({ labour: [300, 340, 370, 0.72, 0.99], reform: [80, 120, 160, 0, 0.01] }, 0.28);
     expect(lines(summary)).toEqual([
       "Current prediction · Labour majority likely (72%) · Labour largest party (99%)",
-      `Labour 340 seats (300–370) · majority 72% · hung 28% ${TODAY}`,
+      `Labour 340 seats (300–370) · majority 72% · hung 28%`,
     ]);
   });
 
@@ -223,7 +222,7 @@ describe("simulated headline lines", () => {
     const summary = national({ labour: [280, 326, 360, 0.502, 0.9], reform: [100, 150, 200, 0, 0.1] }, 0.498);
     expect(lines(summary)).toEqual([
       "Current prediction · Hung parliament or Labour majority equally likely (50%) · Labour largest party (90%)",
-      `Labour 326 seats (280–360) · majority 50% ${TODAY}`,
+      `Labour 326 seats (280–360) · majority 50%`,
     ]);
     const three = national({
       reform: [250, 300, 340, 0.333, 0.5], labour: [250, 300, 340, 0.334, 0.5],
@@ -242,7 +241,7 @@ describe("simulated headline lines", () => {
       "Current prediction · Labour majority or Reform UK majority equally likely (40%) · "
       + "Labour and Reform UK level as largest party (50%)",
     );
-    expect(lines(summary)[1]).toMatch(/· hung 20% \(if an election were held today\)$/);
+    expect(lines(summary)[1]).toMatch(/· hung 20%$/);
   });
 
   it("shows both medians when the largest party is tied on the displayed percentage", () => {
@@ -251,19 +250,19 @@ describe("simulated headline lines", () => {
     }, 0.62);
     expect(lines(summary)).toEqual([
       "Current prediction · Hung parliament likely (62%) · Labour and Reform UK level as largest party (50%)",
-      `Labour 290 seats (250–330) · majority 20% · Reform UK 288 seats (240–330) · majority 18% ${TODAY}`,
+      `Labour 290 seats (250–330) · majority 20% · Reform UK 288 seats (240–330) · majority 18%`,
     ]);
     // The alphabetically later party ahead on the hidden decimal still reads second.
     summary.national.parties.reform.pl = 0.502;
     summary.national.parties.labour.pl = 0.498;
     expect(lines(summary)).toEqual([
       "Current prediction · Hung parliament likely (62%) · Labour and Reform UK level as largest party (50%)",
-      `Labour 290 seats (250–330) · majority 20% · Reform UK 288 seats (240–330) · majority 18% ${TODAY}`,
+      `Labour 290 seats (250–330) · majority 20% · Reform UK 288 seats (240–330) · majority 18%`,
     ]);
     summary.national.hung = 0.38;
     summary.national.parties.labour.pm = 0.42;
     expect(lines(summary)[1]).toBe(
-      `Labour 290 seats (250–330) · majority 42% · Reform UK 288 seats (240–330) · majority 18% · hung 38% ${TODAY}`,
+      `Labour 290 seats (250–330) · majority 42% · Reform UK 288 seats (240–330) · majority 18% · hung 38%`,
     );
   });
 
@@ -281,7 +280,7 @@ describe("simulated headline lines", () => {
     const summary = national({ labour: [330, 380, 420, 0.997, 0.999], reform: [50, 80, 110, 0, 0.001] }, 0.003);
     expect(lines(summary)).toEqual([
       "Current prediction · Labour majority likely (>99%) · Labour largest party (>99%)",
-      `Labour 380 seats (330–420) · majority >99% · hung <1% ${TODAY}`,
+      `Labour 380 seats (330–420) · majority >99% · hung <1%`,
     ]);
   });
 

@@ -151,3 +151,42 @@ describe('renderSeatPopup', () => {
     expect(list().querySelector('.maps-popup-special')).toBeNull();
   });
 });
+
+describe('renderSeatPopup: Current Senate uncalled members', () => {
+  const list = () => document.getElementById('mapsSeatPopupList');
+
+  it('shows an uncalled member as a neutral "Uncalled" row beside the called senator', () => {
+    const { state, ElectionData } = stateModule;
+    state.electionData = new ElectionData({
+      seats: [{
+        n: 'Texas',
+        r: 'region',
+        w: 'republican',
+        members: [
+          { party: 'republican', name: 'Ted <b>Cruz</b>', class: 1 },
+          { party: null, name: null, class: 2, c: false, pc: 62.5 },
+        ],
+      }],
+    });
+    dom.renderSeatPopup('Texas');
+    const rows = list().querySelectorAll('.maps-popup-row');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].textContent).toContain('Ted <b>Cruz</b>');
+    expect(rows[0].querySelector('b')).toBeNull();
+    expect(rows[1].querySelector('.maps-popup-name').textContent).toBe('Uncalled');
+    expect(rows[1].textContent).toContain('62.5% counted');
+    // Neutral grey, never a party colour or the Others colour.
+    expect(rows[1].querySelector('.maps-seat-icon').style.background).toMatch(/#d1d5db|rgb\(209, 213, 219\)/);
+  });
+
+  it('says just "Uncalled" when the counted share is unknown', () => {
+    const { state, ElectionData } = stateModule;
+    state.electionData = new ElectionData({
+      seats: [{ n: 'Texas', r: 'region', w: 'republican', members: [{ party: null, name: null, class: 2, c: false }, { party: 'republican', name: 'A', class: 1 }] }],
+    });
+    dom.renderSeatPopup('Texas');
+    const row = list().querySelectorAll('.maps-popup-row')[0];
+    expect(row.querySelector('.maps-popup-name').textContent).toBe('Uncalled');
+    expect(row.textContent).not.toContain('counted');
+  });
+});

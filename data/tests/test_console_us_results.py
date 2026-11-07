@@ -34,6 +34,7 @@ from db import Database
 from models import Election, ElectionType, Party
 from scripts.us_results import cli
 from scripts.us_results.convert import ConversionResult
+from scripts.us_results.current_senate import DEFAULT_SNAPSHOT, render
 from scripts.us_results.sources import source_for, supported_years
 from tests.console_fixtures import (
     RecordingRunner,
@@ -43,6 +44,7 @@ from tests.console_fixtures import (
     flashes_on_page,
     select_block,
 )
+from tests.senate_current_fixtures import senate_election
 from import_senate_elections import import_senate
 from us_import import PARTY_KEY_TO_NAME
 
@@ -90,6 +92,8 @@ def _isolate(
     out_dir, cache_dir = dirs
     app.config[us_results.OUT_DIR_CONFIG] = out_dir
     app.config[us_results.CACHE_DIR_CONFIG] = cache_dir
+    # Never the committed Current Senate file: a test that rebuilds it opts in.
+    app.config[us_results.SNAPSHOT_CONFIG] = out_dir.parent / "senate-current.json"
     monkeypatch.setattr(us_results, "get_db", lambda: db)
     monkeypatch.setattr(us_results, "run_python_script", unexpected_export)
     monkeypatch.setattr(fetch_module, "_download", unexpected_download)
@@ -1100,6 +1104,112 @@ class TestExport:
         assert export_runner.calls == []
 
 
+class TestCurrentSenate:
+    @pytest.fixture()
+    def files(self, app: Flask, dirs: tuple[Path, Path]) -> tuple[Path, Path, dict[str, Any]]:
+        """The configured snapshot (pre-2026) and the imported 2026 Senate file."""
+        out_dir, _ = dirs
+        snapshot_path = Path(app.config[us_results.SNAPSHOT_CONFIG])
+        snapshot = json.loads(DEFAULT_SNAPSHOT.read_text(encoding="utf-8"))
+        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+        snapshot_path.write_text(render(snapshot), encoding="utf-8")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        election_path = out_dir / "senate-2026.json"
+        election_path.write_text(json.dumps(senate_election(snapshot)), encoding="utf-8")
+        return snapshot_path, election_path, snapshot
+
+    def test_rebuilds_the_snapshot_without_touching_the_db_or_export(
+        self,
+        app: Flask,
+        db: Database,
+        files: tuple[Path, Path, dict[str, Any]],
+        export_runner: RecordingRunner,
+    ) -> None:
+        snapshot_path, _, snapshot = files
+        before = _us_elections(db)
+
+        response = app.test_client().post("/us/results/current-senate")
+
+        assert response.status_code == 200
+        body = response.get_data(as_text=True)
+        assert command_line(body) == "cli.py current-senate (rebuild senate-current.json)"
+        assert "<strong>Exit code:</strong> 0" in body
+        assert "65 holdovers, 35 winners, 0 uncalled (100 members)" in body
+        derived = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        assert derived != snapshot
+        assert sum(len(seat["members"]) for seat in derived["seats"]) == 100
+        assert _us_elections(db) == before
+        assert export_runner.calls == []
+
+    def test_running_it_again_changes_nothing(
+        self, app: Flask, files: tuple[Path, Path, dict[str, Any]]
+    ) -> None:
+        snapshot_path, _, _ = files
+        client = app.test_client()
+        client.post("/us/results/current-senate")
+        first = snapshot_path.read_bytes()
+
+        body = client.post("/us/results/current-senate").get_data(as_text=True)
+
+        assert snapshot_path.read_bytes() == first
+        assert f"unchanged {snapshot_path}" in body
+
+    def test_missing_election_file_is_reported_and_writes_nothing(
+        self, app: Flask, files: tuple[Path, Path, dict[str, Any]]
+    ) -> None:
+        snapshot_path, election_path, snapshot = files
+        election_path.unlink()
+
+        body = app.test_client().post("/us/results/current-senate").get_data(as_text=True)
+
+        assert "<strong>Exit code:</strong> 1" in body
+        assert "election file not found" in body
+        assert snapshot_path.read_text(encoding="utf-8") == render(snapshot)
+
+    def test_a_refused_build_is_reported_and_writes_nothing(
+        self, app: Flask, files: tuple[Path, Path, dict[str, Any]]
+    ) -> None:
+        snapshot_path, election_path, snapshot = files
+        election = json.loads(election_path.read_text(encoding="utf-8"))
+        del election["Georgia"]
+        election_path.write_text(json.dumps(election), encoding="utf-8")
+
+        body = app.test_client().post("/us/results/current-senate").get_data(as_text=True)
+
+        assert "<strong>Exit code:</strong> 1" in body
+        assert "no class 2 race for: Georgia" in body
+        assert snapshot_path.read_text(encoding="utf-8") == render(snapshot)
+
+    def test_busy_slot_refuses_the_rebuild(
+        self, app: Flask, files: tuple[Path, Path, dict[str, Any]]
+    ) -> None:
+        snapshot_path, _, snapshot = files
+        client = app.test_client()
+
+        with MODEL_RUN_LOCK:
+            response = client.post("/us/results/current-senate")
+
+        [message] = flashes(client, response)
+        assert message.startswith("Current Senate not rebuilt: another US model run")
+        assert snapshot_path.read_text(encoding="utf-8") == render(snapshot)
+
+    def test_the_form_offers_it_and_importing_never_runs_it(
+        self,
+        app: Flask,
+        nyt: FakeNyt,
+        files: tuple[Path, Path, dict[str, Any]],
+    ) -> None:
+        snapshot_path, _, snapshot = files
+        client = app.test_client()
+
+        form = client.get("/us/results").get_data(as_text=True)
+        _import(client, "senate")
+
+        assert 'action="/us/results/current-senate"' in form
+        assert "Rebuild Current Senate" in form
+        assert snapshot_path.read_text(encoding="utf-8") == render(snapshot)
+
+
 class TestCrossSite:
     def test_posts_from_another_site_are_refused(
         self,
@@ -1121,9 +1231,10 @@ class TestCrossSite:
         )
         confirm = client.post(f"/us/results/confirm/{token}", headers=_CROSS_SITE)
         export = client.post("/us/results/export", headers=_CROSS_SITE)
+        senate = client.post("/us/results/current-senate", headers=_CROSS_SITE)
 
-        statuses = [preview.status_code, confirm.status_code, export.status_code]
-        assert statuses == [403, 403, 403]
+        statuses = [preview.status_code, confirm.status_code, export.status_code, senate.status_code]
+        assert statuses == [403, 403, 403, 403]
         assert nyt.requested == []
         assert token in PREVIEW_CACHE
         assert not out_dir.exists()

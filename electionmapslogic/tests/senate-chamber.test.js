@@ -130,3 +130,71 @@ describe('regularSenateClass', () => {
     expect(regularSenateClass(2026)).toBeNull();
   });
 });
+
+describe('buildSenateChamber with uncalled members', () => {
+  beforeEach(() => manifest.init(manifestData));
+
+  // Texas: one called, one uncalled (coloured by the called member). Nevada: both uncalled.
+  const chamber = () => new ElectionData({
+    seats: [
+      { n: 'Texas', r: 'westsouthcentral', w: 'republican', members: [
+        { party: 'republican', name: 'Cruz', class: 1 },
+        { party: null, name: null, class: 2, c: false, pc: 40 },
+      ] },
+      { n: 'Nevada', r: 'mountain', c: false, members: [
+        { party: null, name: null, class: 1, c: false },
+        { party: null, name: null, class: 2, c: false, pc: 10 },
+      ] },
+      { n: 'Maine', r: 'newengland', w: 'split', members: [
+        { party: 'independent', name: 'King', class: 1 },
+        { party: 'democrat', name: 'Winner', class: 2 },
+      ] },
+    ],
+  }).currentSeats;
+  const find = (seats, name) => seats.find((seat) => seat.seat === name);
+
+  it('loads a mixed state as a solid called seat and a both-uncalled state as neutral', () => {
+    const seats = chamber();
+    const texas = find(seats, 'Texas');
+    expect(texas.called).toBe(true);
+    expect(texas.winner).toBe('republican');
+    expect(texas.fillKind()).toBe('called');
+    const nevada = find(seats, 'Nevada');
+    expect(nevada.called).toBe(false);
+    expect(nevada.winner).toBeNull();
+    expect(nevada.fillKind()).toBe('neutral');
+    expect(find(seats, 'Maine').fillKind()).toBe('called');
+  });
+
+  it('keeps a mixed state in the called member\'s colour and a both-uncalled state neutral', () => {
+    const result = buildSenateChamber(chamber(), [], new Map(), 3);
+    const texas = find(result, 'Texas');
+    expect(texas.members[1]).toEqual({ party: null, name: null, class: 2, c: false, pc: 40 });
+    expect(texas.called).toBe(true);
+    expect(texas.winner).toBe('republican');
+    expect(texas.fillKind()).toBe('called');
+    const nevada = find(result, 'Nevada');
+    expect(nevada.called).toBe(false);
+    expect(nevada.winner).toBeNull();
+    expect(nevada.fillKind()).toBe('neutral');
+    // A fully called state still takes the shared party or "split".
+    expect(find(result, 'Maine').winner).toBe('split');
+  });
+
+  it('replaces an uncalled member of the contested class with the projected winner', () => {
+    const contested = [new Seat({ seat: 'Texas', winner: 'democrat', votes: {} })];
+    const result = buildSenateChamber(chamber(), contested, new Map(), 2);
+    const texas = find(result, 'Texas');
+    expect(texas.members[1]).toEqual({ party: 'democrat', name: `${manifest.labelParty('democrat')} (projected)`, class: 2 });
+    expect(texas.called).toBe(true);
+    expect(texas.winner).toBe('split');
+  });
+
+  it('turns a both-uncalled state into a coloured one once one member is projected', () => {
+    const contested = [new Seat({ seat: 'Nevada', winner: 'democrat', votes: {} })];
+    const result = buildSenateChamber(chamber(), contested, new Map(), 2);
+    const nevada = find(result, 'Nevada');
+    expect(nevada.called).toBe(true);
+    expect(nevada.winner).toBe('democrat');
+  });
+});

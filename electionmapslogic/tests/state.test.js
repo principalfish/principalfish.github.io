@@ -334,6 +334,55 @@ describe('ElectionSummary.summarize', () => {
     expect(findParty(dem, 'democrat')).toMatchObject({ seats: 1 });
     expect(ElectionSummary.summarize(seats, 'all', { party: 'republican' }).totalSeats).toBe(3);
   });
+
+  it('multi-member: a mixed state shows under the called member\'s party filter, not as the uncalled one', () => {
+    state.currentElection = { multiMember: true };
+    const filters = (party) => ({ party, region: 'all', upcoming: 'all' });
+    const mixed = new Seat({
+      seat: 'Texas',
+      region: 'westsouthcentral',
+      winner: 'republican',
+      members: [{ party: 'republican', name: 'Cruz', class: 1 }, { party: null, name: null, class: 2, c: false }],
+      votes: {},
+    });
+    expect(Seat.matchesPrimaryFilters(mixed, null, filters('republican'), null)).toBe(true);
+    expect(Seat.matchesPrimaryFilters(mixed, null, filters('democrat'), null)).toBe(false);
+    expect(Seat.matchesPrimaryFilters(mixed, null, filters('others'), null)).toBe(false);
+    // Under the Republican filter only the called senator is counted.
+    const tally = ElectionSummary.summarize([mixed], 'all', { party: 'republican' });
+    expect(tally.totalSeats).toBe(1);
+    expect(tally.uncalled).toBe(0);
+    // The state is called and solid, so it is drawn in the called member's party colour.
+    expect(mixed.fillKind()).toBe('called');
+  });
+
+  it('multi-member: an uncalled member is tallied as uncalled, never for a party or "others"', () => {
+    state.currentElection = { multiMember: true };
+    const seats = [
+      { seat: 'Alabama', members: [{ party: 'republican', up: 2026 }, { party: 'republican', up: 2028 }] },
+      { seat: 'Texas', members: [{ party: 'republican', up: 2028 }, { party: null, name: null, c: false, up: 2026 }] },
+    ];
+    const data = ElectionSummary.summarize(seats, 'all');
+    expect(data.totalSeats).toBe(4);
+    expect(data.uncalled).toBe(1);
+    expect(findParty(data, 'republican')).toMatchObject({ seats: 3 });
+    expect(findParty(data, 'others')).toBeUndefined();
+    // The cycle filter applies as usual and counts the uncalled member in its tally.
+    const cycle = ElectionSummary.summarize(seats, 'all', { upcoming: '2026' });
+    expect(cycle.totalSeats).toBe(2);
+    expect(cycle.uncalled).toBe(1);
+    // A party filter matches no uncalled member, 'others' included.
+    expect(ElectionSummary.summarize(seats, 'all', { party: 'others' }).totalSeats).toBe(0);
+    const rep = ElectionSummary.summarize(seats, 'all', { party: 'republican' });
+    expect(rep.totalSeats).toBe(3);
+    expect(rep.uncalled).toBe(0);
+    expect(new ElectionSummary(seats, 'Current Senate', 'all').text).toContain('1 uncalled');
+    // The same tally when the mixed state is recorded as called (w = the called member's party),
+    // as the derived file does: it comes from the members, not from the state's flag.
+    const mixed = [{ ...seats[1], called: true, winner: 'republican' }];
+    expect(ElectionSummary.summarize(mixed, 'all')).toMatchObject({ uncalled: 1, totalSeats: 2 });
+    expect(findParty(ElectionSummary.summarize(mixed, 'all'), 'republican')).toMatchObject({ seats: 1 });
+  });
 });
 
 // ─── ElectionSummary subtitle (majority vs hung) ──────────────────────────────

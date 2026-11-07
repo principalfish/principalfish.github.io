@@ -19,13 +19,18 @@ repeating them:
   import plans every file before importing any.
 - **Export** (POST ``/us/results/export``): a separate button that runs the
   site export. Importing never exports.
+- **Rebuild Current Senate** (POST ``/us/results/current-senate``): a separate
+  button that re-derives ``senate-current.json`` from the imported 2026 Senate
+  file (``scripts/us_results/current_senate.py``). It writes one file, never
+  touches the database, and does not run during an import.
 
 The out-dir and the NYT cache come from the app config keys
 :data:`OUT_DIR_CONFIG` and :data:`CACHE_DIR_CONFIG`, defaulting to the CLI's
-``old_data/files/usa`` and ``config.NYT_CACHE_DIR``; tests point both at a
-temporary folder.
+``old_data/files/usa`` and ``config.NYT_CACHE_DIR``; the Current Senate file
+from :data:`SNAPSHOT_CONFIG`, defaulting to the committed snapshot. Tests point
+all three at a temporary folder.
 
-Import and export both hold the console's one US model-run slot
+Import, export and the Current Senate rebuild all hold the console's one US model-run slot
 (:func:`~console.services.us_models.model_run_slot`): the export publishes
 every US chamber's trend history, which a running history rebuild may have
 half-cleared, and a double-submitted confirm must not import twice at once.
@@ -80,6 +85,11 @@ from scripts.us_results.convert import (
     ConvertError,
     output_name,
 )
+from scripts.us_results.current_senate import (
+    DEFAULT_SNAPSHOT,
+    CurrentSenateError,
+    rebuild_current_senate,
+)
 from scripts.us_results.fetch import FetchError, cached_snapshot_info
 from scripts.us_results.races import Race
 from scripts.us_results.sources import (
@@ -109,10 +119,14 @@ bp = Blueprint("us_results", __name__)
 
 OUT_DIR_CONFIG = "US_RESULTS_OUT_DIR"
 CACHE_DIR_CONFIG = "US_RESULTS_CACHE_DIR"
+SNAPSHOT_CONFIG = "US_RESULTS_CURRENT_SENATE"
+# The converted 2026 Senate election, in the out-dir.
+CURRENT_SENATE_ELECTION_FILE = output_name(2026, "senate")
 
 # The same full export as the site page's "Rebuild Site Data" and its timeout.
 EXPORT_TIMEOUT_SECONDS = 900
 EXPORT_COMMAND_LABEL = "export_elections.py (rebuild site data)"
+CURRENT_SENATE_COMMAND_LABEL = "cli.py current-senate (rebuild senate-current.json)"
 
 PREVIEW_TYPE = "us_results"
 _EXPIRED_MESSAGE = "Preview expired. Please preview again."
@@ -472,6 +486,43 @@ def us_results_export() -> ResponseReturnValue:
     return render_command_result(
         title="Export US Results to Site",
         command=EXPORT_COMMAND_LABEL,
+        stdout=stdout,
+        stderr=stderr,
+        return_code=code,
+        back_endpoint="us_results.us_results_form",
+        back_label="Back to US results",
+    )
+
+
+@bp.route("/us/results/current-senate", methods=["POST"])
+def us_results_current_senate() -> ResponseReturnValue:
+    """POST /us/results/current-senate — Re-derive the Current Senate snapshot.
+
+    Reads the committed Current Senate file and the imported 2026 Senate
+    election file in the out-dir and rewrites the Current Senate file from
+    them (holdovers plus the 2026 winners, uncalled seats left unknown). The
+    result is the same however often it is run. Nothing is exported; run the
+    export afterwards to publish it.
+
+    Returns:
+        The command result with the build report, or a redirect to the form
+        when another US run holds the slot.
+    """
+    snapshot = Path(current_app.config.get(SNAPSHOT_CONFIG, DEFAULT_SNAPSHOT))
+    election = _out_dir() / CURRENT_SENATE_ELECTION_FILE
+    with model_run_slot() as free:
+        if not free:
+            flash(busy_message("Current Senate not rebuilt"))
+            return redirect(url_for("us_results.us_results_form"))
+        try:
+            report = rebuild_current_senate(snapshot_path=snapshot, election_path=election)
+        except (CurrentSenateError, OSError) as err:
+            stdout, stderr, code = "", f"error: {err}", 1
+        else:
+            stdout, stderr, code = report, "", 0
+    return render_command_result(
+        title="Rebuild Current Senate",
+        command=CURRENT_SENATE_COMMAND_LABEL,
         stdout=stdout,
         stderr=stderr,
         return_code=code,
@@ -988,6 +1039,7 @@ def _render_form(
         selected_mode=mode if mode in _SOURCE_MODES else FETCH_LATEST,
         cache_dir=_cache_dir(),
         out_dir=_out_dir(),
+        senate_file=_out_dir() / CURRENT_SENATE_ELECTION_FILE,
         cache=cache_entries(_cache_dir()),
     )
 

@@ -12,6 +12,14 @@ Subcommands, each for one ``--year`` and ``--chamber``:
   Special Election"``, a child of the regular one).
 - ``all``: fetch, convert and import in one go.
 
+A fifth subcommand, ``current-senate``, takes no ``--year`` or ``--chamber``: it
+rebuilds the Current Senate snapshot (``senate-current.json``) from the
+committed 2026 Senate election file and never touches the database (see
+``scripts/us_results/current_senate.py``). Options: ``--snapshot`` (input),
+``--election-file``, ``--out`` (both default to the committed paths) and
+``--dry-run``, which writes nothing and prints the holdover, winner and
+uncalled counts.
+
 Every run prints a diff of the new results against the committed file and the
 database's current rows: seats added or removed, winner changes, newly called
 or uncalled seats, % counted changes and the largest vote changes. Against the
@@ -27,6 +35,7 @@ Usage (from ``data/``)::
     python scripts/us_results/cli.py convert --year 2026 --chamber house --dry-run
     python scripts/us_results/cli.py import --year 2026 --chamber house --refresh
     python scripts/us_results/cli.py all --year 2026 --chamber senate --refresh
+    python scripts/us_results/cli.py current-senate --dry-run
 
 ``python -m scripts.us_results.cli ...`` works too.
 """
@@ -64,6 +73,12 @@ from scripts.us_results.convert import (  # noqa: E402
     convert_races,
     output_name,
 )
+from scripts.us_results.current_senate import (  # noqa: E402
+    DEFAULT_ELECTION_FILE,
+    DEFAULT_SNAPSHOT,
+    CurrentSenateError,
+    rebuild_current_senate,
+)
 from scripts.us_results.fetch import FetchError, FetchResult, fetch  # noqa: E402
 from scripts.us_results.races import Race  # noqa: E402
 from scripts.us_results.sources import (  # noqa: E402
@@ -87,6 +102,8 @@ from us_import import (  # noqa: E402
 
 DEFAULT_OUT_DIR = DATA_DIR / "old_data" / "files" / "usa"
 DEFAULT_TOP_N = 10
+# The subcommand with its own options (no year or chamber); see _run_current_senate.
+CURRENT_SENATE_COMMAND = "current-senate"
 
 _CHAMBER_LABELS: dict[Chamber, str] = {"house": "House", "senate": "Senate"}
 _PARTY_KEY_BY_NAME = {name: key for key, name in PARTY_KEY_TO_NAME.items()}
@@ -915,6 +932,10 @@ def _fetch_line(result: FetchResult) -> str:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Fetch, convert and import NYT US House/Senate results.",
+        epilog=(
+            f"Also: '{CURRENT_SENATE_COMMAND}' rebuilds the Current Senate "
+            f"snapshot; run it with --help for its options."
+        ),
     )
     parser.add_argument("command", choices=("fetch", "convert", "import", "all"))
     parser.add_argument("--year", type=int, required=True, choices=supported_years())
@@ -939,6 +960,48 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _current_senate_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog=f"cli.py {CURRENT_SENATE_COMMAND}",
+        description=(
+            "Rebuild the Current Senate snapshot from the 2026 Senate election "
+            "file. Never touches the database."
+        ),
+    )
+    parser.add_argument(
+        "--snapshot", type=Path, default=DEFAULT_SNAPSHOT, help="Input snapshot"
+    )
+    parser.add_argument(
+        "--election-file",
+        type=Path,
+        default=DEFAULT_ELECTION_FILE,
+        help="Converted 2026 Senate file",
+    )
+    parser.add_argument(
+        "--out", type=Path, default=None, help="Output (default: the snapshot)"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Write nothing; print the counts"
+    )
+    return parser
+
+
+def _run_current_senate(argv: Sequence[str]) -> int:
+    args = _current_senate_parser().parse_args(argv)
+    try:
+        report = rebuild_current_senate(
+            snapshot_path=args.snapshot,
+            election_path=args.election_file,
+            out_path=args.out,
+            dry_run=args.dry_run,
+        )
+    except (CurrentSenateError, OSError) as err:
+        print(f"error: {err}", file=sys.stderr)
+        return 1
+    print(report)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None, *, db: Database | None = None) -> int:
     """Run the CLI.
 
@@ -948,9 +1011,14 @@ def main(argv: Sequence[str] | None = None, *, db: Database | None = None) -> in
 
     Returns:
         The process exit code: 0 on success, 1 on a fetch, parse, convert or
-        import error.
+        import error, or (``current-senate``) a Current Senate build or file
+        error.
     """
-    args = _parser().parse_args(argv)
+    tokens = list(sys.argv[1:] if argv is None else argv)
+    if tokens and tokens[0] == CURRENT_SENATE_COMMAND:
+        # Its options differ from the per-cycle commands' (no year or chamber).
+        return _run_current_senate(tokens[1:])
+    args = _parser().parse_args(tokens)
     chamber: Chamber = args.chamber
     year: int = args.year
     try:

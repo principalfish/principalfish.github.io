@@ -41,6 +41,20 @@
   </section>
 
   <section class="card">
+    <h3>Current Senate</h3>
+    <p>
+      Rebuilds <code>senate-current.json</code> (the Current Senate map) from the imported
+      2026 Senate file: the senators whose seats were not up, plus the 2026 winners. Races
+      not yet called show as uncalled. Writes one file, never the database, and never runs
+      during an import; export afterwards to publish it.
+    </p>
+    <form method="post" action="{{ url_for('us_results.us_results_current_senate') }}" class="inline-form button-form">
+      <button type="submit" class="button">Rebuild Current Senate</button>
+      <small>Reads <code>{{ senate_file }}</code>.</small>
+    </form>
+  </section>
+
+  <section class="card">
     <h3>Cached snapshots</h3>
     <div class="table-wrap">
       <table>

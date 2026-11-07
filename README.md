@@ -1033,6 +1033,50 @@ for supported fields, selection rules, and shell transformations.
 	  the seat rules above, and there is no `r`. The special has no result file or manifest entry of its own.
 - Frontend loader supports both compact and legacy result formats.
 
+### Current Senate snapshot
+
+`uselectionmaps/data/results/senate-current.json` (`pf-senate-current-v1`) is a prebuilt
+snapshot of all 100 seats, not an exported election: per state `n`, `r`, `w` (the pair's
+shared party, or `split`) and two `members`, each `{party, name, class}` with the permanent
+Senate class 1/2/3. Two generators write it:
+
+- `old_data/scripts/usa/convert_senate_current.py` builds it from congress-legislators data
+  (the pre-2026 chamber).
+- `scripts/us_results/current_senate.py` derives it from the 2026 results: the 65 holdovers
+  (every senator whose seat the 2026 election did not contest) plus the 2026 winners, being
+  the 33 class 2 regular winners and the Florida and Ohio special winners (class 3), named
+  from the winning party's row. It reads the committed `old_data/files/usa/senate-2026.json`
+  (and the specials file its `meta.special_file` names, a plain file name in the same
+  folder), never the database.
+
+```
+cd data
+./election_data/bin/python scripts/us_results/cli.py current-senate --dry-run   # counts only, writes nothing
+./election_data/bin/python scripts/us_results/cli.py current-senate             # rewrite the snapshot in place
+```
+
+Options: `--snapshot` (input), `--election-file` (default `senate-2026.json`), `--out`
+(default the snapshot). The console's US results page has the same action, **Rebuild Current
+Senate**; importing results never runs it, and the export is a separate step afterwards.
+The build refuses (non-zero exit, nothing written) if the election lacks a class 2 state or the
+Florida/Ohio special, a contested seat has no sitting senator, a snapshot member is malformed,
+a state does not end with two members of different classes, or the chamber is not 100 members;
+a winner without a name gets a placeholder and a warning. It is idempotent: seats are replaced
+by what the election contested, not by who held them, so the input may be the converter's
+snapshot or its own earlier output and the same election always gives identical bytes (sorted
+by state, members by class). Re-run it as the 2026 counts finish.
+
+Uncalled races are unknown members, never the current leader: `{"party": null, "name": null,
+"class": 2, "c": false, "pc": 62.5}` (`c: false` is the results payload's uncalled flag; `pc`
+is the percent counted, left out when unknown or not a number from 0 to 100, with a warning).
+A state is coloured by its called members only. With one called and one uncalled member, `w`
+is the called member's party and the state carries no `c`: the map draws it in that colour,
+solid, until the other race is called. With both uncalled the seat carries `c: false` and no
+`w`, and the map draws it in the neutral no-result colour (not a party, not `split`). The
+chamber tally counts such a member in the total and the "N uncalled" line only, and no party
+filter matches it. The Senate model reads only each member's class from this file, so uncalled
+members do not affect its allowlist.
+
 ### Topo output behavior
 
 - Bulk export writes TopoJSON per map (`maps.id`), not per election.

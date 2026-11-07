@@ -685,6 +685,17 @@ export class Seat {
   }
 
   /**
+   * True for a multi-member chamber's member whose race is uncalled (`c: false`, the results
+   * payload's uncalled flag). Such a member carries no party and no name and is drawn neutral;
+   * it is tallied as uncalled, never for a party.
+   * @param {{c?: boolean}} member
+   * @returns {boolean}
+   */
+  static isUncalledMember(member) {
+    return member?.c === false;
+  }
+
+  /**
    * Per-member match for multi-member chambers: returns true when a single member satisfies
    * the member-level filters (party + "next up" cycle). Shared by matchesPrimaryFilters (the
    * seat is visible when any member matches) and ElectionSummary.summarize (tally only the
@@ -696,6 +707,8 @@ export class Seat {
    */
   static memberMatchesFilters(member, filterState) {
     if (filterState.party && filterState.party !== 'all') {
+      // An uncalled member has no party yet, so it matches no party filter (not even 'others').
+      if (Seat.isUncalledMember(member)) return false;
       const party = member?.party === 'other' ? 'others' : (member?.party || 'others');
       if (party !== filterState.party) return false;
     }
@@ -825,11 +838,19 @@ export class ElectionSummary {
     if (state.currentElection?.multiMember) {
       const memberStats = new Map();
       let total = 0;
+      let uncalledMembers = 0;
       seats.forEach((seat) => (seat.members || []).forEach((member) => {
         // Count only members matching the active member-level filters (party + cycle), via the
         // same predicate the map uses, so the totals agree with the filtered seats — e.g. a
         // party filter counts that party's senators even in split states, one per state.
         if (!Seat.memberMatchesFilters(member, memberFilter)) return;
+        // A member whose race is uncalled belongs to no party (not 'others'): it counts in the
+        // chamber size and in the uncalled tally only.
+        if (Seat.isUncalledMember(member)) {
+          uncalledMembers += 1;
+          total += 1;
+          return;
+        }
         const key = member.party === 'other' ? 'others' : (member.party || 'others');
         if (!memberStats.has(key)) memberStats.set(key, { seats: 0, votes: 0 });
         memberStats.get(key).seats += 1;
@@ -838,7 +859,7 @@ export class ElectionSummary {
       const parties = Array.from(memberStats.entries())
         .map(([party, stats]) => ({ party, ...stats }))
         .sort((a, b) => b.seats - a.seats);
-      return { parties, totalVotes: 0, totalSeats: total, uncalled: 0 };
+      return { parties, totalVotes: 0, totalSeats: total, uncalled: uncalledMembers };
     }
 
     // partyStats accumulates per-party seat and vote counts in a single pass over `seats`.

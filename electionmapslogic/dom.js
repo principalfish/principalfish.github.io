@@ -1219,20 +1219,23 @@ function loadStateTrends(path) {
 /**
  * Creates a .maps-popup-row element with the party colour bar, label, and injected values HTML.
  * CSS custom properties --maps-popup-bar-width and --maps-popup-bar-colour drive the bar.
- * @param {string} party - Party key for colour lookup.
+ * @param {string|null} party - Party key for colour lookup.
  * @param {number} barWidth - Bar width percentage (0–75), scaled relative to the leading row.
  * @param {string} valuesHtml - Inner HTML for the .maps-popup-values div.
  * @param {string} [label] - Row label; defaults to the party name when omitted (e.g. a
  *   candidate name is passed for constituency popups, party labels for region summaries).
+ * @param {string} [colour] - Explicit swatch/bar colour that overrides the party's (a neutral
+ *   row with no party, such as an uncalled member).
  * @returns {HTMLDivElement}
  */
-function buildPopupRow(party, barWidth, valuesHtml, label) {
+function buildPopupRow(party, barWidth, valuesHtml, label, colour) {
   const item = document.createElement('div');
   item.className = 'maps-popup-row';
+  const rowColour = colour || manifest.colourParty(party);
   item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
-  item.style.setProperty('--maps-popup-bar-colour', manifest.colourParty(party));
+  item.style.setProperty('--maps-popup-bar-colour', rowColour);
   item.innerHTML = `
-    <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(party)}"></span><span class="maps-popup-name">${escapeHtml(label ?? manifest.labelParty(party))}</span></div>
+    <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${rowColour}"></span><span class="maps-popup-name">${escapeHtml(label ?? manifest.labelParty(party))}</span></div>
     <div class="maps-popup-values">${valuesHtml}</div>
   `;
   return item;
@@ -1257,7 +1260,7 @@ function renderPopupRows(rows, getValuesHtml, barCap = 75) {
     // getValuesHtml supplies the right-side content (vote share, delta, seat count, etc.)
     // which differs between the region popup and the constituency popup. row.label, when
     // present, overrides the party label (e.g. a candidate name in the seat popup).
-    seatPopupList.appendChild(buildPopupRow(row.party, barWidth, getValuesHtml(row), row.label));
+    seatPopupList.appendChild(buildPopupRow(row.party, barWidth, getValuesHtml(row), row.label, row.colour));
   });
 }
 
@@ -1461,15 +1464,29 @@ export function renderSeatPopup(seatName) {
     seatPopupTitle.textContent = seat.seat;
     seatPopupMeta.innerHTML =
       `<span class="maps-popup-meta-item">${escapeHtml(getRegionLabel(seat.region, state.currentRegionLabelsByKey))}</span>`;
-    const rows = seat.members.map((member) => ({
-      party: member.party,
-      pct: 100,
-      label: member.name,
-      years: Seat.memberTermYears(member),
-    }));
+    const rows = seat.members.map((member) => {
+      // An uncalled member has no party or name yet: a neutral row saying so, with the count.
+      if (Seat.isUncalledMember(member)) {
+        const hasCount = member.pc !== null && member.pc !== undefined && Number.isFinite(Number(member.pc));
+        return {
+          party: null,
+          colour: neutralSeatFill(),
+          pct: 100,
+          label: 'Uncalled',
+          note: hasCount ? `${Number(member.pc)}% counted` : '',
+          years: Seat.memberTermYears(member),
+        };
+      }
+      return { party: member.party, pct: 100, label: member.name, years: Seat.memberTermYears(member) };
+    });
     // The bar is just a colour accent here, so cap it short to clear the wide "last/up" value.
     // An unresolved cycle year gives null years, so the row shows just the name.
-    renderPopupRows(rows, (row) => (row.years ? `<span>last ${row.years.last} · up ${row.years.up}</span>` : ''), 70);
+    renderPopupRows(rows, (row) => {
+      const parts = [];
+      if (row.note) parts.push(row.note);
+      if (row.years) parts.push(`last ${row.years.last} · up ${row.years.up}`);
+      return parts.length ? `<span>${escapeHtml(parts.join(' · '))}</span>` : '';
+    }, 70);
     seatPopup.hidden = false;
     return;
   }

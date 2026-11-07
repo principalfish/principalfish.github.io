@@ -1,27 +1,36 @@
 # Resume point — read this first
 
 ## Where we are
-Discussion stage of issue 0002 (build, state open). Settled: scope, source (NYT JSON, all years 2018–2026), uncalled handling, publication with disclaimer, one map id per district set. Pending: where the 2026 district shapes come from. The user asked whether the state files are county-level shapes; answered in chat (they are district polygons).
-State checks: planner record only, no source changes. `python3 ~/.claude/lib/planner.py meta 0002` shows state open; master at or after `9ac8b04d` (`git rev-parse --short master`).
+Discussion stage of issue 0002 (build, state open). Open is empty; the full ledger was presented and is awaiting the user's confirmation ("that's everything" / corrections) before issue.md is drafted.
+State checks: planner record only, no source changes. `python3 ~/.claude/lib/planner.py meta 0002` shows state open; master at or after `9ac8b04d` (`git rev-parse --short master`). `grep -A1 '^## Open' decisions.md` shows Open empty.
 If anything differs, stop and tell the user.
 
 ## How it got here — decisions already answered, in order
 1. 2026-11-07 — Which races? → House + Senate; governors out.
-2. 2026-11-07 — Timing? → Import provisional results now, with re-runnable tools.
-3. 2026-11-07 — Forecast scoring? → Wanted, but as a separate issue.
-4. 2026-11-07 — Source? → NYT static JSON with a disclaimer (threads/sources.md).
-5. 2026-11-07 — Uncalled? → Store votes, no one elected, flag uncalled with % counted.
-6. 2026-11-07 — Publish? → Export to the public site with the disclaimer.
-7. 2026-11-07 — Past years? → NYT for 2018–2026, replacing the 538 data via --refresh; three schema adapters.
-8. 2026-11-07 — Map organisation? → One map id per district set (21 = 2022–24; new ids for 2026 and the 2012 cycle).
-9. 2026-11-07 — Disclaimer placement? → Source line under the map only.
+2. Timing? → Provisional now, re-runnable tools.
+3. Scoring? → Separate issue.
+4. Source? → NYT static JSON plus a disclaimer.
+5. Uncalled? → Store votes, no winner, flag uncalled.
+6. Publish? → Yes, with the disclaimer.
+7. Past years? → NYT 2018–2026 replaces 538 for House + Senate.
+8. Maps? → One map id per district set.
+9. Disclaimer? → Source line under the map.
+10. 2026 shapes? → cd119 plus the state enacted plans, stitched.
+11. 2018/2020? → One cd116 map (NC 2020 inaccuracy accepted).
+12. Forecasts? → Roll baselines to 2028 here; freeze the 2026 forecasts.
+13. Current Senate? → Derived from the 2026 results.
+14. Anchor? → The 2026 result.
+15. FL/OH 2028 baseline? → Per-seat override, generalising senateSpecialElections.
+16. Raw files? → Local cache; commit converted only.
+17. Runoffs/RCV? → Decisive round.
+18. Clashing specials? → Regular on the map; special in a separate list.
 
 ## The pending decision (exact)
-2026 district geometry source, for the 9 redrawn states (CA, TX, UT, OH, NC, FL, TN, LA, AL; threads/redistricting.md). Options: (a) recommended: cd119 for 41 states plus each state's official enacted-plan shapefile, stitched into a new map; (b) Redistricting Data Hub; (c) wait for Census 120th-Congress files (likely 2027) and hold the House map. Also open: the 2012-cycle geometry for 2018/2020 (Census cd116; NC 2020 and PA 2018 court maps).
+Confirmation that the ledger in decisions.md is complete and correct. The user may also promote any Assumed item to Open.
 
 ## What the next session does
 1. Run the state checks.
-2. Get the geometry answer, then ask about the 2012-cycle map and the downstream anchors (current-us-house/senate, predictBaselineElectionId, nextElectionYear, senate-current.json after 2027-01-03).
+2. On confirmation, draft issue.md (Planning step 1) and iterate until approved.
 
 ## Don't
 - Edit source (planner is read-only on source).

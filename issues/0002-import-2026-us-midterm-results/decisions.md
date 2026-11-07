@@ -18,13 +18,14 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 - Predict anchor: House and Senate predict views open on the actual 2026 result. The frozen 2026 forecasts stay in the election list as archived entries. (2026-11-07)
 - Senate 2028 baselines: add a per-seat baseline override list (FL, OH → 2026-us-senate). Builder note: `senateSpecialElections` entries already carry a per-seat `baselineElectionId` (US manifest shell), so generalise that mechanism rather than inventing a parallel one. (2026-11-07)
 - Current Senate is derived from the 2026 results: 65 holdovers plus the 2026 winners, as new code alongside the congress-legislators converter (`scripts/export/legacy.py:31`, `senate-current.json`). (2026-11-07)
+- Raw NYT downloads go to a gitignored local cache; only the converted per-seat election JSON is committed. (2026-11-07)
+- Runoffs and RCV: store the decisive round (runoff or final RCV round) once available, falling back to the November first round until then. (2026-11-07)
+- Senate specials: standalone specials (FL/OH 2026, AZ 2020) take the state's map slot. Where a state has a regular and a special in the same year (GA 2020; MN, MS 2018; CA, OK 2022; NE, CA 2024), the map shows the regular race and the special goes in a separate per-year specials list in the export, shown in the state popup and counted in the chamber tally. (2026-11-07)
 
 ## Open
-- Raw NYT files: commit them to the public repo (like `old_data/files/usa/*.json` today), or cache them locally and commit only the converted per-seat files?
-- Runoffs and RCV: GA Senate 2020 (two races, Jan 2021 runoffs) and 2022 (Dec runoff), LA-5 2026 (Dec runoff), AK/ME ranked-choice rounds. Store the decisive round/runoff, or the November first round?
-- Senate specials: `convert_538_senate.py:20` skips specials; FL and OH 2026 are specials (configured in `senateSpecialElections` in the US manifest shell). How do they enter the 2026 Senate file?
 
 ## Assumed
+- Runoff results (GA 2021-01-05, GA 2022-12-06, LA-5 2026) are located on NYT during the build. Where none is found, the seat keeps its first-round result and is flagged.
 - In the derived Current Senate, uncalled 2026 seats (AK, MS now) show as uncalled, not as the leader. `run_us_senate_model.py:55` reads the same file, so the model's chamber baseline changes with it.
 - Re-runs are manual CLI invocations (no scheduler).
 - Presidential stays on its existing sources; NYT replaces 538 for House and Senate only.

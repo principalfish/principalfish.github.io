@@ -8,5 +8,6 @@ No pending decision. Next: Phil merges #80. Then `/issues` marks the issue done,
 Owned by the planner chat `planner: import-2026-us-midterm-results` (main checkout). Restore point for the live DB before the imports: `/home/philiph/dbs/elections.pre-us-nyt-import-20261107.db`. Alaska 2026's override (`data/scripts/export/seat_overrides.json`) must be deleted once the ranked-choice final round is imported. See `plan.md` Notes.
 
 ## Don't
+- Relay any 0002 DB write (imports, model runs, migrations) until `planner: poll-errors-simulation` says 0001's Westminster rerun is done (requested 2026-11-07; its backup is the 21:00 archive).
 - Run imports, migrations or exports against the live DB without Phil's explicit go-ahead at the time.
 - Try to get past the NYT HTML captcha; use only the static CDN JSON.

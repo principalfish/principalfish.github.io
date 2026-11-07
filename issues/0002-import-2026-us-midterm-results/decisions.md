@@ -7,7 +7,6 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 - Import provisional results now, using re-runnable tools that refresh in place as counts finish. (2026-11-07)
 
 ## Open
-- Publication: the user said the work is "not for profit or even published", but `uselectionmaps/data/results/` is served publicly on GitHub Pages (principalfish.co.uk). Do the 2026 results get exported to the site (with the disclaimer), or stay in the DB/console only? This decides whether export, manifest and front-end changes are in scope.
 - Disclaimer: wording and where it shows (map page footer, results popup, export metadata).
 - House geometry: map 21 / `map-21.topo.json` is the 2024 district set. Several states redrew mid-decade for 2026, so 2026 results don't fit 2024 boundaries. Needs new geometry plus a new map id, or per-state handling. Exact list of redrawn states to be confirmed.
 - Senate specials: `convert_538_senate.py:20` skips specials; FL and OH 2026 are specials (configured in `senateSpecialElections` in the US manifest shell). How do they enter the 2026 Senate file?

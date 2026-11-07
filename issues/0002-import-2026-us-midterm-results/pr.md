@@ -24,4 +24,4 @@ Closes #79
 - [x] 10. Derived Current Senate (`cd7dbc43`)
 - [x] Branch self-review fixes (`98269358`)
 - [ ] 11. Docs and live-data runbook (docs `613ac558`; live migration done; imports done, data `bb86f47e`; Current Senate `cfc7f3c5`; export `c32e7ef2`; browser check to come)
-- [ ] 12. US election list order; House/Senate forecasts switched off (code `91f4528e`; re-export to come)
+- [x] 12. US election list order; House/Senate forecasts switched off (`91f4528e`, re-export `f54c40bd`)

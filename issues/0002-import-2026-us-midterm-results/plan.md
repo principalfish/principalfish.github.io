@@ -239,7 +239,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [x] 2. NYT fetch + cache (2a8f90e5)
 - [x] 3. Schema adapters A/B/C + race model (9f17c51d)
 - [x] 4. Converter, importer extensions, CLI, diff report (0a9007e5)
-- [ ] 5. Console results tool
+- [x] 5. Console results tool (147ad9d4)
 - [ ] 6. House maps 24 (2026) and 25 (2012 cycle)
 - [ ] 7. Export: status, sourceNote, specials, naming
 - [ ] 8. Front end: uncalled, source line, specials
@@ -350,3 +350,4 @@ No test touches the live DB (conftest guard).
   - Final: mypy clean, 4995 passed.
 - IMPORTANT for piece 11 and for any manual try-out: from piece 1 on, the ORM's `Election` has `source_note` and there's a new `election_seat_status` table. The live DB isn't migrated, so the branch's console, export and importers fail on any elections query until `migrate_add_us_result_status.py` has run.
   - For a hand test before going live: back up the DB, migrate a copy, and point `.env`'s DATABASE_PATH at the copy (`.env` overrides the shell). Or run the migration on the live DB with the user's go-ahead.
+- 2026-11-07: piece 5 committed (147ad9d4) and pushed. Piece 6 is still blocked on tooling (ogr2ogr, mapshaper). Piece 7 depends only on 1 and 4, so it can go first if the user wants.

@@ -39,4 +39,6 @@ Sent to the builder 2026-11-07. Commit: `eeee25d0` (all seven, pushed; Phil appr
 - R2-4 · low · correctness · `data/console/blueprints/polls.py:188-190`: `poll_detail` still errors for a Westminster poll on a malformed config. Fix: catch `UncertaintyConfigError` and show no MoE with an alert, as `poll_list` now does.
 - R2-5 · nit · `test_tampered_inputs_raise_before_any_replay` claims more than it checks. Fix: rename it, or assert no replay ran.
 
-Round 2 choice (Phil, 2026-11-07): fix **R2-1** (jsdom@24 devDependency), **R2-2** and **R2-4** (console config guards). Skipped by Phil: R2-3 (unpolled-run test) and R2-5 (test-name nit). Commit: (pending).
+Round 2 choice (Phil, 2026-11-07): fix **R2-1** (jsdom@24 devDependency), **R2-2** and **R2-4** (console config guards). Skipped by Phil: R2-3 (unpolled-run test) and R2-5 (test-name nit). Commit: `a832137d` (pushed, on top of the Piece 5 merge `af4405fb`). R2-1 was already met by the merge, which brought master's `jsdom ^24.1.3` devDependency: a plain `npm test` now runs every jsdom suite (Vitest 1449, 3 skipped referdle benchmarks), and the commit only updates the stale comments. R2-2: the header reads "MoE" on invalid settings, with a test. R2-4: `poll_detail` catches `UncertaintyConfigError` for Westminster polls (n shown, "-" for n_eff/Adjustment, no margins, an alert), with a test. Checks: mypy clean, pytest 5781.
+
+**Review closed 2026-11-07.** Planner check at `a832137d`: all 8 `identity.source_sha256` entries in `uncertainty_validation_report.json` match the branch's sources.

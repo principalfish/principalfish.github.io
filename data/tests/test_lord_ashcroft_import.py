@@ -26,7 +26,9 @@ real-world layout is safe.
 
 from __future__ import annotations
 
+import json
 from datetime import date
+from pathlib import Path
 from io import BytesIO
 
 import pytest
@@ -402,10 +404,72 @@ class TestFindFieldwork:
         assert _find_fieldwork(sheet) == (expected_start, expected_end)
 
     @pytest.mark.parametrize(
+        "line, expected_start, expected_end",
+        [
+            # The omitted start month is the month before the end month.
+            (
+                "Fieldwork: 30th-5th November 2025",
+                date(2025, 10, 30),
+                date(2025, 11, 5),
+            ),
+            ("Fieldwork: 30-2 January 2026", date(2025, 12, 30), date(2026, 1, 2)),
+            ("Fieldwork: 31-4 November 2025", date(2025, 10, 31), date(2025, 11, 4)),
+            # Start day not after the end day: same month.
+            ("Fieldwork: 5-5 January 2026", date(2026, 1, 5), date(2026, 1, 5)),
+        ],
+    )
+    def test_omitted_start_month_ranges(
+        self, line: str, expected_start: date, expected_end: date
+    ) -> None:
+        sheet = FakeXlrdSheet("Sheet1", [[line]])
+        assert _find_fieldwork(sheet) == (expected_start, expected_end)
+
+    @pytest.mark.parametrize(
+        "line, expected_start, expected_end",
+        [
+            # 22 October to 5 November is exactly 14 days: accepted.
+            (
+                "Fieldwork: 22nd-5th November 2025",
+                date(2025, 10, 22),
+                date(2025, 11, 5),
+            ),
+            # Same-month ranges are uncapped: nothing was guessed.
+            (
+                "Fieldwork: 1st-20th November 2025",
+                date(2025, 11, 1),
+                date(2025, 11, 20),
+            ),
+        ],
+    )
+    def test_window_cap_boundary_accepted(
+        self, line: str, expected_start: date, expected_end: date
+    ) -> None:
+        sheet = FakeXlrdSheet("Sheet1", [[line]])
+        assert _find_fieldwork(sheet) == (expected_start, expected_end)
+
+    def test_fifteen_day_window_from_an_omitted_start_month_raises(self) -> None:
+        # 21 October to 5 November is 15 days.
+        sheet = FakeXlrdSheet("Sheet1", [["Fieldwork: 21st-5th November 2025"]])
+        with pytest.raises(ValueError, match="Ambiguous fieldwork dates"):
+            _find_fieldwork(sheet)
+
+    def test_day_not_in_the_inferred_start_month_raises_a_parse_error(self) -> None:
+        # November has no 31st.
+        sheet = FakeXlrdSheet("Sheet1", [["Fieldwork: 31-2 December 2025"]])
+        with pytest.raises(ValueError, match="Invalid fieldwork date in line"):
+            _find_fieldwork(sheet)
+
+    def test_long_window_from_an_omitted_start_month_raises(self) -> None:
+        # 5 December to 3 January is 29 days: more likely a typo.
+        sheet = FakeXlrdSheet("Sheet1", [["Fieldwork: 5-3 January 2026"]])
+        with pytest.raises(ValueError, match="Ambiguous fieldwork dates"):
+            _find_fieldwork(sheet)
+
+    @pytest.mark.parametrize(
         "line",
         [
             "Fieldwork: 30 February - 2 March 2026",
-            "Fieldwork: 5-3 January 2026",
+            "Fieldwork: 5 January - 3 January 2026",
             "Fieldwork: 27 Fooruary - 1 September 2026",
             "Fieldwork: 27 August - 1 Fooruary 2026",
         ],
@@ -1829,3 +1893,239 @@ class TestMain:
         # Exact-line check: "would create poll" (printed on its own line
         # just below) is a literal prefix of this pollster line's text.
         assert "[dry-run] would create pollster: lord_ashcroft" in out.splitlines()
+
+
+# ── Column bases ─────────────────────────────────────────────────────────────
+
+# Total then eleven regions, London printed twice (the later column wins, as
+# for the shares), like the September 2026 workbook's "Region (2)" block.
+_BASE_HEADER: list[object] = [
+    "", "Total", "London", "North East", "North West", "Yorkshire and the Humber",
+    "East Midlands", "West Midlands", "East of England", "London", "South East",
+    "South West", "Wales", "Scotland",
+]
+_WEIGHTED_N = (5039, 999, 196, 534, 464, 409, 417, 513, 610, 706, 509, 242, 438)
+_BASE_WEIGHTED: list[object] = ["Weighted Sample", *(float(n) for n in _WEIGHTED_N)]
+_BASE_UNWEIGHTED: list[object] = [
+    "Unweighted Sample", 5039.0, 998.0, 196.0, 526.0, 457.0, 410.0, 446.0, 555.0,
+    440.0, 752.0, 536.0, 276.0, 445.0,
+]
+
+
+def _based_book(*, with_unweighted: bool = True) -> FakeXlrdBook:
+    sample_rows = [_BASE_WEIGHTED]
+    if with_unweighted:
+        sample_rows.append(_BASE_UNWEIGHTED)
+    national: list[list[object]] = [
+        ["Lord Ashcroft Polls"],
+        ["Sample size: 5039 adults in GB"],
+        ["Fieldwork: 24th - 28th September 2026"],
+        _BASE_HEADER,
+        *sample_rows,
+        *_FULL_VI_ROWS,
+    ]
+    values: list[list[object]] = [
+        _BASE_HEADER,
+        *sample_rows,
+        ["CURRENT WESTMINSTER VOTING INTENTION"],
+        # Counts near the national 19% of each column's weighted sample.
+        ["Conservative", 957, *(round(0.19 * n) for n in _WEIGHTED_N[1:])],
+    ]
+    return FakeXlrdBook(
+        [
+            FakeXlrdSheet("Sept 2026 poll - %", national),
+            FakeXlrdSheet("Sept 2026 poll - n", values),
+        ]
+    )
+
+
+class TestParseBases:
+    """parse_poll_from_xls_url reads the all-adult Weighted/Unweighted Sample rows."""
+
+    def test_national_and_regional_sample_rows(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(lord_ashcroft_import, "_fetch_bytes", lambda _url: b"xls")
+        monkeypatch.setattr(xlrd, "open_workbook", lambda **_k: _based_book())
+
+        parsed = parse_poll_from_xls_url("https://x.test/poll.xls")
+
+        bases = {b.regions: (b.unweighted_n, b.weighted_n) for b in parsed.bases}
+        assert bases[()] == (5039, 5039)
+        assert bases[("London",)] == (440, 610)
+        assert bases[("North West England",)] == (526, 534)
+        assert bases[("Scotland",)] == (445, 438)
+        assert len(bases) == 12
+        assert {b.kind for b in parsed.bases} == {"all_adults"}
+
+    def test_no_unweighted_sample_row_gives_no_bases(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(lord_ashcroft_import, "_fetch_bytes", lambda _url: b"xls")
+        book = _based_book(with_unweighted=False)
+        monkeypatch.setattr(xlrd, "open_workbook", lambda **_k: book)
+
+        assert parse_poll_from_xls_url("https://x.test/poll.xls").bases == []
+
+
+# ── Regional shares from the percentage sheet (real layouts) ─────────────────
+
+_ASHCROFT_FIXTURES = Path(__file__).parent / "fixtures" / "lord_ashcroft"
+
+
+def _fixture_sheets(name: str) -> list[FakeXlrdSheet]:
+    """Rebuild a trimmed real workbook (header, base rows, VI block per sheet)."""
+    data = json.loads((_ASHCROFT_FIXTURES / name).read_text())
+    return [
+        FakeXlrdSheet(
+            sheet["name"],
+            [["" if cell is None else cell for cell in row] for row in sheet["rows"]],
+        )
+        for sheet in data["sheets"]
+    ]
+
+
+def _parse_fixture(name: str, monkeypatch: pytest.MonkeyPatch) -> ParsedPoll:
+    sheets = _fixture_sheets(name)
+    monkeypatch.setattr(lord_ashcroft_import, "_fetch_bytes", lambda _url: b"xls")
+    monkeypatch.setattr(lord_ashcroft_import, "_read_sheets", lambda _payload: sheets)
+    return parse_poll_from_xls_url("https://x.test/tables.xlsx")
+
+
+def _region_totals(parsed: ParsedPoll) -> dict[str, float]:
+    totals: dict[str, float] = {}
+    for values in parsed.party_region_percentages.values():
+        for region, share in values.items():
+            totals[region] = totals.get(region, 0.0) + share
+    return totals
+
+
+class TestRegionalSharesFromPercentageSheet:
+    """Regional shares share the national figures' basis (don't-know included)."""
+
+    def test_september_2026_reads_the_percentage_sheet_not_the_counts(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        parsed = _parse_fixture("tables-2026-09-28.json", monkeypatch)
+
+        assert sum(parsed.party_percentages.values()) == 72.0
+        regional = parsed.party_region_percentages
+        # London prints in two columns; both read 13 for the Conservatives.
+        assert regional["Conservative"]["London"] == 13.0
+        assert regional["Conservative"]["South East England"] == 22.0
+        assert regional["Plaid Cymru"]["Wales"] == 13.0
+        assert regional["Scottish National Party"]["Scotland"] == 22.0
+        # Counts / all-adult weighted sample gave 54-61 against a national 72.
+        assert all(68 <= total <= 76 for total in _region_totals(parsed).values())
+        london = next(b for b in parsed.bases if b.regions == ("London",))
+        assert (london.unweighted_n, london.weighted_n) == (440, 610)
+
+    def test_single_sheet_2025_workbook_reads_percentages_directly(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        parsed = _parse_fixture("tables-2025-06-30.json", monkeypatch)
+
+        regional = parsed.party_region_percentages
+        assert regional["Labour"]["London"] == 19.0
+        assert regional["Reform UK"]["North East England"] == 21.0
+        assert regional["Scottish National Party"]["Scotland"] == 19.0
+        # Percentages divided by the weighted sample gave 7-19.
+        assert all(55 <= total <= 70 for total in _region_totals(parsed).values())
+
+    def test_counts_in_the_first_sheet_are_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sheets = _fixture_sheets("tables-2026-09-28.json")
+        counts = FakeXlrdSheet("counts first", sheets[1]._rows)
+        monkeypatch.setattr(lord_ashcroft_import, "_fetch_bytes", lambda _url: b"x")
+        monkeypatch.setattr(
+            lord_ashcroft_import, "_read_sheets", lambda _payload: [counts, sheets[0]]
+        )
+
+        with pytest.raises(ValueError, match="not percentages"):
+            parse_poll_from_xls_url("https://x.test/tables.xlsx")
+
+
+class TestRegionalGuardsAndBases:
+    """The basis guard on both parse paths, and where regional bases come from."""
+
+    def test_fallback_counts_on_another_basis_are_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        values: list[list[object]] = [
+            _BASE_HEADER,
+            _BASE_WEIGHTED,
+            _BASE_UNWEIGHTED,
+            ["CURRENT WESTMINSTER VOTING INTENTION"],
+            # Counts near 3% of each column: far below the national 19%.
+            ["Conservative", 150, *(round(0.03 * n) for n in _WEIGHTED_N[1:])],
+        ]
+        national: list[list[object]] = [
+            ["Sample size: 5039 adults in GB"],
+            ["Fieldwork: 24th - 28th September 2026"],
+            *_FULL_VI_ROWS,
+        ]
+        sheets = [
+            FakeXlrdSheet("Poll - %", national),
+            FakeXlrdSheet("Poll - n", values),
+        ]
+        monkeypatch.setattr(lord_ashcroft_import, "_fetch_bytes", lambda _url: b"x")
+        monkeypatch.setattr(lord_ashcroft_import, "_read_sheets", lambda _p: sheets)
+
+        with pytest.raises(ValueError, match="Rejected Lord Ashcroft regional shares"):
+            parse_poll_from_xls_url("https://x.test/tables.xls")
+
+    def test_direct_percentages_on_another_basis_are_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sheets = _fixture_sheets("tables-2025-06-30.json")
+        rows = [list(row) for row in sheets[0]._rows]
+        vi = next(
+            i for i, row in enumerate(rows)
+            if "CURRENT WESTMINSTER" in str(row[0]).upper()
+        )
+        for row in rows[vi + 1:]:
+            row[52:63] = [
+                round(v / 5) if isinstance(v, (int, float)) else v for v in row[52:63]
+            ]
+        changed = [FakeXlrdSheet(sheets[0].name, rows)]
+        monkeypatch.setattr(lord_ashcroft_import, "_fetch_bytes", lambda _url: b"x")
+        monkeypatch.setattr(lord_ashcroft_import, "_read_sheets", lambda _p: changed)
+
+        with pytest.raises(ValueError, match="Rejected Lord Ashcroft regional shares"):
+            parse_poll_from_xls_url("https://x.test/tables.xls")
+
+    def test_bases_come_from_the_sheet_the_regional_shares_use(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sheets = _fixture_sheets("tables-2026-09-28.json")
+        counts = [list(row) for row in sheets[1]._rows]
+        unweighted = next(
+            i for i, row in enumerate(counts) if row[0] == "Unweighted Sample"
+        )
+        counts[unweighted][66] = 9999  # London (second London column)
+        sheets[1] = FakeXlrdSheet(sheets[1].name, counts)
+        monkeypatch.setattr(lord_ashcroft_import, "_fetch_bytes", lambda _url: b"x")
+        monkeypatch.setattr(lord_ashcroft_import, "_read_sheets", lambda _p: sheets)
+
+        parsed = parse_poll_from_xls_url("https://x.test/tables.xlsx")
+
+        london = next(b for b in parsed.bases if b.regions == ("London",))
+        assert london.unweighted_n == 440
+
+    def test_regional_bases_that_do_not_add_up_are_dropped(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sheets = _fixture_sheets("tables-2026-09-28.json")
+        percent = [list(row) for row in sheets[0]._rows]
+        unweighted = next(
+            i for i, row in enumerate(percent) if row[0] == "Unweighted Sample"
+        )
+        percent[unweighted][61] = 527  # North West: 526 -> 527
+        sheets[0] = FakeXlrdSheet(sheets[0].name, percent)
+        monkeypatch.setattr(lord_ashcroft_import, "_fetch_bytes", lambda _url: b"x")
+        monkeypatch.setattr(lord_ashcroft_import, "_read_sheets", lambda _p: sheets)
+
+        parsed = parse_poll_from_xls_url("https://x.test/tables.xlsx")
+
+        assert [(b.regions, b.unweighted_n) for b in parsed.bases] == [((), 5039)]

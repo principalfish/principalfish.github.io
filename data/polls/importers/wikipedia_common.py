@@ -122,7 +122,30 @@ def parse_date_range(raw: str) -> tuple[date, date] | None:
 
     Returns:
         ``(start, end)`` tuple of :class:`datetime.date` objects, or ``None``
-        if the string cannot be parsed.
+        if the string cannot be parsed or parses to a start after the end (a
+        source typo such as ``"5–3 Feb 2026"``), so the row is skipped rather
+        than stored with an inverted window. Callers that only use the dates
+        as a match key can use :func:`match_date_range_unchecked` instead.
+    """
+    parsed = match_date_range_unchecked(raw)
+    if parsed is None or parsed[0] > parsed[1]:
+        return None
+    return parsed
+
+
+def match_date_range_unchecked(raw: str) -> tuple[date, date] | None:
+    """Parse *raw* like :func:`parse_date_range`, but keep an inverted range.
+
+    For callers that use Wikipedia's dates only to find a poll and store the
+    source document's own dates (the Westminster queue), where dropping a typo
+    like ``"5–3 Feb 2026"`` would hide a poll that imports correctly.
+
+    Args:
+        raw: Raw date string extracted from a Wikipedia table cell.
+
+    Returns:
+        ``(start, end)``, possibly with start after end, or ``None`` if the
+        string cannot be parsed.
     """
     text = re.sub(r"[–—]", "-", raw).strip()
     text = re.sub(r"\s+", " ", text)

@@ -52,6 +52,8 @@ class PollImportResult(BaseModel):
         replaced_rows: Number of existing PollRow records replaced.
         skipped_existing_rows: True if existing rows were left unchanged rather
             than replaced.
+        inserted_bases: Number of ``PollBase`` rows written (Westminster
+            importers; the poll's previous bases are replaced with them).
     """
 
     created_pollster: bool
@@ -60,3 +62,4 @@ class PollImportResult(BaseModel):
     inserted_rows: int
     replaced_rows: int
     skipped_existing_rows: bool
+    inserted_bases: int = 0

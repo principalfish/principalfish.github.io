@@ -20,6 +20,7 @@ import {
   buildRouteSearchParams,
 } from './state.js';
 import { fetchJson } from './files.js';
+import { activateUncertaintyView } from "./uncertainty-controller.js";
 import {
   renderHeader,
   renderLeftBar,
@@ -149,12 +150,17 @@ async function activateElection(features) {
 
   // Fetch map topology, election results, and (election view only) comparison results.
   const { mapFile, dataFile, comparisonDataFile } = manifest.resolveElectionFiles(fetchElection);
+  const requestedElection = state.currentElection;
+  const requestedParliament = state.currentParliament;
+  const requestedView = state.view;
   const includeComparison = state.view !== 'predict' && comparisonDataFile;
   const [mapData, resultsData, comparisonData] = await Promise.all([
     fetchJson(`${DATA_BASE}/${mapFile}`),
     fetchJson(`${DATA_BASE}/${dataFile}`),
     includeComparison ? fetchJson(`${DATA_BASE}/${comparisonDataFile}`) : Promise.resolve(null),
   ]);
+  if (state.currentElection !== requestedElection || state.currentParliament !== requestedParliament
+      || state.view !== requestedView) return;
 
   // Wire results into state. Predict mode points both electionData and
   // comparisonElectionData at the baseline so the initial render shows it without
@@ -179,7 +185,11 @@ async function activateElection(features) {
     for (const feature of Object.values(features)) {
       await feature.activateElection?.();
     }
+    await activateUncertaintyView();
   }
+
+  if (state.currentElection !== requestedElection || state.currentParliament !== requestedParliament
+      || state.view !== requestedView) return;
 
   const params = buildRouteSearchParams(state.view === 'predict' ? 'predict' : 'election');
   window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);

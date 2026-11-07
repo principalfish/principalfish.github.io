@@ -1819,3 +1819,75 @@ class TestMain:
 
         out = capsys.readouterr().out
         assert "[dry-run] would create pollster: focaldata" in out
+
+
+# ── Column bases ─────────────────────────────────────────────────────────────
+
+_COLUMN_N_ROWS: tuple[list[object], ...] = (
+    _row({1: "Column n", 2: 1397, 11: 363, 12: 244, 13: 449, 14: 162, 15: 67, 16: 112}),
+    _row(
+        {
+            1: "Column Population",
+            2: 1029.181,
+            11: 246.097,
+            12: 163.5,
+            13: 350.051,
+            14: 136.047,
+            15: 44.674,
+            16: 88.811,
+        }
+    ),
+)
+
+
+def _based_workbook(header: str = _HEADER_PHRASE, base_rows: bool = True) -> Workbook:
+    rows = _tables_sheet(extra_rows=list(_COLUMN_N_ROWS) if base_rows else None)
+    rows[0] = _row({1: header})
+    return build_workbook({"Info": _info_sheet(), "Tables": rows})
+
+
+class TestParseBases:
+    """parse_poll reads the combined-VI table's Column n / Column Population."""
+
+    def test_column_n_and_population_rows_per_column(self) -> None:
+        parsed = fd.parse_poll(_based_workbook(), source_url=_XLSX_URL)
+
+        assert {
+            base.regions: (base.unweighted_n, base.weighted_n, base.kind)
+            for base in parsed.bases
+        } == {
+            (): (1397, 1029, "decided"),
+            ("North East England", "North West England", "Yorkshire and The Humber"): (
+                363,
+                246,
+                "decided",
+            ),
+            ("East Midlands", "West Midlands"): (244, 164, "decided"),
+            ("East of England", "South East England", "South West England"): (
+                449,
+                350,
+                "decided",
+            ),
+            ("London",): (162, 136, "decided"),
+            ("Wales",): (67, 45, "decided"),
+            ("Scotland",): (112, 89, "decided"),
+        }
+
+    def test_other_section_headers_give_no_bases(self) -> None:
+        workbook = _based_workbook(
+            header=(
+                "If there was a general election held in the next few weeks,"
+                " who would you vote for?"
+            )
+        )
+
+        parsed = fd.parse_poll(workbook, source_url=_XLSX_URL)
+
+        assert parsed.bases == []
+
+    def test_no_column_n_row_gives_no_bases(self) -> None:
+        parsed = fd.parse_poll(
+            _based_workbook(base_rows=False), source_url=_XLSX_URL
+        )
+
+        assert parsed.bases == []

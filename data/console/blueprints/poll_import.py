@@ -225,8 +225,14 @@ def import_poll_confirm(token: str) -> ResponseReturnValue:
     if result.skipped_existing_rows:
         flash("Poll already had rows, so nothing was inserted.")
     else:
+        bases = (
+            f" and {result.inserted_bases} respondent bases"
+            if result.inserted_bases
+            else ""
+        )
         flash(
-            f"Import complete. Poll #{result.poll_id}, inserted {result.inserted_rows} rows."
+            f"Import complete. Poll #{result.poll_id}, inserted"
+            f" {result.inserted_rows} rows{bases}."
         )
         if run_model:
             try:

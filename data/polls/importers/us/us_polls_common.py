@@ -103,8 +103,18 @@ def parse_date_range(raw: str) -> tuple[date, date] | None:
     - Cross-month range: ``"May 28 – June 3, 2026"`` / ``"May 28–June 3, 2026"``
 
     En/em-dashes are normalised to hyphens before matching. Returns ``None`` when
-    the string cannot be parsed.
+    the string cannot be parsed, or when it parses to a start after the end (a
+    source typo such as ``"June 5–3, 2026"``), so the row is skipped rather than
+    stored with an inverted window.
     """
+    parsed = _match_date_range(raw)
+    if parsed is None or parsed[0] > parsed[1]:
+        return None
+    return parsed
+
+
+def _match_date_range(raw: str) -> tuple[date, date] | None:
+    """Match *raw* against the formats :func:`parse_date_range` lists, unchecked."""
     text = re.sub(r"[–—]", "-", raw)
     text = re.sub(r"\s+", " ", text).strip()
 

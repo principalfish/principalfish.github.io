@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Respondent Base Coverage</h2>
+    <p>
+      Polls on <strong>{{ map_name }}</strong> with a captured national base,
+      and reported crossbreaks (poll &times; region with a non-zero share) with
+      a captured regional base. Columns without one fall back to the sample
+      size nationally, or a population estimate regionally.
+    </p>
+    {% if not coverage %}
+      <p>No polls on this map.</p>
+    {% else %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Pollster</th>
+              <th scope="col">Polls</th>
+              <th scope="col">With national base</th>
+              <th scope="col">National %</th>
+              <th scope="col">Crossbreaks</th>
+              <th scope="col">With base</th>
+              <th scope="col">Crossbreak %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in coverage %}
+              <tr>
+                <td>{{ row.name }} ({{ row.identifier }})</td>
+                <td>{{ row.polls }}</td>
+                <td>{{ row.polls_with_national_base }}</td>
+                <td>
+                  {{- "%.0f%%" | format(row.national_pct)
+                      if row.national_pct is not none else "-" -}}
+                </td>
+                <td>{{ row.crossbreaks }}</td>
+                <td>{{ row.crossbreaks_with_base }}</td>
+                <td>
+                  {{- "%.0f%%" | format(row.crossbreak_pct)
+                      if row.crossbreak_pct is not none else "-" -}}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+    <p><a href="{{ url_for('polls.poll_list') }}">All polls</a></p>
+  </section>
+{% endblock %}

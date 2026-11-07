@@ -453,6 +453,7 @@ def test_metadata_only_preserves_election_order_comparisons_and_default(
     monkeypatch.setattr(export_elections, "PAGE_OUTPUT_ROOTS", roots)
     monkeypatch.setattr(export_elections, "parse_args", lambda: argparse.Namespace(
         election_name=None, current_simulation=False, metadata_only=True, dry_run=False,
+        output_base=None,
     ))
     export_elections.main()
     for root in roots.values():

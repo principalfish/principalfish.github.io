@@ -32,7 +32,11 @@ from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel
 
 from polls.importers.types import ScrapedPollRow
-from polls.importers.wikipedia_common import clean_text, fetch_html, parse_date_range
+from polls.importers.wikipedia_common import (
+    clean_text,
+    fetch_html,
+    match_date_range_unchecked,
+)
 
 WIKI_URL = (
     "https://en.wikipedia.org/wiki/"
@@ -356,10 +360,13 @@ def _parse_row(
     if area not in NATIONAL_AREAS:
         return None, 0, area
 
-    # Date cells carry footnotes for split fieldwork; parse_date_range anchors
+    # Date cells carry footnotes for split fieldwork; the date matcher anchors
     # its match, so a stray "[12]" would make the whole row unparseable.
     date_label = clean_text(_CITATION_MARKER_RE.sub("", cells[_COL_DATE].get_text()))
-    parsed_dates = parse_date_range(f"{date_label} {year}")
+    # Unchecked: these dates are only a match key. The importer stores the
+    # source document's own dates, and an inverted label ("5–3 Feb") surfaces
+    # through the review's "dates disagree" warning rather than hiding the poll.
+    parsed_dates = match_date_range_unchecked(f"{date_label} {year}")
     if parsed_dates is None:
         return None, 1, None
     fieldwork_start, fieldwork_end = parsed_dates

@@ -1699,3 +1699,230 @@ class TestMain:
         assert f"deleted existing rows: {rows_before}" in out
         assert f"inserted poll rows: {_EXPECTED_ROW_COUNT}" in out
         assert len(db.get_rows_for_poll(existing.id)) == _EXPECTED_ROW_COUNT
+
+
+# ── Column bases ──────────────────────────────────────────────────────────────
+
+_YOUGOV_FIXTURES = Path(__file__).parent / "fixtures" / "yougov"
+_NORTH = ("North East England", "North West England", "Yorkshire and The Humber")
+_MIDLANDS = ("East Midlands", "West Midlands")
+_REST_OF_SOUTH = ("East of England", "South East England", "South West England")
+
+_BaseKey = tuple[str, ...]
+
+
+def _bases_by_regions(text: str) -> dict[_BaseKey, tuple[int | None, int | None]]:
+    return {
+        base.regions: (base.unweighted_n, base.weighted_n)
+        for base in parse_poll(text).bases
+    }
+
+
+class TestParseBases:
+    """The Weighted/Unweighted Sample rows, as all-adult bases."""
+
+    def test_combined_layout_reads_page_one_regional_columns(self) -> None:
+        text = (_YOUGOV_FIXTURES / "headline-20260209.txt").read_text()
+
+        parsed = parse_poll(text)
+
+        assert {base.kind for base in parsed.bases} == {"all_adults"}
+        assert _bases_by_regions(text) == {
+            (): (2466, 2466),
+            ("Wales",): (123, 118),
+            ("Scotland",): (207, 215),
+            _NORTH: (567, 584),
+            _MIDLANDS: (406, 404),
+            ("London",): (287, 298),
+            _REST_OF_SOUTH: (876, 846),
+        }
+
+    def test_split_layout_reads_the_region_table_count_rows(self) -> None:
+        text = (_YOUGOV_FIXTURES / "headline-20260928.txt").read_text()
+
+        assert _bases_by_regions(text) == {
+            (): (2310, 2310),
+            ("Wales",): (136, 111),
+            ("Scotland",): (187, 201),
+            _NORTH: (502, 547),
+            _MIDLANDS: (413, 379),
+            ("London",): (241, 280),
+            _REST_OF_SOUTH: (831, 792),
+        }
+
+    def test_split_layout_skips_the_routine_column(self) -> None:
+        text = (_YOUGOV_FIXTURES / "headline-20260921.txt").read_text()
+
+        bases = _bases_by_regions(text)
+
+        assert bases[("Wales",)] == (141, 110)
+        assert bases[_NORTH] == (520, 542)
+        assert bases[_REST_OF_SOUTH] == (780, 784)
+        assert len(bases) == 7
+
+    def test_table_rows_follow_page_one_row_order(self) -> None:
+        text = (_YOUGOV_FIXTURES / "headline-20260928.txt").read_text()
+        lines = text.splitlines()
+        weighted = next(x for x in lines if x.startswith("Weighted Sample 2310 416"))
+        unweighted = next(
+            x for x in lines if x.startswith("Unweighted Sample 2310 353")
+        )
+        swapped = text.replace(
+            f"{weighted}\n{unweighted}", f"{unweighted}\n{weighted}", 1
+        )
+
+        bases = _bases_by_regions(swapped)
+
+        # Page 1 now prints the unweighted row first, so the region table's
+        # first (really weighted) row is read as the unweighted counts.
+        assert bases[("Wales",)] == (111, 136)
+        assert bases[()] == (2310, 2310)
+
+    def test_england_only_region_table_takes_wales_and_scotland_from_page_one(
+        self,
+    ) -> None:
+        fillers = " ".join(["10"] * 16)
+        sample_rows = (
+            f"Weighted Sample 2380 {fillers} 2058 125 197\n"
+            f"Unweighted Sample 2380 {fillers} 2030 140 210\n"
+        )
+        header = "Routine England Wales Scotland\n"
+        text = AUG_2026_TEXT.replace(header, header + sample_rows, 1)
+
+        bases = _bases_by_regions(text)
+
+        assert bases[("Wales",)] == (140, 125)
+        assert bases[("Scotland",)] == (210, 197)
+        assert bases[_NORTH] == (545, 564)
+        assert bases[_REST_OF_SOUTH] == (828, 816)
+        assert len(bases) == 7
+
+    def test_counts_that_do_not_add_up_keep_only_the_national_base(self) -> None:
+        text = (_YOUGOV_FIXTURES / "headline-20260209.txt").read_text()
+        row = next(
+            line for line in text.splitlines() if line.startswith("Unweighted Sample")
+        )
+        text = text.replace(row, row.replace(" 287 876", " 288 876"), 1)
+
+        assert _bases_by_regions(text) == {(): (2466, 2466)}
+
+    def test_no_sample_rows_gives_no_bases(self) -> None:
+        assert parse_poll(SEPT_2026_TEXT).bases == []
+
+    def test_plan_apportions_macro_bases_by_population(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        world = westminster_world
+        _patch_pdf_fetch(monkeypatch, [OCT_2026_TEXT])
+
+        plan = build_import_plan(
+            db, pdf_url="https://example.test/yougov.pdf", map_name=world.map_name
+        )
+
+        planned = {base.region_id: base for base in plan.bases}
+        ids = world.region_ids
+        # North 553 over 2.7m/7.7m/5.5m: quotas 93.9/267.8/191.3.
+        north = [planned[ids[name]].unweighted_n for name in _NORTH]
+        assert north == [94, 268, 191]
+        assert sum(n or 0 for n in north) == 553
+        assert planned[ids["North East England"]].split_from_macro is True
+        assert planned[ids["Wales"]].split_from_macro is False
+        assert planned[None].unweighted_n == 2312
+        assert ids["Northern Ireland"] not in planned
+        assert {base.kind for base in plan.bases} == {"all_adults"}
+        assert len(planned) == 12
+
+
+# ── Region table after the headline section (Jun 2025 - Feb 2026) ─────────────
+
+
+class TestRegionTableAfterSection:
+    """Page 1 ends in the country columns; the region table follows question 2.
+
+    Fixture: the first two pages of poll 26's source PDF (3-4 Aug 2025), as
+    pypdf extracts them. The old parser read page 1's last six columns (65+,
+    ABC1, C2DE, England, Wales, Scotland) as the six regions.
+    """
+
+    _TEXT = (_YOUGOV_FIXTURES / "headline-20250804.txt").read_text()
+
+    def test_regional_shares_come_from_the_region_table(self) -> None:
+        parsed = parse_poll(self._TEXT)
+
+        shares = parsed.party_macro_percentages
+        assert shares["Scottish National Party"] == {
+            "Wales": 0.0, "Scotland": 39.0, "North": 0.0, "Midlands": 0.0,
+            "London": 0.0, "Rest of South": 0.0,
+        }
+        assert shares["Plaid Cymru"]["Wales"] == 27.0
+        assert shares["Plaid Cymru"]["London"] == 0.0
+        assert shares["Labour"] == {
+            "Wales": 23.0, "Scotland": 15.0, "North": 27.0, "Midlands": 19.0,
+            "London": 34.0, "Rest of South": 16.0,
+        }
+        assert shares["Conservative"]["Rest of South"] == 19.0
+
+    def test_bases_come_from_the_region_table_and_page_one(self) -> None:
+        bases = _bases_by_regions(self._TEXT)
+
+        assert bases == {
+            (): (2472, 2472),
+            _NORTH: (592, 586),
+            _MIDLANDS: (407, 405),
+            ("London",): (275, 299),
+            _REST_OF_SOUTH: (877, 848),
+            ("Wales",): (123, 119),
+            ("Scotland",): (198, 215),
+        }
+
+    def test_without_the_region_table_the_misaligned_columns_are_rejected(
+        self,
+    ) -> None:
+        text = self._TEXT.replace("Region in England", "Region elsewhere")
+
+        with pytest.raises(ValueError, match="Rejected YouGov regional table"):
+            parse_poll(text)
+
+    def test_misspelt_weighted_sample_row_is_still_read(self) -> None:
+        text = self._TEXT.replace("Weighted Sample 2472", "Weighetd Sample 2472")
+
+        assert _bases_by_regions(text)[()] == (2472, 2472)
+        assert _bases_by_regions(text)[("London",)] == (275, 299)
+
+
+class TestRegionalAlignmentGuard:
+    """parse_headline_vi_table refuses SNP/Plaid shares outside their nation."""
+
+    def test_snp_share_outside_scotland_is_rejected(self) -> None:
+        text = (_YOUGOV_FIXTURES / "headline-20260209.txt").read_text()
+        row = next(line for line in text.splitlines() if line.startswith("SNP "))
+        values = row.split()
+        values[-1] = "4"  # Rest of South
+        text = text.replace(row, " ".join(values), 1)
+
+        with pytest.raises(ValueError, match="Scottish National Party 4% in Rest"):
+            parse_poll(text)
+
+    def test_small_rounding_shares_are_accepted(self) -> None:
+        text = (_YOUGOV_FIXTURES / "headline-20260209.txt").read_text()
+        row = next(line for line in text.splitlines() if line.startswith("SNP "))
+        values = row.split()
+        values[-1] = "3"
+        text = text.replace(row, " ".join(values), 1)
+
+        assert parse_poll(text).party_macro_percentages["Scottish National Party"][
+            "Rest of South"
+        ] == 3.0
+
+
+class TestSplitLayoutBaseTotals:
+    def test_region_table_counts_that_do_not_add_up_keep_only_national(
+        self,
+    ) -> None:
+        text = (_YOUGOV_FIXTURES / "headline-20250804.txt").read_text()
+        text = text.replace("592 407 275 877", "593 407 275 877", 1)
+
+        assert _bases_by_regions(text) == {(): (2472, 2472)}

@@ -91,7 +91,8 @@ describe("saved Senate forecast view", () => {
     const css = readFileSync(new URL("../maps.css", import.meta.url), "utf8");
     expect(shell).toMatch(/<p\b[^>]*id="mapsSenateForecastComparison"[^>]*\bhidden[^>]*><\/p>/);
     expect(shell).toMatch(/<nav\b[^>]*id="mapsSenateForecastTabNav"[^>]*\bhidden/);
-    expect(shell).toMatch(/<table\b[^>]*id="mapsVoteTotalsTable"[^>]*aria-describedby="mapsSenateForecastComparison"/);
+    const descriptionIds = shell.match(/<table\b[^>]*id="mapsVoteTotalsTable"[^>]*aria-describedby="([^"]+)"/)?.[1].split(/\s+/);
+    expect(descriptionIds).toContain("mapsSenateForecastComparison");
     const collapsedRule = css.match(/#mapsVoteTotalsCard\.maps-vote-totals--collapsed[^{}]+\{[^}]+\}/)?.[0];
     expect(collapsedRule).toContain(".maps-senate-forecast-comparison");
     expect(collapsedRule).toContain(".maps-predict-tabs");

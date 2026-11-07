@@ -15,6 +15,7 @@
       {% endif %}
     </p>
     <p><a class="button" href="{{ url_for(outputs_endpoint) }}">Back to Model Outputs</a></p>
+    {% if outputs_endpoint.startswith('westminster.') %}<p><a href="{{ url_for('uncertainty_runs.results', election_id=election.id) }}">Uncertainty results</a> · <a href="{{ url_for('uncertainty_runs.budget', election_id=election.id) }}">Error budget</a></p>{% endif %}
   </section>
 
   <section class="card">

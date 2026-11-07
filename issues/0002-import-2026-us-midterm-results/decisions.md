@@ -7,7 +7,7 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 - Import provisional results now, using re-runnable tools that refresh in place as counts finish. (2026-11-07)
 
 ## Open
-- Data source (user asked to check NYT and BBC): the existing converters read FiveThirtyEight's `election-results` CSVs (`old_data/scripts/usa/convert_538_house.py`, `convert_538_senate.py`). 538 closed in March 2025, so that repo is unlikely to carry 2026. Alternatives: Wikipedia scrape (the `scrape_holyrood_2026.py` pattern), MIT Election Lab (usually months later), state SoS feeds, AP/NYT/DDHQ (licensed).
+- Data source (user asked to check NYT and BBC; 2026-11-07 the session's fetch tool refused both nytimes.com/static01.nyt.com and bbc.co.uk, so neither has been inspected yet; both are AP/licensed, copyrighted data, terms unchecked): the existing converters read FiveThirtyEight's `election-results` CSVs (`old_data/scripts/usa/convert_538_house.py`, `convert_538_senate.py`). 538 closed in March 2025, so that repo is unlikely to carry 2026. Alternatives: Wikipedia scrape (the `scrape_holyrood_2026.py` pattern), MIT Election Lab (usually months later), state SoS feeds, AP/NYT/DDHQ (licensed).
 - Uncalled / still-counting seats: how they are stored and shown while the tools are re-run.
 - House geometry: map 21 / `map-21.topo.json` is the 2024 district set. Several states redrew mid-decade for 2026, so 2026 results don't fit 2024 boundaries. Needs new geometry plus a new map id, or per-state handling. Exact list of redrawn states to be confirmed.
 - Senate specials: `convert_538_senate.py:20` skips specials; FL and OH 2026 are specials (configured in `senateSpecialElections` in the US manifest shell). How do they enter the 2026 Senate file?

@@ -160,7 +160,12 @@ previous day, so use a bare date when that is unsuitable. The text is
 The file at `uncertaintyDataPath` describes the run exported as the model
 election (for Westminster, `current-prediction`): the latest-dated model run. Vote shares are percentage
 points to 1 dp; probabilities are fractions from 0 to 1 to 3 dp (the site shows whole percentages, with "<1%" and ">99%" at the extremes); seats are
-integers. Parties and regions are keyed by numeric ID strings, as in `parties`
+integers, except the mean seats `mean` (2 dp). Each block's whole seats `m` are its
+parties' `mean` rounded by largest remainder (floor each mean, then one more
+seat to each of the largest fractional parts until the block's seat total is
+reached; equal fractions go to the larger mean, then by party name), so they
+add up to the block's seat total: 650 nationally, the region's seat count in a
+region. The site's Seats column and headline show `m`. Parties and regions are keyed by numeric ID strings, as in `parties`
 and `mapModes[mapId].regions`.
 
 | Field | Description |
@@ -169,9 +174,9 @@ and `mapModes[mapId].regions`.
 | `as_of_date`, `election_name` | The model run, e.g. `"2026-10-12"`, `"UNS 2026-10-12"`. |
 | `simulations`, `interval` | Simulation count and interval level (`0.9`: ranges run from the 5th to the 95th percentile). |
 | `basis` | One-line reading guide to show with the figures, e.g. "Nowcast: if an election were held today. 90% ranges and probabilities from 10,000 simulations, conditional on current polls and the model's error assumptions." |
-| `national.parties[id]` | `v: [lo, hi]` vote-share range; `s: [lo, median, hi]` seats; `pm` P(majority); `pl` P(largest party, ties split); `hist: {start, counts}` seat histogram, `counts[i]` simulations with `start + i` seats (counts sum to `simulations`). |
+| `national.parties[id]` | `v: [lo, hi]` vote-share range; `s: [lo, median, hi]` seats; `mean` mean seats over the simulations; `m` whole seats (above); `pm` P(majority); `pl` P(largest party, ties split); `hist: {start, counts}` seat histogram, `counts[i]` simulations with `start + i` seats (counts sum to `simulations`). |
 | `national.hung` | P(no party reaches a majority). |
-| `regions[id].parties[id]` | `v` and `s` as nationally, plus `pm` (more than half the region's seats) and `pl` when the run stored them. Parties whose range stays below 0.5 points and that never win a seat there are omitted. |
+| `regions[id].parties[id]` | `v`, `s`, `mean` and `m` as nationally, plus `pm` (more than half the region's seats) and `pl` when the run stored them. Parties whose range stays below 0.5 points and that never win a seat there are omitted (their mean there is 0, so `m` still adds up). |
 | `regions[id].hung` | P(no party holds more than half the region's seats), when stored. |
 
 The model election's result file (`pf-results-v4`) carries the matching

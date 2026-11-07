@@ -114,6 +114,47 @@ describe('parsePollTrackerData', () => {
     expect(parsed.hung).toEqual([null, null, null, null, 0.5, 0.5, 0.5]);
   });
 
+  it("draws a simulated run's mean seats, keeping the election-day result as it was", () => {
+    const uncertain = (date, s, sm) => ({
+      as_of_date: date, segment_id: "a", hung: 0.5,
+      parties: { 1: { s, v: 40, sl: s - 100, sh: s + 100, sm } },
+    });
+    const parsed = parsePollTrackerData([
+      { as_of_date: "2024-07-05", parties: { 1: { s: 411, v: 34 } } },
+      uncertain("2024-07-08", 300, 297.4),
+      uncertain("2024-07-10", 310, 305.0),
+    ]);
+    const labour = parsed.seriesByParty.get("1");
+    expect(labour.seats).toEqual([411, 411, 411, null, 297.4, 297.4, 305]);
+    expect(labour.seatMean).toEqual([null, null, null, null, 297.4, 297.4, 305]);
+    // The band is still the stored 5th-95th percentile range.
+    expect(labour.seatLo).toEqual([null, null, null, null, 200, 200, 210]);
+    expect(labour.latestSeats).toBe(305);
+  });
+
+  it("keeps a carried-forward mean labelled as a mean when a run lacks the party", () => {
+    const { seriesByParty } = parsePollTrackerData([
+      { segment_id: "a", as_of_date: "2024-01-01", hung: 0.5, parties: { 1: { s: 300, v: 40, sm: 297.4 } } },
+      { segment_id: "a", as_of_date: "2024-01-02", hung: 0.5, parties: { 2: { s: 10, v: 5, sm: 9.6 } } },
+      { segment_id: "a", as_of_date: "2024-01-03", hung: 0.5, parties: { 1: { s: 310, v: 41 } } },
+    ]);
+    // The 2nd carries Labour's mean seats, so they stay labelled a mean; the 3rd's central
+    // seats are not one.
+    expect(seriesByParty.get("1").seats).toEqual([297.4, 297.4, 310]);
+    expect(seriesByParty.get("1").seatMean).toEqual([297.4, 297.4, null]);
+    expect(seriesByParty.get("2").seatMean).toEqual([null, 9.6, 9.6]);
+  });
+
+  it.each([[undefined], [null], [-1], ["297"], [NaN]])(
+    "falls back to the central seats for a run whose mean is %s", (sm) => {
+      const { seriesByParty } = parsePollTrackerData([
+        { segment_id: "a", as_of_date: "2024-01-01", hung: 0.5, parties: { 1: { s: 300, v: 40, sm } } },
+      ]);
+      expect(seriesByParty.get("1").seats).toEqual([300]);
+      expect(seriesByParty.get("1").seatMean).toEqual([null]);
+    },
+  );
+
   it("keeps central-only Westminster history continuous without any segment metadata", () => {
     const parsed = parsePollTrackerData([
       { as_of_date: "2026-06-01", parties: { 1: { s: 300, v: 40 } } },

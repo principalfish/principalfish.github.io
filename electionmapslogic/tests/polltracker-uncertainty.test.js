@@ -54,6 +54,19 @@ describe("poll tracker uncertainty display", () => {
       .toEqual(["88%", "Unavailable", ">99%"]);
   });
 
+  it("labels a simulated run's seats as the mean, at 1 dp, and the election result as plain seats", () => {
+    const tracked = {
+      ...series, seats: [411, 297.4, 305], seatMean: [null, 297.4, 305],
+      seatLo: [null, 238, 240], seatHi: [null, 389, 390],
+    };
+    expect(pollTrackerTooltipValues(tracked, 0)[0]).toEqual(["Seats", "411"]);
+    expect(pollTrackerTooltipValues(tracked, 1).slice(0, 1)).toEqual([["Seats (simulated mean)", "297.4"]]);
+    expect(pollTrackerTooltipValues(tracked, 1)).toContainEqual(["90% seat range", "238–389"]);
+    expect(pollTrackerTooltipValues(tracked, 2, { ranges: false })).toEqual([
+      ["Seats (simulated mean)", "305.0"], ["Vote share", "0.00%"],
+    ]);
+  });
+
   it("draws separated band paths and visible isolated ranges without joining missing days", () => {
     const drawn = [];
     const plot = { append(type) {

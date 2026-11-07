@@ -13,7 +13,7 @@ import { activateUncertaintyView } from "../uncertainty-controller.js";
 function payload() {
   return {
     schema: "pf-uncertainty-v1", uncertaintyId: "saved-run", interval: 0.9,
-    simulations: 10000, national: { parties: { 1: { v: [20, 30], s: [200, 300, 400], pm: 0.3, pl: 0.8 } }, hung: 0.7 },
+    simulations: 10000, national: { parties: { 1: { v: [20, 30], s: [200, 300, 400], m: 297, pm: 0.3, pl: 0.8 } }, hung: 0.7 },
     regions: {},
   };
 }

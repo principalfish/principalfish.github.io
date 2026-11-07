@@ -2131,8 +2131,10 @@ class TestResetExistingModelOutputs:
             ("UNS 2026-05-31", 1),
             ("UNS 2026-06-03", 1),
         ]
+        # The latest run is kept even where its central values repeat.
         assert [entry["as_of_date"] for entry in _read_json(trend_json)] == [
-            "2026-05-31"
+            "2026-05-31",
+            "2026-06-03",
         ]
 
     def test_range_preserves_same_named_other_type(

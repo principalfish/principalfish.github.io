@@ -65,6 +65,8 @@ export function chanceSeries(series, metric, hung) {
 /**
  * Only finite values are formatted; missing optional observations never become zero.
  * With `ranges: false` (uncertainty hidden) the 90% seat and vote ranges are left out.
+ * A simulated run's seats are its mean over the simulations, labelled so and kept to the trend
+ * file's 1 dp; a central-only run (the election result) shows its whole seats.
  */
 export function pollTrackerTooltipValues(series, index, { ranges = true } = {}) {
   const percent = (value) => Number.isFinite(value) ? `${formatPct(value)}%` : "Unavailable";
@@ -72,8 +74,10 @@ export function pollTrackerTooltipValues(series, index, { ranges = true } = {}) 
     const chance = series.chance[index];
     return [[series.chanceLabel, Number.isFinite(chance) ? formatProbability(chance) : "Unavailable"]];
   }
+  const mean = series.seatMean?.[index];
   const values = [
-    ["Seats", Number.isFinite(series.seats[index]) ? formatInt(series.seats[index]) : "Unavailable"],
+    Number.isFinite(mean) ? ["Seats (simulated mean)", mean.toFixed(1)]
+      : ["Seats", Number.isFinite(series.seats[index]) ? formatInt(series.seats[index]) : "Unavailable"],
     ["Vote share", percent(series.votePct[index])],
   ];
   if (!ranges) return values;

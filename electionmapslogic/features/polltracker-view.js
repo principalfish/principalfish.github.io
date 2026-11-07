@@ -362,6 +362,7 @@ function pollTrackerSelectedSeries(selectedParties, windowStart) {
       voteHi: (series.voteHi || []).slice(windowStart),
       seatLo: (series.seatLo || []).slice(windowStart),
       seatHi: (series.seatHi || []).slice(windowStart),
+      seatMean: (series.seatMean || []).slice(windowStart),
       pMaj: (series.pMaj || []).slice(windowStart),
       pLargest: (series.pLargest || []).slice(windowStart),
     }));

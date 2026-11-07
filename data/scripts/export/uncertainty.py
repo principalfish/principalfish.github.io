@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,7 +30,7 @@ from model_support.persistence import (
     westminster_uns_scope,
 )
 from model_support.public_uncertainty import SeatBand, public_document, seat_bands
-from models import Election, ElectionType
+from models import Election, ElectionType, Party
 from scripts.export.serialize import write_json
 
 UNCERTAINTY_FILENAME = "prediction-uncertainty.json"
@@ -79,8 +80,20 @@ class ModelUncertaintyExport:
     document: dict[str, object] | None
 
 
+def party_names(session: Session) -> dict[int, str]:
+    """Return every party's name by id: the whole seats' last tie-break."""
+    return {
+        party_id: name
+        for party_id, name in session.execute(select(Party.id, Party.name))
+    }
+
+
 def model_uncertainty_export(
-    stored: StoredUncertainty | None, *, election_name: str, as_of_date: str | None
+    stored: StoredUncertainty | None,
+    *,
+    election_name: str,
+    as_of_date: str | None,
+    party_names: Mapping[int, str],
 ) -> ModelUncertaintyExport:
     """Build a model run's published uncertainty from its stored summary.
 
@@ -88,6 +101,7 @@ def model_uncertainty_export(
         stored: The run's stored summary, or None when it has none.
         election_name: The run's election name.
         as_of_date: Its as-of date, ISO format, or None.
+        party_names: Party id -> name (:func:`party_names`).
 
     Returns:
         The seat bands and document; each None when its block is absent
@@ -107,6 +121,7 @@ def model_uncertainty_export(
             stored.regions,
             election_name=election_name,
             as_of_date=as_of_date,
+            party_names=party_names,
         )
     )
     return ModelUncertaintyExport(bands, document)
@@ -140,13 +155,16 @@ def latest_model_run(session: Session) -> Election | None:
 
 
 def model_run_uncertainty(
-    election: Election, stored: StoredUncertainty | None
+    election: Election,
+    stored: StoredUncertainty | None,
+    party_names: Mapping[int, str],
 ) -> ModelUncertaintyExport:
     """Return what a ``model_uns`` run publishes from its stored summary.
 
     Args:
         election: The model run being exported.
         stored: Its stored summary (``load_uncertainty``), or None.
+        party_names: Party id -> name (:func:`party_names`).
 
     Returns:
         Its seat bands and ``pf-uncertainty-v1`` document, each None when the
@@ -165,6 +183,7 @@ def model_run_uncertainty(
         stored,
         election_name=election.name,
         as_of_date=as_of.isoformat() if as_of is not None else None,
+        party_names=party_names,
     )
 
 

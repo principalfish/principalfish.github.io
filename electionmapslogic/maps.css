@@ -1082,7 +1082,7 @@ a {
 .maps-vote-totals--collapsed .maps-senate-forecast-comparison,
 .maps-vote-totals--collapsed .maps-uncertainty-toggle,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-table,
-#mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-seat-median-note,
+#mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-map-colour-note,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed #mapsVoteTotalsToggle {
   display: none;
 }

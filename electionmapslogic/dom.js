@@ -8,7 +8,7 @@ import { manifest, state, page, seatComparisonHidden, Seat } from './state.js';
 import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR, buildStateTrendSeries } from './utils.js';
 import { fetchJson } from './files.js';
 import {
-  activeUncertainty, seatMedianRange, seatUncertaintyText, simulatedSubtitle, uncertaintyForTotals,
+  activeUncertainty, seatsWithRange, seatUncertaintyText, simulatedSubtitle, uncertaintyForTotals,
   uncertaintyNumber, uncertaintyRange,
 } from "./uncertainty.js";
 import {
@@ -581,7 +581,7 @@ const voteTotalsBody = document.getElementById('mapsVoteTotalsBody');
 const voteTotalsTable = document.getElementById('mapsVoteTotalsTable');
 const voteTotalsToggle = document.getElementById('mapsVoteTotalsToggle');
 const uncertaintyToggle = document.getElementById("mapsUncertaintyToggle");
-const seatMedianNote = document.getElementById("mapsSeatMedianNote");
+const mapColourNote = document.getElementById("mapsMapColourNote");
 const voteTotalsCollapse = document.getElementById('mapsVoteTotalsCollapse');
 
 /**
@@ -592,7 +592,7 @@ const voteTotalsCollapse = document.getElementById('mapsVoteTotalsCollapse');
 /**
  * Returns a sorted copy of party rows according to state.voteTotals.sort (party name alpha, or numeric column with label tiebreak).
  * @param {Array<object>} rows - Party summary rows with a `party` key and numeric fields matching sort key names.
- * @param {boolean} [seatTiesByName=false] - Break equal seat counts by name alone (simulated medians).
+ * @param {boolean} [seatTiesByName=false] - Break equal seat counts by name alone (simulated whole seats).
  * @returns {Array<object>} New sorted array of party rows.
  */
 function sortPartyRows(rows, seatTiesByName = false) {
@@ -644,20 +644,19 @@ export function renderVoteTotals(
   voteTotalsTable.classList.toggle('hide-vote-total-col', !state.voteTotalsColumnVisible('votes'));
   voteTotalsTable.classList.toggle('hide-vote-pct-col', !state.voteTotalsColumnVisible('votePct'));
   // Whole-country and single-region views of a saved run have stored simulations: Seats is then
-  // the simulated median, and the toggle adds only the range text. Every other view (filtered
-  // slices, predict, scenarios, real elections) keeps the plain count.
+  // the exported whole seats (the simulated means rounded by largest remainder, so they add up
+  // to the view's seat total), and the toggle adds only the range text. Every other view
+  // (filtered slices, predict, scenarios, real elections) keeps the plain count.
   const uncertainty = uncertaintyForTotals(state);
   const showRanges = renderUncertaintyToggle(uncertaintyToggle, state);
-  if (seatMedianNote) {
-    seatMedianNote.hidden = !uncertainty;
-    seatMedianNote.textContent = uncertainty
-      ? `Seats are simulated medians, so they needn't add up to ${formatInt(summary.totalSeats)}. `
-        + "Map colours show each seat's uniform-swing winner."
-      : '';
+  // The simulated seats can disagree with the map, which colours the uniform-swing winners.
+  if (mapColourNote) {
+    mapColourNote.hidden = !uncertainty;
+    mapColourNote.textContent = uncertainty ? "Map colours show each seat's uniform-swing winner." : "";
   }
   const descriptions = ["mapsSenateForecastComparison"];
   if (activeUncertainty(state)?.basis) descriptions.push("mapsUncertaintyBasis");
-  if (uncertainty) descriptions.push("mapsSeatMedianNote");
+  if (uncertainty) descriptions.push("mapsMapColourNote");
   voteTotalsTable.setAttribute("aria-describedby", descriptions.join(" "));
 
   const hiddenParties = new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []);
@@ -677,10 +676,10 @@ export function renderVoteTotals(
   const rows = summary.parties.map((partyRow) => {
     const votePct = summary.totalVotes > 0 ? (partyRow.votes / summary.totalVotes) * 100 : 0;
     const comparison = comparisonByParty.get(partyRow.party) || { seats: 0, votePct: 0 };
-    // The uniform-swing count is replaced, not kept beside the median; a party with no stored
-    // row in this view (no simulated median) gets a dash, not that count.
+    // The uniform-swing count is replaced, not kept beside the whole seats; a party with no
+    // stored row in this view (no simulated seats) gets a dash, not that count.
     const band = uncertainty ? uncertainty.parties[partyRow.party] ?? null : undefined;
-    const seats = band === undefined ? partyRow.seats : band?.s[1] ?? null;
+    const seats = band === undefined ? partyRow.seats : band?.m ?? null;
     return {
       ...partyRow,
       band,
@@ -720,23 +719,25 @@ export function renderVoteTotals(
 
 /**
  * The Seats cell: the plain count without stored simulations (`band` undefined), else the
- * simulated median, with "(lo–hi)" when ranges are shown, or a dash for a party with no stored row.
+ * exported whole seats, with "(lo–hi)" when ranges are shown, or a dash for a party with no stored
+ * row.
  * @param {number} seats - The party's seat count in this view.
- * @param {{s: number[], v: number[]}|null|undefined} band - The stored bands; `undefined` when the
- *   view has no stored simulations, `null` when the party has no stored row.
+ * @param {{m: number, s: number[], v: number[]}|null|undefined} band - The stored bands and whole
+ *   seats; `undefined` when the view has no stored simulations, `null` when the party has no
+ *   stored row.
  * @param {boolean} showRanges - Whether "Show uncertainty" is on.
  * @returns {string}
  */
 function seatsCellText(seats, band, showRanges) {
   if (band === undefined) return formatInt(seats);
   if (!band) return '—';
-  return showRanges ? seatMedianRange(band.s) : uncertaintyNumber(band.s[1]);
+  return showRanges ? seatsWithRange(band.m, band.s) : uncertaintyNumber(band.m);
 }
 
 /**
  * The Vote % cell: the central share, with the simulated "(lo–hi%)" when ranges are shown.
  * @param {number} votePct - The party's central vote share.
- * @param {{s: number[], v: number[]}|null|undefined} band - The stored bands, if any.
+ * @param {{m: number, s: number[], v: number[]}|null|undefined} band - The stored bands, if any.
  * @param {boolean} showRanges - Whether "Show uncertainty" is on.
  * @returns {string}
  */
@@ -785,7 +786,7 @@ function wireVoteTotalsToggle() {
 
 /**
  * Wires the vote-totals card collapse button. Mirrors the predict-window collapse pattern:
- * toggles `maps-vote-totals--collapsed` on the card (CSS hides the tabs, table, seat-median note
+ * toggles `maps-vote-totals--collapsed` on the card (CSS hides the tabs, table, map-colour note
  * and Show all button) and flips the glyph between ▲ (expanded) and ▼ (collapsed). The button itself is
  * hidden on mobile via a media query in mobile-sidebar.css.
  * @returns {void}

@@ -16,8 +16,8 @@ function element() {
 
 const summary = {
   basis: "Nowcast: if an election were held today. 90% ranges and probabilities from 10,000 simulations, conditional on current polls and the model's error assumptions.",
-  national: { parties: { labour: { v: [20, 30], s: [200, 300, 400], pl: 0.9, pm: 0.3 } }, hung: 0.7 },
-  regions: { scotland: { parties: { labour: { v: [10, 20], s: [2, 4, 6] } } } },
+  national: { parties: { labour: { v: [20, 30], s: [200, 300, 400], m: 297, pl: 0.9, pm: 0.3 } }, hung: 0.7 },
+  regions: { scotland: { parties: { labour: { v: [10, 20], s: [2, 4, 6], m: 4 } } } },
 };
 
 describe("uncertainty display controls", () => {
@@ -80,7 +80,7 @@ describe("uncertainty display controls", () => {
     renderUncertaintyBasis(header, summary);
     expect(header.children.map((child) => child.className))
       .toEqual(["maps-subtitle-uncertainty", "maps-subtitle-basis"]);
-    expect(header.children[0].textContent).toBe("Labour 300 seats (200–400) · majority 30%");
+    expect(header.children[0].textContent).toBe("Labour 297 seats (200–400) · majority 30%");
     // The note carries the nowcast sentence in full; the odds line no longer repeats it.
     expect(header.children[1].textContent).toBe(summary.basis);
     expect(header.children[1].id).toBe("mapsUncertaintyBasis");
@@ -108,7 +108,8 @@ describe("uncertainty display controls", () => {
     expect(shell).toMatch(/id="mapsVoteTotalsToggle"[^>]*>Show all<\/button>\s*<button[^>]*id="mapsUncertaintyToggle"[^>]*aria-pressed="false"/);
     expect(shell).toMatch(/data-sort-key="seats"[^>]*>Seats<\/th>\s*<th class="comparison-col">±<\/th>\s*<th class="vote-total-col"/);
     expect(shell).not.toMatch(/uncertainty-col|data-uncertainty-label/);
-    expect(shell).toMatch(/<p id="mapsSeatMedianNote"[^>]*hidden><\/p>/);
+    expect(shell).not.toContain("mapsSeatMedianNote");
+    expect(shell).toMatch(/<p id="mapsMapColourNote"[^>]*hidden><\/p>/);
     expect(shell).not.toContain('id="mapsUncertaintyBasis"');
   });
 });

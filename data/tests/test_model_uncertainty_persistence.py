@@ -180,6 +180,7 @@ def engine_summary() -> SimulationSummary:
             3: NationalPartyOutcome(
                 vote=(22.81, 29.64),
                 seats=(222, 299, 372),
+                mean=298.53,
                 histogram=SeatHistogram(start=220, counts=(1, 0, 3)),
                 p_majority=0.2834,
                 p_largest=0.9731,
@@ -187,13 +188,20 @@ def engine_summary() -> SimulationSummary:
             12: NationalPartyOutcome(
                 vote=(19.6, 26.5),
                 seats=(47, 114, 203),
+                mean=117.2,
                 histogram=SeatHistogram(start=45, counts=(2,)),
                 p_majority=0.0,
                 p_largest=0.0269,
             ),
         },
         p_hung=0.7166,
-        regions={13: {3: RegionPartyOutcome(vote=(31.2, 40.07), seats=(40, 51, 59))}},
+        regions={
+            13: {
+                3: RegionPartyOutcome(
+                    vote=(31.2, 40.07), seats=(40, 51, 59), mean=50.75
+                )
+            }
+        },
         seats={101: {3: SeatPartyOutcome(vote=(38.5, 52.25), p_win=0.9912)}},
     )
 

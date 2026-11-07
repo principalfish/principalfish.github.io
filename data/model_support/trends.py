@@ -3,7 +3,8 @@
 Each entry is one run's national seats ``s`` and vote share ``v`` per party.
 A run with a stored Monte Carlo summary also carries, per party, its vote band
 ``vl``/``vh`` (the summary's vote interval, 90%; 1 dp), ``sl``/``sh``
-(integer seat bounds), and P(majority) ``pm`` /
+(integer seat bounds), ``sm`` (the mean seats over the simulations, from the
+stored national histogram; 1 dp), and P(majority) ``pm`` /
 P(largest) ``pl`` (fractions, 3 dp; left out when zero), plus an entry-level
 ``hung``. A run without one gets none of these keys, so its entry is exactly
 as before. In an entry with ``hung``, a party lacking ``pm``/``pl`` has
@@ -12,6 +13,11 @@ probability 0, and a party lacking ``vl``/``vh`` was not in the summary.
 Consecutive runs with the same seats and shares collapse to the first, as
 before; uncertainty does not keep a duplicate (the simulation seed changes
 daily, so its odds always differ slightly). Westminster keeps a duplicate
+for the latest run that can be kept (the last polled run once any is polled;
+in an all-unpolled history, the last leading run), so the tracker ends on the
+run the site's headline and table show. A trailing unpolled run is not shown:
+the unpolled-run rule below leaves it out, though the export's
+``latest_model_run`` may still publish it. Westminster also keeps a duplicate
 where summary availability changes, or where a run's known config/kernel
 identity differs from the last known identity among the runs kept so far
 (including the first known one after unknown ones). The poll tracker
@@ -285,9 +291,12 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
         last_segment: str | None = None
         # Unpolled runs before this are the leading baseline, kept central-only.
         seen_polled = False
-        for eid, (name, as_of) in sorted(
-            elections.items(), key=lambda item: (item[1][1], item[0])
-        ):
+        ordered = sorted(elections.items(), key=lambda item: (item[1][1], item[0]))
+        # The last run that can be kept: unpolled runs after the first polled
+        # one are left out, so once any run is polled it is the last polled run.
+        polled = [eid for eid, _ in ordered if eid not in unpolled]
+        latest = polled[-1] if polled else (ordered[-1][0] if ordered else None)
+        for eid, (name, as_of) in ordered:
             if as_of.isoformat() in dates:
                 raise ValueError(
                     f"Multiple scoped model results for {as_of}; rerun this model date"
@@ -311,9 +320,14 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             # tracker break), or a known identity new to the kept runs. The
             # first known identity after unknown ones draws no break, but is kept
             # so that a later change away from it is visible to the tracker.
+            # The latest run that can be kept (the last polled run once any is
+            # polled; else the last leading unpolled run) is kept too, so the
+            # tracker's last point is the run the headline and table show. A
+            # trailing unpolled run is left out above and never shown.
             must_keep = previous is not None and (
                 previous[1] != has_summary
                 or (has_summary and segment is not None and segment != last_segment)
+                or eid == latest
             )
             if (
                 previous is not None

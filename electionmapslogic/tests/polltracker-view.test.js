@@ -267,6 +267,21 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
       expect(labourPath().__data__[0]).toBe(411);
       expect(labourPath().getAttribute("d")).toMatch(/^M0,/);
     });
+
+    it("draws each simulated run's mean seats, keeping the election-day result and the bands", async () => {
+      const [electionDay, ...runs] = historyWithElectionDay();
+      fetchJson.mockResolvedValue([electionDay, ...runs.map((run) => ({
+        ...run, parties: { ...run.parties, 20: { ...run.parties[20], sm: 317.4 } },
+      }))]);
+      await view.activatePollTrackerMode();
+      MODES["Seats only"]();
+      const seats = labourPath().__data__;
+      expect(seats[0]).toBe(411);
+      expect(seats.at(-1)).toBe(317.4);
+      expect(seats).not.toContain(320);
+      const band = document.querySelector(".maps-polltracker-band--seats").__data__;
+      expect(band.at(-1)).toEqual([280, 360]);
+    });
   });
 
   it("draws separate Westminster segments and restarts trailing smoothing at each boundary", async () => {

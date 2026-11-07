@@ -24,7 +24,12 @@ export function decodeSeatUncertainty(value, resolveParty) {
   return result;
 }
 
-/** Decode public identifiers once, when a matching summary arrives. */
+/**
+ * Decode public identifiers once, when a matching summary arrives. A party row needs its whole
+ * seats `m` (the export's largest-remainder rounding of the mean): a row without them is dropped,
+ * never shown with the median instead, so a file from before whole seats has no national rows
+ * and decodes to null (no uncertainty).
+ */
 export function decodeUncertainty(payload, identity, resolveParty, regionsById) {
   if (!identity || payload?.schema !== "pf-uncertainty-v1"
       || payload.uncertaintyId !== identity || !finite(payload.interval, 0, 1)
@@ -33,9 +38,10 @@ export function decodeUncertainty(payload, identity, resolveParty, regionsById) 
   function decodeBlock(block) {
     const parties = {};
     for (const [id, row] of Object.entries(block?.parties || {})) {
-      if (!validRange(row?.v, 2, 100) || !validRange(row?.s, 3)) continue;
+      if (!validRange(row?.v, 2, 100) || !validRange(row?.s, 3)
+          || !Number.isInteger(row.m) || row.m < 0) continue;
       parties[resolveParty(id)] = {
-        v: [...row.v], s: [...row.s],
+        v: [...row.v], s: [...row.s], m: row.m,
         pm: finite(row.pm, 0, 1) ? row.pm : null,
         pl: finite(row.pl, 0, 1) ? row.pl : null,
       };
@@ -59,8 +65,8 @@ export function activeUncertainty(state) {
 }
 
 /**
- * Whole-country and exactly-one-region totals have stored medians and ranges; arbitrary slices,
- * and a region stored with no party rows, do not.
+ * Whole-country and exactly-one-region totals have stored whole seats and ranges; arbitrary
+ * slices, and a region stored with no party rows, do not.
  */
 export function uncertaintyForTotals(state) {
   const summary = activeUncertainty(state);
@@ -105,10 +111,10 @@ export function formatProbability(value) {
   return `${percent}%`;
 }
 
-/** Seats as "median (lo–hi)"; text only. */
-export function seatMedianRange(values) {
-  if (!Array.isArray(values) || values.length !== 3) return "—";
-  return `${uncertaintyNumber(values[1])} (${uncertaintyRange(values)})`;
+/** Whole seats with the simulated range, "seats (lo–hi)"; text only. */
+export function seatsWithRange(seats, values) {
+  if (!Number.isFinite(seats) || !Array.isArray(values) || values.length !== 3) return "—";
+  return `${uncertaintyNumber(seats)} (${uncertaintyRange(values)})`;
 }
 
 /** Text only: the caller escapes it or assigns textContent. */
@@ -190,14 +196,15 @@ export function simulatedSubtitle(electionName, summary, labelParty) {
 }
 
 /**
- * The most likely largest party's (or each tied party's) simulated seats and majority odds,
- * then the hung odds when the main line's outcome does not already give them. Text only.
+ * The most likely largest party's (or each tied party's) whole seats (its rounded simulated
+ * mean), range and majority odds, then the hung odds when the main line's outcome does not
+ * already give them. Text only.
  */
 export function uncertaintyHeadline(summary, labelParty) {
   const outlook = headlineOutlook(summary, labelParty);
   if (!outlook) return "";
   const parts = outlook.largest.map(([party, row]) => `${labelParty(party)} `
-    + `${uncertaintyNumber(row.s[1])} seats (${uncertaintyRange(row.s)}) · majority ${formatProbability(row.pm)}`);
+    + `${uncertaintyNumber(row.m)} seats (${uncertaintyRange(row.s)}) · majority ${formatProbability(row.pm)}`);
   if (!outlook.outcomes.some(({ party }) => party === null)) {
     parts.push(`hung ${formatProbability(outlook.hung)}`);
   }

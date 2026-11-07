@@ -1454,6 +1454,7 @@ class TestToJsonDict:
         assert party == {
             "v": [round(outcome.vote[0], 2), round(outcome.vote[1], 2)],
             "s": list(outcome.seats),
+            "mean": round(outcome.mean, 2),
             "pm": round(outcome.p_majority, 4),
             "pl": round(outcome.p_largest, 4),
             "hist": {
@@ -1462,7 +1463,7 @@ class TestToJsonDict:
             },
         }
         region = data["regions"]["14"]["parties"]["3"]
-        assert set(region) == {"v", "s", "pm", "pl"}
+        assert set(region) == {"v", "s", "mean", "pm", "pl"}
         assert summary.region_hung is not None
         assert data["regions"]["14"]["hung"] == round(summary.region_hung[14], 4)
         seat_id = inputs.seat_ids[0]
@@ -1470,6 +1471,35 @@ class TestToJsonDict:
         assert all(
             set(value) == {"v", "w"} for value in data["seats"][str(seat_id)].values()
         )
+
+    def test_mean_seats_are_the_simulated_means(self, world_run: WorldRun) -> None:
+        inputs, summary, draws = world_run
+        data = json.loads(json.dumps(summary.to_json_dict()))
+
+        for k, party_id in enumerate(inputs.party_ids):
+            expected = float(draws.seats[:, k].mean())
+            assert summary.national[party_id].mean == pytest.approx(expected)
+            assert data["national"]["parties"][str(party_id)]["mean"] == round(
+                expected, 2
+            )
+        assert sum(o.mean for o in summary.national.values()) == pytest.approx(
+            inputs.seat_count
+        )
+        for r, region_id in enumerate(inputs.region_ids):
+            in_region = draws.winner[:, inputs.seat_region == r]
+            parties = summary.regions[region_id]
+            for k, party_id in enumerate(inputs.party_ids):
+                if party_id not in parties:
+                    # Left out below the floor only when it never wins there.
+                    assert not (in_region == k).any()
+                    continue
+                expected = float((in_region == k).sum(axis=1).mean())
+                assert parties[party_id].mean == pytest.approx(expected)
+                stored = data["regions"][str(region_id)]["parties"][str(party_id)]
+                assert stored["mean"] == round(expected, 2)
+            assert sum(o.mean for o in parties.values()) == pytest.approx(
+                in_region.shape[1]
+            )
 
     def test_blocks_are_the_parts_of_the_whole(self, world_run: WorldRun) -> None:
         _, summary, _ = world_run

@@ -41,6 +41,7 @@ from scripts.export.uncertainty import (
     latest_model_run,
     link_uncertainty_payload,
     model_run_uncertainty,
+    party_names,
 )
 
 
@@ -147,7 +148,7 @@ def export_preview(db: Database) -> ExportPreview | None:
             ).scalars()
         )
         stored = load_uncertainty(Path(db.config.database_path), election.id)
-        published = model_run_uncertainty(election, stored)
+        published = model_run_uncertainty(election, stored, party_names(session))
         plain = build_result_payload(seats, votes, election_year=election.year)
         with_u = build_result_payload(
             seats,
@@ -202,10 +203,11 @@ def export_preview(db: Database) -> ExportPreview | None:
                 len(compact_json(document).encode("utf-8")),
                 (
                     f"schema {document['schema']}, as of {document['as_of_date']}",
-                    f"national: {len(national_parties)} parties with v, s, pm, pl "
-                    "and seat histogram; hung",
-                    f"{region_count} regions with v and s (pm, pl, hung where "
-                    "stored)",
+                    f"national: {len(national_parties)} parties with v, s, mean, "
+                    "whole seats m (largest remainder), pm, pl and seat histogram; "
+                    "hung",
+                    f"{region_count} regions with v, s, mean and m (pm, pl, hung "
+                    "where stored)",
                 ),
             )
         )
@@ -237,7 +239,8 @@ def export_preview(db: Database) -> ExportPreview | None:
                 "results/model_output_trends.json",
                 None,
                 (
-                    f"This run's entry: vl/vh for {len(trend.parties)} parties, pm "
+                    f"This run's entry: vl/vh/sl/sh/sm for {len(trend.parties)} "
+                    "parties, pm "
                     f"for {with_pm}, pl for {with_pl} (zeros left out), hung "
                     f"{trend.hung}: about +{added:,} bytes",
                     f"{_runs_phrase(_stored_runs(db, map_id))} a stored national "

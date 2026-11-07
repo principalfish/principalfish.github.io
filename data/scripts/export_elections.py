@@ -99,6 +99,7 @@ from scripts.export.uncertainty import (
     latest_model_run,
     link_uncertainty_payload,
     model_run_uncertainty,
+    party_names,
     sync_uncertainty_file,
 )
 
@@ -395,6 +396,8 @@ def main() -> None:
     with db.session() as session:
         parties = session.execute(select(Party)).scalars().all()
         regions = session.execute(select(Region)).scalars().all()
+        # The whole seats' last tie-break, from the same source as the console preview.
+        tie_break_names = party_names(session)
         manifest_parties = build_manifest_party_settings(parties)
         manifest_regions_by_map_id = build_manifest_regions_by_map_id(regions)
 
@@ -446,7 +449,9 @@ def main() -> None:
                 .options(joinedload(Vote.party))
             ).scalars().all())
             published = model_run_uncertainty(
-                sim_election, load_uncertainty(database_path, sim_election.id)
+                sim_election,
+                load_uncertainty(database_path, sim_election.id),
+                tie_break_names,
             )
             result_payload = build_result_payload(
                 seats,
@@ -543,7 +548,11 @@ def main() -> None:
             None,
         )
         model_uncertainty = (
-            model_run_uncertainty(model_run, load_uncertainty(database_path, model_run.id))
+            model_run_uncertainty(
+                model_run,
+                load_uncertainty(database_path, model_run.id),
+                tie_break_names,
+            )
             if model_run is not None
             else None
         )

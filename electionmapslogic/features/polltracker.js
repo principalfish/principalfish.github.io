@@ -21,8 +21,15 @@ function optionalFields(party, hasUncertainty) {
   return {
     voteLo: hasBand ? lo : null, voteHi: hasBand ? hi : null,
     seatLo: hasSeatBand ? seatLo : null, seatHi: hasSeatBand ? seatHi : null,
+    seatMean: seatMean(party),
     pMaj: odds("pm"), pLargest: odds("pl"),
   };
+}
+
+/** A run's simulated mean seats `sm`, or null for a central-only run (e.g. the election result). */
+function seatMean(party) {
+  const value = party?.sm;
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
 /**
@@ -30,7 +37,9 @@ function optionalFields(party, hasUncertainty) {
  *
  * Input shape (one entry per model run; the writer guarantees one entry per as_of_date):
  *   [{ election_id, election_name, as_of_date: "YYYY-MM-DD",
- *      parties: { "<partyId>": { s: <seats>, v: <votePct>, vl?, vh?, sl?, sh?, pm?, pl? } }, hung? }]
+ *      parties: { "<partyId>": { s: <seats>, v: <votePct>, vl?, vh?, sl?, sh?, sm?, pm?, pl? } },
+ *      hung? }]
+ *   A run with a simulated mean `sm` plots it as its seats, else its central (uniform-swing) `s`.
  *
  * Pipeline:
  *   1. Flatten — explode each entry into one row per party: { partyKey, asOfDate, seats, votePct }.
@@ -57,6 +66,7 @@ function optionalFields(party, hasUncertainty) {
  *     voteHi: Array<number|null>,
  *     seatLo: Array<number|null>,
  *     seatHi: Array<number|null>,
+ *     seatMean: Array<number|null>,
  *     pMaj: Array<number|null>,
  *     pLargest: Array<number|null>,
  *     latestSeats: number
@@ -83,12 +93,13 @@ export function parsePollTrackerData(data) {
       const seats = Number(pdata.s);
       const votePct = Number(pdata.v);
       if (!Number.isFinite(partyId) || !Number.isFinite(seats) || !Number.isFinite(votePct)) continue;
+      const optional = optionalFields(pdata, hung !== null);
       rows.push({
         partyKey: String(partyId),
         asOfDate,
-        seats,
+        seats: optional.seatMean ?? seats,
         votePct,
-        ...optionalFields(pdata, hung !== null),
+        ...optional,
       });
     }
   }
@@ -168,24 +179,33 @@ export function parsePollTrackerData(data) {
   byParty.forEach((rowsByDateKey, partyKey) => {
     const seats = [];
     const votePct = [];
-    const optional = { voteLo: [], voteHi: [], seatLo: [], seatHi: [], pMaj: [], pLargest: [] };
+    const optional = {
+      voteLo: [], voteHi: [], seatLo: [], seatHi: [], seatMean: [], pMaj: [], pLargest: [],
+    };
     let lastOptional = optionalFields(null, false);
     let lastSeats = null;
+    // Whether lastSeats is a simulated mean: it travels with lastSeats, not with the optional
+    // fields, so a run lacking this party carries its last mean forward still labelled a mean.
+    let lastSeatMean = null;
     let lastVotePct = null;
     timeline.forEach((entry) => {
       const row = entry.boundary ? null : rowsByDateKey.get(entry.dateKey);
       if (entry.boundary) {
         lastSeats = null;
+        lastSeatMean = null;
         lastVotePct = null;
         lastOptional = optionalFields(null, false);
       }
       if (row) {
         lastSeats = Number(row.seats || 0);
+        lastSeatMean = row.seatMean;
         lastVotePct = Number(row.votePct || 0);
       }
       // Calendar gaps carry forward; an explicit run clears any missing optional values.
       if (!entry.boundary && runsByDate.has(entry.dateKey)) lastOptional = row ?? optionalFields(null, false);
-      for (const key of Object.keys(optional)) optional[key].push(lastOptional[key]);
+      for (const key of Object.keys(optional)) {
+        optional[key].push(key === "seatMean" ? lastSeatMean : lastOptional[key]);
+      }
       seats.push(lastSeats);
       votePct.push(lastVotePct);
     });

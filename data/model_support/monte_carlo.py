@@ -123,6 +123,7 @@ WESTMINSTER_KERNEL_VERSION: Final = "pf-westminster-mc-v1"
 # Decimal places kept by SimulationSummary.to_json_dict.
 _SHARE_DECIMALS: Final = 2
 _PROBABILITY_DECIMALS: Final = 4
+_SEAT_MEAN_DECIMALS: Final = 2
 
 
 class SimulationFileError(UncertaintyError):
@@ -1185,6 +1186,7 @@ class NationalPartyOutcome:
         vote: The interval of its turnout-weighted vote share, (lo, hi).
         seats: Its seat total at the interval's ends and the median,
             (lo, median, hi).
+        mean: Its mean seat total over the simulations.
         histogram: Its full seat distribution.
         p_majority: Share of simulations with a majority.
         p_largest: Share of simulations as the largest party, ties split
@@ -1193,6 +1195,7 @@ class NationalPartyOutcome:
 
     vote: tuple[float, float]
     seats: tuple[int, int, int]
+    mean: float
     histogram: SeatHistogram
     p_majority: float
     p_largest: float
@@ -1205,10 +1208,12 @@ class RegionPartyOutcome:
     Attributes:
         vote: Interval of its regional vote share, (lo, hi).
         seats: Its regional seats, (lo, median, hi).
+        mean: Its mean regional seats over the simulations.
     """
 
     vote: tuple[float, float]
     seats: tuple[int, int, int]
+    mean: float
     p_majority: float | None = None
     p_largest: float | None = None
 
@@ -1262,12 +1267,12 @@ class SimulationSummary:
     def national_json(self) -> dict[str, object]:
         """Return the national block, with the run's metadata, as JSON data.
 
-        Shape (party ids become string keys; shares to 2 dp, probabilities
-        to 4)::
+        Shape (party ids become string keys; shares and mean seats to 2 dp,
+        probabilities to 4)::
 
             {"simulations", "interval", "seed", "config_hash", "hung": p,
              "parties": {pid: {"v": [lo, hi], "s": [lo, med, hi],
-                               "pm": p, "pl": p,
+                               "mean": seats, "pm": p, "pl": p,
                                "hist": {"start": n, "counts": [...]}}}}
 
         Every party is present.
@@ -1287,6 +1292,7 @@ class SimulationSummary:
                 str(party_id): {
                     "v": _round_pair(outcome.vote),
                     "s": list(outcome.seats),
+                    "mean": round(outcome.mean, _SEAT_MEAN_DECIMALS),
                     "pm": round(outcome.p_majority, _PROBABILITY_DECIMALS),
                     "pl": round(outcome.p_largest, _PROBABILITY_DECIMALS),
                     "hist": {
@@ -1302,8 +1308,10 @@ class SimulationSummary:
         """Return the region block as JSON data.
 
         Shape: ``{rid: {"parties": {pid: {"v": [lo, hi], "s": [lo, med,
-        hi]}}}}``. A party is left out of a region where its share interval
-        tops out below :data:`COMPACT_SHARE_FLOOR` and it never wins a seat.
+        hi], "mean": seats, "pm": p, "pl": p}}, "hung": p}}`` (mean seats to
+        2 dp). A party is left out of a region where its share interval tops
+        out below :data:`COMPACT_SHARE_FLOOR` and it never wins a seat, so its
+        mean there is 0 and the means present still sum to the region's seats.
 
         Returns:
             The data, serialisable with ``json.dumps``.
@@ -1314,6 +1322,7 @@ class SimulationSummary:
                     str(party_id): {
                         "v": _round_pair(outcome.vote),
                         "s": list(outcome.seats),
+                        "mean": round(outcome.mean, _SEAT_MEAN_DECIMALS),
                         **(
                             {
                                 "pm": round(outcome.p_majority, _PROBABILITY_DECIMALS),
@@ -1463,6 +1472,7 @@ def summarise(
 
     vote_band = np.quantile(tallies.national_vote, [lo, hi], axis=0)
     seat_range = _seat_range(tallies.national_seats, config)
+    seat_mean = tallies.national_seats.mean(axis=0)
     p_majority, p_largest = seat_outcome_probabilities(
         tallies.national_seats, config.majority_threshold
     )
@@ -1473,6 +1483,7 @@ def summarise(
         national[party_id] = NationalPartyOutcome(
             vote=(float(vote_band[0, k]), float(vote_band[1, k])),
             seats=_triple(seat_range[:, k]),
+            mean=float(seat_mean[k]),
             histogram=SeatHistogram(
                 start=start,
                 counts=tuple(int(c) for c in np.bincount(party_seats - start)),
@@ -1483,6 +1494,7 @@ def summarise(
 
     region_band = np.quantile(tallies.region_vote, [lo, hi], axis=0)
     region_range = _seat_range(tallies.region_seats, config)
+    region_mean = tallies.region_seats.mean(axis=0)
     region_seat_max = tallies.region_seats.max(axis=0)
     regions: dict[int, dict[int, RegionPartyOutcome]] = {}
     region_hung: dict[int, float] = {}
@@ -1498,6 +1510,7 @@ def summarise(
             party_id: RegionPartyOutcome(
                 vote=(float(region_band[0, r, k]), float(region_band[1, r, k])),
                 seats=_triple(region_range[:, r, k]),
+                mean=float(region_mean[r, k]),
                 p_majority=float(reg_majority[k]),
                 p_largest=float(reg_largest[k]),
             )

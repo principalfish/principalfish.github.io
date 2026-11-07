@@ -132,7 +132,20 @@ def _check_outcomes(draws: SimulationDraws, run: RunRecord) -> None:
                 for value, saved in zip(votes, saved_votes)
             )
         )
-        if item.get("hist") != histogram or item.get("s") != seats or not votes_match:
+        # Summaries stored before mean seats have none; one that has a mean
+        # must be this file's, rounded to its 2 dp.
+        saved_mean = item.get("mean")
+        mean_matches = saved_mean is None or (
+            isinstance(saved_mean, int | float)
+            and not isinstance(saved_mean, bool)
+            and abs(float(saved_mean) - float(counts.mean())) <= 0.005 + 1e-9
+        )
+        if (
+            item.get("hist") != histogram
+            or item.get("s") != seats
+            or not votes_match
+            or not mean_matches
+        ):
             raise SimulationFileError(
                 "Raw outcomes do not match this stored run; the raw file may predate a rerun."
             )

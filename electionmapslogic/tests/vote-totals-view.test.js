@@ -17,7 +17,8 @@ const shell = readFileSync(new URL("../shell.html", import.meta.url), "utf8");
 
 /**
  * Stored simulations for Labour and Reform nationally and in London. Each party's uniform-swing
- * count (summary below) differs from its median, so a stray count shows up in the table text.
+ * count (summary below) and its median `s[1]` differ from its whole seats `m`, so a stray count
+ * or median shows up in the table text.
  */
 function payload() {
   return {
@@ -25,13 +26,16 @@ function payload() {
     basis: "Nowcast: if an election were held today.",
     national: {
       parties: {
-        1: { v: [21.7, 29.3], s: [199, 282, 359], pm: 0.19, pl: 0.94 },
-        2: { v: [19.2, 27.1], s: [114, 120, 130], pm: 0, pl: 0.06 },
+        1: { v: [21.7, 29.3], s: [199, 282, 359], m: 280, pm: 0.19, pl: 0.94 },
+        2: { v: [19.2, 27.1], s: [114, 120, 130], m: 118, pm: 0, pl: 0.06 },
       },
       hung: 0.81,
     },
     regions: {
-      17: { parties: { 1: { v: [30, 40], s: [40, 48, 55] }, 2: { v: [10, 20.5], s: [2, 5, 9] } }, hung: null },
+      17: {
+        parties: { 1: { v: [30, 40], s: [40, 48, 55], m: 47 }, 2: { v: [10, 20.5], s: [2, 5, 9], m: 6 } },
+        hung: null,
+      },
     },
   };
 }
@@ -57,7 +61,7 @@ const comparison = {
   ],
 };
 
-/** The plain table body, as rendered before simulated medians existed. */
+/** The plain table body, as rendered before simulated seats existed. */
 const PLAIN_BODY = [
   ["labour", "Labour", "#e4003b", "300", "maps-delta-positive", "+300", "600", "60.00", "maps-delta-positive", "+60.00"],
   ["reform", "Reform UK", "#12b6cf", "109", "maps-delta-positive", "+109", "380", "38.00", "maps-delta-positive", "+38.00"],
@@ -111,22 +115,35 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
   const header = () => [...document.querySelectorAll("#mapsVoteTotalsTable thead th")].map((th) => th.textContent);
   const table = () => [...document.querySelectorAll("#mapsVoteTotalsBody tr")]
     .map((tr) => [...tr.cells].map((td) => td.textContent));
-  const note = () => document.getElementById("mapsSeatMedianNote");
+  const MAP_COLOURS = "Map colours show each seat's uniform-swing winner.";
+  const mapNote = () => document.getElementById("mapsMapColourNote");
+  /** The note in a mean view: the map-colour sentence alone, never "needn't add up". */
+  const shownNote = () => {
+    expect(mapNote().hidden).toBe(false);
+    expect(mapNote().textContent).toBe(MAP_COLOURS);
+    expect(document.getElementById("mapsSeatMedianNote")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/needn't add up|simulated medians/);
+  };
+  const noNote = () => {
+    expect(mapNote().hidden).toBe(true);
+    expect(mapNote().textContent).toBe("");
+    expect(document.body.textContent).not.toMatch(/needn't add up|simulated medians/);
+  };
   const toggle = () => document.getElementById("mapsUncertaintyToggle");
   const describedBy = () => document.getElementById("mapsVoteTotalsTable").getAttribute("aria-describedby");
   const PLAIN_HEADER = ["Party", "Seats", "±", "Votes", "Vote %", "±"];
 
-  it("shows each simulated median under Seats, with ± from the median and a dash without one", () => {
+  it("shows each party's whole seats under Seats, with ± from them and a dash without them", () => {
     renderVoteTotals(summary, comparison);
     expect(header()).toEqual(PLAIN_HEADER);
     expect(table()).toEqual([
-      ["Labour", "282", "-129", "600", "60.00", "+10.00"],
-      ["Reform UK", "120", "+115", "380", "38.00", "+18.00"],
+      ["Labour", "280", "-131", "600", "60.00", "+10.00"],
+      ["Reform UK", "118", "+113", "380", "38.00", "+18.00"],
       ["Green", "—", "", "20", "2.00", "-8.00"],
     ]);
-    // No uniform-swing count anywhere: not in a cell and not in a hover title.
+    // No uniform-swing count or median anywhere: not in a cell and not in a hover title.
     const html = document.getElementById("mapsVoteTotalsTable").outerHTML;
-    expect(html).not.toMatch(/>300<|>109<|title="[^"]*(300|109|[Uu]niform)/);
+    expect(html).not.toMatch(/>300<|>109<|>282<|>120<|title="[^"]*(300|109|[Uu]niform)/);
     expect(toggle().hidden).toBe(false);
     expect(toggle().textContent).toBe("Show uncertainty");
   });
@@ -138,8 +155,8 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     renderVoteTotals(summary, comparison);
     expect(header()).toEqual(PLAIN_HEADER);
     expect(table()).toEqual([
-      ["Labour", "282 (199–359)", "-129", "600", "60.00 (21.7–29.3%)", "+10.00"],
-      ["Reform UK", "120 (114–130)", "+115", "380", "38.00 (19.2–27.1%)", "+18.00"],
+      ["Labour", "280 (199–359)", "-131", "600", "60.00 (21.7–29.3%)", "+10.00"],
+      ["Reform UK", "118 (114–130)", "+113", "380", "38.00 (19.2–27.1%)", "+18.00"],
       ["Green", "—", "", "20", "2.00", "-8.00"],
     ]);
     // Same rows, same columns; only the Seats and Vote % texts gain their ranges.
@@ -150,33 +167,32 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     expect(toggle().textContent).toBe("Hide uncertainty");
   });
 
-  it("explains the medians beside the table and names the note to assistive technology", () => {
+  it("notes only the map colours under the table, since the whole seats add up", () => {
     renderVoteTotals(summary, comparison);
-    expect(note().hidden).toBe(false);
-    expect(note().textContent).toBe(
-      "Seats are simulated medians, so they needn't add up to 650. Map colours show each seat's uniform-swing winner.",
-    );
-    expect(describedBy().split(" ")).toContain("mapsSeatMedianNote");
+    shownNote();
+    expect(describedBy()).toBe("mapsSenateForecastComparison mapsUncertaintyBasis mapsMapColourNote");
   });
 
-  it("hides the median note with the table when the card collapses", () => {
+  it("hides the map-colour note with the table when the card collapses", () => {
     const css = readFileSync(new URL("../maps.css", import.meta.url), "utf8");
     const collapsedRule = css.match(/#mapsVoteTotalsCard\.maps-vote-totals--collapsed[^{}]+\{[^}]+\}/)?.[0];
-    expect(note().classList.contains("maps-seat-median-note")).toBe(true);
-    expect(collapsedRule).toContain(".maps-seat-median-note");
+    expect(mapNote().classList.contains("maps-map-colour-note")).toBe(true);
+    expect(collapsedRule).toContain(".maps-map-colour-note");
     expect(collapsedRule).toContain("display: none;");
+    expect(css).not.toContain("maps-seat-median-note");
   });
 
-  it("sorts Seats by the median, breaking ties by name", () => {
+  it("sorts Seats by the whole seats, breaking ties by name", () => {
     state.voteTotals.sort = { key: "seats", direction: "desc" };
-    // Reform's uniform-swing count leads, but Labour's median does.
+    // Reform's uniform-swing count and median lead, but Labour's whole seats do.
+    state.electionData.uncertainty.national.parties.reform.s = [100, 290, 400];
     const swapped = { ...summary, parties: [
       { party: "labour", seats: 100, votes: 300 }, { party: "reform", seats: 400, votes: 700 },
     ] };
     renderVoteTotals(swapped, null);
     expect(table().map((row) => row[0])).toEqual(["Labour", "Reform UK"]);
-    // Equal medians: Reform's larger vote share does not put it first.
-    state.electionData.uncertainty.national.parties.reform.s = [100, 282, 400];
+    // Equal whole seats: Reform's larger vote share and median do not put it first.
+    state.electionData.uncertainty.national.parties.reform.m = 280;
     renderVoteTotals(swapped, null);
     expect(table().map((row) => row[0])).toEqual(["Labour", "Reform UK"]);
     state.voteTotals.sort = { key: "seats", direction: "asc" };
@@ -184,7 +200,7 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     expect(table().map((row) => row[0])).toEqual(["Labour", "Reform UK"]);
   });
 
-  it("uses one region's medians, with ± against that region's 2024 seats", () => {
+  it("uses one region's whole seats, with ± against that region's 2024 seats", () => {
     state.mapFilters.region = "london";
     state.voteTotals.showUncertainty = true;
     const london = { totalVotes: 100, totalSeats: 75, parties: [
@@ -195,10 +211,10 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     ] };
     renderVoteTotals(london, london2024);
     expect(table()).toEqual([
-      ["Labour", "48 (40–55)", "-11", "70", "70.00 (30–40%)", "+10.00"],
-      ["Reform UK", "5 (2–9)", "+5", "30", "30.00 (10–20.5%)", "+20.00"],
+      ["Labour", "47 (40–55)", "-12", "70", "70.00 (30–40%)", "+10.00"],
+      ["Reform UK", "6 (2–9)", "+6", "30", "30.00 (10–20.5%)", "+20.00"],
     ]);
-    expect(note().textContent).toContain("needn't add up to 75.");
+    shownNote();
   });
 
   it.each([
@@ -211,8 +227,7 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     expect(table().map((row) => row.slice(1, 3))).toEqual([["300", "-111"], ["109", "+104"], ["3", "-1"]]);
     expect(table().flat().join(" ")).not.toMatch(/[–—]/);
     expect(toggle().hidden).toBe(true);
-    expect(note().hidden).toBe(true);
-    expect(note().textContent).toBe("");
+    noNote();
     expect(describedBy()).toBe("mapsSenateForecastComparison mapsUncertaintyBasis");
   });
 
@@ -220,7 +235,7 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     function expectPlain() {
       expect(header()).toEqual(PLAIN_HEADER);
       expect(document.getElementById("mapsVoteTotalsBody").innerHTML).toBe(PLAIN_BODY);
-      expect(note().hidden).toBe(true);
+      noNote();
       expect(toggle().hidden).toBe(true);
       expect(describedBy()).toBe("mapsSenateForecastComparison");
     }
@@ -259,7 +274,7 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
       renderVoteTotals(summary, empty);
       expect(header()).toEqual(["Party", "EV", "±", "Votes", "Vote %", "±"]);
       expect(document.getElementById("mapsVoteTotalsBody").innerHTML).toBe(PLAIN_BODY);
-      expect(note().hidden).toBe(true);
+      noNote();
     });
   });
 });

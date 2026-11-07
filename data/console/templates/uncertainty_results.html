@@ -1,8 +1,8 @@
 {% extends "uncertainty_run_base.html" %}
 {% macro outcome_table(block, totals, histograms=false) %}
 <p>Probability no party wins a majority: {{ fmt(block.get('hung') * 100, '.1f') ~ '%' if block.get('hung') is number else 'not stored' }}. Largest-party ties divide probability equally.</p>
-<div class="table-wrap"><table><thead><tr><th scope="col">Party</th><th scope="col">Central seats</th><th scope="col">Simulated seats low / median / high</th><th scope="col">Simulated vote interval</th><th scope="col">P(majority)</th><th scope="col">P(largest)</th>{% if histograms %}<th scope="col">Seat distribution</th>{% endif %}</tr></thead><tbody>
-{% for party, item in ordered_parties(block.get('parties'), totals) %}<tr><td>{{ labels.parties.get(party, party) }}</td><td>{{ totals.get(party, 0) }}</td><td>{{ item.get('s', '-')|round_display }}</td><td>{{ item.get('v', '-')|round_display }}</td><td>{{ fmt(item.pm * 100, '.1f') ~ '%' if item.get('pm') is number else 'not stored' }}</td><td>{{ fmt(item.pl * 100, '.1f') ~ '%' if item.get('pl') is number else 'not stored' }}</td>
+<div class="table-wrap"><table><thead><tr><th scope="col">Party</th><th scope="col">Central seats</th><th scope="col">Simulated seats low / median / high</th><th scope="col">Simulated mean seats</th><th scope="col">Simulated vote interval</th><th scope="col">P(majority)</th><th scope="col">P(largest)</th>{% if histograms %}<th scope="col">Seat distribution</th>{% endif %}</tr></thead><tbody>
+{% for party, item in ordered_parties(block.get('parties'), totals) %}<tr><td>{{ labels.parties.get(party, party) }}</td><td>{{ totals.get(party, 0) }}</td><td>{{ item.get('s', '-')|round_display }}</td><td>{{ fmt(item.mean, '.2f') if item.get('mean') is number else 'not stored' }}</td><td>{{ item.get('v', '-')|round_display }}</td><td>{{ fmt(item.pm * 100, '.1f') ~ '%' if item.get('pm') is number else 'not stored' }}</td><td>{{ fmt(item.pl * 100, '.1f') ~ '%' if item.get('pl') is number else 'not stored' }}</td>
 {% if histograms %}
 <td>
   {% set hist = mapping(item.get('hist')) %}

@@ -6,6 +6,7 @@ import argparse
 import json
 import sqlite3
 import sys
+from collections import Counter
 from contextlib import closing
 from dataclasses import replace
 from datetime import timedelta
@@ -44,6 +45,7 @@ from export_elections import (
     refresh_manifest_modes,
 )
 from scripts.export.ordering import float_model_entries_first, reorder_manifest_entries
+from scripts.export.uncertainty import party_names
 from tests.export_golden import (
     GOLDEN_PATH,
     SHELL,
@@ -706,11 +708,14 @@ class TestModelRunUncertaintyExport:
         identity = document.pop("uncertaintyId")
         assert identity == payload["uncertaintyId"]
         assert len(identity) == 64
+        with db.session() as session:
+            names = party_names(session)
         assert document == public_document(
             model_run.national,
             model_run.regions or {},
             election_name=f"UNS {DAY}",
             as_of_date=DAY.isoformat(),
+            party_names=names,
         )
         assert document["schema"] == "pf-uncertainty-v1"
         assert document["simulations"] == 50
@@ -927,6 +932,55 @@ class TestModelRunUncertaintyExport:
             )
             conn.commit()
         with pytest.raises(PublicUncertaintyError, match="national.hung"):
+            run_export(db, tmp_path, [], monkeypatch)
+        assert not (tmp_path / "out" / "results").exists()
+
+    def test_whole_seats_add_up_to_each_seat_total(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        result = run_export(db, tmp_path, [], monkeypatch, shell=SHELL_WITH_FLAG)
+        document = json.loads(result["files"]["results/prediction-uncertainty.json"])
+        with db.session() as session:
+            election = session.get(Election, model_run.election_id)
+            assert election is not None
+            region_seats = Counter(
+                session.execute(
+                    select(Seat.region_id).where(Seat.map_id == election.map_id)
+                ).scalars()
+            )
+        national = document["national"]["parties"]
+        assert sum(party["m"] for party in national.values()) == sum(
+            region_seats.values()
+        )
+        for region_id, block in document["regions"].items():
+            parties = block["parties"].values()
+            assert sum(party["m"] for party in parties) == region_seats[int(region_id)]
+            assert sum(party["mean"] for party in parties) == pytest.approx(
+                region_seats[int(region_id)], abs=0.005 * len(parties)
+            )
+
+    def test_a_run_stored_without_mean_seats_fails_the_export(
+        self,
+        db: Database,
+        model_run: StoredUncertainty,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # A summary stored before mean seats existed: no median stand-in.
+        national: Any = json.loads(json.dumps(model_run.national))
+        for party in national["parties"].values():
+            party.pop("mean")
+        with closing(sqlite3.connect(db.config.database_path)) as conn:
+            conn.execute(
+                "UPDATE model_uncertainty SET national_json = ? WHERE election_id = ?",
+                (json.dumps(national), model_run.election_id),
+            )
+            conn.commit()
+        with pytest.raises(PublicUncertaintyError, match="no stored mean seats"):
             run_export(db, tmp_path, [], monkeypatch)
         assert not (tmp_path / "out" / "results").exists()
 

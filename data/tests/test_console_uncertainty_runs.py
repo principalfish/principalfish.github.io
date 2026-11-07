@@ -85,6 +85,10 @@ def test_stored_pages_render(app: Flask, saved: dict[str, Any], suffix: str) -> 
     if suffix == "results":
         assert "Seat distribution" in body
         assert "Most competitive" in body
+        assert "Simulated mean seats" in body
+        national: Any = saved["record"].stored.national
+        labour = national["parties"][str(saved["world"].party_ids["Labour"])]
+        assert f"<td>{labour['mean']:.2f}</td>" in body
     if suffix == "sims":
         assert "50 / 50 simulations" in body
         assert "not necessary thresholds" in body
@@ -266,6 +270,57 @@ def test_snapshot_validation_and_stale_same_date(
     save_draws(path, replace(draws, seats=changed, replay=None), saved["meta"])
     with pytest.raises(SimulationFileError, match="outcomes do not match"):
         raw_run(path, saved["record"])
+
+
+@pytest.mark.parametrize("mean", ["x", True, [1.0]])
+def test_a_stored_mean_that_is_not_a_number_is_a_mismatch(
+    saved: dict[str, Any], mean: object
+) -> None:
+    # Rig the first party to exactly 1 seat in every simulation (the largest
+    # party takes up the difference, so totals still hold), and store both
+    # parties' outcomes to match, so a mean of 1.0 passes and True (== 1) is
+    # refused only for being a bool.
+    path, draws, record = saved["path"], saved["draws"], saved["record"]
+    seats = draws.seats.copy()
+    largest = int(seats.mean(axis=0).argmax())
+    assert largest != 0
+    seats[:, largest] += seats[:, 0] - 1
+    seats[:, 0] = 1
+    save_draws(path, replace(draws, seats=seats, replay=None), saved["meta"])
+    national: Any = json.loads(json.dumps(record.stored.national))
+    tail = outcome_tail(national)
+    for k in (0, largest):
+        counts = seats[:, k]
+        start = int(counts.min())
+        national["parties"][str(draws.party_ids[k])].update(
+            s=np.quantile(counts, [tail, 0.5, 1 - tail], method="inverted_cdf")
+            .astype(int)
+            .tolist(),
+            hist={"start": start, "counts": np.bincount(counts - start).tolist()},
+            mean=round(float(counts.mean()), 2),
+        )
+    party = national["parties"][str(draws.party_ids[0])]
+    assert party["mean"] == 1.0
+    raw_run(path, replace(record, stored=replace(record.stored, national=national)))
+    party["mean"] = mean
+    stale = replace(record, stored=replace(record.stored, national=national))
+    with pytest.raises(SimulationFileError, match="outcomes do not match"):
+        raw_run(path, stale)
+
+
+def test_a_stored_mean_must_match_the_raw_file(saved: dict[str, Any]) -> None:
+    record = saved["record"]
+    national: Any = json.loads(json.dumps(record.stored.national))
+    party = next(iter(national["parties"].values()))
+    party["mean"] = party["mean"] + 0.01
+    stale = replace(record, stored=replace(record.stored, national=national))
+    with pytest.raises(SimulationFileError, match="outcomes do not match"):
+        raw_run(saved["path"], stale)
+    # A summary stored before mean seats has none to compare.
+    for item in national["parties"].values():
+        item.pop("mean")
+    legacy = replace(record, stored=replace(record.stored, national=national))
+    raw_run(saved["path"], legacy)
 
 
 @pytest.mark.parametrize(

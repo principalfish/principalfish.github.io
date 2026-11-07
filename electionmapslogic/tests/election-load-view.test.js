@@ -27,7 +27,7 @@ const header = `<header class="maps-header"><h1 class="maps-title"></h1>
   <p id="mapsSubtitle" class="maps-subtitle"></p><p id="mapsElectionCountdown" hidden></p></header>`;
 const shell = header + readFileSync(new URL("../shell.html", import.meta.url), "utf8");
 
-const HEADLINE = "Labour 282 seats (199–359) · majority 19%";
+const HEADLINE = "Labour 280 seats (199–359) · majority 19%";
 const BASIS = "Nowcast: if an election were held today. 90% ranges and probabilities from 10,000 "
   + "simulations, conditional on current polls and the model's error assumptions.";
 const LATEST = "Latest poll used: Opinium (2026-10-28 to 2026-10-30)";
@@ -75,8 +75,8 @@ function uncertainty() {
     basis: BASIS,
     national: {
       parties: {
-        1: { v: [21.7, 29.3], s: [199, 282, 359], pm: 0.19, pl: 0.94 },
-        2: { v: [19.2, 27.1], s: [114, 120, 130], pm: 0, pl: 0.06 },
+        1: { v: [21.7, 29.3], s: [199, 282, 359], m: 280, pm: 0.19, pl: 0.94 },
+        2: { v: [19.2, 27.1], s: [114, 120, 130], m: 118, pm: 0, pl: 0.06 },
       },
       hung: 0.81,
     },
@@ -178,10 +178,14 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       expect(state.electionData.uncertainty.national.hung).toBe(0.81);
       expect(headline().textContent).toBe(HEADLINE);
       expect(mainLine().textContent).toBe(SIMULATED);
-      // The totals table shows the simulated medians, not the one-seat uniform-swing count.
+      // The totals table shows the exported whole seats, not the median or the one-seat
+      // uniform-swing count; the only note is the map-colour one.
       expect([...document.querySelectorAll("#mapsVoteTotalsBody tr")].map((tr) => tr.cells[1].textContent))
-        .toEqual(["282", "120"]);
-      expect(document.getElementById("mapsSeatMedianNote").hidden).toBe(false);
+        .toEqual(["280", "118"]);
+      expect(document.getElementById("mapsSeatMedianNote")).toBeNull();
+      expect(document.getElementById("mapsMapColourNote").hidden).toBe(false);
+      expect(document.getElementById("mapsMapColourNote").textContent)
+        .toBe("Map colours show each seat's uniform-swing winner.");
       expect(document.querySelectorAll("#mapContent .maps-region-path")).toHaveLength(1);
       expect(dom.window.location.search).toBe("?view=election&election=current-prediction");
     });
@@ -278,7 +282,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       expect(mainLine().textContent).toBe("2024 General Election · Labour majority: 1");
       expect([...document.querySelectorAll("#mapsVoteTotalsBody tr")].map((tr) => tr.cells[1].textContent))
         .toEqual(["1", "0"]);
-      expect(document.getElementById("mapsSeatMedianNote").hidden).toBe(true);
+      expect(document.getElementById("mapsMapColourNote").hidden).toBe(true);
       expect(headline()).toBeNull();
       expect(basisNote()).toBeNull();
     });
@@ -336,7 +340,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
         "Current prediction · Hung parliament likely (81%) · <b>Labour</b> & co largest party (94%)",
       );
       expect(mainLine().children).toHaveLength(0);
-      expect(headline().textContent.startsWith("<b>Labour</b> & co 282 seats")).toBe(true);
+      expect(headline().textContent.startsWith("<b>Labour</b> & co 280 seats")).toBe(true);
       expect(headline().children).toHaveLength(0);
     });
   });

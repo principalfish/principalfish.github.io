@@ -18,3 +18,4 @@
 - 2026-11-07 11:48 · import-2026-us-midterm-results (0002) · title = Import 2018–2026 US House and Senate results from NYT data
 - 2026-11-07 11:51 · import-2026-us-midterm-results (0002) · planned → building
 - 2026-11-07 13:21 · tools/ added: setup-worktree.sh, coverage-changed.sh, coveragerc; project.md points at them; quick-build entry 3b1adc2f removed (script moved here)
+- 2026-11-07 13:22 · 3b1adc2f was already pushed, so its quick-build entry is restored

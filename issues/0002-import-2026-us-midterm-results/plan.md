@@ -242,7 +242,7 @@ New code lives in `data/scripts/us_results/` (the newer live-importer location, 
 - [x] 3. Schema adapters A/B/C + race model (9f17c51d)
 - [x] 4. Converter, importer extensions, CLI, diff report (0a9007e5)
 - [x] 5. Console results tool (147ad9d4)
-- [ ] 6. House maps 24 (2026) and 25 (2012 cycle)
+- [x] 6. House maps 24 (2026) and 25 (2012 cycle) (bfe5dc77)
 - [x] 7. Export: status, sourceNote, specials, naming (f90f26d3)
 - [ ] 8. Front end: uncalled, source line, specials
 - [ ] 9. Predict rollover + per-seat Senate baselines
@@ -385,6 +385,7 @@ No test touches the live DB (conftest guard).
   - The 2020 NC inaccuracy stands (NC 2020 shows on the 2018 boundaries).
   - `mapModes` 24 (`us-house-2026`) and 25 (`us-house-2018`) added to `map-modes-shell.json`; the generated `map-modes.json` is not regenerated (export is piece 11's live step). `map-modes.json` rebuilds from the shell on export.
 - 2026-11-07 (piece 6) built on Sonnet (experiment), inline in the builder shell. One analysis round: frontier correctness and security found nothing blocking (two low download-hardening notes, a docstring contradiction, a gap-fill edge case); all fixed except the zip-size limit and checksum, which are skipped (constant Census URLs, dev-time tool). Style/common-mistakes: dead `enrich`, unused constants, non-atomic download cache (now temp-then-rename) and a float threshold compare, all fixed.
+- 2026-11-07: piece 6 committed (bfe5dc77) and pushed. User confirmed the Census TIGER2026 cd120 source for the nine redrawn states, MO on cb_2024.
 - Piece 6 coverage (changed lines, 98% overall): `build_house_topojson.py` 96.9%. Uncovered lines are defensive: skip of an unknown state FIPS, the non-polygon branch of `_polygonal`, an empty gap piece, an empty clipped district. Each only guards against degenerate geometry the Census files don't produce. The new untracked files are not counted by diff-cover; their tests run 45 cases (the CLI of `check_redistricting.py` is the only part not run in tests; I ran it against the real data).
 - 2026-11-07: issue handed over to the new-style planner chat `planner: import-2026-us-midterm-results` (main checkout), which starts the builder. The old worktree `planner-us-midterm-import-eee87c` was switched back to its own branch, freeing `import-2026-us-midterm-results`.
 - 2026-11-07 (planner chat): record ingested from the old chat's outbox (plan.md merged by hand: its piece-1 Files line and two piece-1 notes had never reached the record). Draft PR #80 opened. Overlap check against issue 0001 (`poll-errors-simulation`, PR #74): the committed branches already conflict in 6 files (`README.md`, `data/models.py`, `data/scripts/export/payload.py`, `data/scripts/export_elections.py`, `data/tests/test_export_manifest.py`, `data/tests/test_export_payload.py`; `git merge-tree`). Piece 6 shares nothing with 0001. Piece 8 shares `electionmapslogic/state.js`, `dom.js`, `shell.html`, `maps.css`, the tests folder and both rebuilt bundles; piece 9 shares `test_export_manifest.py`; piece 11 shares `README.md`/`AGENTS.md`. 0001 has only its live backfill/export left and ships first, so merging master into this branch after #74 lands (before piece 8) is the suggested order — the user decides.

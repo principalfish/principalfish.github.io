@@ -152,6 +152,72 @@ describe('renderSeatPopup', () => {
   });
 });
 
+describe('renderSeatPopup: individual candidate rows', () => {
+  const load = (payload, comparison = null) => {
+    const { state, ElectionData } = stateModule;
+    state.electionData = new ElectionData(payload);
+    state.comparisonElectionData = comparison ? new ElectionData(comparison) : null;
+  };
+  const meta = () => document.getElementById('mapsSeatPopupMeta');
+  const list = () => document.getElementById('mapsSeatPopupList');
+  const rowTexts = () => [...list().querySelectorAll('.maps-popup-row')].map((row) => row.textContent.replace(/\s+/g, ' ').trim());
+  const alaska = (extra = {}) => ({
+    n: 'Alaska', r: 'region', w: 'democrat', c: false, pc: 74.1,
+    p: [['democrat', 102962, 'Mary Peltola'], ['republican', 102325, 'Dan Sullivan'],
+      ['republican', 4846, 'Gerald Heikes'], ['others', 3600, 'Daniel <b>Sullivan</b>']],
+    ...extra,
+  });
+
+  it('lists the four candidates with percentages, sorted by votes, and no deltas', () => {
+    // A comparison seat would give every party a delta; candidate rows carry none.
+    load({ seats: [alaska()] }, { seats: [rawSeat('Alaska', 'republican', { republican: 60, democrat: 40 })] });
+    dom.renderSeatPopup('Alaska');
+    expect(rowTexts()).toEqual([
+      expect.stringMatching(/^Mary Peltola\s*48\.17%$/),
+      expect.stringMatching(/^Dan Sullivan\s*47\.88%$/),
+      expect.stringMatching(/^Gerald Heikes\s*2\.27%$/),
+      expect.stringMatching(/^Daniel <b>Sullivan<\/b>\s*1\.68%$/),
+    ]);
+    expect(list().querySelector('b')).toBeNull();
+    expect(list().querySelector('.maps-popup-values span:nth-child(2)')).toBeNull();
+    expect(meta().textContent).toContain('UNCALLED · 74.1% counted');
+    // Peltola's lead over Sullivan (637 votes), not the Republican party total's lead of 4,209.
+    expect(meta().textContent).toContain('Majority: 0.30% = 637');
+    expect(meta().textContent).not.toContain('4,209');
+  });
+
+  it('colours each row by its own party', () => {
+    stateModule.manifest.init({
+      parties: [
+        { id: 20, key: 'democrat', name: 'Democrat', colour: '#0000ff' },
+        { id: 21, key: 'republican', name: 'Republican', colour: '#ff0000' },
+        { id: 15, key: 'others', name: 'Others', colour: '#888888' },
+      ],
+      mapModes: {}, elections: [], defaultElection: null, files: {}, parliamentFeatures: {}, partyKeyAliases: {}, misc: {},
+    });
+    load({ seats: [alaska()] });
+    dom.renderSeatPopup('Alaska');
+    const rows = [...list().querySelectorAll('.maps-popup-row')];
+    const colour = (row) => row.style.getPropertyValue('--maps-popup-bar-colour');
+    expect(colour(rows[1])).toBe(colour(rows[2]));
+    expect(colour(rows[1])).toBe('#ff0000');
+    expect(colour(rows[0])).toBe('#0000ff');
+    expect(colour(rows[3])).toBe('#888888');
+  });
+
+  it('a seat without a repeated party keeps its per-party rows and deltas', () => {
+    load(
+      { seats: [rawSeat('Texas', 'republican', { republican: 60, democrat: 40 })] },
+      { seats: [rawSeat('Texas', 'republican', { republican: 50, democrat: 50 })] },
+    );
+    dom.renderSeatPopup('Texas');
+    const texts = rowTexts();
+    expect(texts).toHaveLength(2);
+    expect(texts[0]).toContain('+10.00');
+    expect(texts[1]).toContain('-10.00');
+  });
+});
+
 describe('renderSeatPopup: previous same-class result (pv)', () => {
   const load = (payload, comparison = null) => {
     const { state, ElectionData } = stateModule;

@@ -1059,6 +1059,21 @@ for supported fields, selection rules, and shell transformations.
 	- optional top-level `specials` (US Senate): same-day special elections held alongside a state's regular race, one
 	  `{n, cl, w, p, c, pc, sp, rd, pv}` per state, sorted by name. `cl` is the seat's Senate class; the other keys follow
 	  the seat rules above, and there is no `r`. The special has no result file or manifest entry of its own.
+- a party may appear in more than one `p` row of a seat. That happens only when a committed seat override splits a
+  merged same-party result into its individual candidates (normally the export merges them into one row per party). The
+  front end sums the rows for party totals, tallies and the ±, and, when it sees a repeated party, lists the individual
+  rows (no per-row deltas) in the seat popup instead of the per-party rows, and the popup's majority (and the majority
+  filters) and the second-place filter use the top two candidates rather than the top two party totals.
+- Seat candidate overrides: `data/scripts/export/seat_overrides.json`, applied on every export by
+  `scripts/export/seat_overrides.py`, replaces one uncalled seat's `p` with the individual candidates and sets `w` to the
+  individual vote leader. It is keyed by election name (exact, e.g. `"2026 US Senate Election"`), then seat name
+  (`"Alaska"`), each `{"w": partyKey, "p": [[partyKey, votes, name], ...]}` with rows in descending vote order (no tie for the top count) and `w` the party of the first row, the individual leader; party keys
+  are resolved to manifest ids at export. It exists for the 2026 Alaska Senate seat, where Sullivan and Heikes (both
+  Republican) merge into one row that outvotes Peltola although Peltola leads individually. Stale guard: the override holds
+  static numbers, so it is applied only while the seat is still uncalled and each party's override rows sum to the seat's
+  current merged party totals; otherwise the export prints a `WARNING` and keeps the merged rows (update or delete the
+  entry; the export never fails over it). A malformed file stops the export with a clear error. Delete the Alaska entry once
+  the ranked-choice final round is imported.
 - Frontend loader supports both compact and legacy result formats.
 
 ### Current Senate snapshot

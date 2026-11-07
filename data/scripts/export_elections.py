@@ -70,6 +70,7 @@ from scripts.export.payload import (
     senate_results_by_class,
     set_others_party_id,
 )
+from scripts.export.seat_overrides import apply_seat_overrides, load_seat_overrides
 from scripts.export.serialize import (
     write_json,
     write_manifest,
@@ -792,6 +793,7 @@ def _export_page(
     manifest_id_by_db_id: dict[int, str] = {}
     pending_by_election_rows: list[dict[str, Any]] = []
     senate_results_cache: dict[int, SenateResults] = {}
+    seat_overrides = load_seat_overrides()
 
     for election in elections:
         if is_folded_senate_special(election):
@@ -878,6 +880,12 @@ def _export_page(
             election_year=election.year,
             ev_by_unit=ev_by_unit,
             statuses=election_statuses,
+        )
+        apply_seat_overrides(
+            result_payload,
+            election.name,
+            {party["key"]: party["id"] for party in manifest_parties},
+            seat_overrides,
         )
         if election.type == ElectionType.us_senate:
             specials = senate_special_entries(session, election, seats)

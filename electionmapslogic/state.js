@@ -331,7 +331,8 @@ export class Seat {
   /**
    * @param {{seat: string, region: string, winner: (string|number), votes: object,
    *   called?: boolean, pctCounted?: (number|null), sameParty?: boolean, round?: (string|null),
-   *   senateClass?: (number|null), previous?: ({winner?: (string|number), votes?: object}|null)}} input
+   *   senateClass?: (number|null), previous?: ({winner?: (string|number), votes?: object}|null),
+   *   candidateRows?: (Array<{party: (string|number), votes: number, name?: string}>|null)}} input
    *   Normalised seat-shaped object. For raw JSON input, use {@link Seat.fromRaw} instead.
    *   The status fields are optional; a seat built without them is a called, ordinary result.
    */
@@ -361,6 +362,10 @@ export class Seat {
     // Optional candidate names by party key; absent for projections / older data,
     // where the UI falls back to the party label.
     this.candidates = { ...(input?.candidates || {}) };
+    // Individual candidate rows `[{party, votes, name}]` in payload order, set only when one
+    // party has several rows (an export override splitting a merged same-party result); null
+    // for every other seat. The popup lists these instead of the per-party rows.
+    this.candidateRows = Seat.#normalizeCandidateRows(input?.candidateRows);
     // Electoral College votes for this seat (presidential maps only); 0 otherwise.
     this.ev = Number(input?.ev) || 0;
     // Multi-member seats only (a seat that returns several members, each {party, name, up});
@@ -402,6 +407,7 @@ export class Seat {
       winner: rawSeat?.w,
       votes: Seat.#decodeCompactVotes(rawSeat?.p),
       candidates: Seat.#decodeCandidates(rawSeat?.p),
+      candidateRows: Seat.#decodeCandidateRows(rawSeat?.p),
       ev: rawSeat?.ev,
       members: rawSeat?.members,
       called: rawSeat?.c !== false,
@@ -431,6 +437,40 @@ export class Seat {
       if (partyKey && !candidates[partyKey]) candidates[partyKey] = String(entry[2]);
     });
     return candidates;
+  }
+
+  /**
+   * Decodes the individual candidate rows of a seat whose `p` repeats a party. Returns null
+   * unless some party appears in more than one row, so ordinary seats are unaffected. Rows
+   * with a non-positive total are dropped; the name is the row's third element (or '').
+   * @param {Array<[number|string, number, string]>|undefined} p - Compact party-vote rows.
+   * @returns {Array<{party: string, votes: number, name: string}>|null}
+   */
+  static #decodeCandidateRows(p) {
+    if (!Array.isArray(p)) return null;
+    const rows = [];
+    p.forEach((entry) => {
+      if (!Array.isArray(entry) || entry.length < 2) return;
+      const party = manifest.resolvePartyRef(entry[0]);
+      const votes = Number(entry[1] || 0);
+      if (!party || votes <= 0) return;
+      rows.push({ party, votes, name: entry[2] ? String(entry[2]) : '' });
+    });
+    const repeated = new Set(rows.map((row) => row.party)).size < rows.length;
+    return repeated ? rows : null;
+  }
+
+  /**
+   * Normalises candidate rows on the clone path (party refs re-resolved, bad rows dropped).
+   * @param {Array<{party: (string|number), votes: number, name?: string}>|null|undefined} rows
+   * @returns {Array<{party: string, votes: number, name: string}>|null} Null when absent or empty.
+   */
+  static #normalizeCandidateRows(rows) {
+    if (!Array.isArray(rows)) return null;
+    const out = rows
+      .filter((row) => row && Number(row.votes) > 0)
+      .map((row) => ({ party: manifest.resolvePartyRef(row.party), votes: Number(row.votes), name: row.name ? String(row.name) : '' }));
+    return out.length ? out : null;
   }
 
   /**
@@ -551,12 +591,25 @@ export class Seat {
   }
 
   /**
+   * The rows that rank the seat's contenders: its individual `candidateRows` when it has them
+   * (a repeated party), otherwise its party totals; largest first.
+   * @returns {Array<{party: string, votes: number}>}
+   */
+  #rankedRows() {
+    return this.candidateRows
+      ? [...this.candidateRows].sort((a, b) => b.votes - a.votes)
+      : this.#sortedVoteRows();
+  }
+
+  /**
    * Returns { pct, raw } for the winning majority in this seat: pct as a percentage of total
-   * votes, raw as the vote margin between first and second place.
+   * votes, raw as the vote margin between first and second place. A seat with individual
+   * `candidateRows` (a repeated party) measures the margin between its top two candidates, not
+   * its top two party totals.
    * @returns {{pct: number, raw: number}}
    */
   majorityStats() {
-    const voteRows = this.#sortedVoteRows();
+    const voteRows = this.#rankedRows();
     if (voteRows.length < 2) return { pct: 0, raw: 0 };
     const marginVotes = voteRows[0].votes - voteRows[1].votes;
     if (this.turnout <= 0) return { pct: 0, raw: marginVotes };
@@ -634,11 +687,11 @@ export class Seat {
 
   /**
    * Returns the party key of the second-place finisher in this seat, or null if fewer than two
-   * parties have votes.
+   * parties have votes. A seat with `candidateRows` takes the party of its second candidate.
    * @returns {string|null}
    */
   #secondPlaceParty() {
-    const voteRows = this.#sortedVoteRows();
+    const voteRows = this.#rankedRows();
     if (voteRows.length < 2) return null;
     return voteRows[1].party;
   }

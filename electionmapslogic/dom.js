@@ -1576,14 +1576,23 @@ export function renderSeatPopup(seatName) {
   // there is nothing to compare with, which suppresses the delta span.
   const currentTurnout = seat.turnout;
 
-  const rows = Object.entries(seat.votes || {})
+  // A seat whose data repeats a party (an export override listing the individual candidates)
+  // shows one row per candidate with no delta: the comparison is per party, not per candidate.
+  const partyRows = () => Object.entries(seat.votes || {})
     .map(([party, votes]) => {
       const voteTotal = Number(votes || 0);
       const pct = currentTurnout > 0 ? (voteTotal / currentTurnout) * 100 : 0;
       const delta = deltaBasis.deltaFor(party, pct);
       // Label by candidate name where available (name mode); party label otherwise.
       return { party, pct, delta, label: seat.candidates?.[party] };
-    })
+    });
+  const candidateRows = () => seat.candidateRows.map((row) => ({
+    party: row.party,
+    pct: currentTurnout > 0 ? (row.votes / currentTurnout) * 100 : 0,
+    delta: null,
+    label: row.name || undefined,
+  }));
+  const rows = (seat.candidateRows ? candidateRows() : partyRows())
     .sort((a, b) => b.pct - a.pct)
     .slice(0, 8);
 

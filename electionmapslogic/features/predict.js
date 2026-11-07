@@ -114,7 +114,7 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
  * @returns {Seat}
  */
 export function cloneBaselineSeat(baseSeat, overrides = {}) {
-  return new Seat({ ...baseSeat, ...projectedStatus(baseSeat), ...overrides, candidates: {} });
+  return new Seat({ ...baseSeat, ...projectedStatus(baseSeat), ...overrides, candidates: {}, candidateRows: null });
 }
 
 /**

@@ -755,6 +755,15 @@ describe('uncalled baseline seats', () => {
     expect(clone.votes).toEqual({ republican: 540, democrat: 460 });
   });
 
+  it('a projected clone drops stale candidate rows', () => {
+    const split = new Seat({
+      seat: 'A', region: 'r', winner: 'democrat', called: false, votes: { republican: 540, democrat: 460 },
+      candidateRows: [{ party: 'democrat', votes: 460, name: 'D' }, { party: 'republican', votes: 400, name: 'R1' }, { party: 'republican', votes: 140, name: 'R2' }],
+    });
+    expect(split.candidateRows).not.toBeNull();
+    expect(cloneBaselineSeat(split).candidateRows).toBeNull();
+  });
+
   it('an uncalled seat tied for the lead takes the first-listed vote row, never "others"', () => {
     const tied = uncalled({ winner: null, votes: { democrat: 500, republican: 500 } });
     expect(tied.winner).toBeNull();

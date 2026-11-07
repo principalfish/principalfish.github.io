@@ -572,3 +572,67 @@ describe('comparison totals', () => {
     expect(state.hasActiveFilters()).toBe(true);
   });
 });
+
+describe('Seat.candidateRows: a party repeated in p (export override)', () => {
+  // Alaska 2026 after the export override: Peltola leads as an individual, but the two
+  // Republican rows (Sullivan + Heikes) out-total him as a party.
+  const alaska = () => rawSeat('Alaska', 'democrat', {}, {
+    p: [['democrat', 102962, 'Mary Peltola'], ['republican', 102325, 'Dan Sullivan'],
+      ['republican', 4846, 'Gerald Heikes'], ['others', 3600, 'Daniel Sullivan']],
+    c: false, pc: 74.1,
+  });
+
+  it('keeps the candidate rows in payload order and sums the party votes', () => {
+    const seat = Seat.fromRaw(alaska());
+    expect(seat.candidateRows).toEqual([
+      { party: 'democrat', votes: 102962, name: 'Mary Peltola' },
+      { party: 'republican', votes: 102325, name: 'Dan Sullivan' },
+      { party: 'republican', votes: 4846, name: 'Gerald Heikes' },
+      { party: 'others', votes: 3600, name: 'Daniel Sullivan' },
+    ]);
+    expect(seat.votes).toEqual({ democrat: 102962, republican: 107171, others: 3600 });
+    expect(seat.turnout).toBe(213733);
+    expect(seat.candidates.republican).toBe('Dan Sullivan');
+  });
+
+  it('majorityStats uses the top two candidates, not the top two party totals', () => {
+    const seat = Seat.fromRaw(alaska());
+    const { pct, raw } = seat.majorityStats();
+    expect(raw).toBe(637); // Peltola 102,962 - Sullivan 102,325, not R 107,171 - D 102,962
+    expect(pct).toBeCloseTo((637 / 213733) * 100, 6);
+    // Unchanged for a seat without candidate rows.
+    expect(Seat.fromRaw(rawSeat('A', 'republican', { republican: 107171, democrat: 102962, others: 3600 })).majorityStats().raw).toBe(4209);
+  });
+
+  it('the second-place filter ranks candidates: republican shows Alaska, democrat hides it', () => {
+    const open = { party: 'all', region: 'all', secondParty: 'all', majorityMin: 0, majorityMax: 100, gainsOnly: false, upcoming: 'all' };
+    const seat = Seat.fromRaw(alaska());
+    expect(Seat.matchesPrimaryFilters(seat, null, { ...open, secondParty: 'republican' }, null)).toBe(true);
+    expect(Seat.matchesPrimaryFilters(seat, null, { ...open, secondParty: 'democrat' }, null)).toBe(false);
+    // The majority filter reads the 0.30% candidate margin, not the 1.97% party margin.
+    expect(Seat.matchesPrimaryFilters(seat, null, { ...open, majorityMin: 1 }, null)).toBe(false);
+    expect(Seat.matchesPrimaryFilters(seat, null, { ...open, majorityMax: 0.5 }, null)).toBe(true);
+  });
+
+  it('survives a clone', () => {
+    const seat = Seat.fromRaw(alaska());
+    expect(new Seat(seat).candidateRows).toEqual(seat.candidateRows);
+  });
+
+  it('is null for a seat with no repeated party', () => {
+    expect(Seat.fromRaw(rawSeat('A', 'democrat', { democrat: 2, republican: 1 })).candidateRows).toBeNull();
+    expect(Seat.fromRaw({ n: 'A', r: 'r', w: 'democrat', p: [['democrat', 2, 'X'], ['republican', 1, 'Y']] }).candidateRows).toBeNull();
+    expect(new Seat({ seat: 'A', winner: 'democrat', votes: { democrat: 1 } }).candidateRows).toBeNull();
+  });
+
+  it('an uncalled seat with w democrat fills as provisional Democrat; party totals stay summed', () => {
+    const seat = Seat.fromRaw(alaska());
+    expect(seat.winner).toBe('democrat');
+    expect(seat.fillKind()).toBe('provisional');
+    const data = ElectionSummary.summarize([seat], 'all');
+    expect(data.uncalled).toBe(1);
+    expect(findParty(data, 'democrat').seats ?? 0).toBe(0);
+    expect(findParty(data, 'republican').votes).toBe(107171);
+    expect(findParty(data, 'democrat').votes).toBe(102962);
+  });
+});

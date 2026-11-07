@@ -24,6 +24,7 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - 2a-H2 contract: equal weights across six transitions, new folds report-only (decided 2026-10-30; built in `88bfc2a0`).
 
 ## Open
+- Move the offline conversion experiment (2a, H1–H3: `ab3fc62e`, `eaa73607`, `88bfc2a0`, `44dd8336`; ~17.5 MB of JSON) off this branch and into issue 0003's branch (Phil, 2026-11-07). Open: exactly where the boundary falls, whether to remove it with a commit or rewrite the branch, and how 0003's branch picks it up.
 - W-4 at 3a: MC median as the headline, or shown alongside the deterministic count. Thread 4's Notes record Phil choosing **headline** on 2026-10-28 (deterministic count kept, labelled "uniform-swing projection"); this ledger carried it as open. Asked Phil to confirm on 2026-11-07, after the ship-as-built decision.
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.
 - The go-ahead for each live step of the Westminster backfill and export (Piece 6).

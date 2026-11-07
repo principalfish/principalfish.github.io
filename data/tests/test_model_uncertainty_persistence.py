@@ -522,9 +522,12 @@ class TestDelete:
         target = save(path, scopes["main"], 1, payload(1))
         bystander = save(path, scopes["main"], 2, payload(2))
 
-        assert delete_model_output(
-            db, election_id=target, election_type=ElectionType.model_uns
-        ) == 1
+        assert (
+            delete_model_output(
+                db, election_id=target, election_type=ElectionType.model_uns
+            )
+            == 1
+        )
 
         assert set(all_rows(path)) == {bystander}
 
@@ -548,9 +551,12 @@ class TestDelete:
         # Pooled connections may hold the dropped table's schema.
         db.engine.dispose()
 
-        assert delete_model_output(
-            db, election_id=target, election_type=ElectionType.model_uns
-        ) == 1
+        assert (
+            delete_model_output(
+                db, election_id=target, election_type=ElectionType.model_uns
+            )
+            == 1
+        )
 
 
 class TestRead:
@@ -610,11 +616,13 @@ class TestRead:
     def test_latest_run_is_by_date_then_id(self) -> None:
         # The highest id is the earliest date: date wins.
         assert latest_run([(9, date(2026, 10, 1)), (3, date(2026, 10, 5))]) == (
-            3, date(2026, 10, 5),
+            3,
+            date(2026, 10, 5),
         )
         # Equal dates: the higher id wins, whatever the order given.
         assert latest_run([(7, date(2026, 10, 5)), (4, date(2026, 10, 5))]) == (
-            7, date(2026, 10, 5),
+            7,
+            date(2026, 10, 5),
         )
         assert latest_run([]) is None
 
@@ -770,9 +778,7 @@ class TestRead:
             conn.commit()
         assert uncertainty_status(path, scopes["main"]) == UncertaintyStatus(
             stored_runs=2,
-            detail_run=UncertaintyRun(
-                rerun, "UNS 2026-10-05 rerun", date(2026, 10, 5)
-            ),
+            detail_run=UncertaintyRun(rerun, "UNS 2026-10-05 rerun", date(2026, 10, 5)),
         )
 
     def test_status_after_deleting_the_detailed_run(
@@ -800,7 +806,6 @@ class TestRead:
         drop_table(path)
         assert uncertainty_status(path, scopes["main"]) is None
         assert uncertainty_status(tmp_path / "absent.db", scopes["main"]) is None
-
 
 
 def test_westminster_uns_scope() -> None:

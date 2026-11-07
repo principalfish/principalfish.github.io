@@ -28,14 +28,23 @@ _BROKEN_ASHCROFT_URL = "https://example.test/ashcroft-broken-2025.xls"
 _GOOD_ASHCROFT_URL = "https://example.test/ashcroft-good-2026.xls"
 
 _ENGLAND = (
-    "North East England", "North West England", "Yorkshire and The Humber",
-    "East Midlands", "West Midlands", "London", "East of England",
-    "South East England", "South West England",
+    "North East England",
+    "North West England",
+    "Yorkshire and The Humber",
+    "East Midlands",
+    "West Midlands",
+    "London",
+    "East of England",
+    "South East England",
+    "South West England",
 )
 _SOUTH = ("East of England", "South East England", "South West England")
 _ASHCROFT_NATIONAL = {
-    "Conservative": 13.0, "Labour": 14.0, "Reform UK": 17.0,
-    "Liberal Democrats": 7.0, "Green": 8.0,
+    "Conservative": 13.0,
+    "Labour": 14.0,
+    "Reform UK": 17.0,
+    "Liberal Democrats": 7.0,
+    "Green": 8.0,
 }
 
 
@@ -77,13 +86,21 @@ def _yougov_parsed(
             "Scottish National Party": snp,
             "Plaid Cymru": dict.fromkeys(macros, 0.0) | {"Wales": 27.0},
             "Labour": {
-                "Wales": 23.0, "Scotland": 15.0, "North": 27.0, "Midlands": 19.0,
-                "London": 34.0, "Rest of South": 16.0,
+                "Wales": 23.0,
+                "Scotland": 15.0,
+                "North": 27.0,
+                "Midlands": 19.0,
+                "London": 34.0,
+                "Rest of South": 16.0,
             },
             # Brings every region's total to 100, as a headline table's is.
             "Reform UK": {
-                "Wales": 50.0, "Scotland": 46.0, "North": 73.0, "Midlands": 81.0,
-                "London": 66.0, "Rest of South": 84.0,
+                "Wales": 50.0,
+                "Scotland": 46.0,
+                "North": 73.0,
+                "Midlands": 81.0,
+                "London": 66.0,
+                "Rest of South": 84.0,
             },
         },
         bases=[
@@ -97,8 +114,11 @@ def _ashcroft_parsed(
     *, labour_national: float = 14.0
 ) -> lord_ashcroft_import.ParsedPoll:
     london = {
-        "Conservative": 10.0, "Labour": 19.0, "Reform UK": 12.0,
-        "Liberal Democrats": 9.0, "Green": 12.0,
+        "Conservative": 10.0,
+        "Labour": 19.0,
+        "Reform UK": 12.0,
+        "Liberal Democrats": 9.0,
+        "Green": 12.0,
     }
     return lord_ashcroft_import.ParsedPoll(
         sample_size=5018,
@@ -147,35 +167,55 @@ class _Seeded:
         broken[ids["Scotland"]] = {labour: 11.0, snp: 4.0, plaid: 0.0}
         broken[ids["Wales"]] = {labour: 9.0, snp: 0.0, plaid: 0.0}
         self.broken_yougov = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="yougov",
-            fieldwork_start=date(2025, 8, 3), fieldwork_end=date(2025, 8, 4),
-            national={}, regional=broken, sample_size=2472,
+            db,
+            map_id=world.map_id,
+            pollster_identifier="yougov",
+            fieldwork_start=date(2025, 8, 3),
+            fieldwork_end=date(2025, 8, 4),
+            national={},
+            regional=broken,
+            sample_size=2472,
             source_url=_BROKEN_YOUGOV_URL,
         )
         reform = parties["Reform UK"]
         good = {ids[name]: {labour: 25.0, reform: 70.0, snp: 0.0} for name in _ENGLAND}
         good[ids["Scotland"]] = {labour: 15.0, reform: 49.0, snp: 36.0}
         self.good_yougov = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="yougov",
-            fieldwork_end=date(2026, 9, 28), national={}, regional=good,
-            sample_size=2310, source_url=_GOOD_YOUGOV_URL,
+            db,
+            map_id=world.map_id,
+            pollster_identifier="yougov",
+            fieldwork_end=date(2026, 9, 28),
+            national={},
+            regional=good,
+            sample_size=2310,
+            source_url=_GOOD_YOUGOV_URL,
         )
         national = {parties[p]: share for p, share in _ASHCROFT_NATIONAL.items()}
         self.broken_ashcroft = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="lord_ashcroft",
-            fieldwork_start=date(2025, 6, 26), fieldwork_end=date(2025, 6, 30),
+            db,
+            map_id=world.map_id,
+            pollster_identifier="lord_ashcroft",
+            fieldwork_start=date(2025, 6, 26),
+            fieldwork_end=date(2025, 6, 30),
             national=national,
             regional={ids["London"]: {labour: 3.0, parties["Conservative"]: 2.0}},
-            sample_size=5018, source_url=_BROKEN_ASHCROFT_URL,
+            sample_size=5018,
+            source_url=_BROKEN_ASHCROFT_URL,
         )
         self.good_ashcroft = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="lord_ashcroft",
-            fieldwork_end=date(2026, 1, 19), national=national,
+            db,
+            map_id=world.map_id,
+            pollster_identifier="lord_ashcroft",
+            fieldwork_end=date(2026, 1, 19),
+            national=national,
             regional={ids["London"]: {p: s + 0.5 for p, s in national.items()}},
-            sample_size=5448, source_url=_GOOD_ASHCROFT_URL,
+            sample_size=5448,
+            source_url=_GOOD_ASHCROFT_URL,
         )
         polls = (
-            self.broken_yougov, self.good_yougov, self.broken_ashcroft,
+            self.broken_yougov,
+            self.good_yougov,
+            self.broken_ashcroft,
             self.good_ashcroft,
         )
         assert len({p.id for p in polls}) == 4
@@ -308,9 +348,14 @@ class TestPlanRepairs:
         rows = {ids[name]: {labour: 70.0, snp: 0.0} for name in _ENGLAND}
         rows[ids["Scotland"]] = {labour: 50.0, snp: 24.0}
         low = add_poll_with_rows(
-            db, map_id=westminster_world.map_id, pollster_identifier="yougov",
-            fieldwork_start=date(2025, 8, 3), fieldwork_end=date(2025, 8, 4),
-            national={}, regional=rows, sample_size=2472,
+            db,
+            map_id=westminster_world.map_id,
+            pollster_identifier="yougov",
+            fieldwork_start=date(2025, 8, 3),
+            fieldwork_end=date(2025, 8, 4),
+            national={},
+            regional=rows,
+            sample_size=2472,
             source_url="https://example.test/yougov-low-2025.pdf",
         )
         source = {"https://example.test/yougov-low-2025.pdf": _yougov_parsed}
@@ -669,10 +714,16 @@ class TestRegionalRowsDigest:
 class TestReport:
     def test_change_lines_show_telltale_cells(self) -> None:
         item = repair.RegionalRepair(
-            26, "yougov", "2025-08-04", "change", "problem",
+            26,
+            "yougov",
+            "2025-08-04",
+            "change",
+            "problem",
             rows=((13, 4, 0.0),),
-            telltales=(("London", "Plaid Cymru", 27.0, 0.0),
-                       ("Scotland", "Scottish National Party", None, 39.0)),
+            telltales=(
+                ("London", "Plaid Cymru", 27.0, 0.0),
+                ("Scotland", "Scottish National Party", None, 39.0),
+            ),
         )
 
         assert item.lines() == [

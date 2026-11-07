@@ -147,9 +147,7 @@ def _seed_database(path: Path) -> tuple[SeatShares, SeatShares]:
             [(1, "Test map", "westminster"), (2, "Holyrood map", "holyrood")],
         )
         regions = {**GB_REGIONS, NI_REGION: "Northern Ireland"}
-        conn.executemany(
-            "INSERT INTO regions VALUES (?, 1, ?)", list(regions.items())
-        )
+        conn.executemany("INSERT INTO regions VALUES (?, 1, ?)", list(regions.items()))
         conn.executemany("INSERT INTO parties VALUES (?, ?)", list(PARTIES.items()))
         conn.executemany(
             "INSERT INTO elections VALUES (?, 1, ?, ?, 'uk_general')",
@@ -329,8 +327,9 @@ class TestScript:
             pair["cross"] / pair["lever_squares"], abs=1e-3
         )
         residuals = pair["residuals"]
-        assert sum(residuals["counts"]) + residuals["below"] + residuals["above"] == (
-            pair["cells"]
+        assert (
+            sum(residuals["counts"]) + residuals["below"] + residuals["above"]
+            == (pair["cells"])
         )
         assert set(residuals["percentiles"]) == {
             "5", "10", "25", "50", "75", "90", "95",

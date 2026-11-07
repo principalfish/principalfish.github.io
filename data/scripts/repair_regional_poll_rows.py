@@ -106,7 +106,6 @@ from scripts.poll_sources import (
     source_mismatch,
 )
 
-
 YOUGOV_MIN_REGION_TOTAL = 85.0
 
 Shares = Mapping[str, Mapping[str, float]]
@@ -258,9 +257,7 @@ class RegionalRepair:
                 f"{head}delete {self.old_row_count} regional rows, keep bases"
                 f" [{self.note}]"
             ]
-        bases = (
-            f"{len(self.bases)} bases" if self.bases else "keep the stored bases"
-        )
+        bases = f"{len(self.bases)} bases" if self.bases else "keep the stored bases"
         lines = [
             f"{head}replace {self.old_row_count} regional rows with"
             f" {len(self.rows)}, {bases} [{self.note}]"
@@ -428,9 +425,7 @@ def plan_repairs(
             if poll.poll_id in by_poll:
                 plan.append(_plan_deletion(poll, by_poll[poll.poll_id]))
             else:
-                plan.append(
-                    _plan_repair(poll, stored.regions, stored.party_ids, fetch)
-                )
+                plan.append(_plan_repair(poll, stored.regions, stored.party_ids, fetch))
     loaded = {item.poll_id for item in plan}
     for deletion in recorded:
         if deletion.poll_id in loaded or deletion.pollster not in wanted:
@@ -448,9 +443,7 @@ def plan_repairs(
     return plan
 
 
-def apply_repairs(
-    conn: sqlite3.Connection, repairs: Sequence[RegionalRepair]
-) -> int:
+def apply_repairs(conn: sqlite3.Connection, repairs: Sequence[RegionalRepair]) -> int:
     """Write every ``change`` in one transaction, in plan order.
 
     Args:

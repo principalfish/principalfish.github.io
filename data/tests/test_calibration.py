@@ -12,24 +12,11 @@ import dataclasses
 import json
 import math
 import random
-import statistics
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pytest
-
-from model_support.monte_carlo import (
-    ErrorScales,
-    ErrorStreams,
-    build_simulation_inputs,
-    centring_sd_ratio,
-    centring_weights,
-    deterministic_projection,
-    draw_errors,
-    error_scales,
-    share_scale_array,
-)
 
 from model_support.calibration import (
     CALIBRATION_REPORT_SCHEMA,
@@ -37,6 +24,7 @@ from model_support.calibration import (
     MAD_TO_SD,
     PARAMETER_NOTES,
     CalibrationError,
+    CellPrediction,
     ElectionVotes,
     FinalPollElection,
     FinalPollParty,
@@ -46,7 +34,6 @@ from model_support.calibration import (
     SeatSwing,
     SwingCell,
     build_pair_cells,
-    CellPrediction,
     cell_centring_ratios,
     decided_fraction_fit,
     fit_lambda,
@@ -64,6 +51,17 @@ from model_support.calibration import (
     robust_spread,
     seat_predictions,
     seat_residuals,
+)
+from model_support.monte_carlo import (
+    ErrorScales,
+    ErrorStreams,
+    build_simulation_inputs,
+    centring_sd_ratio,
+    centring_weights,
+    deterministic_projection,
+    draw_errors,
+    error_scales,
+    share_scale_array,
 )
 from model_support.uncertainty import UncertaintyConfig, share_scale
 
@@ -394,9 +392,7 @@ class TestSwingFit:
 
 def _votes(name: str, seats: dict[int, dict[int, float]]) -> ElectionVotes:
     # Seats 1-2 in region 10, seat 3 in region 20.
-    return ElectionVotes(
-        name=name, seat_votes=seats, seat_region={1: 10, 2: 10, 3: 20}
-    )
+    return ElectionVotes(name=name, seat_votes=seats, seat_region={1: 10, 2: 10, 3: 20})
 
 
 class TestBuildPairCells:
@@ -638,8 +634,10 @@ class TestEngineUnits:
         # engine's centred noise would have at some raw σ (here 5).
         ratios = np.array([cell_centring_ratios(row, CONFIG) for row in projected])
         draws_rng = np.random.default_rng(1)
-        history = 5.0 * ratios[np.newaxis] * draws_rng.standard_normal(
-            (20,) + projected.shape
+        history = (
+            5.0
+            * ratios[np.newaxis]
+            * draws_rng.standard_normal((20,) + projected.shape)
         )
         realised = robust_spread(history.ravel().tolist())
         raw = robust_spread((history / ratios).ravel().tolist())
@@ -841,8 +839,10 @@ class TestCalibrationReport:
             (lambda r: r["swing"]["pairs"][0].update(exclusions=[]), "exclusions"),
             (lambda r: r["swing"].pop("speaker_seats"), "speaker_seats"),
             (lambda r: r["decided_fraction"].update(pollsters=None), "pollsters"),
-            (lambda r: r["national"]["elections"][0].update(source_url="http://x"),
-             "https"),
+            (
+                lambda r: r["national"]["elections"][0].update(source_url="http://x"),
+                "https",
+            ),
             (lambda r: r["national"]["elections"][0].update(source_url=3), "https"),
         ],
     )

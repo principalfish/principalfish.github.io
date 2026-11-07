@@ -44,13 +44,14 @@ from collections.abc import Mapping, Sequence
 from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_DIR = SCRIPT_DIR.parent
 for _path in (DATA_DIR, DATA_DIR / "models" / "westminster"):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
+
+from run_uns_model import PARTY_ID_ALIASES as PARTY_ID_ALIASES
 
 from config import DatabaseConfig
 from model_support.calibration import (
@@ -89,7 +90,6 @@ from model_support.uncertainty import (
     UncertaintyConfigError,
     load_uncertainty_config,
 )
-from run_uns_model import PARTY_ID_ALIASES as PARTY_ID_ALIASES
 from scripts.migrate_add_us_poll_scope import open_database
 
 # Consecutive general elections on the same boundaries: (label, earlier, later).
@@ -320,9 +320,7 @@ def load_poll_base_records(conn: sqlite3.Connection) -> list[PollBaseRecord]:
     ]
 
 
-def fit_pairs(
-    conn: sqlite3.Connection, config: UncertaintyConfig
-) -> list[PairFit]:
+def fit_pairs(conn: sqlite3.Connection, config: UncertaintyConfig) -> list[PairFit]:
     """Fit λ̂ and σ_seat for every pair in :data:`ELECTION_PAIRS`.
 
     Raises:
@@ -439,9 +437,7 @@ def derivations(calibration: Calibration) -> dict[str, str]:
     years = [election.year for election in calibration.elections]
     pairs = calibration.pairs
     per_pair_lambda = ", ".join(f"{pair.label} {pair.lam:+.2f}" for pair in pairs)
-    per_pair_seat = ", ".join(
-        f"{pair.label} {pair.spread.sd:.2f}" for pair in pairs
-    )
+    per_pair_seat = ", ".join(f"{pair.label} {pair.spread.sd:.2f}" for pair in pairs)
     centring = calibration.centring
     pooled = calibration.pooled
     decided = calibration.decided
@@ -608,7 +604,6 @@ def report_json(
                     "source_url": election.source_url,
                     "mean_z2": _r(national.by_election[election.year] ** 2),
                     "rms_z": _r(national.by_election[election.year]),
-
                     "parties": errors_by_year[election.year],
                 }
                 for election in calibration.elections

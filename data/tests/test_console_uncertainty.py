@@ -36,8 +36,7 @@ from model_support.persistence import (
     UncertaintyStatus,
     replace_output,
 )
-
-from tests.console_fixtures import app
+from tests.console_fixtures import app  # noqa: F401  (pytest fixture)
 
 
 @pytest.fixture(autouse=True)
@@ -358,8 +357,16 @@ class TestCalibrationView:
         assert _rows(body, "2010→2015") == [
             ["2810", "6", "14159.4", "59374.5", "+0.24", "0.06"],
             [
-                "2719", "91", "2", "-0.27", "3.10", "4.60", "-0.45", "3.30",
-                "4.86", "0.82 / 0.94",
+                "2719",
+                "91",
+                "2",
+                "-0.27",
+                "3.10",
+                "4.60",
+                "-0.45",
+                "3.30",
+                "4.86",
+                "0.82 / 0.94",
             ],
         ]
         assert "√(mean over 2 pairs of λ̂²) = √0.15" in re.sub(r"\s+", " ", body)

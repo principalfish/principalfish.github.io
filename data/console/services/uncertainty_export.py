@@ -43,6 +43,7 @@ from scripts.export.uncertainty import (
     model_run_uncertainty,
 )
 
+
 @dataclass(frozen=True, slots=True)
 class PublishedFile:
     """One export output, as the export would write it now.
@@ -103,16 +104,13 @@ def _withheld(stored: StoredUncertainty) -> tuple[str, ...]:
                 region_parties |= _keys(region.get("parties"))
         lines += [
             f"regions: {private(_keys(stored.regions), PUBLIC_REGION_FIELDS)}",
-            "region parties: "
-            f"{private(region_parties, PUBLIC_REGION_PARTY_FIELDS)}",
+            "region parties: " f"{private(region_parties, PUBLIC_REGION_PARTY_FIELDS)}",
         ]
     if stored.seats is not None:
         seat_parties: set[str] = set()
         for seat in stored.seats.values():
             seat_parties |= _keys(seat)
-        lines.append(
-            f"seat parties: {private(seat_parties, PUBLIC_SEAT_PARTY_FIELDS)}"
-        )
+        lines.append(f"seat parties: {private(seat_parties, PUBLIC_SEAT_PARTY_FIELDS)}")
     return tuple(lines)
 
 

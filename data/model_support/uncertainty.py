@@ -199,12 +199,8 @@ def load_uncertainty_config(path: Path | None = None) -> UncertaintyConfig:
         sigma_reg=_number(data, "sigma_reg", defaults.sigma_reg),
         sigma_seat=_number(data, "sigma_seat", defaults.sigma_seat),
         sigma_lambda=_number(data, "sigma_lambda", defaults.sigma_lambda),
-        lambda_min_share=_number(
-            data, "lambda_min_share", defaults.lambda_min_share
-        ),
-        min_polled_share=_number(
-            data, "min_polled_share", defaults.min_polled_share
-        ),
+        lambda_min_share=_number(data, "lambda_min_share", defaults.lambda_min_share),
+        min_polled_share=_number(data, "min_polled_share", defaults.min_polled_share),
         simulations=_integer(data, "simulations", defaults.simulations),
         chunk_size=_integer(data, "chunk_size", defaults.chunk_size),
         majority_threshold=_integer(

@@ -213,7 +213,10 @@ def trend_uncertainty(national: Mapping[str, object]) -> TrendUncertainty:
         lo, hi = _share_band(party.get("v"), f"{where}.v")
         seat_lo, _, seat_hi = _seat_range(party.get("s"), f"{where}.s")
         fields: dict[str, int | float] = {
-            "vl": lo, "vh": hi, "sl": seat_lo, "sh": seat_hi,
+            "vl": lo,
+            "vh": hi,
+            "sl": seat_lo,
+            "sh": seat_hi,
         }
         odds[party_id] = {}
         for key in ("pm", "pl"):
@@ -295,9 +298,7 @@ def _public_fields(
     return copied
 
 
-def _check_histogram(
-    party: Mapping[str, object], where: str, simulations: int
-) -> None:
+def _check_histogram(party: Mapping[str, object], where: str, simulations: int) -> None:
     """The seat range must lie inside the histogram, which spans min to max."""
     lo, _, hi = _seat_range(party.get("s"), f"{where}.s")
     start, counts = _histogram_parts(party.get("hist"), f"{where}.hist", simulations)

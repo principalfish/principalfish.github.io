@@ -52,9 +52,17 @@ def _no_real_fetch(monkeypatch: pytest.MonkeyPatch) -> None:
         pytest.fail("backfill test reached a real network fetch")
 
     for module in (
-        bmg_research_import, deltapoll_import, find_out_now_import, focaldata_import,
-        ipsos_import, lord_ashcroft_import, more_in_common_import, opinium_import,
-        survation_import, techne_import, yougov_import,
+        bmg_research_import,
+        deltapoll_import,
+        find_out_now_import,
+        focaldata_import,
+        ipsos_import,
+        lord_ashcroft_import,
+        more_in_common_import,
+        opinium_import,
+        survation_import,
+        techne_import,
+        yougov_import,
     ):
         monkeypatch.setattr(module, "urlopen", _blocked, raising=False)
     monkeypatch.setattr(deltapoll_import, "_fetch_bytes", _blocked)
@@ -133,47 +141,78 @@ class _Seeded:
         london = world.region_ids["London"]
         ni = world.region_ids["Northern Ireland"]
         self.mic = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="more_in_common",
-            fieldwork_start=date(2026, 9, 18), fieldwork_end=date(2026, 9, 21),
+            db,
+            map_id=world.map_id,
+            pollster_identifier="more_in_common",
+            fieldwork_start=date(2026, 9, 18),
+            fieldwork_end=date(2026, 9, 21),
             national={labour: 26.0, con: 23.0},
             regional={london: {labour: 35.0, con: 23.0}, ni: {labour: 0.0}},
-            sample_size=2113, source_url=_MIC_URL,
+            sample_size=2113,
+            source_url=_MIC_URL,
         )
         self.yougov = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="yougov",
-            fieldwork_start=date(2026, 9, 27), fieldwork_end=date(2026, 9, 28),
+            db,
+            map_id=world.map_id,
+            pollster_identifier="yougov",
+            fieldwork_start=date(2026, 9, 27),
+            fieldwork_end=date(2026, 9, 28),
             national={},
             regional={world.region_ids[name]: {labour: 31.0} for name in _NORTH},
-            sample_size=2310, source_url=_YOUGOV_URL,
+            sample_size=2310,
+            source_url=_YOUGOV_URL,
         )
         self.techne = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="techne",
-            fieldwork_start=date(2026, 3, 11), fieldwork_end=date(2026, 3, 12),
-            national={labour: 25.0}, sample_size=1635, source_url=_TECHNE_URL,
+            db,
+            map_id=world.map_id,
+            pollster_identifier="techne",
+            fieldwork_start=date(2026, 3, 11),
+            fieldwork_end=date(2026, 3, 12),
+            national={labour: 25.0},
+            sample_size=1635,
+            source_url=_TECHNE_URL,
         )
         self.gone = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="opinium",
-            fieldwork_end=date(2026, 8, 7), national={labour: 27.0},
-            sample_size=1547, source_url=_MISSING_URL,
+            db,
+            map_id=world.map_id,
+            pollster_identifier="opinium",
+            fieldwork_end=date(2026, 8, 7),
+            national={labour: 27.0},
+            sample_size=1547,
+            source_url=_MISSING_URL,
         )
         self.no_url = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="survation",
-            fieldwork_end=date(2026, 9, 23), national={labour: 27.0}, sample_size=1224,
+            db,
+            map_id=world.map_id,
+            pollster_identifier="survation",
+            fieldwork_end=date(2026, 9, 23),
+            national={labour: 27.0},
+            sample_size=1224,
         )
         self.fon = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="find_out_now",
-            fieldwork_end=date(2026, 9, 30), national={labour: 27.0},
-            sample_size=2607, source_url="https://example.test/fon-2026.xlsx",
+            db,
+            map_id=world.map_id,
+            pollster_identifier="find_out_now",
+            fieldwork_end=date(2026, 9, 30),
+            national={labour: 27.0},
+            sample_size=2607,
+            source_url="https://example.test/fon-2026.xlsx",
         )
         self.unknown = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="savanta",
-            fieldwork_end=date(2026, 9, 1), national={labour: 30.0},
+            db,
+            map_id=world.map_id,
+            pollster_identifier="savanta",
+            fieldwork_end=date(2026, 9, 1),
+            national={labour: 30.0},
             source_url="https://example.test/savanta.xlsx",
         )
         other_map = db.add_map("Other Map", parliament="westminster")
         self.other_map = add_poll_with_rows(
-            db, map_id=other_map.id, pollster_identifier="more_in_common",
-            fieldwork_end=date(2026, 9, 21), national={labour: 26.0},
+            db,
+            map_id=other_map.id,
+            pollster_identifier="more_in_common",
+            fieldwork_end=date(2026, 9, 21),
+            national={labour: 26.0},
             source_url=_MIC_URL,
         )
         polls = (self.mic, self.yougov, self.techne, self.gone, self.no_url)

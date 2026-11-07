@@ -85,7 +85,6 @@ from scripts.poll_sources import (
     stale_reason,
 )
 
-
 Status = Literal["insert", "skip"]
 
 
@@ -402,9 +401,7 @@ def main(
             return 0
 
         result = apply_backfill(conn, items)
-        print(
-            f"Inserted {result.rows_written} bases for {result.polls_written} polls."
-        )
+        print(f"Inserted {result.rows_written} bases for {result.polls_written} polls.")
         if result.stale:
             print(
                 f"\nSkipped {len(result.stale)} polls that changed since planning"

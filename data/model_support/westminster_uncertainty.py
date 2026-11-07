@@ -148,7 +148,8 @@ def _centred_sd(raw: FloatArray, weights: FloatArray) -> FloatArray:
 
 
 def exclude_polling_regions(
-    inputs: SimulationInputs, excluded: Mapping[int, str],
+    inputs: SimulationInputs,
+    excluded: Mapping[int, str],
 ) -> SimulationInputs:
     """Disable polling and swing effects in excluded regions, retaining seat noise.
 
@@ -216,33 +217,36 @@ def uncertainty_payload(
     regional_national = _centred_sd(raw_national, scales.national_region_weight)
     turnouts = np.bincount(inputs.seat_region, weights=inputs.seat_turnout)
     region_weights = turnouts / turnouts.sum()
-    region_mean = np.stack([
-        np.average(
-            projected[inputs.seat_region == r],
-            axis=0,
-            weights=inputs.seat_turnout[inputs.seat_region == r],
-        )
-        for r in range(inputs.region_count)
-    ])
+    region_mean = np.stack(
+        [
+            np.average(
+                projected[inputs.seat_region == r],
+                axis=0,
+                weights=inputs.seat_turnout[inputs.seat_region == r],
+            )
+            for r in range(inputs.region_count)
+        ]
+    )
     mean = np.average(projected, axis=0, weights=inputs.seat_turnout)
 
     # Each region applies a masked/recentred copy of the SAME national draw.
     # Average its linear transforms before squaring, rather than treating
     # regions as independent and shrinking the national uncertainty.
-    transform = np.eye(inputs.party_count)[np.newaxis] * scales.national_reach[:, :, None]
+    transform = (
+        np.eye(inputs.party_count)[np.newaxis] * scales.national_reach[:, :, None]
+    )
     transform -= (
-        scales.national_region_weight[:, :, None]
-        * scales.national_reach[:, None, :]
+        scales.national_region_weight[:, :, None] * scales.national_reach[:, None, :]
     )
     national_transform = np.einsum("r,rkj->kj", region_weights, transform)
     national_applied = np.sqrt(
         (national_transform**2 * scales.national_sd**2).sum(axis=1)
     )
     national_sampling = np.sqrt(
-        (region_weights[:, None]**2 * regional_sampling**2).sum(axis=0)
+        (region_weights[:, None] ** 2 * regional_sampling**2).sum(axis=0)
     )
     national_systematic = np.sqrt(
-        (region_weights[:, None]**2 * regional_systematic**2).sum(axis=0)
+        (region_weights[:, None] ** 2 * regional_systematic**2).sum(axis=0)
     )
 
     def row(
@@ -271,39 +275,42 @@ def uncertainty_payload(
         seat_q = reference / reference.sum()
         seat_sd = _centred_sd(seat_raw, seat_q)
         result = _poll_budget(evidence_key, aggregation, sampling)
-        result.update({
-            "poll_average": average,
-            "baseline_share": baseline,
-            "swing": swing,
-            "sampling_source": "national" if region is None else (
-                "national_fallback" if fallback else "crossbreaks"
-            ),
-            "sampling_sd": sampling_sd,
-            "sampling_exact": sampling_exact,
-            "share_scale": float(share_scale_array(np.array([average]), config)[0]),
-            "national_share_scale": float(
-                share_scale_array(inputs.national_average, config)[k]
-            ),
-            "national_raw_sd": float(scales.national_sd[k]) if polled else 0.0,
-            "national_sd": national_sd,
-            "regional_systematic_raw_sd": systematic_raw_sd,
-            "regional_systematic_sd": systematic_sd,
-            "regional_sd": regional_sd,
-            "combined_sd": combined_sd,
-            "seat_reference_share": seat_share,
-            "seat_raw_sd": float(seat_raw[k]),
-            "seat_sd": float(seat_sd[k]),
-            "centring_weight": q,
-            "polled": polled,
-            "fallback": fallback,
-            "lambda_eligible": eligible,
-            "sampling_variance_fraction": (
-                sampling_sd**2 / combined_sd**2 if combined_sd > 0 else 0.0
-            ),
-            "swing_interval": [
-                swing - config.z * combined_sd, swing + config.z * combined_sd,
-            ],
-        })
+        result.update(
+            {
+                "poll_average": average,
+                "baseline_share": baseline,
+                "swing": swing,
+                "sampling_source": "national"
+                if region is None
+                else ("national_fallback" if fallback else "crossbreaks"),
+                "sampling_sd": sampling_sd,
+                "sampling_exact": sampling_exact,
+                "share_scale": float(share_scale_array(np.array([average]), config)[0]),
+                "national_share_scale": float(
+                    share_scale_array(inputs.national_average, config)[k]
+                ),
+                "national_raw_sd": float(scales.national_sd[k]) if polled else 0.0,
+                "national_sd": national_sd,
+                "regional_systematic_raw_sd": systematic_raw_sd,
+                "regional_systematic_sd": systematic_sd,
+                "regional_sd": regional_sd,
+                "combined_sd": combined_sd,
+                "seat_reference_share": seat_share,
+                "seat_raw_sd": float(seat_raw[k]),
+                "seat_sd": float(seat_sd[k]),
+                "centring_weight": q,
+                "polled": polled,
+                "fallback": fallback,
+                "lambda_eligible": eligible,
+                "sampling_variance_fraction": (
+                    sampling_sd**2 / combined_sd**2 if combined_sd > 0 else 0.0
+                ),
+                "swing_interval": [
+                    swing - config.z * combined_sd,
+                    swing + config.z * combined_sd,
+                ],
+            }
+        )
         return result
 
     national_budget: dict[str, object] = {}
@@ -311,13 +318,21 @@ def uncertainty_payload(
         average = float(inputs.national_average[k])
         baseline = baseline_national.get(party, 0.0)
         national_budget[str(party)] = row(
-            k, region=None, average=average, baseline=baseline,
+            k,
+            region=None,
+            average=average,
+            baseline=baseline,
             swing=average - baseline if inputs.national_polled[k] else 0.0,
-            evidence_key=(None, party), sampling_sd=float(national_sampling[k]),
-            national_sd=float(national_applied[k]), systematic_raw_sd=None,
-            systematic_sd=float(national_systematic[k]), seat_share=float(mean[k]),
-            q=float(scales.national_weight[k]), polled=bool(inputs.national_polled[k]),
-            fallback=False, eligible=bool(inputs.region_proportional[:, k].any()),
+            evidence_key=(None, party),
+            sampling_sd=float(national_sampling[k]),
+            national_sd=float(national_applied[k]),
+            systematic_raw_sd=None,
+            systematic_sd=float(national_systematic[k]),
+            seat_share=float(mean[k]),
+            q=float(scales.national_weight[k]),
+            polled=bool(inputs.national_polled[k]),
+            fallback=False,
+            eligible=bool(inputs.region_proportional[:, k].any()),
             sampling_exact=bool(scales.regional_sampling_exact.all()),
         )
     national["budget"] = {
@@ -337,36 +352,44 @@ def uncertainty_payload(
             polled = bool(inputs.region_polled[r, k])
             key = (None if fallback else region, party)
             entry = row(
-                k, region=r,
+                k,
+                region=r,
                 average=averages.get(
                     (region, party), float(inputs.region_average[r, k])
                 ),
                 baseline=float(inputs.region_baseline[r, k]),
-                swing=float(inputs.region_swing[r, k]), evidence_key=key,
+                swing=float(inputs.region_swing[r, k]),
+                evidence_key=key,
                 sampling_sd=float(regional_sampling[r, k]),
                 national_sd=float(regional_national[r, k]),
                 systematic_raw_sd=float(scales.regional_systematic_sd[r, k]),
                 systematic_sd=float(regional_systematic[r, k]),
                 seat_share=float(region_mean[r, k]),
-                q=float(scales.regional_weight[r, k]), polled=polled,
-                fallback=fallback, eligible=bool(inputs.region_proportional[r, k]),
+                q=float(scales.regional_weight[r, k]),
+                polled=polled,
+                fallback=fallback,
+                eligible=bool(inputs.region_proportional[r, k]),
                 sampling_exact=bool(scales.regional_sampling_exact[r]),
             )
-            entry.update({
-                "national_centring_weight": float(
-                    scales.national_region_weight[r, k]
-                ),
-                "sampling_shape": float(scales.regional_sampling_shape[r, k]),
-                "sampling_scale": float(scales.regional_sampling_scale[r]),
-                "region_turnout_weight": float(region_weights[r]),
-                "national_reach": bool(scales.national_reach[r, k]),
-            })
+            entry.update(
+                {
+                    "national_centring_weight": float(
+                        scales.national_region_weight[r, k]
+                    ),
+                    "sampling_shape": float(scales.regional_sampling_shape[r, k]),
+                    "sampling_scale": float(scales.regional_sampling_scale[r]),
+                    "region_turnout_weight": float(region_weights[r]),
+                    "national_reach": bool(scales.national_reach[r, k]),
+                }
+            )
             if region in aggregation.excluded_regions:
-                entry.update({
-                    "poll_average": None,
-                    "sampling_source": "excluded",
-                    "polling_exclusion": aggregation.excluded_regions[region],
-                })
+                entry.update(
+                    {
+                        "poll_average": None,
+                        "sampling_source": "excluded",
+                        "polling_exclusion": aggregation.excluded_regions[region],
+                    }
+                )
             budget[str(party)] = entry
         regions[str(region)] = {**existing, "budget": budget}
     return UncertaintyPayload(national, regions, run.summary.seats_json())

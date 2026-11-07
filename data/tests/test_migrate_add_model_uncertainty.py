@@ -139,7 +139,11 @@ class TestMatchesOrmSchema:
     ) -> None:
         migrated = _columns(migrated_conn, "model_uncertainty")
         assert list(migrated) == [
-            "election_id", "schema", "national_json", "regions_json", "seats_json",
+            "election_id",
+            "schema",
+            "national_json",
+            "regions_json",
+            "seats_json",
         ]
         assert migrated == _columns(orm_conn, "model_uncertainty")
 

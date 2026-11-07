@@ -14,6 +14,7 @@ from datetime import date
 
 import pytest
 from pydantic import ValidationError
+
 from db import Database
 from model_support.poll_bases import (
     UNRESOLVED,
@@ -63,8 +64,22 @@ class TestCountValue:
 
     @pytest.mark.parametrize(
         "value",
-        [None, "", "-", 0, 0.0, -5, 1491.6, "1,49", "1491 adults", "1.491", True,
-         math.nan, math.inf, [1491]],
+        [
+            None,
+            "",
+            "-",
+            0,
+            0.0,
+            -5,
+            1491.6,
+            "1,49",
+            "1491 adults",
+            "1.491",
+            True,
+            math.nan,
+            math.inf,
+            [1491],
+        ],
     )
     def test_non_counts(self, value: object) -> None:
         assert count_value(value) is None
@@ -88,8 +103,21 @@ class TestWeightedValue:
 
     @pytest.mark.parametrize(
         "value",
-        [None, "-", 0, 0.4, -3.0, math.nan, math.inf, False, "n/a", "1,0,2,9.181",
-         "10,29.1", "1,029.", ".5"],
+        [
+            None,
+            "-",
+            0,
+            0.4,
+            -3.0,
+            math.nan,
+            math.inf,
+            False,
+            "n/a",
+            "1,0,2,9.181",
+            "10,29.1",
+            "1,029.",
+            ".5",
+        ],
     )
     def test_non_bases(self, value: object) -> None:
         assert weighted_value(value) is None
@@ -457,15 +485,21 @@ class TestPollNIndex:
         labour = world.party_ids["Labour"]
         london, wales = world.region_ids["London"], world.region_ids["Wales"]
         first = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="more_in_common",
-            fieldwork_start=date(2026, 9, 18), fieldwork_end=date(2026, 9, 21),
+            db,
+            map_id=world.map_id,
+            pollster_identifier="more_in_common",
+            fieldwork_start=date(2026, 9, 18),
+            fieldwork_end=date(2026, 9, 21),
             national={labour: 26.0},
             regional={london: {labour: 35.0}, wales: {labour: 33.0}},
             sample_size=2113,
         )
         second = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="find_out_now",
-            fieldwork_start=date(2026, 9, 29), fieldwork_end=date(2026, 9, 30),
+            db,
+            map_id=world.map_id,
+            pollster_identifier="find_out_now",
+            fieldwork_start=date(2026, 9, 29),
+            fieldwork_end=date(2026, 9, 30),
             national={labour: 27.0},
             regional={london: {labour: 34.0}, wales: {labour: 24.0}},
             sample_size=2607,
@@ -475,7 +509,9 @@ class TestPollNIndex:
             for region_id, n in ((None, 1491), (london, 239)):
                 session.add(
                     PollBase(
-                        poll_id=first.id, region_id=region_id, unweighted_n=n,
+                        poll_id=first.id,
+                        region_id=region_id,
+                        unweighted_n=n,
                         kind="decided",
                     )
                 )
@@ -513,23 +549,35 @@ class TestPollBaseCoverage:
             world.region_ids[name] for name in ("London", "Wales", "Northern Ireland")
         )
         based = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="yougov",
-            fieldwork_end=date(2026, 9, 2), national={labour: 30.0},
+            db,
+            map_id=world.map_id,
+            pollster_identifier="yougov",
+            fieldwork_end=date(2026, 9, 2),
+            national={labour: 30.0},
             regional={london: {labour: 35.0}, wales: {labour: 30.0}, ni: {labour: 0.0}},
         )
         add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="yougov",
-            fieldwork_end=date(2026, 9, 9), national={labour: 30.0},
+            db,
+            map_id=world.map_id,
+            pollster_identifier="yougov",
+            fieldwork_end=date(2026, 9, 9),
+            national={labour: 30.0},
             regional={london: {labour: 36.0}},
         )
         add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="techne",
-            fieldwork_end=date(2026, 9, 4), national={labour: 30.0},
+            db,
+            map_id=world.map_id,
+            pollster_identifier="techne",
+            fieldwork_end=date(2026, 9, 4),
+            national={labour: 30.0},
         )
         other_map = db.add_map("Other Map", parliament="westminster")
         add_poll_with_rows(
-            db, map_id=other_map.id, pollster_identifier="yougov",
-            fieldwork_start=date(2026, 9, 5), fieldwork_end=date(2026, 9, 6),
+            db,
+            map_id=other_map.id,
+            pollster_identifier="yougov",
+            fieldwork_start=date(2026, 9, 5),
+            fieldwork_end=date(2026, 9, 6),
             national={labour: 1.0},
         )
         with db.session() as session:
@@ -537,7 +585,9 @@ class TestPollBaseCoverage:
             for region_id, n in ((None, 2310), (london, 241), (ni, 13)):
                 session.add(
                     PollBase(
-                        poll_id=based.id, region_id=region_id, unweighted_n=n,
+                        poll_id=based.id,
+                        region_id=region_id,
+                        unweighted_n=n,
                         kind="all_adults",
                     )
                 )

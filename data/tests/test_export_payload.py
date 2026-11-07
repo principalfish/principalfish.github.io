@@ -15,7 +15,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import pytest
 
-from model_support.public_uncertainty import SeatBand
 from export_elections import (
     SeatRow,
     build_result_payload,
@@ -25,6 +24,7 @@ from export_elections import (
     party_id_for_vote,
     set_others_party_id,
 )
+from model_support.public_uncertainty import SeatBand
 
 
 class _Party:

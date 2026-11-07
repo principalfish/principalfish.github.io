@@ -21,7 +21,9 @@ from model_support.westminster_validation_replay import frozen_input_validation
 def _reseal(raw: dict[str, object], path: Path) -> None:
     body = {key: value for key, value in raw.items() if key != "content_sha256"}
     raw["content_sha256"] = hashlib.sha256(
-        json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+        json.dumps(
+            body, sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode()
     ).hexdigest()
     path.write_text(json.dumps(raw))
 
@@ -51,15 +53,24 @@ def test_frozen_runtime_keeps_original_and_current_identities_distinct() -> None
     assert first == frozen_input_validation(INPUTS_PATH, current, count=4)
     assert first["input_source"] == "committed_frozen_inputs"
     assert first["seed"] == load_validation_inputs().provenance["seed"]
-    assert first["saved_config_hash"] == load_validation_inputs().provenance["config_hash"]
+    assert (
+        first["saved_config_hash"] == load_validation_inputs().provenance["config_hash"]
+    )
     assert first["evaluated_config_hash"] == config_hash(current)
     assert first["saved_config_hash"] != first["evaluated_config_hash"]
-    assert first["source_archive_input_hash"] == load_validation_inputs().provenance["archive_input_hash"]
+    assert (
+        first["source_archive_input_hash"]
+        == load_validation_inputs().provenance["archive_input_hash"]
+    )
     assert first["source_kernel_version"] == "pf-westminster-mc-v1"
 
 
-@pytest.mark.parametrize("field", ["schema", "provenance", "inputs", "party_names", "region_names"])
-def test_frozen_fixture_rejects_missing_required_fields(tmp_path: Path, field: str) -> None:
+@pytest.mark.parametrize(
+    "field", ["schema", "provenance", "inputs", "party_names", "region_names"]
+)
+def test_frozen_fixture_rejects_missing_required_fields(
+    tmp_path: Path, field: str
+) -> None:
     raw = json.loads(INPUTS_PATH.read_text())
     raw.pop(field)
     path = tmp_path / "inputs.json"
@@ -86,7 +97,10 @@ def test_frozen_fixture_rejects_unsealed_edits(tmp_path: Path) -> None:
     ],
 )
 def test_resealed_invalid_input_arrays_fail_validation(
-    tmp_path: Path, field: str, value: list[int], message: str,
+    tmp_path: Path,
+    field: str,
+    value: list[int],
+    message: str,
 ) -> None:
     raw = json.loads(INPUTS_PATH.read_text())
     raw["inputs"][field] = value
@@ -96,7 +110,9 @@ def test_resealed_invalid_input_arrays_fail_validation(
         load_validation_inputs(path)
 
 
-def test_resealed_changed_array_still_fails_original_archive_fingerprint(tmp_path: Path) -> None:
+def test_resealed_changed_array_still_fails_original_archive_fingerprint(
+    tmp_path: Path,
+) -> None:
     raw = json.loads(INPUTS_PATH.read_text())
     raw["inputs"]["seat_turnout"][0] += 1
     path = tmp_path / "inputs.json"
@@ -105,7 +121,9 @@ def test_resealed_changed_array_still_fails_original_archive_fingerprint(tmp_pat
         load_validation_inputs(path)
 
 
-def test_resealed_changed_source_config_fails_original_config_hash(tmp_path: Path) -> None:
+def test_resealed_changed_source_config_fails_original_config_hash(
+    tmp_path: Path,
+) -> None:
     raw = json.loads(INPUTS_PATH.read_text())
     raw["provenance"]["config"]["sigma_nat"] += 1
     path = tmp_path / "inputs.json"
@@ -124,7 +142,9 @@ def test_resealed_changed_source_config_fails_original_config_hash(tmp_path: Pat
     ],
 )
 def test_resealed_invalid_provenance_fails_closed(
-    tmp_path: Path, field: str, value: object,
+    tmp_path: Path,
+    field: str,
+    value: object,
 ) -> None:
     raw = json.loads(INPUTS_PATH.read_text())
     raw["provenance"][field] = value

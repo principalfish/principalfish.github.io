@@ -88,6 +88,7 @@ from numpy.typing import NDArray
 from model_support.uncertainty import UncertaintyConfig, UncertaintyError
 
 if TYPE_CHECKING:
+    # Type-only: simulation_replay imports this module at load time (import cycle).
     from model_support.simulation_replay import ReplaySnapshot
 
 FloatArray = NDArray[np.float64]
@@ -754,9 +755,7 @@ def error_scales(
         ),
         national_reach=reach,
         national_region_weight=centring_weights(national_by_region, reach),
-        regional_systematic_sd=np.where(
-            inputs.region_polled, regional_systematic, 0.0
-        ),
+        regional_systematic_sd=np.where(inputs.region_polled, regional_systematic, 0.0),
         regional_weight=regional_weight,
         regional_sampling_scale=sampling.scale,
         regional_sampling_shape=sampling.shape,
@@ -959,9 +958,7 @@ def draw_errors(streams: ErrorStreams, scales: ErrorScales, count: int) -> Error
     swing_type = scales.sigma_lambda * streams.swing_type.standard_normal(count)
     return ErrorDraws(
         national=_centre(national, scales.national_weight),
-        national_by_region=_centre(
-            national_by_region, scales.national_region_weight
-        ),
+        national_by_region=_centre(national_by_region, scales.national_region_weight),
         regional=_centre(systematic, scales.regional_weight) + sampling,
         regional_sampling=sampling,
         seat=_centre(seat, scales.seat_weight.astype(np.float32)),
@@ -1317,15 +1314,23 @@ class SimulationSummary:
                     str(party_id): {
                         "v": _round_pair(outcome.vote),
                         "s": list(outcome.seats),
-                        **({"pm": round(outcome.p_majority, _PROBABILITY_DECIMALS),
-                            "pl": round(outcome.p_largest, _PROBABILITY_DECIMALS)}
-                           if outcome.p_majority is not None and outcome.p_largest is not None
-                           else {}),
+                        **(
+                            {
+                                "pm": round(outcome.p_majority, _PROBABILITY_DECIMALS),
+                                "pl": round(outcome.p_largest, _PROBABILITY_DECIMALS),
+                            }
+                            if outcome.p_majority is not None
+                            and outcome.p_largest is not None
+                            else {}
+                        ),
                     }
                     for party_id, outcome in parties.items()
                 },
-                **({"hung": round(self.region_hung[region_id], _PROBABILITY_DECIMALS)}
-                   if self.region_hung is not None else {}),
+                **(
+                    {"hung": round(self.region_hung[region_id], _PROBABILITY_DECIMALS)}
+                    if self.region_hung is not None
+                    else {}
+                ),
             }
             for region_id, parties in self.regions.items()
         }
@@ -1749,6 +1754,7 @@ def save_draws(path: Path, draws: SimulationDraws, meta: DrawsMeta) -> None:
         "election_id": meta.election_id,
         "as_of_date": meta.as_of_date.isoformat(),
     }
+    # Local: simulation_replay imports this module at load time (import cycle).
     from model_support.simulation_replay import snapshot_members
 
     extra: dict[str, Any] = {}
@@ -1851,6 +1857,7 @@ def load_draws(path: Path) -> tuple[SimulationDraws, DrawsMeta]:
         )
     except (SimulationFileError, ValueError) as err:
         raise SimulationFileError(f"{path}: {err}") from err
+    # Local: simulation_replay imports this module at load time (import cycle).
     from model_support.simulation_replay import read_snapshot
 
     draws = replace(draws, replay=read_snapshot(header.get("replay"), arrays, draws))
@@ -1959,6 +1966,7 @@ def run_simulations(
         else None
     )
     if draws is not None:
+        # Local: simulation_replay imports this module at load time (import cycle).
         from model_support.simulation_replay import ReplaySnapshot
 
         draws = replace(draws, replay=ReplaySnapshot(inputs, config))
@@ -1970,6 +1978,7 @@ def run_simulations(
         if draws is not None:
             draws.record(start, errors, projection, tallies)
     summary = summarise(inputs, tallies, config, seed=seed)
+    # Local: simulation_replay imports this module at load time (import cycle).
     from model_support.simulation_replay import input_fingerprint
 
     summary = replace(summary, input_hash=input_fingerprint(inputs))

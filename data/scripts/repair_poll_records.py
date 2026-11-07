@@ -115,9 +115,7 @@ _UPDATE_SQL: dict[Column, str] = {
     ),
 }
 
-_WIKIPEDIA = (
-    "Wikipedia 'Opinion polling for the next United Kingdom general election'"
-)
+_WIKIPEDIA = "Wikipedia 'Opinion polling for the next United Kingdom general election'"
 
 
 @dataclass(frozen=True, slots=True)
@@ -398,7 +396,8 @@ def _poll_snapshot(conn: sqlite3.Connection, poll_id: int) -> tuple[object, ...]
     if head is None:
         return None
     shares = conn.execute(
-        "SELECT * FROM poll_rows WHERE poll_id = ? ORDER BY id", (poll_id,),
+        "SELECT * FROM poll_rows WHERE poll_id = ? ORDER BY id",
+        (poll_id,),
     ).fetchall()
     return tuple(head), tuple(tuple(row) for row in shares)
 
@@ -437,9 +436,17 @@ def plan_repairs(
 
     # Capture every source identity before the first potentially slow PDF fetch.
     snapshots = {
-        row[1]: (tuple(row[6:]), tuple(tuple(share) for share in conn.execute(
-            "SELECT * FROM poll_rows WHERE poll_id = ? ORDER BY id", (row[1],),
-        ))) for row in rows
+        row[1]: (
+            tuple(row[6:]),
+            tuple(
+                tuple(share)
+                for share in conn.execute(
+                    "SELECT * FROM poll_rows WHERE poll_id = ? ORDER BY id",
+                    (row[1],),
+                )
+            ),
+        )
+        for row in rows
     }
     repairs: list[Repair] = []
     for identifier, *fields in rows:
@@ -447,16 +454,20 @@ def plan_repairs(
         snapshot = snapshots[poll.poll_id]
         repair = (
             _plan_bmg(poll.poll_id, poll.fieldwork_end, poll.sample_size)
-            if identifier == BMG_IDENTIFIER else _plan_techne(poll, fetch_pdf_text)
+            if identifier == BMG_IDENTIFIER
+            else _plan_techne(poll, fetch_pdf_text)
         )
         repairs.append(replace(repair, snapshot=snapshot))
     if corrections is None:
         corrections = CORRECTIONS
     for correction in corrections:
         correction_snapshot = _poll_snapshot(conn, correction.poll_id)
-        repairs.append(replace(
-            _plan_correction(conn, correction), snapshot=correction_snapshot,
-        ))
+        repairs.append(
+            replace(
+                _plan_correction(conn, correction),
+                snapshot=correction_snapshot,
+            )
+        )
     return repairs
 
 

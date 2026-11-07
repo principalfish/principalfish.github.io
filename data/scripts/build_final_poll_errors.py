@@ -150,9 +150,7 @@ SKIPPED_ROWS: Mapping[tuple[str, int, str, str], str] = {
 _FIELDWORK_RE = re.compile(
     r"^(?:c\.\s*)?(?:(\d{1,2})|\?)(?:\s*[-/]\s*(\d{1,2}))?\s*\??$"
 )
-_DAY_MONTH_RANGE_RE = re.compile(
-    r"^\d{1,2}(?:/\d{1,2})?\s*-\s*(\d{1,2})/(\d{1,2})$"
-)
+_DAY_MONTH_RANGE_RE = re.compile(r"^\d{1,2}(?:/\d{1,2})?\s*-\s*(\d{1,2})/(\d{1,2})$")
 _PUBLISHED_RE = re.compile(r"^(\d{1,2})(?:\s*[-/]\s*\d{1,2})?$")
 
 

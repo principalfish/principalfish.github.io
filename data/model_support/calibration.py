@@ -748,9 +748,9 @@ def _seat_swing(
     baseline = np.array([seat0.get(party, 0.0) for party in universe])
     before = np.array([region0.get(party, 0.0) for party in universe])
     additive = np.array([region1.get(party, 0.0) for party in universe]) - before
-    applies = np.array(
-        [party not in additive_party_ids for party in universe]
-    ) & (before >= min_regional_share)
+    applies = np.array([party not in additive_party_ids for party in universe]) & (
+        before >= min_regional_share
+    )
     safe = np.where(applies, before, 1.0)
     proportional = np.where(applies, additive * baseline / safe, additive)
     return SeatSwing(

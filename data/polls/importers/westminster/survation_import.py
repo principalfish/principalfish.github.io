@@ -19,7 +19,7 @@ from sqlalchemy import select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
-from models import Poll, PollBaseKind, PollRow, Pollster
+from models import Poll, PollBaseKind, PollRow
 from polls.importers.bases import (
     ParsedBase,
     PlannedPollBase,

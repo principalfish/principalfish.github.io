@@ -910,11 +910,23 @@ class TestCorrections:
             assert _poll(conn, 271)[2] == 367
 
 
-@pytest.mark.parametrize("mutation", [
-    "start", "end", "source", "map", "pollster", "deleted", "reused", "shares",
-])
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "start",
+        "end",
+        "source",
+        "map",
+        "pollster",
+        "deleted",
+        "reused",
+        "shares",
+    ],
+)
 def test_repair_revalidates_full_identity_atomically(
-    conn: sqlite3.Connection, seeded: Seeded, mutation: str,
+    conn: sqlite3.Connection,
+    seeded: Seeded,
+    mutation: str,
 ) -> None:
     repairs = plan_repairs(conn, fake_fetch)
     poll_id = seeded.techne["good"]
@@ -938,9 +950,12 @@ def test_repair_revalidates_full_identity_atomically(
             (seeded.bmg_good, poll_id),
         )
     elif mutation in {"deleted", "reused"}:
-        row = list(conn.execute(
-            "SELECT * FROM polls WHERE id = ?", (poll_id,),
-        ).fetchone())
+        row = list(
+            conn.execute(
+                "SELECT * FROM polls WHERE id = ?",
+                (poll_id,),
+            ).fetchone()
+        )
         conn.execute("DELETE FROM polls WHERE id = ?", (poll_id,))
         if mutation == "reused":
             columns = [row[1] for row in conn.execute("PRAGMA table_info(polls)")]
@@ -965,7 +980,8 @@ def test_repair_revalidates_full_identity_atomically(
 
 
 def test_repair_detects_identity_change_during_pdf_fetch(
-    conn: sqlite3.Connection, seeded: Seeded,
+    conn: sqlite3.Connection,
+    seeded: Seeded,
 ) -> None:
     def changed_fetch(url: str) -> str:
         conn.execute(
@@ -983,23 +999,32 @@ def test_repair_detects_identity_change_during_pdf_fetch(
 
 
 def test_repair_validates_same_poll_multiple_corrections_before_writing(
-    conn: sqlite3.Connection, seeded: Seeded,
+    conn: sqlite3.Connection,
+    seeded: Seeded,
 ) -> None:
     poll_id = seeded.yougov_mrp
     head = conn.execute(
-        "SELECT sample_size, fieldwork_start FROM polls WHERE id = ?", (poll_id,),
+        "SELECT sample_size, fieldwork_start FROM polls WHERE id = ?",
+        (poll_id,),
     ).fetchone()
     corrections = [
         Correction(poll_id, "yougov", "sample_size", head[0], 1500, "synthetic"),
         Correction(
-            poll_id, "yougov", "fieldwork_start", head[1], "2024-01-01", "synthetic",
+            poll_id,
+            "yougov",
+            "fieldwork_start",
+            head[1],
+            "2024-01-01",
+            "synthetic",
         ),
     ]
     repairs = [
-        repair for repair in plan_repairs(conn, fake_fetch, corrections)
+        repair
+        for repair in plan_repairs(conn, fake_fetch, corrections)
         if repair.poll_id == poll_id
     ]
     assert apply_repairs(conn, repairs) == 2
     assert conn.execute(
-        "SELECT sample_size, fieldwork_start FROM polls WHERE id = ?", (poll_id,),
+        "SELECT sample_size, fieldwork_start FROM polls WHERE id = ?",
+        (poll_id,),
     ).fetchone() == (1500, "2024-01-01")

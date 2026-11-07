@@ -239,9 +239,7 @@ class ResolvedN:
         if (self.origin == "sample_size" and self.basis != "sample_size") or (
             self.origin == "base" and self.basis == "sample_size"
         ):
-            raise ValueError(
-                f"origin {self.origin!r} cannot have basis {self.basis!r}"
-            )
+            raise ValueError(f"origin {self.origin!r} cannot have basis {self.basis!r}")
 
     @property
     def source(self) -> str | None:

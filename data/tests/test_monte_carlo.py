@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-import math
 import sys
 import zipfile
 from collections import Counter
@@ -25,6 +24,8 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westminster"))
+
+from run_uns_model import project_seat_votes
 
 from model_support.monte_carlo import (
     COMPACT_SHARE_FLOOR,
@@ -45,8 +46,8 @@ from model_support.monte_carlo import (
     draw_errors,
     error_scales,
     load_draws,
-    regional_sampling_multinomial,
     project_seats_vectorised,
+    regional_sampling_multinomial,
     run_simulations,
     save_draws,
     seat_outcome_probabilities,
@@ -58,7 +59,6 @@ from model_support.uncertainty import (
     share_scale,
     weighted_average_variance,
 )
-from run_uns_model import project_seat_votes
 
 SEED = date(2026, 10, 5).toordinal()
 DEFAULTS = UncertaintyConfig()
@@ -750,7 +750,6 @@ class TestDrawErrors:
         assert abs(draws.swing_type.mean()) < 0.01
 
 
-
 # ── Regional sampling error ──────────────────────────────────────────────────
 
 # Sampling only: every systematic, seat and swing-type term switched off.
@@ -1027,6 +1026,7 @@ class TestRegionalSampling:
             assert np.array_equal(getattr(again, name), getattr(whole, name)), name
             assert not np.allclose(getattr(other, name), getattr(whole, name)), name
 
+
 # ── Projection ────────────────────────────────────────────────────────────────
 
 
@@ -1271,8 +1271,9 @@ class TestRunSimulations:
             )
             assert outcome.histogram.start == sorted_seats[0]
             assert sum(outcome.histogram.counts) == 400
-            assert outcome.histogram.start + len(outcome.histogram.counts) - 1 == (
-                sorted_seats[-1]
+            assert (
+                outcome.histogram.start + len(outcome.histogram.counts) - 1
+                == (sorted_seats[-1])
             )
             lo, hi = np.quantile(draws.vote[:, k].astype(np.float64), [0.05, 0.95])
             assert outcome.vote == pytest.approx((lo, hi), abs=1e-4)

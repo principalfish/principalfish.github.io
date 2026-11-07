@@ -28,6 +28,7 @@ from console.services.uncertainty_export import ExportPreview, export_preview
 from db import Database
 from model_support import calibration as calibration_module
 from model_support import uncertainty as uncertainty_module
+from model_support import westminster_validation
 from model_support.calibration import (
     PARAMETER_NOTES,
     POLLBASE_CREDIT,
@@ -35,6 +36,7 @@ from model_support.calibration import (
     CalibrationError,
     load_calibration_report,
 )
+from model_support.monte_carlo import config_hash
 from model_support.persistence import (
     UncertaintyStatus,
     UncertaintyStoreError,
@@ -47,8 +49,6 @@ from model_support.uncertainty import (
     UncertaintyConfigError,
     load_uncertainty_config,
 )
-from model_support import westminster_validation
-from model_support.monte_carlo import config_hash
 from models import Map
 
 bp = Blueprint("uncertainty", __name__)
@@ -410,10 +410,15 @@ def uncertainty_validation() -> str:
     stale = False
     try:
         report = westminster_validation.read_report()
-        stale = report["identity"].get("config_hash") != config_hash(load_uncertainty_config())
+        stale = report["identity"].get("config_hash") != config_hash(
+            load_uncertainty_config()
+        )
     except (CalibrationError, UncertaintyConfigError) as exc:
         error = str(exc)
     return render_template(
-        "uncertainty_validation.html", report=report, error=error,
-        stale=stale, fmt=fmt,
+        "uncertainty_validation.html",
+        report=report,
+        error=error,
+        stale=stale,
+        fmt=fmt,
     )

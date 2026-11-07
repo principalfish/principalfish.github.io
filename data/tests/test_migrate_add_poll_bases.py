@@ -197,7 +197,12 @@ class TestMatchesOrmSchema:
     ) -> None:
         migrated = _columns(migrated_conn, "poll_bases")
         assert list(migrated) == [
-            "id", "poll_id", "region_id", "unweighted_n", "weighted_n", "kind",
+            "id",
+            "poll_id",
+            "region_id",
+            "unweighted_n",
+            "weighted_n",
+            "kind",
             "split_from_macro",
         ]
         assert migrated == _columns(orm_conn, "poll_bases")

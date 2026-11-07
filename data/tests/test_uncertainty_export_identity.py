@@ -24,11 +24,15 @@ def test_same_day_central_result_or_summary_change_changes_identity() -> None:
     document: dict[str, object] = {"election_name": "UNS 2026-10-12", "interval": 0.9}
     original = link_uncertainty_payload(result, document)
     assert original is not None
-    changed_result: dict[str, object] = {"seats": [{"p": [[1, 43]], "u": [[1, 30, 50, 0.6]]}]}
+    changed_result: dict[str, object] = {
+        "seats": [{"p": [[1, 43]], "u": [[1, 30, 50, 0.6]]}]
+    }
     changed = link_uncertainty_payload(changed_result, document)
     assert changed is not None
     assert changed["uncertaintyId"] != original["uncertaintyId"]
-    changed = link_uncertainty_payload(copy.deepcopy(result), {**document, "interval": 0.8})
+    changed = link_uncertainty_payload(
+        copy.deepcopy(result), {**document, "interval": 0.8}
+    )
     assert changed is not None
     assert changed["uncertaintyId"] != original["uncertaintyId"]
 

@@ -24,21 +24,46 @@ INPUTS_PATH = (
 )
 INPUTS_SCHEMA = "westminster-validation-inputs-v1"
 _ORIGINAL_CONFIG_FIELDS = {
-    "design_effect", "n_eff_cap", "interval", "p_ref", "decided_fraction",
-    "likely_voters_fraction", "sigma_nat", "sigma_reg", "sigma_seat",
-    "sigma_lambda", "lambda_min_share", "min_polled_share", "simulations",
-    "chunk_size", "majority_threshold",
+    "design_effect",
+    "n_eff_cap",
+    "interval",
+    "p_ref",
+    "decided_fraction",
+    "likely_voters_fraction",
+    "sigma_nat",
+    "sigma_reg",
+    "sigma_seat",
+    "sigma_lambda",
+    "lambda_min_share",
+    "min_polled_share",
+    "simulations",
+    "chunk_size",
+    "majority_threshold",
 }
 _ID_FIELDS = {"party_ids", "region_ids", "seat_ids"}
 _BOOL_FIELDS = {
-    "region_proportional", "region_polled", "region_fallback", "national_polled",
+    "region_proportional",
+    "region_polled",
+    "region_fallback",
+    "national_polled",
 }
 # The original archive's input fingerprint precedes later optional metadata.
 _ARCHIVE_FIELDS = (
-    "party_ids", "region_ids", "seat_ids", "seat_region", "seat_turnout",
-    "seat_baseline", "region_baseline", "region_proportional", "region_swing",
-    "region_average", "region_variance", "region_polled", "region_fallback",
-    "national_average", "national_polled",
+    "party_ids",
+    "region_ids",
+    "seat_ids",
+    "seat_region",
+    "seat_turnout",
+    "seat_baseline",
+    "region_baseline",
+    "region_proportional",
+    "region_swing",
+    "region_average",
+    "region_variance",
+    "region_polled",
+    "region_fallback",
+    "national_average",
+    "national_polled",
 )
 
 
@@ -72,7 +97,11 @@ def load_validation_inputs(path: Path = INPUTS_PATH) -> FrozenValidationInputs:
         content = path.read_bytes()
         raw = json.loads(content)
         expected = {
-            "schema", "provenance", "inputs", "party_names", "region_names",
+            "schema",
+            "provenance",
+            "inputs",
+            "party_names",
+            "region_names",
             "content_sha256",
         }
         if not isinstance(raw, dict) or set(raw) != expected:
@@ -84,8 +113,14 @@ def load_validation_inputs(path: Path = INPUTS_PATH) -> FrozenValidationInputs:
             raise SimulationFileError("Frozen validation input content hash differs")
         source = raw["provenance"]
         required = {
-            "source_archive_sha256", "as_of_date", "election_id", "config_hash",
-            "config", "seed", "archive_input_hash", "source_archive_format",
+            "source_archive_sha256",
+            "as_of_date",
+            "election_id",
+            "config_hash",
+            "config",
+            "seed",
+            "archive_input_hash",
+            "source_archive_format",
             "source_kernel_version",
         }
         if not isinstance(source, dict) or set(source) != required:
@@ -101,16 +136,23 @@ def load_validation_inputs(path: Path = INPUTS_PATH) -> FrozenValidationInputs:
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise SimulationFileError(f"Frozen provenance has invalid {name}")
         date.fromisoformat(source["as_of_date"])
-        if (source["source_archive_format"] != "pf-simulations-v1"
-                or source["source_kernel_version"] != "pf-westminster-mc-v1"):
+        if (
+            source["source_archive_format"] != "pf-simulations-v1"
+            or source["source_kernel_version"] != "pf-westminster-mc-v1"
+        ):
             raise SimulationFileError("Unknown frozen source archive/kernel version")
-        if (not isinstance(source["config"], dict)
-                or set(source["config"]) != _ORIGINAL_CONFIG_FIELDS):
+        if (
+            not isinstance(source["config"], dict)
+            or set(source["config"]) != _ORIGINAL_CONFIG_FIELDS
+        ):
             raise SimulationFileError("Frozen provenance lacks original settings")
         settings = dict(source["config"])
         for name, value in settings.items():
-            if (isinstance(value, bool) or not isinstance(value, int | float)
-                    or not math.isfinite(value)):
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, int | float)
+                or not math.isfinite(value)
+            ):
                 raise SimulationFileError(f"Frozen original setting {name} is invalid")
             if name in {"simulations", "chunk_size", "majority_threshold"}:
                 if not isinstance(value, int) or value <= 0:
@@ -124,8 +166,9 @@ def load_validation_inputs(path: Path = INPUTS_PATH) -> FrozenValidationInputs:
         if original_hash != source["config_hash"]:
             raise SimulationFileError("Frozen original settings hash differs")
         encoded_inputs = raw["inputs"]
-        if (not isinstance(encoded_inputs, dict)
-                or set(encoded_inputs) != set(_ARCHIVE_FIELDS)):
+        if not isinstance(encoded_inputs, dict) or set(encoded_inputs) != set(
+            _ARCHIVE_FIELDS
+        ):
             raise SimulationFileError("Frozen validation input fields are incomplete")
         values: dict[str, Any] = {}
         for name in _ARCHIVE_FIELDS:
@@ -165,7 +208,8 @@ def load_validation_inputs(path: Path = INPUTS_PATH) -> FrozenValidationInputs:
                 "Frozen input arrays differ from their archive fingerprint"
             )
         return FrozenValidationInputs(
-            inputs, source,
+            inputs,
+            source,
             _names(raw["party_names"], inputs.party_ids, "party names"),
             _names(raw["region_names"], inputs.region_ids, "region names"),
             hashlib.sha256(content).hexdigest(),

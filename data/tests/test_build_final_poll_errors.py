@@ -37,6 +37,7 @@ def _no_skip_list(monkeypatch: pytest.MonkeyPatch) -> None:
     """The real skip list names PollBase rows the synthetic workbook lacks."""
     monkeypatch.setattr(builder, "SKIPPED_ROWS", {})
 
+
 HEADER: tuple[object, ...] = (
     "Year", "Month", "Fieldwork", None, "Published", "Polling", "Publisher",
     "Con", None, "Lab", None, "LD", None, "Green", None, "UKIP", None,

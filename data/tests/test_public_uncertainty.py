@@ -159,10 +159,16 @@ class TestPublicDocument:
             (lambda n: n["parties"]["2"]["hist"].update(counts=[1, 2]), "!= 200"),
             # The seat range must sit inside a histogram whose ends are filled.
             (lambda n: n["parties"]["2"]["hist"].update(start=221), "does not span"),
-            (lambda n: n["parties"]["2"]["hist"].update(counts=[0, *HIST_2[1:], 100]),
-             "does not span"),
-            (lambda n: n["parties"]["2"]["hist"].update(counts=[*HIST_2, 0]),
-             "does not span"),
+            (
+                lambda n: n["parties"]["2"]["hist"].update(
+                    counts=[0, *HIST_2[1:], 100]
+                ),
+                "does not span",
+            ),
+            (
+                lambda n: n["parties"]["2"]["hist"].update(counts=[*HIST_2, 0]),
+                "does not span",
+            ),
             # Exclusive outcomes: rounding allows half a unit per term, no more.
             (lambda n: n.update(hung=0.696), r"P\(majority\) \+ P\(hung\) sums"),
             (lambda n: n["parties"]["10"].update(pl=0.032), r"P\(largest\) sums"),
@@ -207,8 +213,10 @@ class TestPublicDocument:
 
 @pytest.mark.parametrize(
     ("interval", "simulations", "phrase"),
-    [(0.9, 10_000, "90% ranges and probabilities from 10,000 simulations"),
-     (0.8, 500, "80% ranges and probabilities from 500 simulations")],
+    [
+        (0.9, 10_000, "90% ranges and probabilities from 10,000 simulations"),
+        (0.8, 500, "80% ranges and probabilities from 500 simulations"),
+    ],
 )
 def test_basis_label_states_interval_and_count(
     interval: float, simulations: int, phrase: str
@@ -222,13 +230,22 @@ class TestTrendUncertainty:
     def test_bands_rounded_zero_odds_dropped(self) -> None:
         result = trend_uncertainty(national())
         assert result.parties == {
-            "2": {"vl": 22.8, "vh": 30.6, "sl": 220, "sh": 376, "pm": 0.306, "pl": 0.97},
+            "2": {
+                "vl": 22.8,
+                "vh": 30.6,
+                "sl": 220,
+                "sh": 376,
+                "pm": 0.306,
+                "pl": 0.97,
+            },
             "10": {"vl": 0.4, "vh": 0.4, "sl": 0, "sh": 2, "pl": 0.03},
         }
         assert list(result.parties) == ["2", "10"]
         assert result.hung == 0.694
 
-    @pytest.mark.parametrize("seats", [[2, 1, 3], [-1, 1, 3], [0, 1, 2.5], [False, 1, 2], [0, 2]])
+    @pytest.mark.parametrize(
+        "seats", [[2, 1, 3], [-1, 1, 3], [0, 1, 2.5], [False, 1, 2], [0, 2]]
+    )
     def test_seat_bounds_require_an_ordered_integer_range(self, seats: object) -> None:
         stored = national()
         stored["parties"]["2"]["s"] = seats
@@ -253,7 +270,8 @@ class TestTrendUncertainty:
         stored = national()
         stored["parties"] = {
             str(party): {
-                "v": [0.1, 0.2], "s": [0, 0, 1],
+                "v": [0.1, 0.2],
+                "s": [0, 0, 1],
                 "pm": 0.001 if party < majorities else 0.0,
                 "pl": 1.0 if party == 0 else 0.0,
             }

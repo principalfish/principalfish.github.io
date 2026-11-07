@@ -3,13 +3,13 @@
   "slug": "poll-errors-simulation",
   "title": "Poll-error uncertainty for Westminster forecasts",
   "mode": "build",
-  "state": "review",
+  "state": "ready",
   "branch": "poll-errors-simulation",
   "base": "master",
   "gh_issue": null,
   "build_model": null,
   "created": "2026-10-30 10:54",
-  "updated": "2026-11-07 19:24",
+  "updated": "2026-11-07 23:12",
   "done": null,
   "pr": 74
 }

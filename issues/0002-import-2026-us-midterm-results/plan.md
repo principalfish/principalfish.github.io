@@ -351,3 +351,16 @@ No test touches the live DB (conftest guard).
 - IMPORTANT for piece 11 and for any manual try-out: from piece 1 on, the ORM's `Election` has `source_note` and there's a new `election_seat_status` table. The live DB isn't migrated, so the branch's console, export and importers fail on any elections query until `migrate_add_us_result_status.py` has run.
   - For a hand test before going live: back up the DB, migrate a copy, and point `.env`'s DATABASE_PATH at the copy (`.env` overrides the shell). Or run the migration on the live DB with the user's go-ahead.
 - 2026-11-07: piece 5 committed (147ad9d4) and pushed. Piece 6 is still blocked on tooling (ogr2ogr, mapshaper). Piece 7 depends only on 1 and 4, so it can go first if the user wants.
+- 2026-11-07: piece 6 unblocked. The user installed GDAL 3.12.2 (`/usr/bin/ogr2ogr`) and mapshaper 0.7.101 (`/usr/local/bin/mapshaper`, global npm). Per the user, piece 6 starts after piece 7 is committed.
+- Piece 7: the documentation check found the results schema in README.md (~1015) and the entry table in `electionmaps/data/map-modes.md` (~60-72) need the new fields (`c`, `pc`, `sp`, `rd`, `specials`, `sourceNote`). Those two docs move into piece 7's files, since they're the export contract.
+- 2026-11-07 (piece 7) first build: payload fields `c:false` (uncalled), `pc` (uncalled only, 1dp), `sp:true`, `rd`. For an uncalled seat, `w` = the leading party. Manifest `sourceNote` is recomputed each export.
+  - Specials are folded into the parent's payload as `specials:[{n, cl, w, p, c, pc, sp, rd}]`. The child gets its own stem/id (`us-senate-{y}-special` / `{y}-us-senate-special`), which fixed a real collision in `models/us/_common.resolve_special_baselines`.
+  - Schema stays pf-results-v4. Mypy clean, 5018 passed.
+- Piece 7 review round 1. Security: no findings. User decision: House 2026 on map 24 gets NO comparison election (the boundary rule).
+- Piece 7 fixes routed:
+  - an export preflight refuses before writing anything if any pre-built map is missing;
+  - uncalled seats with no votes or a tied top two get no leader (neutral);
+  - exporting a folded special by name raises;
+  - `resolve_special_baselines` skips folded specials;
+  - more tests;
+  - the schema docs in README and map-modes.md.

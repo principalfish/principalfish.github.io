@@ -122,7 +122,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 4 · Branch self-review done and chosen fixes committed (`eeee25d0`).
 - [x] 5 · Master merged in; checks green (`af4405fb`).
 - [x] 6a · Westminster weighting defaults: 15-day half-life, 60-day window (`a5cdf8e0`).
-- [ ] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation.
+- [x] 6 · T4 Phase 5 and T1: Westminster backfill and export done with authorisation (`51c31966`).
 - [ ] 6b · Main headline line leads with the simulation.
 - [ ] 7 · PR text drafted.
 
@@ -243,3 +243,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (builder, Piece 6a): defaults changed in `data/console/blueprints/westminster.py` (form: 60 / 15.0, 15.0 added to the menu) and `data/models/westminster/run_uns_model.py` (CLI: half-life 15.0, since 60, lookback 60, docstring), plus README and the pinned tests, and a new GET test that the form preselects 60 and 15.0. The console's daily run after a poll import (`console/blueprints/poll_import.py:101`) calls `run_uns_model.py` with no flags, so it picks up the new defaults too. The validation report is unaffected: none of its hashed sources changed, and a scratch regeneration was byte-identical. `monte_carlo.py:318` still says "30-day averages since 2024"; that describes a past measurement, and editing it would change a hashed source, so it's left alone. Checks: mypy clean, pytest 5782 passed, Vitest 1449 passed, console smoke and `git diff --check` clean, changed-lines coverage 100% (3 lines). All five analysis checks were clean on round 1, so no verifier ran. The 365-day trends file was restored to HEAD (a copy is in builder scratch).
 - 2026-11-07: Piece 6a committed as `a5cdf8e0` and pushed with Phil's approval ("Approve, commit and push"). Next: Piece 6 step 2, the 15/60 full rerun, which needs its own go-ahead.
 - 2026-11-07 (planner): the step-5 trial export showed the main subtitle line (uniform swing, "Labour majority: 58") contradicting the MC line (majority 44%, hung 56%). Phil chose to change it in a new piece, **6b**, and picked "Lead with the simulation" over "Label it uniform swing" and "Hide the main line". Order: the step-7 data commit first, then 6b, then the PR text.
+- 2026-11-07: Piece 6 finished. The 15/60 rerun (848/848), backup `elections-2026-11-07-183903.db.gz`, trends rebuild (383 points), staged and real export, and the data commit `51c31966` were each pushed or run with Phil's go-ahead. Next: 6b (main headline line), once its go-ahead comes.

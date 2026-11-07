@@ -16,5 +16,5 @@ Westminster only. The US uncertainty work moved to its own branch, and the model
 - [x] Merge master in (`af4405fb`)
 - [x] Westminster poll weighting: 15-day half-life over a 60-day window (`a5cdf8e0`)
 - [x] Westminster backfill and export: 848 nowcasts rerun with uncertainty (`51c31966`)
-- [ ] Main headline leads with the simulation
+- [x] Main headline leads with the simulated outcome (`c7a85eab`)
 - [ ] Final PR description

@@ -67,7 +67,7 @@ omitted. Core fields are `id`, `name`, `type`, `mapId`, and `parliament`.
 | `mapId` | Numeric ID matching `files.elections.mapsById` and `mapModes`. |
 | `parliament` | Parliament key. Current UK keys are `westminster` and `holyrood`; current US keys are `us_house`, `us_presidential`, and `us_senate`. These are configured examples, not a fixed schema enum. |
 | `comparisonElectionId` | Optional ID of the comparison results. Enables aggregate deltas and, where supported, per-seat comparisons. |
-| `byElectionSeats` | Optional array of seat names; marks by-election seats and changes the Gains filter's label to “By-elections”. |
+| `byElectionSeats` | Optional array of seat names; marks by-election seats, changes the Gains filter's label to “By-elections”, and tags those seats with a BY-ELECTION marker in the seat popup and seat list. |
 | `model` | Optional boolean. Marks a prediction election for presentation, prediction metadata, and countdown eligibility. Raw vote counts are suppressed, while vote shares can still be displayed. |
 | `referendum` | Optional truthy flag or configuration object. Enables referendum presentation, hides per-seat comparison controls, and shows the data-info button. The object configures the referendum choropleth (below). |
 | `multiMember` | Optional boolean for chamber-composition snapshots such as Current Senate. Tallies individual members; hides vote count/share columns and vote/comparison-based map controls. |

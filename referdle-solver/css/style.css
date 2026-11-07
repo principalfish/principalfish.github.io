@@ -32,6 +32,8 @@ header {
   gap: 14px;
 }
 header h1 { margin: 0; font-size: 20px; letter-spacing: 0.5px; }
+.game-link { display: inline-block; margin-bottom: 12px; color: var(--accent); font-size: 14px; text-decoration: none; }
+.game-link:hover { text-decoration: underline; }
 
 main { padding: 20px 24px 80px; max-width: 1400px; margin: 0 auto; }
 

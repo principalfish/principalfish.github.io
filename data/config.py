@@ -16,9 +16,8 @@ class DatabaseConfig(BaseSettings):
 
     The application uses a single local SQLite database. Set ``DATABASE_PATH``
     to point at the database file (defaults to ``/home/philiph/dbs/elections.db``).
-    The live database is kept on local disk and backed up by ``backup.py``
-    (local archives plus one Google Drive copy) — it must not be opened directly
-    off the Drive mount.
+    The live database is kept on local disk and archived by ``backup.py``; an
+    hourly restic job outside the repo carries the newest copy to B2.
     """
 
     model_config = SettingsConfigDict(extra="ignore")

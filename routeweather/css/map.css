@@ -1,0 +1,53 @@
+/* Route Weather — the route map (js/map-view.js). Path colours are set in JS
+   (Leaflet writes them as SVG attributes); this file styles the panel and the
+   divIcon markers. */
+
+.map-panel { padding: 0; overflow: hidden; }
+
+.map-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 14px;
+}
+.map-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.map-toggle input { accent-color: var(--accent); margin: 0; }
+
+.route-map { height: 440px; background: var(--panel-2); }
+@media (max-width: 600px) {
+  .route-map { height: 320px; }
+}
+
+/* Leaflet's own chrome stays light (it sits on light map tiles). */
+.route-map .leaflet-control-attribution { font-size: 10px; }
+
+/* --- position marker + wind arrow --- */
+
+.rw-position { background: none; border: none; }
+.rw-position-inner { position: relative; display: block; width: 100%; height: 100%; }
+
+.rw-dot {
+  position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  border-radius: 50%; background: #fff; border: 3px solid #e8590c;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
+/* Inline transform: rotate(<deg>) points it where the wind is going; the band
+   class scales and colours it. */
+.rw-wind { position: absolute; inset: 0; display: block; transform-origin: 50% 50%; }
+.rw-wind svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.rw-wind path {
+  stroke: #fff; stroke-width: 2; stroke-linejoin: round; paint-order: stroke;
+}
+.wind-calm { scale: 0.7; }
+.wind-calm path { fill: #2f9e44; }
+.wind-breezy { scale: 0.85; }
+.wind-breezy path { fill: #1971c2; }
+.wind-strong path { fill: #e67700; }
+.wind-gale { scale: 1.2; }
+.wind-gale path { fill: #c92a2a; }
+
+/* --- peaks and valleys: triangles with a dark outline --- */
+
+.rw-extreme { background: none; border: none; filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000); }
+.rw-extreme::before { content: ""; position: absolute; inset: 0; }
+.rw-peak::before { background: var(--peak); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.rw-valley::before { background: var(--valley); clip-path: polygon(0 0, 100% 0, 50% 100%); }

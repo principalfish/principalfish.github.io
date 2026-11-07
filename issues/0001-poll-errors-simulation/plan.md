@@ -69,7 +69,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
      - against the committed version, the diff touches only `replay` and `identity.source_sha256`, with `historical`, `national`, `methods` and `limitations` unchanged (present the diff summary);
      - a second run reproduces the new file byte-for-byte;
      - `./run_tests.sh` stays green, and no other file is staged (`model_output_trends.json` in particular).
-2. **3a: Westminster display** (thread 4, Piece 3a). W-4: the MC median seat count as the headline (Phil, confirmed 2026-11-07), with the deterministic count labelled "uniform-swing projection" and flagged when it falls outside its own 90% range. S-1: integer percentages, "<1%" and ">99%", stored to 3 dp. Westminster views only now.
+2. **3a: Westminster display** (thread 4, Piece 3a). W-4 (confirmed by Phil 2026-11-07): the MC median seat count is the headline, with the deterministic count labelled "uniform-swing projection" and flagged when it falls outside its own 90% range. S-1: integer percentages, "<1%" and ">99%", stored to 3 dp. Westminster views only now.
    - Acceptance: `npm test`, `npm run minify:electionmaps`, the jsdom harness on both pages; screenshots or text dumps presented.
 3. **Style cleanup** (thread 4, Phase 6). One formatting-only commit; no behaviour change. Model: `claude-sonnet-5-5`. Depends on: 1, 1b, 2.
 4. **Self-review of the branch.** `/review self poll-errors-simulation` on the UK-only diff. Fix what Phil picks. Depends on: 3.
@@ -87,7 +87,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] US work moved to issue 0004; branch `us-poll-errors-uncertainty` at `44dd8336` pushed (2026-11-07).
 - [x] 1 · US work removed from this branch; checks green (`5a96e52c`).
 - [x] 1b · Offline conversion experiment removed from this branch; checks green (`39610fb9`).
-- [ ] 1c · Westminster validation report regenerated and committed.
+- [x] 1c · Westminster validation report regenerated and committed (`2618c0dd`).
 - [ ] 2 · T4 Piece 3a: Westminster display changes.
 - [ ] 3 · T4 Phase 6: Style cleanup.
 - [ ] 4 · Branch self-review done and chosen fixes committed.
@@ -140,3 +140,5 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
 - 2026-11-07 (builder, Piece 1b): removal staged, paused for Phil's review (uncommitted). 21 files: 16 experiment-only files deleted; `uncertainty.py`, `uncertainty_validation.html`, `westminster_validation.py` and `westminster_validation_inputs.py` restored byte-for-byte to `92743751` (no other commit touched them); README's experiment section (28 lines) removed. Branch diff vs merge base 184 → 168 files. Acceptance grep empty. Checks: mypy 246 files clean; pytest 5668 passed (5971 → 5668 with the four experiment test files gone); vitest 588 passed / 3 skipped; export dry-run exit 0; console builds; `/westminster/uncertainty/validation` 200, `/…/conversion-validation` 404; `git diff --check` clean. Analysis loop: all five checks clean.
   - **Pre-existing gap (not caused by 1b):** the committed `uncertainty_validation_report.json` (from `c067f150`) was never regenerated after `92743751` switched the replay to frozen inputs. A run now matches it on `historical`, `national`, `methods` and `limitations`, but differs in `replay` (the frozen-input fields) and in `identity.source_sha256`. A run at `5a96e52c` (pre-1b) gives the same output as post-1b, apart from the two restored files' source hashes. So 1b changes no validation result. Regenerating the committed report is Phil's call.
 - 2026-11-07: Piece 1b committed as `39610fb9` and pushed (21 files, −529,284 lines). Next: Piece 1c.
+- 2026-11-07 (builder, Piece 1c): report regenerated, paused for review (uncommitted). The diff touches only `identity.source_sha256` (four hashes updated, plus `westminster_validation_inputs.py`, which was missing) and `replay`, which gains six metadata fields for the frozen-input source. `report_hash` goes 08266bae → 6c36090c. No number changed: `variants`, `seed_spread`, `historical`, `national`, `methods` and `limitations` are identical. A second run is byte-identical. Correctness check clean (hashes match HEAD files and the fixture; `read_report()` verifies). mypy 246 clean, pytest 5668 passed, `git diff --check` clean, console `/westminster/uncertainty/validation` 200 showing "Input source: committed frozen inputs". Only the report file is modified.
+- 2026-11-07: Piece 1c committed as `2618c0dd` and pushed. Next: Piece 2 (3a); W-4 is settled (MC median headline).

@@ -5,6 +5,19 @@ Brief: "look into importing the us mid term results" (2026-11-07). The 2026 midt
 ## Settled
 - Scope is House + Senate. Governors are out (no pipeline; possible separate issue). (2026-11-07)
 - Import provisional results now, using re-runnable tools that refresh in place as counts finish. (2026-11-07)
+- Forecast scoring (forecast vs. result) is wanted but goes in a separate issue; noted, not built here. (2026-11-07)
+- Source is NYT's static results JSON (2026: `static01.nyt.com/elections-assets/pages/data/2026-11-03/results-{house,senate}.json`), credited with a disclaimer (NYT/AP data, non-commercial use). BBC is out (it only embeds AP's licensed widgets). See threads/sources.md. (2026-11-07)
+- Uncalled races: store votes so far, mark no one elected, and flag the seat as uncalled with % expected vote counted so the map can show it as leading/uncalled. Needs a small schema/export addition. (2026-11-07)
+- Publication: 2026 results are exported to the public US maps site with the disclaimer, so export, manifest and front-end changes are in scope. (2026-11-07)
+- Disclaimer: a source line under the map whenever a NYT-sourced election is selected ("Results: The New York Times / AP. Provisional until certified."). Not in seat popups. (2026-11-07)
+- Past elections: one NYT-based toolchain for 2018–2026 House + Senate, with three schema adapters (2022–26, 2020, 2018). Re-import 2020–2024 with --refresh (ids kept) to replace the 538-sourced data, diffing against the 538 files as a check; add the missing House 2018/2020 and Senate 2018. (2026-11-07)
+- House geometry: one map id per district set. Map 21 stays for 2022–24; new ids for 2026 and for the 2012-cycle set, each a full 435-district topojson. Same pattern as westminster-2010/-2024 in the UK manifest. (2026-11-07)
+- 2026 House geometry: Census cb_2024 cd119 for the 41 unchanged states, plus each redrawn state's official enacted-plan shapefile (CA, TX, UT, OH, NC, FL, TN, LA, AL; threads/redistricting.md), stitched into the new map. A per-state source table lives in the build script; swap to Census 120th-Congress files when they appear. CO/NV/OR noise to be confirmed in the build. (2026-11-07)
+- House 2018 and 2020 share one 2012-cycle map from Census cb_2018 cd116 (includes PA's 2018 court map). Known inaccuracy: NC 2020 used a 2019 court map that no Census file has, so NC 2020 shows on 2018 boundaries. (2026-11-07)
+- Predict pages roll forward in this issue: House and Senate predictBaselineElectionId move to 2026-cycle results and nextElectionYear/nextElectionDate to 2028. The 2026 forecasts stay frozen for the scoring issue; building 2028 forecast models is out of scope. (2026-11-07)
+- Predict anchor: House and Senate predict views open on the actual 2026 result. The frozen 2026 forecasts stay in the election list as archived entries. (2026-11-07)
+- Senate 2028 baselines: add a per-seat baseline override list (FL, OH → 2026-us-senate). Builder note: `senateSpecialElections` entries already carry a per-seat `baselineElectionId` (US manifest shell), so generalise that mechanism rather than inventing a parallel one. (2026-11-07)
+- Current Senate is derived from the 2026 results: 65 holdovers plus the 2026 winners, as new code alongside the congress-legislators converter (`scripts/export/legacy.py:31`, `senate-current.json`). (2026-11-07)
 
 ## Open
 - Raw NYT files: commit them to the public repo (like `old_data/files/usa/*.json` today), or cache them locally and commit only the converted per-seat files?

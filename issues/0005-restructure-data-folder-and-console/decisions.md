@@ -5,12 +5,12 @@ Full sweep reports, read-only at master `35e5326c`: `findings/us-importers.md`, 
 ## Settled
 - Scope is wider than the original US importer tidy: a full assessment of `data/`, UK and US, plus a rethink of the data console (user, 2026-11-08)
 - Nothing is built in this chat; done means approved `issue.md` and `plan.md` with current and proposed structure, every caller of what moves, and how behaviour preservation is checked (2026-11-08)
+- Two issues, planned together in this chat, with separate branches and PRs: this one for the folders, a new one for the console (user, 2026-11-08)
+- `data/` is organised role first, jurisdiction second (user, 2026-11-08)
+- `model_support/` and the Westminster calibrate/validate scripts move now, not after 0003 (user, 2026-11-08). The user accepted the extra merge work on 0003 and 0004; the hashed report's handling is still open
+- Console scope: navigation by family with a fixed stage order, consolidated templates, consistent URLs (28 routes, redirects on GET pages only), missing confirms and small fixes, a run log, and new Holyrood/US diagnostic views (user, 2026-11-08)
 
 ## Open
-- One issue or several? Folder moves are behaviour-preserving and the console rethink is a deliberate UI change; they are proven differently and the console's nav work touches no import paths.
-- Organising axis for `data/`: role first with jurisdiction second (recommended), or jurisdiction first? It fixes the shape of every later move.
-- When does `model_support/` move? It is hashed by the Westminster validation report (8 source paths on master) and directly conflicts with 0003 and 0004.
-- Console scope: nav and layout only, or also URL renames, missing confirms, a run log or background jobs, and Holyrood/US diagnostic views?
 - What specifically hurts in the console today? Sets what the rethink is for and how to judge it.
 - Later: are the five pure `migrate_*` scripts applied on the live DB and safe to delete? (they are still given as the upgrade path in the README)
 - Later: is `core/` worth 271 rewritten imports?

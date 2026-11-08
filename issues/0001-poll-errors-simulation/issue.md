@@ -8,11 +8,11 @@ Add honest uncertainty to the Westminster nowcast. Poll sample sizes and bases f
 
 **Out of scope.** Westminster only. US uncertainty moved to issue 0004 (branch `us-poll-errors-uncertainty`). The offline conversion-error experiment and the model refinements (correlated conversion error, heavier seat tails, parameter uncertainty) moved to #78. The seat ranges are known to be on the narrow side; that work is where they get revisited.
 
-**Where it stands.** The code is on branch `poll-errors-simulation`, PR #74. Still to do: a full self-review of the whole branch (running), merging master (#80 landed, and the branch now conflicts in 14 files), and the final PR text.
+**Where it stands.** The code is on branch `poll-errors-simulation`, PR #74. Still to do: fixes from the whole-branch self-review, merging master (#80 landed, and the branch now conflicts in 14 files), and the final PR text.
 
 ## Plan
 
-_2026-11-08 · 16 of 17 pieces done · now: waiting on a decision (self-review findings), then merge master and PR text_
+_2026-11-08 · 16 of 17 pieces done · now: review fixes (round 3) in progress, then merge master and PR text_
 
 - [x] **Threads 1–4** · 40 checkpoints, commits in each thread plan
   The calibrated Monte Carlo engine, poll bases and effective n, console diagnostics, map and tracker uncertainty, and the frozen validation replay.
@@ -52,5 +52,7 @@ _2026-11-08 · 16 of 17 pieces done · now: waiting on a decision (self-review f
   Mean seats, rounded by largest remainder to add up to 650, in the table, headline and tracker.
 - [x] **7/8 Split the map page: UNS by default, opt-in modelled uncertainty** · `5902f98f`
   Added 2026-11-08: a "Show with modelled uncertainty" checkbox replaces Show uncertainty; the latest poll and nowcast note move below the map; the tracker line follows its checkbox.
+- [ ] **Review fixes (round 3)** · in progress
+  Poll tracker back to master on initial load, with new features behind its checkbox; docs, console error tests and validator fixes.
 - [ ] **8/8 PR text** · not started
   The first final description went on PR #74 on 2026-11-08; `/publish` again after piece 7.

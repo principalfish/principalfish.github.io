@@ -142,3 +142,11 @@ Run from `data/` unless noted.
 - 2026-11-07: Created by splitting 0001. Thread 4's Phase 2 and 4b–4d moved here; 0001 keeps 3a, 4a, the gated US/Westminster live work, and style.
 - 2026-11-07: Piece 1 done. Phil chose route (a), a pre-registered landslide/efficiency term, over 1983–92 history first or deferring 2a. For its form he chose "diagnose, then choose" over committing now to directional, lead-dependent spread, or both. 2a is now 2a-L1…L4 (pieces 2–5); later pieces renumbered 6–14.
 - 2026-11-07 (from 0001's planner chat, with Phil's OK while 0003 is paused): branch cut locally at `44dd8336`, so it keeps the conversion experiment that 0001 Piece 1b removes. See the Branch note in Context for the revert needed after merging 0001 or master in.
+
+## Carried over from 0001's whole-branch self-review (2026-11-08)
+
+Phil left these for this issue ("Recommended set"). Line numbers are at `poll-errors-simulation` head `5902f98f`; the full list is in 0001's `reviews/03-2026-11-08.md` (findings 1, 5–12, 14, 16, 17, 21, 22, 24, 25, 28–31).
+
+- Refactors with no behaviour change: `westminster_validation.py` importing a CLI script and duplicating `fit_pairs` and the DB opener; `uncertainty_runs.py` decoding every run per page; the test-only `aggregate_poll_shares`; `seat_decomposition` re-implementing engine arithmetic, and `uncertainty_explorer.py:114`'s rounding; duplicated poll snapshot and migration code; long lines. Some touch sources the Westminster validation report hashes.
+- Hard-coded figures in the validation report's limitations text.
+- Remaining test gaps: guards in the repair, calibration and validation scripts, the Monte Carlo engine and `run_uns_model.py`'s CLI; the tracker's tooltip wiring.

@@ -10,11 +10,11 @@ The console's pages don't change here, only its imports. Its redesign is a separ
 
 ## Plan
 
-_2026-11-08 · 1 of 10 pieces done · now: piece 2 in progress_
+_2026-11-08 · 1 of 10 pieces done · now: waiting on review of piece 2_
 
 - [x] **1/10 Editable install, archive folder, dead files** · `4b0f4475`
   Make `data/` installable so scripts can import normally, and create the archive folder.
-- [ ] **2/10 `schema.py` and `models/` package** · in progress
+- [ ] **2/10 `schema.py` and `models/` package** · waiting on you
   Rename `models.py` so the `models/` folder can be imported normally.
 - [ ] **3/10 `inputs/`** · not started
   Move the source data files out of `old_data/files`.

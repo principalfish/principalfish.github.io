@@ -150,3 +150,4 @@ Phil left these for this issue ("Recommended set"). Line numbers are at `poll-er
 - Refactors with no behaviour change: `westminster_validation.py` importing a CLI script and duplicating `fit_pairs` and the DB opener; `uncertainty_runs.py` decoding every run per page; the test-only `aggregate_poll_shares`; `seat_decomposition` re-implementing engine arithmetic, and `uncertainty_explorer.py:114`'s rounding; duplicated poll snapshot and migration code; long lines. Some touch sources the Westminster validation report hashes.
 - Hard-coded figures in the validation report's limitations text.
 - Remaining test gaps: guards in the repair, calibration and validation scripts, the Monte Carlo engine and `run_uns_model.py`'s CLI; the tracker's tooltip wiring.
+- `data/model_support/persistence.py:432` has the same JSON-handler gap the 0001 overflow fixes closed elsewhere: a 5000-digit integer escapes as a raw `ValueError` (by reading only, not reproduced).

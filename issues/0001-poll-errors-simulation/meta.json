@@ -6,10 +6,10 @@
   "state": "review",
   "branch": "poll-errors-simulation",
   "base": "master",
-  "gh_issue": null,
+  "gh_issue": 81,
   "build_model": null,
   "created": "2026-10-30 10:54",
-  "updated": "2026-11-08 12:22",
+  "updated": "2026-11-08 12:32",
   "done": null,
   "pr": 74,
   "local": [

@@ -1,19 +1,25 @@
-# Poll-error uncertainty for Westminster and US forecasts
+# Poll-error uncertainty for Westminster forecasts
 
-Add honest uncertainty to the election projections. Poll sample sizes and bases feed an effective-n and margin of error. A Monte Carlo engine, calibrated against historical poll errors, turns them into seat ranges and outcome probabilities, shown in the console, on the maps and as bands on the poll trackers.
+Add honest uncertainty to the Westminster nowcast. Poll sample sizes and bases feed an effective n and a margin of error per poll. A Monte Carlo engine (10,000 simulations per run), calibrated against historical final-poll errors, turns the poll average into seat ranges and outcome probabilities. A reproducible validation harness checks the shipped model against frozen inputs.
 
-Westminster is built. The US House, Senate and presidential models have the same machinery, but their release is gated on calibration being accepted.
+**What readers get.** The map page still opens on the uniform-swing view. A "Show with modelled uncertainty" checkbox below the header switches to the simulated headline, mean seats with 90% ranges (rounded by largest remainder so the table adds up to 650), and each seat's vote range and win chance in its popup. The poll tracker starts on the uniform-swing line; its Uncertainty box switches to the simulated mean with 90% bands. "Latest poll used" moves to a smaller line below the map, joined by the nowcast note when the box is ticked. The data console shows every stage's intermediate numbers.
 
-The remaining work comes from a review of the branch. Fix how vote shares convert to seats under correlated error, add heavier seat-level tails and parameter uncertainty, and correct several US model details. Then rerun and publish the backfilled history, only with explicit approval.
+**Model settings and data.** Westminster poll weighting is a 15-day half-life over a 60-day window (it was 30 days for both). The full history (848 daily runs, 2024-07-05 to 2026-10-30) was rerun with these settings. On 2026-10-30 Labour is 354 on uniform swing and 317 as the simulated mean; the gap is the cost of error falling on Labour's many narrow seats.
 
-The work lives on branch `poll-errors-simulation`.
+**Out of scope.** Westminster only. US uncertainty moved to issue 0004 (branch `us-poll-errors-uncertainty`). The offline conversion-error experiment and the model refinements (correlated conversion error, heavier seat tails, parameter uncertainty) moved to #78. The seat ranges are known to be on the narrow side; that work is where they get revisited.
+
+**Where it stands.** The code is on branch `poll-errors-simulation`, PR #74. Still to do: a full self-review of the whole branch (running), merging master (#80 landed, and the branch now conflicts in 14 files), and the final PR text.
 
 ## Plan
 
-_2026-11-08 · 16 of 17 pieces done · now: all done, in review; PR text next_
+_2026-11-08 · 16 of 17 pieces done · now: full branch self-review running, then merge master and PR text_
 
 - [x] **Threads 1–4** · 40 checkpoints, commits in each thread plan
   The calibrated Monte Carlo engine, poll bases and effective n, console diagnostics, map and tracker uncertainty, and the frozen validation replay.
+- [x] **Offline conversion experiment** · `eaa73607`, `88bfc2a0`, `44dd8336`
+  Six-transition check of how vote shares convert to seats; it failed its gate. Removed from this branch by piece 1b and carried on in #78.
+- [ ] ~~**Conversion, tail and parameter refinements (2a–2f, 4b–4d)**~~ · moved 2026-11-07 to #78
+- [ ] ~~**US House, Senate and presidential uncertainty**~~ · moved 2026-11-07 to issue 0004
 - [x] **1/8 Remove the US work** · `5a96e52c`
   The US uncertainty work moved to issue 0004's branch, `us-poll-errors-uncertainty`.
 - [x] **1b/8 Remove the offline conversion experiment** · `39610fb9`

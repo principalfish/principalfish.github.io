@@ -34,3 +34,4 @@
 - 2026-11-08 11:29 · poll-errors-simulation (0001) · ready → building
 - 2026-11-08 12:22 · poll-errors-simulation (0001) · building → review
 - 2026-11-08 12:22 · poll-errors-simulation (0001) · Piece 7 committed as 5902f98f and pushed (Phil: "Tried it, approve")
+- 2026-11-08 12:32 · poll-errors-simulation (0001) · GitHub issue #81

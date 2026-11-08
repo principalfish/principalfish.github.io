@@ -1,0 +1,221 @@
+# Plan: redesign-data-console-into-five-sections
+
+**Build model:** claude-opus-5-5. The routes carry safeguards that are easy to lose, and the background runner is concurrent code. Piece 11 is docs only and marked for Sonnet.
+
+## Context
+
+Redesign the local Flask data console around five uniform sections (GitHub #83).
+
+**Prerequisite:** built after 0005 (GitHub #82) has merged, branching from the master that contains it. Paths below use the post-0005 layout: `model_support` is `models/support`, `scripts/export*` is `export/`, `polls/importers` is `importers/polls`, `console/importers_registry.py` is `importers/polls/westminster/registry.py`. Line numbers are at `35e5326c`, before that move: re-grep.
+
+**Read first, on the planner branch:** `../0005-restructure-data-folder-and-console/findings/console.md` has every route, method, template, test assertion and inconsistency. `decisions.md` has the ledger.
+
+**Facts this plan relies on:**
+- `map.parliament` already takes exactly five values: `westminster`, `holyrood`, `us_house`, `us_senate`, `us_presidential` (`export_elections.py:129-132`). Polls have `map_id`. So one value identifies a section for polls, outputs and export.
+- The US scraper already filters by contest (`us_wikipedia_polls.py:216-265`): `house_national`, `house_districts`, `senate_races`, `president`.
+- `run_us_chamber_and_export` already runs a single chamber (`console/services/us_models.py`).
+- `_common.py:2634-2686` gives the US runners the same run parameters as Holyrood.
+- The two UK sections share one site page and manifest, as do the three US sections, so a partial export must preserve the other sections' entries.
+
+**Settled decisions (don't re-derive):**
+- Five sections: Westminster, Holyrood, House, Senate, President. Family-first was superseded by this.
+- Each section: auto import polls, view polls, run models with parameters, view model runs, delete for polls and runs.
+- "Import poll" is Westminster only.
+- Section-specific tools stay in their section: by-elections for Westminster, matchups per US section, NYT results for House and Senate, Current Senate for Senate.
+- URL shape: `/<section>/polls`, `/<section>/polls/import`, `/<section>/model`, `/<section>/outputs`. 302 redirects for old GET pages only, never POSTs: a replayed POST from a stale tab could repeat an action.
+- One global export page: tick sections, then results, current forecast or metadata. Dry run on by default.
+- Each model run form has "export when done", on by default for real runs. What it exports stays as today: Westminster `--current-simulation`, others full.
+- No "run all US" action.
+- Rebuild, backup and restore live on an admin page.
+- Run log and background job records are files beside the database (`<database folder>/console-runs/`), one per run, pruned to a set number. No schema change.
+- Background runs with live progress come last.
+- Must stay exactly: every transparency view and number; poll n, n source, n_eff, MoE; `/polls/coverage`; every `us_results_preview` section; queue summaries including Scrape Diagnostics; raw stdout, stderr, exit code and command on every run; hub export preview; interrupted-run notes and `NO_MATCHUP_NOTE`; `same_origin_only`, `TRUSTED_HOSTS`; `backup_after_write`; preview tokens and their `"type"` tags; `expected_index`; `_serialised` locks; `model_run_slot` at every call site; dry-run default true; existing confirms and their tested text.
+- Never link a queue `/finish` as a plain `<a>`, because GET mutates.
+- Out: new Holyrood and US diagnostic pages (own issue later) and new uncertainty models.
+
+**Assumed, for Phil to correct at plan approval:**
+- One background job runs at a time across the console. A second start is refused with a link to the running one.
+- Holyrood's auto import stays one-click and unreviewed, as today. A review queue would be new importer work.
+- "Rebuild Site Data" and `/us/results/export` are replaced by the export page.
+- A run interrupted by a console restart is marked "interrupted" when the console next starts, not resumed.
+
+## Current structure
+
+```
+console/
+  blueprints/  flat, 14 mixing families: poll_import (Westminster), westminster, holyrood, us,
+               us_poll_import, us_results, by_elections, polls, site, db_admin, home, uncertainty*
+  services/    flat: runner, preview, trends, model_outputs, wikipedia_queue, us_poll_queue, us_models, us_matchups
+  templates/   37 flat; near-duplicate run, queue and summary pages
+  static/style.css
+```
+
+No navigation in `base.html`. Home holds the only links and several POST forms.
+
+## Proposed structure
+
+```
+console/
+  __init__.py csrf.py db.py forms.py paths.py
+  sections.py   the five sections: slug, label, parliament, capabilities
+  nav.py        one nav structure, exposed to base.html
+  shared/       runner, run_log, jobs, preview, poll_queue, trends, model_outputs
+  westminster/  model, outputs, poll_import, by_elections, uncertainty*
+  holyrood/     model, outputs, poll_import
+  us/           section views, poll_import, results, matchups, models
+  polls/        poll list, detail, coverage, delete
+  admin/        admin page, export page, db_admin
+  templates/    mirrored, plus _macros/
+```
+
+```
+Home           links to the sections and Admin
+Westminster    Polls (View, Auto import, Import poll, Coverage) · By-elections · Model · Outputs · Uncertainty
+Holyrood       Polls (View, Auto import) · Model · Outputs
+House          Polls (View, Auto import) · Matchups · Results · Model · Outputs
+Senate         Polls (View, Auto import) · Matchups · Results · Current Senate · Model · Outputs
+President      Polls (View, Auto import) · Matchup · Model · Outputs
+Export         one page
+Runs           log of every run
+Admin          Rebuild database · Backup · Restore
+```
+
+## Approach
+
+Structure first, then behaviour, so each visible change lands on a stable base. A section registry drives navigation, section pages and filters, so "uniform" is enforced by one data structure and not by convention. The queue and preview safeguards are moved, not rewritten.
+
+Rejected:
+- **Top level by pipeline stage:** a single Import page would merge a pollster URL form, a one-click button and a race-level queue, and matchups and uncertainty have no natural stage.
+- **Four families with US as one:** Phil chose five sections.
+- **Run log in a database table:** needs a live schema migration and writes during runs.
+- **New diagnostics in this issue:** a separate follow-up keeps this reviewable.
+
+## Pieces
+
+1. **Section registry and internal layout**
+   - Files: new `console/sections.py`; `console/blueprints/*` and `console/services/*` moved per the proposed tree; the 108 monkeypatch strings in `test_console_*.py` and the two queue test files; `console/__init__.py`.
+   - What: move modules with no route, endpoint or template change. Add the registry mapping each section to its slug, label, `parliament` value and capabilities. Replace the `startswith('westminster.')` test in `model_output_detail.html:18` with an explicit registry flag, and centralise the "UK Constituencies post 2022" constant, repeated at `poll_import.py:74`, `uncertainty_runs.py:20`, `westminster.py:139`. Keep the `db_admin.` endpoint prefix: `backup_after_write` depends on it (`__init__.py:79`).
+   - Functions: `create_app`'s blueprint registration.
+   - Depends on: 0005 merged.
+   - Acceptance: `url_map` identical to baseline; `backup_after_write` still skips `db_admin.` endpoints.
+   - Tests: existing suite with patch paths updated; a new registry test that every section's `parliament` is one of `map.parliament`'s values and that labels are unique.
+
+2. **Navigation and section pages**
+   - Files: new `console/nav.py`, `templates/base.html`, new section landing templates, `home.html`, `static/style.css`, `tests/test_console_{us,site,db_admin,us_results,uncertainty}.py`.
+   - What: top nav and section nav from `nav.py`, the current section taken from `request.endpoint`, breadcrumbs. Landing pages for each section. Home becomes links only, and its POST forms move to their sections or Admin (the rebuild-all-history option moves with the run form in piece 5).
+   - Depends on: 1.
+   - Acceptance: every page shows navigation; home has no POST forms; existing confirm text survives the move.
+   - Tests: crawl from `/` over a seeded temporary database with no 4xx or 5xx; every parameterless GET rule reachable from `/`; every `nav.py` entry resolves and renders; `/` has no `method="post"`.
+   - Manual review: `cd data && ./election_data/bin/python server.py` from the worktree, on a free port. Walk each section and Admin in a browser, including narrow width.
+
+3. **Template and route consolidation**
+   - Files: new `templates/_macros/{run_result,queue,forms,meta}.html`, `_uncertainty_nav.html`; `model_run.html` replacing `holyrood_model_run.html`; `wikipedia_*` and `us_poll_queue*` templates; the outputs route code in `westminster.py:256-367`, `holyrood.py:282-372`, `us.py:432-504`; `shared/runner.py`.
+   - What: one data-driven run form; one run-result macro with the label as a parameter so tested strings survive; shared queue macros; generalise `_register_chamber_routes` to all five sections' outputs, keeping endpoint names; add `run_model_then_export`. Move Chart.js and the inline script to `static/`, with Chart.js pinned or vendored so charts don't vanish offline. Reformat the long uncertainty templates only. Calibration and Validation join the uncertainty sub-nav.
+   - Depends on: 1.
+   - Acceptance: HTML for each consolidated page contains every field and number it had; existing assertions pass unchanged.
+   - Tests: existing suite; a new test that every uncertainty page shows the sub-nav; a new test that the run-result macro renders command, exit code, stdout and stderr.
+
+4. **One URL shape**
+   - Files: all section routes, new redirect table, tests with URL literals (about 240 per the findings).
+   - What: rename to the settled shape, keeping endpoint names. Add 302 redirects for old GET pages only. Old POST URLs return 404 and run nothing. Rule-set checks at `test_console_us.py:106-141,834` and `test_console_csrf.py` update with them.
+   - Depends on: 2, 3.
+   - Acceptance: every section follows the shape; no old POST route exists.
+   - Tests: old GET URLs redirect to their new homes; old POST URLs 404 and run nothing; every `<form method=post action=…>` resolves to a POST rule.
+
+5. **Section parity**
+   - Files: `console/us/*`, `console/polls/*`, `console/holyrood/*`, `shared/runner.py`, the run form, `console/forms.py`.
+   - What:
+     - `/<section>/polls` lists that section's polls, filtered by `map.parliament`, with the same table and numbers as today. `/polls` stays as the all-polls view.
+     - House, Senate and President each get a run form with the US runners' parameters and a dry run default. Remove `/us/run-models`. The "Rebuild all history" option and its confirm move to each form, keeping the tested confirm text.
+     - Add "export when done" to all five run forms.
+     - Auto import opens the existing US queue limited to that section's contests. Queue finish runs only that section's model; automatic matchup tracking is unchanged.
+     - Matchups, NYT results and Current Senate move into their sections. Delete for polls and runs is available in every section.
+   - Functions: `run_us_chamber_and_export`, `UsQueueStartForm`, queue `finish`.
+   - Depends on: 4.
+   - Acceptance: every section offers the agreed actions, with Import poll only on Westminster; `model_run_slot` held on every US run path.
+   - Tests: section poll lists include only their own polls; each US run form sends only its chamber's script and parameters; "export when done" off skips the export and on runs what today's flow runs; queue finish runs only the section's model; `model_run_slot` refuses a concurrent run from each form.
+   - Manual review: open each section's Polls and Model pages. Do a dry-run model for one US section, and start then abandon one auto import.
+
+6. **Global export page**
+   - Files: `export/export_elections.py`, new export view and template under `console/admin/`, `console/paths.py`, export tests.
+   - What: add a section filter to the script, using `map.parliament`, working with every content mode. Filtering must preserve other sections' entries in the shared page and manifest. Content options become combinable: results, current forecast, metadata. The form defaults to dry run and shows what would be written. The page replaces `/site/rebuild` and `/us/results/export`, under `model_run_slot`.
+   - Functions: `partition`/`export_pages`/`_export_page`, argument parsing.
+   - Depends on: 4.
+   - Acceptance: with no filter, the script's output is byte-identical to today's; a one-section export leaves other sections' site files and manifest entries unchanged.
+   - Tests: golden export unchanged with no filter; a one-section export under `--output-base` changes only that section's files and preserves shared manifest entries; each content combination; the form defaults to dry run; a real export requires an explicit choice.
+   - Manual review: run a dry run for one section, and check the listed changes make sense.
+
+7. **Admin page, confirms and small fixes**
+   - Files: new `templates/admin.html`, `console/admin/*`, `poll_list.html`, `model_outputs.html`, matchup templates, the queue `finish` routes, `__init__.py`.
+   - What: admin page for Rebuild database, Backup, Restore. Add confirms to poll and output deletes (single and bulk), matchup-page rebuilds and queue abandon. Request a backup after queue finishes that write on GET. Add the per-token lock to Westminster's finish. Fix the stale "automatic reload" copy (`import_form.html:12`, `us_poll_import.html:13`, `services/preview.py:15`) and use one word, "Export", everywhere.
+   - Depends on: 4.
+   - Acceptance: every destructive action has a confirm; backup requested after a GET finish that wrote.
+   - Tests: each destructive form has a confirm; existing confirm text unchanged; a GET finish that writes requests a backup and one that doesn't write doesn't; Westminster finish serialises per token.
+   - Manual review: in a browser, cancel each confirm on Rebuild database and Restore. Delete a disposable model run.
+
+8. **Looks and readability**
+   - Files: `static/style.css`, templates using inline styles.
+   - What: `:root` colour and spacing tokens, nav styles, consistent tables and number alignment, one spacing scale, a dark mode, remove dead CSS (`.action-grid-three`, the `.topbar` leftovers) and inline `style=` attributes except the deliberate calibration bar width. Keep the classes tests assert on.
+   - Depends on: 2, 3.
+   - Acceptance: no inline styles beyond the exception; tables readable at narrow width.
+   - Tests: a test that templates hold no `style=` beyond the allowed one. Mostly a visual piece, proven by the manual review.
+   - Manual review: look over a dense page in each section (poll list, output detail, uncertainty results, run form) in light and dark, at desktop and narrow width.
+
+9. **Run log**
+   - Files: new `shared/run_log.py`, `shared/runner.py`, new `/runs` and `/runs/<id>` views and templates, section pages.
+   - What: every console-launched command writes a record to `<database folder>/console-runs/<id>/` holding the command, start and end times, exit code, stdout and stderr, written to a temporary name then moved. Keep the newest N (default 200, configurable by environment variable). `/runs` lists them, filterable by section; each run page shows the full output.
+   - Functions: `run_command` and its callers.
+   - Depends on: 3, 5.
+   - Acceptance: a run's output is viewable after leaving the page and after a restart; the elections database is untouched by logging.
+   - Tests: a record is written for success, failure and timeout; pruning keeps the newest N; a corrupt record is skipped with a note, not an error; the log folder follows the configured database path, so tests can't reach the live one.
+
+10. **Background runs with live progress**
+    - Files: new `shared/jobs.py`, `shared/runner.py`, run forms, `/runs/<id>` live view, a small script in `static/`, `console/__init__.py`.
+    - What: model runs and exports start in a background thread running the subprocess and streaming output into the run record. The POST redirects to `/runs/<id>`, which polls a JSON status route and shows live output, ending with the same result block as today. One job at a time; a second is refused with a link to the running job. `model_run_slot` is held for the job's whole life, and the backup request fires when a job that wrote finishes. On startup, records still marked running become "interrupted". Timeouts still apply.
+    - Functions: `run_command` callers, `backup_after_write` for jobs.
+    - Depends on: 9.
+    - Acceptance: starting a run returns immediately; progress shows while it runs; the result is unchanged; a restart mid-run leaves a clear "interrupted" record.
+    - Tests: start returns a redirect without waiting; a real trivial subprocess streams output to the record; a second start is refused while one runs; the slot is released on success, failure, timeout and crash; records left running are marked interrupted at startup; backup requested on completion of a writing job.
+    - Manual review: start a Holyrood dry-run model, watch progress, leave and come back.
+
+11. **Docs**
+    - Files: `README.md:738,1267,1457` and the console sections, `AGENTS.md`.
+    - What: document the five sections, URL shape, export page, run log location and retention.
+    - Depends on: 10.
+    - Acceptance: docs name only pages and paths that exist.
+    - Tests: none worth writing; docs only.
+    - Model: claude-sonnet-5-5
+
+## Checkpoints
+
+- [ ] 1: Section registry and internal layout
+- [ ] 2: Navigation and section pages
+- [ ] 3: Template and route consolidation
+- [ ] 4: One URL shape
+- [ ] 5: Section parity
+- [ ] 6: Global export page
+- [ ] 7: Admin page, confirms and small fixes
+- [ ] 8: Looks and readability
+- [ ] 9: Run log
+- [ ] 10: Background runs with live progress
+- [ ] 11: Docs
+
+## Verification
+
+Run from `data/` after every piece:
+- `./run_tests.sh` (strict mypy gates it, then pytest).
+- `./election_data/bin/python -c "from console import create_app; create_app()"`.
+- `url_map` dump: piece 1 must match the baseline exactly. Later pieces change it only as they state.
+- `git diff --check` and `npm test` from the repo root. Stage explicitly.
+
+Rules for tests and walks:
+- Any walk over the app is a pytest test, because `tests/conftest.py`'s autouse fixture is what keeps `Database()` off the live file.
+- Any POST that shells out must have its runner monkeypatched, except piece 10's trivial subprocess, which doesn't touch the database.
+- No browser here: the Flask test client covers routes, redirects, HTML and forms. Chart rendering, `confirm()` dialogs, select-all and layout are the manual reviews, in Phil's browser.
+- No piece needs a live database write. Anything Phil does in a manual review against the live database, such as a real delete or run, is his choice at the time.
+
+**Transparency check:** before and after pieces 3, 4 and 5, the same seeded test data must render the same numbers on each transparency page listed in Settled.
+
+## Notes
+
+- Follow-up, not part of this issue: full stage-by-stage diagnostics for Holyrood and US.

@@ -23,9 +23,39 @@ import { activeMapMode, ElectionData, manifest, page, Seat, state } from "../sta
 import { seatLookupKey } from "../utils.js";
 
 const readData = (file) => JSON.parse(readFileSync(new URL(`../../uselectionmaps/data/${file}`, import.meta.url), "utf8"));
-const manifestData = readData("map-modes.json");
+// These tests exercise the dormant saved-forecast view, which describes a forecast made in the
+// 2026 cycle. The exported manifest has moved on (Predict rolled to 2028, and the House/Senate
+// forecast elections are not exported while the export flag is off), so the 2026-cycle
+// manifest is rebuilt here from the committed one and the forecast payload is a fixture.
+function cycle2026Manifest(exported) {
+  const cycle = structuredClone(exported);
+  for (const entry of [
+    { id: "current-us-house", name: "2026 Prediction", type: "us_house_model", mapId: 21, parliament: "us_house", model: true, comparisonElectionId: "2024-us-house" },
+    { id: "current-us-senate", name: "2026 Prediction", type: "us_senate_model", mapId: 23, parliament: "us_senate", model: true, comparisonElectionId: "2020-us-senate" },
+  ]) {
+    if (!cycle.elections.some((election) => election.id === entry.id)) cycle.elections.push(entry);
+  }
+  // The forecast files are no longer exported, so the manifest has no data-file entries for them.
+  const files = cycle.files.elections.electionsById;
+  files["current-us-house"] ??= "results/us-house-forecast.json";
+  files["current-us-senate"] ??= "results/us-senate-forecast.json";
+  const senate = cycle.parliamentFeatures.us_senate;
+  senate.nextElectionYear = 2026;
+  senate.predictAnchorElectionId = "current-us-senate";
+  senate.predictBaselineElectionId = "2020-us-senate";
+  senate.predict.tabs[0].label = "Seats up (2026)";
+  const mode = cycle.mapModes["23"];
+  mode.senateClassNextElection = { 1: 2030, 2: 2026, 3: 2028 };
+  mode.senateSpecialElections = [
+    { seat: "Florida", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
+    { seat: "Ohio", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
+  ];
+  delete mode.senateBaselineOverrides;
+  return cycle;
+}
+const manifestData = cycle2026Manifest(readData("map-modes.json"));
 const chamberData = readData("results/senate-current.json");
-const forecastData = readData("results/us-senate-forecast.json");
+const forecastData = JSON.parse(readFileSync(new URL("./fixtures/us-senate-forecast.json", import.meta.url), "utf8"));
 const baselineData = readData("results/us-senate-2020.json");
 const specialBaselineData = readData("results/us-senate-2022.json");
 function fetchResults(url) {
@@ -104,7 +134,12 @@ describe("activateSenateForecastView", () => {
     const expectedTallies = expectedChamberTallies();
     expect(Object.values(expectedTallies).reduce((sum, seats) => sum + seats, 0)).toBe(100);
     expect(tallies(state.filteredSeatsSummary)).toEqual(expectedTallies);
-    expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({ republican: 53, democrat: 45, independent: 2 });
+    // The comparison side is the current chamber itself, so its tallies are the snapshot's members.
+    const snapshotMembers = {};
+    new ElectionData(chamberData).currentSeats.forEach((seat) => seat.members.forEach((member) => {
+      if (member.party) snapshotMembers[member.party] = (snapshotMembers[member.party] || 0) + 1;
+    }));
+    expect(tallies(state.filteredSeatsComparisonSummary)).toEqual(snapshotMembers);
     expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(100);
     expect(state.filteredSeatsSummary.totalVotes).toBe(0);
     expect(state.voteTotals.columns).toMatchObject({ votes: false, votePct: false });
@@ -154,6 +189,59 @@ describe("activateSenateForecastView", () => {
     latestTabs().onTabChange("seatsup");
     latestTabs().onTabChange("unknown");
     expect(renderMap).toHaveBeenCalledTimes(6);
+  });
+
+  describe("archived 2026 forecast after the 2028 rollover", () => {
+    /** The manifest as exported once Predict has rolled to 2028 on the 2026 Senate result. */
+    function rollOver({ keepSpecials }) {
+      const rolled = structuredClone(manifestData);
+      const senate = rolled.parliamentFeatures.us_senate;
+      senate.nextElectionYear = 2028;
+      senate.predictAnchorElectionId = "2026-us-senate";
+      senate.predictBaselineElectionId = "2022-us-senate";
+      senate.predict.tabs[0].label = "Seats up (2028)";
+      if (!keepSpecials) rolled.mapModes["23"].senateSpecialElections = [];
+      rolled.elections.push({ id: "2026-us-senate", name: "2026 Election", type: "us_senate", mapId: 23, parliament: "us_senate" });
+      manifest.init(rolled);
+      state.currentElection = { ...manifest.getElectionFromId("current-us-senate") };
+      state.setupMapData();
+    }
+
+    it("still gets its tabs, labelled with its own cycle, though it is no longer the predict anchor", async () => {
+      rollOver({ keepSpecials: false });
+      expect(state.currentElection.id).not.toBe(manifest.parliamentConfig("us_senate").predictAnchorElectionId);
+      await activateSenateForecastView();
+      expect(latestTabs().tabs).toEqual([
+        { key: "seatsup", label: "Seats up (2026)" },
+        { key: "chamber", label: "Full Senate" },
+      ]);
+    });
+
+    it("merges its winners into the Class-2 members, not the 2028 class", async () => {
+      rollOver({ keepSpecials: false });
+      await activateSenateForecastView();
+      latestTabs().onTabChange("chamber");
+      const alabama = state.electionData.currentSeats.find((seat) => seat.seat === "Alabama");
+      expect(alabama.members.find((member) => member.class === 2).name).toMatch(/\(projected\)$/);
+      expect(alabama.members.find((member) => member.class === 3).name).not.toMatch(/\(projected\)$/);
+    });
+
+    it("completes the Florida and Ohio comparison from 2026 specials declared for its own year", async () => {
+      rollOver({ keepSpecials: true });
+      await activateSenateForecastView();
+      expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: true });
+      expect(fetchJson.mock.calls.map(([url]) => url)).toContain("data/results/us-senate-2022.json");
+    });
+
+    it("leaves a non-forecast election alone", async () => {
+      rollOver({ keepSpecials: false });
+      state.currentElection = { ...manifest.getElectionFromId("2026-us-senate") };
+      renderSenateForecastTabs.mockClear();
+      fetchJson.mockClear();
+      await activateSenateForecastView();
+      expect(fetchJson).not.toHaveBeenCalled();
+      expect(latestTabs()).toBeUndefined();
+    });
   });
 
   it("retains region and party filters while switching views", async () => {

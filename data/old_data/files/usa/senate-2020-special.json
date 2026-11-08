@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "source": "The New York Times / AP",
+    "source_urls": [
+      "https://static01.nyt.com/elections-assets/2020/data/api/2020-11-03/national-map-page/national/senate.json",
+      "https://static01.nyt.com/elections-assets/2020/data/api/2021-01-05/state-page/georgia.json"
+    ],
+    "retrieved_at": "2026-11-07T20:05:29.546276+00:00",
+    "source_updated_at": "2023-02-17T20:16:28.962Z",
+    "sources": [
+      {
+        "kind": "general",
+        "url": "https://static01.nyt.com/elections-assets/2020/data/api/2020-11-03/national-map-page/national/senate.json",
+        "retrieved_at": "2026-11-07T20:05:29.546276+00:00",
+        "source_updated_at": "2023-02-17T20:16:28.962Z"
+      },
+      {
+        "kind": "runoff",
+        "url": "https://static01.nyt.com/elections-assets/2020/data/api/2021-01-05/state-page/georgia.json",
+        "retrieved_at": "2026-11-07T20:05:29.827705+00:00",
+        "source_updated_at": "2023-02-17T21:10:15.328Z"
+      }
+    ],
+    "year": 2020,
+    "chamber": "senate",
+    "special": true,
+    "map_id": 23,
+    "map_name": "US Senate 2024",
+    "special_file": null,
+    "election_date": "2020-11-03",
+    "source_note": "Results: The New York Times / AP."
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "democrat",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": "runoff",
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": true,
+      "senateClass": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2288923,
+        "name": "Raphael Warnock"
+      },
+      "republican": {
+        "total": 2195373,
+        "name": "Kelly Loeffler"
+      }
+    }
+  }
+}

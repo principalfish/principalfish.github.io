@@ -38,6 +38,7 @@ def create_app() -> Flask:
     from console.blueprints.uncertainty_runs import bp as uncertainty_runs_bp
     from console.blueprints.us import bp as us_bp
     from console.blueprints.us_poll_import import bp as us_poll_import_bp
+    from console.blueprints.us_results import bp as us_results_bp
     from console.blueprints.westminster import bp as westminster_bp
 
     for blueprint in (
@@ -51,6 +52,7 @@ def create_app() -> Flask:
         holyrood_bp,
         us_bp,
         us_poll_import_bp,
+        us_results_bp,
         by_elections_bp,
         site_bp,
         db_admin_bp,

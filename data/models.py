@@ -183,6 +183,8 @@ class Seat(Base):
         map: The owning ``Map`` instance.
         region: The ``Region`` this seat belongs to, if any.
         votes: All ``Vote`` records for this seat across elections.
+        seat_statuses: All ``ElectionSeatStatus`` records for this seat across
+            elections.
     """
 
     __tablename__ = "seats"
@@ -197,6 +199,9 @@ class Seat(Base):
     map: Mapped["Map"] = relationship("Map", back_populates="seats")
     region: Mapped[Optional["Region"]] = relationship("Region", back_populates="seats")
     votes: Mapped[list["Vote"]] = relationship("Vote", back_populates="seat", cascade="all, delete-orphan")
+    seat_statuses: Mapped[list["ElectionSeatStatus"]] = relationship(
+        "ElectionSeatStatus", back_populates="seat", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         """Return a debug string representation of the Seat."""
@@ -256,10 +261,13 @@ class Election(Base):
             from.
         election_date: Optional specific date of the election.
         target_election_year: Target cycle for presidential model runs.
+        source_note: Optional credit for where the election's results came
+            from, shown under the map.
         map: The owning ``Map`` instance.
         parent_election: Optional parent ``Election`` instance.
         votes: All ``Vote`` records belonging to this election.
         uncertainty: The run's ``ModelUncertainty`` summary, if one is stored.
+        seat_statuses: All ``ElectionSeatStatus`` records for this election.
     """
 
     __tablename__ = "elections"
@@ -272,6 +280,7 @@ class Election(Base):
     parent_election_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("elections.id"), nullable=True)
     election_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     target_election_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    source_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     map: Mapped["Map"] = relationship("Map", back_populates="elections")
     parent_election: Mapped[Optional["Election"]] = relationship("Election", remote_side="Election.id")
@@ -285,6 +294,9 @@ class Election(Base):
         uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+    seat_statuses: Mapped[list["ElectionSeatStatus"]] = relationship(
+        "ElectionSeatStatus", back_populates="election", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
@@ -386,6 +398,63 @@ class ModelUncertainty(Base):
         return (
             f"<ModelUncertainty election={self.election_id} schema={self.schema} "
             f"detail={self.regions_json is not None or self.seats_json is not None}>"
+        )
+
+
+class ElectionSeatStatus(Base):
+    """ORM model for the ``election_seat_status`` table.
+
+    Describes how settled one seat's result is within an election, for
+    results imported while counting is still under way. At most one row
+    exists per ``(election_id, seat_id)``.
+
+    Attributes:
+        id: Auto-incrementing primary key.
+        election_id: Foreign key to the owning ``Election``.
+        seat_id: Foreign key to the ``Seat`` the status describes.
+        called: Whether the seat's winner has been called. Defaults to
+            ``True``.
+        pct_counted: Optional percentage (0-100) of the expected vote counted
+            so far.
+        same_party: Whether the seat's top candidates all belong to one party
+            and were merged into a single party result. Defaults to ``False``.
+        decisive_round: Optional label of the round that decides the seat
+            (e.g. ``"runoff"`` or ``"rcv-final"``). ``None`` when the first
+            round is decisive.
+        senate_class: Optional Senate class (1-3) of the seat contested, for
+            US Senate results; ``None`` for other chambers or when unknown.
+        election: The owning ``Election`` instance.
+        seat: The ``Seat`` this status describes.
+    """
+
+    __tablename__ = "election_seat_status"
+    __table_args__ = (
+        # One row per seat per election; also serves lookups by election.
+        Index(
+            "ux_election_seat_status_election_seat",
+            "election_id",
+            "seat_id",
+            unique=True,
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    election_id: Mapped[int] = mapped_column(Integer, ForeignKey("elections.id"), nullable=False)
+    seat_id: Mapped[int] = mapped_column(Integer, ForeignKey("seats.id"), nullable=False)
+    called: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))
+    pct_counted: Mapped[float | None] = mapped_column(Float, nullable=True)
+    same_party: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
+    decisive_round: Mapped[str | None] = mapped_column(Text, nullable=True)
+    senate_class: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    election: Mapped["Election"] = relationship("Election", back_populates="seat_statuses")
+    seat: Mapped["Seat"] = relationship("Seat", back_populates="seat_statuses")
+
+    def __repr__(self) -> str:
+        """Return a debug string representation of the ElectionSeatStatus."""
+        return (
+            f"<ElectionSeatStatus election={self.election_id} seat={self.seat_id} "
+            f"called={self.called} pct_counted={self.pct_counted}>"
         )
 
 

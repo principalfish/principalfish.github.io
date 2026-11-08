@@ -33,6 +33,7 @@
       <h2>USA</h2>
       <div class="action-stack">
         <a class="button primary button-block" href="{{ url_for('us_poll_import.import_form') }}">Import US Polls</a>
+        <a class="button primary button-block" href="{{ url_for('us_results.us_results_form') }}">Import US Results (NYT)</a>
         <form method="post" action="{{ url_for('us.run_us_models') }}" class="inline-form button-form"
               onsubmit="return !this.rebuild_history.checked || confirm('Rebuild ALL US history? The House, President and Senate models each recompute their whole trend history, one after another, then the export runs. This page stays open and blocked until it finishes, which can take hours.');">
           <label class="checkbox">

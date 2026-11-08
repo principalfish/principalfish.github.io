@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>{{ year }} US {{ chamber_label }} Results Preview</h2>
+    <p>
+      Source: {{ "latest files fetched from NYT" if mode == "fetch" else "newest cached snapshot (offline)" }}.
+      Nothing has been written to the database or to <code>{{ out_dir }}</code>.
+    </p>
+    <ul>
+      {% for target in targets %}
+        <li>
+          <strong>{{ target.file_name }}</strong> → {{ target.election_name }}:
+          {% if target.existing_id is not none %}
+            refreshes the existing election in place (id {{ target.existing_id }})
+          {% else %}
+            creates a new election
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+    <p>{{ specials_note }}</p>
+    <form method="post" action="{{ url_for('us_results.us_results_confirm', token=token) }}" class="form-inline">
+      <button type="submit" class="button primary">Confirm: write files and import</button>
+    </form>
+    <p>
+      <a class="button" href="{{ url_for('us_results.us_results_form') }}">Back to US results</a>
+    </p>
+  </section>
+
+  <section class="card">
+    <h3>Files read</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Kind</th>
+            <th scope="col">From</th>
+            <th scope="col">Retrieved (UTC)</th>
+            <th scope="col">NYT updated</th>
+            <th scope="col">Schema</th>
+            <th scope="col">URL</th>
+            <th scope="col">Cache file</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fetched in fetches %}
+            <tr>
+              <td>{{ fetched.source.kind }}</td>
+              <td>{{ "cache" if fetched.from_cache else "NYT (fetched now)" }}</td>
+              <td>{{ fetched.retrieved_at.isoformat() }}</td>
+              <td>{{ fetched.source_updated_at or "n/a" }}</td>
+              <td>{{ fetched.source.schema }}</td>
+              <td><code>{{ fetched.source.url }}</code></td>
+              <td><code>{{ fetched.cache_path.name }}</code></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <h4>Fetch log</h4>
+    <pre class="terminal-output">{{ fetch_log | join("\n") }}</pre>
+  </section>
+
+  <section class="card">
+    <h3>Pipeline</h3>
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          {% for label, count in pipeline %}
+            <tr><th scope="row">{{ label }}</th><td>{{ count }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% for target in targets %}
+    <section class="card">
+      <h3>{{ target.file_name }}</h3>
+      <p>
+        <strong>Election:</strong> {{ target.election_name }}
+        {% if target.existing_id is not none %}(refresh id {{ target.existing_id }}){% else %}(new){% endif %}
+      </p>
+      <p>
+        <strong>Seats:</strong> {{ target.seats }}, <strong>called:</strong> {{ target.called }}
+        ({% for party, count in target.tally %}{{ party }} {{ count }}{{ ", " if not loop.last }}{% endfor %})
+      </p>
+      <p><strong>Source note:</strong> {{ target.source_note }}</p>
+      {% if target.diff.backfilled %}
+        <p><strong>Unopposed seats with 538 totals ({{ target.diff.backfilled | length }}):</strong> {{ target.diff.backfilled | join(", ") }}</p>
+      {% endif %}
+      {% if target.diff.nominal %}
+        <p><strong>Unopposed seats with nominal totals ({{ target.diff.nominal | length }}):</strong> {{ target.diff.nominal | join(", ") }}</p>
+      {% endif %}
+
+      <h4>Diff</h4>
+      {% if not target.diff.comparisons %}
+        <p>No committed file or database election to compare with.</p>
+      {% else %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Against</th>
+                <th scope="col">Seats</th>
+                <th scope="col">Added</th>
+                <th scope="col">Removed</th>
+                <th scope="col">Winner changes</th>
+                <th scope="col">Newly called</th>
+                <th scope="col">Newly uncalled</th>
+                <th scope="col">% counted changes</th>
+                <th scope="col">Seats with vote changes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for comparison in target.diff.comparisons %}
+                <tr>
+                  <td>{{ comparison.label }}</td>
+                  <td>{{ comparison.old_seats }} → {{ comparison.new_seats }}</td>
+                  <td>{{ comparison.added | length }}</td>
+                  <td>{{ comparison.removed | length }}</td>
+                  <td>
+                    {{ comparison.winner_changes | length }}
+                    {% for change in comparison.winner_changes %}<br>{{ change.seat }}: {{ change.old }} → {{ change.new }}{% endfor %}
+                  </td>
+                  <td>{{ comparison.newly_called | length }}{% if comparison.newly_called %}: {{ comparison.newly_called | join(", ") }}{% endif %}</td>
+                  <td>{{ comparison.newly_uncalled | length }}{% if comparison.newly_uncalled %}: {{ comparison.newly_uncalled | join(", ") }}{% endif %}</td>
+                  <td>{{ comparison.pct_changes | length }}</td>
+                  <td>{{ comparison.vote_deltas | length }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+      <h4>Full diff report</h4>
+      <pre class="terminal-output">{{ target.diff.summary() }}</pre>
+    </section>
+  {% endfor %}
+
+  <section class="card">
+    <h3>Warnings ({{ warnings | length }})</h3>
+    {% if warnings %}
+      <ul>
+        {% for warning in warnings %}
+          <li>{{ warning }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>None.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h3>Party mapping</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">NYT party code</th>
+            <th scope="col">Party key</th>
+            <th scope="col">Database party</th>
+            <th scope="col">Candidates</th>
+            <th scope="col">Votes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for party in parties %}
+            <tr>
+              <td>{{ party.nyt_party }}</td>
+              <td>{{ party.party_key }}</td>
+              <td>{{ party.db_party }}</td>
+              <td>{{ party.candidates }}</td>
+              <td>{{ "{:,}".format(party.votes) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Races ({{ rows | length }})</h3>
+    <p>
+      <strong>Against the database:</strong>
+      {% for change, count in change_counts %}{{ change }} {{ count }}{{ ", " if not loop.last }}{% endfor %}
+    </p>
+    {% if not_imported %}
+      <p>
+        <strong>Not imported ({{ not_imported | length }}):</strong>
+        {{ not_imported | join(", ") }}: same-day House specials, which the converter leaves out.
+      </p>
+    {% endif %}
+    <p>
+      <strong>Uncalled ({{ uncalled | length }}):</strong>
+      {{ uncalled | join(", ") if uncalled else "none" }}
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Seat</th>
+            <th scope="col">File</th>
+            <th scope="col">Leader</th>
+            <th scope="col">Runner-up</th>
+            <th scope="col">Margin</th>
+            <th scope="col">% counted</th>
+            <th scope="col">Called</th>
+            <th scope="col">Decisive round</th>
+            <th scope="col">Votes source</th>
+            <th scope="col">Same party</th>
+            <th scope="col">Change vs DB</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>{{ row.seat }}{% if row.special %} (special){% endif %}</td>
+              <td>{{ row.file }}</td>
+              <td>{{ row.leader }} ({{ row.leader_party }} → {{ row.leader_key }})</td>
+              <td>{% if row.runner_up %}{{ row.runner_up }} ({{ row.runner_up_party }}){% else %}none{% endif %}</td>
+              <td>{{ "%.2f%%" | format(row.margin_pct) if row.margin_pct is not none else "n/a" }}</td>
+              <td>{{ "{:g}%".format(row.pct_counted) if row.pct_counted is not none else "n/a" }}</td>
+              <td>{% if row.called %}yes{% if row.winner %} ({{ row.winner }}){% endif %}{% else %}UNCALLED{% endif %}</td>
+              <td>{{ row.decisive_round or "first round" }}</td>
+              <td>{{ row.votes_source or "" }}</td>
+              <td>{{ "yes" if row.same_party else "" }}</td>
+              <td>{{ row.change }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

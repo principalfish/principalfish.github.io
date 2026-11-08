@@ -9,7 +9,7 @@ import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Generator, Literal, Sequence, cast
+from typing import Any, Generator, Iterable, Literal, Sequence, cast
 
 from sqlalchemy import (
     ColumnElement,
@@ -28,6 +28,7 @@ from config import DatabaseConfig
 from models import (
     Base,
     Election,
+    ElectionSeatStatus,
     ElectionType,
     Map,
     Party,
@@ -85,12 +86,44 @@ class StoredPollReadings:
     readings: dict[str, float]
 
 
+@dataclass(frozen=True, slots=True)
+class SeatStatus:
+    """How settled one seat's result is within an election.
+
+    The plain-data form of an ``ElectionSeatStatus`` row, used both to write
+    statuses and to read them back.
+
+    Attributes:
+        seat_id: Seat the status describes.
+        called: Whether the seat's winner has been called.
+        pct_counted: Percentage (0-100) of the expected vote counted so far,
+            or None if unknown.
+        same_party: Whether the seat's top candidates share a party and were
+            merged into one party result.
+        decisive_round: Label of the round that decides the seat (e.g.
+            ``"runoff"`` or ``"rcv-final"``), or None when the first round is
+            decisive.
+        senate_class: Senate class (1-3) of the seat contested, for US Senate
+            results; None otherwise. A state's regular and same-day special
+            races share one seat, so the class tells them apart.
+    """
+
+    seat_id: int
+    called: bool = True
+    pct_counted: float | None = None
+    same_party: bool = False
+    decisive_round: str | None = None
+    senate_class: int | None = None
+
+
 def ensure_elections_sqlite_schema(conn: sqlite3.Connection) -> None:
     """Ensure the unified elections/votes tables exist (no-op on the main DB).
 
     Mirrors the schema in ``models.py``. On the live ``elections.db`` these
     tables already exist, so this is a no-op; it only materialises them for a
-    fresh database (e.g. in tests).
+    fresh database (e.g. in tests). Columns added to an existing table later
+    (``target_election_year``, ``source_note``) come from that column's
+    migration script, not from here.
     """
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS elections (
@@ -101,7 +134,8 @@ def ensure_elections_sqlite_schema(conn: sqlite3.Connection) -> None:
             type TEXT NOT NULL,
             parent_election_id INTEGER,
             election_date TEXT,
-            target_election_year INTEGER
+            target_election_year INTEGER,
+            source_note TEXT
         );
         CREATE TABLE IF NOT EXISTS votes (
             id INTEGER PRIMARY KEY,
@@ -762,10 +796,11 @@ class Database:
             return len(objs)
 
     def clear_votes_for_election(self, election_id: int) -> int:
-        """Delete all Vote rows for a single election.
+        """Delete all Vote and seat-status rows for a single election.
 
-        Removes only the Vote rows for the given election; the Election row
-        itself and its ``parent_election_id`` links are left intact.
+        The seat statuses describe the votes, so they go with them. The
+        Election row itself and its ``parent_election_id`` links are left
+        intact.
 
         Args:
             election_id: Primary key of the Election whose votes to delete.
@@ -774,10 +809,83 @@ class Database:
             Number of Vote rows deleted.
         """
         with self.session() as s:
+            s.execute(
+                delete(ElectionSeatStatus).where(
+                    ElectionSeatStatus.election_id == election_id
+                )
+            )
             result = s.execute(
                 delete(Vote).where(Vote.election_id == election_id)
             )
             return cast("CursorResult[Any]", result).rowcount
+
+    # ── seat statuses ─────────────────────────────────────────────────────
+
+    def set_seat_statuses(
+        self, election_id: int, statuses: Iterable[SeatStatus]
+    ) -> int:
+        """Replace every seat-status row for an election.
+
+        Existing rows are deleted and *statuses* inserted in one session, so
+        a failure (e.g. a repeated seat id) leaves the old rows in place. An
+        empty *statuses* just clears the election's rows.
+
+        Args:
+            election_id: Primary key of the Election.
+            statuses: One status per seat; seat ids must be distinct.
+
+        Returns:
+            Number of rows inserted.
+        """
+        with self.session() as s:
+            s.execute(
+                delete(ElectionSeatStatus).where(
+                    ElectionSeatStatus.election_id == election_id
+                )
+            )
+            rows = [
+                ElectionSeatStatus(
+                    election_id=election_id,
+                    seat_id=status.seat_id,
+                    called=status.called,
+                    pct_counted=status.pct_counted,
+                    same_party=status.same_party,
+                    decisive_round=status.decisive_round,
+                    senate_class=status.senate_class,
+                )
+                for status in statuses
+            ]
+            s.add_all(rows)
+            s.flush()
+            return len(rows)
+
+    def get_seat_statuses(self, election_id: int) -> dict[int, SeatStatus]:
+        """Return an election's seat statuses keyed by seat id.
+
+        Args:
+            election_id: Primary key of the Election.
+
+        Returns:
+            Mapping of seat id to its SeatStatus; seats without a row are
+            absent.
+        """
+        with self.session() as s:
+            rows = s.execute(
+                select(ElectionSeatStatus).where(
+                    ElectionSeatStatus.election_id == election_id
+                )
+            ).scalars()
+            return {
+                row.seat_id: SeatStatus(
+                    seat_id=row.seat_id,
+                    called=row.called,
+                    pct_counted=row.pct_counted,
+                    same_party=row.same_party,
+                    decisive_round=row.decisive_round,
+                    senate_class=row.senate_class,
+                )
+                for row in rows
+            }
 
     def bulk_add_seats(
         self,

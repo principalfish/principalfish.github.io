@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // predict-controller imports the DOM render layer (dom.js) and the predict view module
@@ -32,6 +33,7 @@ import {
 import { setApplyActionVisible, setPredictActionHandlers } from '../features/predict-view.js';
 import { manifest, page, state, ElectionData } from '../state.js';
 import { fetchJson } from '../files.js';
+import { loadSenateSpecialBaseline } from '../features/senate-baseline.js';
 import { renderSenateForecastComparison, renderSenateForecastTabs } from "../features/senate-forecast-view.js";
 
 describe('getPredictBaseElection', () => {
@@ -348,5 +350,157 @@ describe('activatePredictView Senate special elections', () => {
     } finally {
       logged.mockRestore();
     }
+  });
+});
+
+describe('2028 predict rollover (shipped shell)', () => {
+  const shell = JSON.parse(readFileSync(new URL('../../uselectionmaps/data/map-modes-shell.json', import.meta.url), 'utf8'));
+  const elections = [
+    { id: '2026-us-house', mapId: 24, parliament: 'us_house' },
+    { id: '2024-us-house', mapId: 21, parliament: 'us_house' },
+    { id: '2026-us-senate', mapId: 23, parliament: 'us_senate' },
+    { id: '2022-us-senate', mapId: 23, parliament: 'us_senate' },
+  ];
+
+  beforeEach(() => {
+    manifest.init({ parliamentFeatures: shell.parliamentFeatures, elections, mapModes: shell.mapModes });
+    state.view = 'predict';
+  });
+
+  it('House swings from the 2026 result and opens on it', () => {
+    state.currentParliament = 'us_house';
+    expect(getPredictBaseElection()).toMatchObject({ id: '2026-us-house' });
+    expect(manifest.parliamentConfig('us_house').predictAnchorElectionId).toBe('2026-us-house');
+    expect(manifest.parliamentConfig('us_house').nextElectionYear).toBe(2028);
+    // The anchor is a real past election, not a forecast to apply.
+    expect(parliamentHasForecast('us_house')).toBe(false);
+  });
+
+  it('Senate swings class 3 from 2022 and opens on the 2026 result', () => {
+    state.currentParliament = 'us_senate';
+    expect(getPredictBaseElection()).toMatchObject({ id: '2022-us-senate' });
+    expect(manifest.parliamentConfig('us_senate').predictAnchorElectionId).toBe('2026-us-senate');
+    expect(manifest.parliamentConfig('us_senate').nextElectionYear).toBe(2028);
+    expect(parliamentHasForecast('us_senate')).toBe(false);
+  });
+
+  it('declares Florida and Ohio overrides and no live 2026 specials', () => {
+    const senate = shell.mapModes['23'];
+    expect(senate.senateSpecialElections).toEqual([]);
+    expect(senate.senateBaselineOverrides).toEqual([
+      { seat: 'Florida', class: 3, baselineElectionId: '2026-us-senate' },
+      { seat: 'Ohio', class: 3, baselineElectionId: '2026-us-senate' },
+    ]);
+    expect(shell.parliamentFeatures.us_senate.predict.tabs[0].label).toBe('Seats up (2028)');
+  });
+});
+
+describe('activatePredictView Senate baseline overrides (2028 class 3)', () => {
+  // The 2022 class-3 field the page loaded as its baseline, in 2022's shares.
+  const class3 = ['Georgia', 'Florida', 'Ohio', 'Arizona'];
+  const baseline2022 = { seats: class3.map((n) => ({
+    n, r: 'south', w: 'republican', p: [['republican', 520], ['democrat', 480]],
+  })) };
+  // The 2026 Senate file: the specials in the Florida and Ohio slots, plus a Class-2 seat that
+  // has nothing to do with 2028.
+  const results2026 = { seats: [
+    { n: 'Florida', r: 'south', w: 'republican', p: [['republican', 600], ['democrat', 400]] },
+    { n: 'Ohio', r: 'south', w: 'republican', p: [['republican', 540], ['democrat', 460]] },
+    { n: 'Maine', r: 'south', w: 'democrat', p: [['democrat', 700], ['republican', 300]] },
+  ] };
+  const overrides = [
+    { seat: 'Florida', class: 3, baselineElectionId: '2026-us-senate' },
+    { seat: 'Ohio', class: 3, baselineElectionId: '2026-us-senate' },
+  ];
+  const predictConfig = {
+    model: 'senate',
+    modelledPartyKeys: ['democrat', 'republican'],
+    gridSections: [{ id: 'us', columnKeys: ['democrat', 'republican'] }],
+    tabs: [{ key: 'seatsup', label: 'Seats up' }, { key: 'chamber', label: 'Full Senate' }],
+  };
+
+  function configureSenate(parliament, mapOverrides) {
+    manifest.init({
+      parliamentFeatures: { [parliament]: { nextElectionYear: 2028, predict: predictConfig } },
+      elections: [{ id: '2022-us-senate', mapId: 23 }, { id: '2026-us-senate', mapId: 23 }],
+      mapModes: { 23: {
+        name: 'us-senate-2024', regions: [], senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 },
+        ...(mapOverrides ? { senateBaselineOverrides: mapOverrides } : {}),
+      } },
+      files: { elections: {
+        mapsById: { 23: 'maps/m.topo.json' },
+        electionsById: { '2022-us-senate': 'results/2022.json', '2026-us-senate': 'results/2026.json' },
+      } },
+    });
+    state.currentParliament = parliament;
+    state.currentElection = { id: '2022-us-senate', mapId: 23 };
+    state.comparisonElectionData = new ElectionData(baseline2022);
+    state.currentRegionLabelsByKey = new Map([['south', 'South']]);
+  }
+
+  async function runActivate() {
+    try {
+      await activatePredictView();
+    } catch { /* expected: no window in node; the override load already ran */ }
+  }
+
+  beforeEach(() => { fetchJson.mockReset(); });
+
+  it('loadSenateSpecialBaseline takes only the named seats of the overriding election', async () => {
+    configureSenate('p_loader', overrides);
+    fetchJson.mockResolvedValue(results2026);
+    const seats = await loadSenateSpecialBaseline(overrides);
+    expect(fetchJson).toHaveBeenCalledExactlyOnceWith('data/results/2026.json');
+    expect(seats.map((seat) => seat.seat)).toEqual(['Florida', 'Ohio']);
+  });
+
+  it('swings Florida and Ohio from 2026 and the rest of the class from 2022', async () => {
+    configureSenate('p_overrides', overrides);
+    fetchJson.mockResolvedValue(results2026);
+    await runActivate();
+    const model = state.predictModel;
+    expect(fetchJson).toHaveBeenCalledExactlyOnceWith('data/results/2026.json');
+    // The class stays the 2028 field: same four states, nothing added from the 2026 file.
+    expect(model.projectionBase.map((seat) => seat.seat)).toEqual(class3);
+    const rep = (name) => model.projectionBase.find((seat) => seat.seat === name).votes.republican;
+    expect(rep('Georgia')).toBe(520);
+    expect(rep('Arizona')).toBe(520);
+    expect(rep('Florida')).toBe(600);
+    expect(rep('Ohio')).toBe(540);
+    expect(model.regularClass).toBe(3);
+    // The ballot baseline follows the replaced rows: (520+600+540+520) / 4000 = 54.5%, shown as 55.
+    expect(model.ballots[0].baseline.get('south').get('republican')).toBe(55);
+  });
+
+  it('no-ops when the map declares no overrides', async () => {
+    configureSenate('p_nooverrides', null);
+    await runActivate();
+    expect(fetchJson).not.toHaveBeenCalled();
+    expect(state.predictModel.projectionBase.every((seat) => seat.votes.republican === 520)).toBe(true);
+  });
+
+  it('a failed override fetch leaves the 2022 baseline in place', async () => {
+    configureSenate('p_overridefail', overrides);
+    fetchJson.mockRejectedValue(new Error('404'));
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await runActivate();
+    expect(state.predictModel.projectionBase.map((seat) => seat.votes.republican)).toEqual([520, 520, 520, 520]);
+    logged.mockRestore();
+  });
+
+  it('ignores an override for a class other than the one being contested', async () => {
+    // Florida and Ohio also hold Class-1 seats: a Class-3 special must not rebase them.
+    configureSenate('p_overrideclass', overrides);
+    manifest.parliamentFeatures.p_overrideclass.nextElectionYear = 2030;
+    await runActivate();
+    expect(state.predictModel.regularClass).toBe(1);
+    expect(fetchJson).not.toHaveBeenCalled();
+    expect(state.predictModel.projectionBase.map((seat) => seat.votes.republican)).toEqual([520, 520, 520, 520]);
+  });
+
+  it('skips an override whose baseline election id does not resolve', async () => {
+    configureSenate('p_overridebadid', [{ seat: 'Ohio', class: 3, baselineElectionId: 'missing' }]);
+    await runActivate();
+    expect(fetchJson).not.toHaveBeenCalled();
   });
 });

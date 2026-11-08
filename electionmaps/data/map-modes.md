@@ -66,11 +66,12 @@ omitted. Core fields are `id`, `name`, `type`, `mapId`, and `parliament`.
 | `type` | Election/model category recorded by the exporter; see current values below. Display behavior uses explicit flags and map/parliament configuration. |
 | `mapId` | Numeric ID matching `files.elections.mapsById` and `mapModes`. |
 | `parliament` | Parliament key. Current UK keys are `westminster` and `holyrood`; current US keys are `us_house`, `us_presidential`, and `us_senate`. These are configured examples, not a fixed schema enum. |
-| `comparisonElectionId` | Optional ID of the comparison results. Enables aggregate deltas and, where supported, per-seat comparisons. |
+| `comparisonElectionId` | Optional ID of the comparison results. Enables aggregate deltas and, where supported, per-seat comparisons. The exporter chains each election to the previous one of the same type on the same map; US House chains across maps (seats compared by district key), and US Senate compares with the Senate election six years earlier (the same class: 2026 against 2020, 2024 against 2018) when that election is in the list, otherwise it has none. The front end's totals table then compares the Senate's seat and vote changes over matching states only (states up in both elections; off-cycle specials are left out of the changes), while every other election, the US House included, compares against the whole comparison election. |
+| `sourceNote` | Optional source credit for the results (e.g. NYT/AP), shown under the map. Derived from the election's DB `source_note` and recomputed on every export, so it is dropped when the note is cleared. |
 | `byElectionSeats` | Optional array of seat names; marks by-election seats, changes the Gains filter's label to “By-elections”, and tags those seats with a BY-ELECTION marker in the seat popup and seat list. |
 | `model` | Optional boolean. Marks a prediction election for presentation, prediction metadata, and countdown eligibility. Raw vote counts are suppressed, while vote shares can still be displayed. |
 | `referendum` | Optional truthy flag or configuration object. Enables referendum presentation, hides per-seat comparison controls, and shows the data-info button. The object configures the referendum choropleth (below). |
-| `multiMember` | Optional boolean for chamber-composition snapshots such as Current Senate. Tallies individual members; hides vote count/share columns and vote/comparison-based map controls. |
+| `multiMember` | Optional boolean for chamber-composition snapshots such as Current Senate. Tallies individual members; hides vote count/share columns and vote/comparison-based map controls. A member with `c: false` (and no party or name) is an uncalled race: it is tallied as uncalled, never for a party or `others`, matches no party filter, and the state is coloured by its called members only: one called plus one uncalled member gives the called member's party (solid, with `w` and no state `c`), while two uncalled members give a neutral state (`c: false`, no `w`). Current Senate's source file is derived from the 2026 Senate results (`scripts/us_results/cli.py current-senate`; see the README's Current Senate snapshot). |
 | `upcomingElections` | Optional boolean enabling the next-election-year filter, populated from member data. Current Senate uses it alongside `multiMember`. |
 
 Current category values are:
@@ -79,6 +80,12 @@ Current category values are:
 |-|-|
 | UK | `uk_general`, `holyrood_general`, `model_uns`, `holyrood_uns`, `eu_referendum` |
 | US | `us_house`, `us_house_model`, `us_presidential`, `us_presidential_model`, `us_senate`, `us_senate_model` |
+
+The US House and Senate model types (`us_house_model`, `us_senate_model`) are valid but
+currently not exported (`EXPORT_US_CHAMBER_FORECASTS` in `data/scripts/export_elections.py`);
+the presidential forecast is. Election order is not set by the shell: the export keeps the
+previous manifest's order, except that the `us_house` and `us_senate` result elections are
+listed newest first (Senate: `current-senate` directly after the newest) and forecasts lead.
 
 A type label alone does not enable a prediction engine or referendum UI. For
 example, the UK forecast carries `"type": "model_uns"` and `"model": true`;
@@ -201,7 +208,7 @@ without `u` has no stored ranges at all.
 | `virtualColumnMeta` | Virtual column key → optional `title` tooltip and `swatchClass` CSS class. |
 | `regionLabelOverrides` | Normalized region key → shorter label for the prediction grid only. |
 | `tabs` | Ordered `{ "key": "constituency", "label": "Constituency" }` records. AMS uses `constituency`/`list` input tabs; Senate uses `seatsup`/`chamber` output tabs. The first tab is initially active. |
-| `chamberElectionId` | Senate-only election ID for the full-chamber snapshot, currently `current-senate`. Carried-over members are merged with projected seats-up winners. |
+| `chamberElectionId` | Senate-only election ID for the full-chamber snapshot, currently `current-senate`. Carried-over members are merged with projected seats-up winners. It also decides where the left bar puts the Predict and Poll tracker links: after this election when it directly follows the predict anchor in the list, otherwise right after the anchor. |
 
 ## Map configuration: `mapModes`
 
@@ -218,10 +225,11 @@ the current shells show which each map uses.
 | `postcode` | Optional postcode lookup configuration, described below. A map without it has no postcode search. |
 | `projection` | `albersUsa` selects D3's US projection; otherwise the renderer uses Mercator. |
 | `tally` | `electoralVotes` weights presidential winner totals by electoral votes and labels the tally column “EV”; otherwise winners are tallied as seats (or members for a composition snapshot). |
-| `neutralFill` | Fill colour for topology areas with no active result, used for uncontested Senate states. Falls back to the `others` party colour. |
+| `neutralFill` | Fill colour for topology areas with no active result, used for uncontested Senate states (falls back to the `others` party colour). Also the fill and list swatch of an uncalled seat with no leading party (no votes, or a tied lead), where it falls back to light grey `#d1d5db`. |
 | `hideMajority` | Suppresses the subtitle's majority summary for single-winner elections; multi-member chamber summaries are handled separately. |
-| `senateClassNextElection` | Generated class → next-election-year object. Sets each chamber member's next-up year from their class for cycle filtering and popups. |
+| `senateClassNextElection` | Generated class → next-election-year object. Sets each chamber member's next-up year from their class for cycle filtering and popups. Each year is the first on the class's cycle that is no earlier than the export year or `parliamentFeatures.us_senate.nextElectionYear`, whichever is later, so a class that has just voted rolls on to its next term. |
 | `senateSpecialElections` | Array of `{ seat, class, year, baselineElectionId }` records for live off-cycle races. Overrides the named member's cycle and provides the baseline for Senate prediction. |
+| `senateBaselineOverrides` | Array of `{ seat, class, baselineElectionId }` records for seats of the regular class that swing from a different election than the rest of the class. Applies only while `class` is the class being contested (a state's seats of other classes are untouched). Senate Predict replaces the named seats of its baseline with their rows from that election; the member of that class up next also shows that election's year as the year last contested. Does not change any member's next-up year. |
 
 `postcode` has `endpoint` (the URL prefix to which the encoded postcode is
 appended) and `resultProperty` (the constituency field under the response's
@@ -243,11 +251,14 @@ These are configuration inputs, rather than keys to add to a generated manifest:
 | Shell field | Exported result |
 |-|-|
 | `mapModes[mapId].regionNameOverride` | Database region name → display name overrides for generated `regions`. The override object is removed. Existing explicit shell `regions` are retained for compatibility. |
-| `mapModes[mapId].senateClassCycle` | Durable `{ "base": { "1": 2018, "2": 2020, "3": 2022 }, "period": 6 }` cycle becomes `senateClassNextElection`, resolved against the export year. The cycle input is removed. |
+| `mapModes[mapId].senateClassCycle` | Durable `{ "base": { "1": 2018, "2": 2020, "3": 2022 }, "period": 6 }` cycle becomes `senateClassNextElection`, resolved as above. The cycle input is removed. |
 | `mapModes[mapId].senateSpecialElections` | Only valid records for `parliamentFeatures.us_senate.nextElectionYear` survive. A target year earlier than the export year produces no live specials. Each record needs integer `class`/`year` and non-blank `seat`/`baselineElectionId`. |
+| `mapModes[mapId].senateBaselineOverrides` | Valid records pass through, with no year test: each needs a non-blank string `seat` and `baselineElectionId` and an integer `class` of 1 to 3, and a later record for an already-named (seat, class) is dropped. Malformed records are dropped; extra fields are kept. A non-list value yields an empty list. |
 
-The generated Senate manifest currently has next-up years `1: 2030`, `2: 2026`,
-and `3: 2028`, with Florida and Ohio Class 3 specials in 2026 using
-`2022-us-senate` as their baseline. Regeneration resolves this time-dependent
+The generated Senate manifest currently has next-up years `1: 2030`, `2: 2032`,
+and `3: 2028`. No specials are live (the 2026 Florida and Ohio specials were held),
+and Florida and Ohio are overridden to `2026-us-senate`: their Class 3 seats were
+filled at those specials, so 2028 swings from that result while the rest of Class 3
+swings from `2022-us-senate`. Regeneration resolves this time-dependent
 configuration afresh; edit the shell's durable inputs rather than the generated
 years.

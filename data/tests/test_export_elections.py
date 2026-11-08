@@ -20,6 +20,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
+import export_elections
 from db import Database
 from model_support.persistence import (
     OutputVote,
@@ -417,6 +418,17 @@ class TestRefreshManifestModes:
         refresh_manifest_modes(manifest, rebuilt, {"23": []})
         assert manifest["mapModes"]["23"]["senateSpecialElections"] == valid
 
+    def test_refreshes_baseline_overrides_and_drops_them_when_the_shell_does(self) -> None:
+        overrides = [{"seat": "Ohio", "class": 3, "baselineElectionId": "2026-us-senate"}]
+        manifest = self._manifest()
+        manifest["mapModes"]["23"]["senateBaselineOverrides"] = [{"seat": "Stale", "class": 3, "baselineElectionId": "x"}]
+        refresh_manifest_modes(
+            manifest, {"23": {"regions": [], "senateBaselineOverrides": overrides}}, {}
+        )
+        assert manifest["mapModes"]["23"]["senateBaselineOverrides"] == overrides
+        refresh_manifest_modes(manifest, {"23": {"regions": []}}, {})
+        assert "senateBaselineOverrides" not in manifest["mapModes"]["23"]
+
     def test_falls_back_to_raw_db_regions_without_a_rebuilt_mode(self) -> None:
         manifest = self._manifest()
         refresh_manifest_modes(manifest, {}, {"23": [{"id": 9, "name": "Pacific"}]})
@@ -733,6 +745,7 @@ class TestModelRunUncertaintyExport:
         assert result["stdout"].splitlines() == [
             "Wrote uncertainty: <root>/out/results/prediction-uncertainty.json "
             f"({len(document['regions'])} regions)",
+            "Warning: no mapModes entry for map id(s) [2] in <root>/out/map-modes-shell.json",
             "Wrote manifest: <root>/out/map-modes.json (3 elections)",
         ]
 
@@ -1135,3 +1148,44 @@ class TestOutputBase:
         assert message in capsys.readouterr().err
         assert not (tmp_path / "x").exists() and not (tmp_path / "y").exists()
         assert not (tmp_path / "out" / "results").exists()
+
+
+class TestMainLatestUsForecastSelection:
+    """``main`` prepends the latest forecast run per US type, honouring the chamber flag."""
+
+    @staticmethod
+    def _run_main(db: Database, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        db.add_party("Others")
+        house_map = db.add_map("US House", parliament="us_house")
+        senate_map = db.add_map("US Senate", parliament="us_senate")
+        president_map = db.add_map("US President", parliament="us_presidential")
+        db.add_election(house_map.id, 2026, "House run 1", ElectionType.us_house_model)
+        db.add_election(house_map.id, 2026, "House run 2", ElectionType.us_house_model)
+        db.add_election(senate_map.id, 2026, "Senate run", ElectionType.us_senate_model)
+        db.add_election(president_map.id, 2028, "President run", ElectionType.us_presidential_model)
+        db.add_election(house_map.id, 2024, "2024 US House", ElectionType.us_house)
+
+        exported: list[str] = []
+
+        def record(**kwargs: Any) -> None:
+            exported.extend(str(election.name) for election in kwargs["elections"])
+
+        # Use the fixture database and stop at the export step: nothing is written.
+        monkeypatch.setattr(export_elections, "Database", lambda: db)
+        monkeypatch.setattr(export_elections, "export_pages", record)
+        monkeypatch.setattr(sys, "argv", ["export_elections.py", "--dry-run"])
+        export_elections.main()
+        return exported
+
+    def test_flag_off_skips_the_chamber_forecasts_but_keeps_the_presidential_one(
+        self, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert self._run_main(db, monkeypatch) == ["President run", "2024 US House"]
+
+    def test_flag_on_prepends_the_latest_run_of_each_type(
+        self, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(export_elections, "EXPORT_US_CHAMBER_FORECASTS", True)
+        assert self._run_main(db, monkeypatch) == [
+            "House run 2", "President run", "Senate run", "2024 US House",
+        ]

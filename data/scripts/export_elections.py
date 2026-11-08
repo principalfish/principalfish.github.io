@@ -36,8 +36,9 @@ import shutil
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_DIR = SCRIPT_DIR.parent
@@ -47,10 +48,10 @@ if str(DATA_DIR) not in sys.path:
 from sqlalchemy import inspect, select
 from sqlalchemy.orm import joinedload, Session
 
-from db import Database
+from db import Database, SeatStatus
 from electoral_votes import allocation_year, get_electoral_votes
 from model_support.persistence import load_uncertainty
-from models import Election, ElectionType, Map, Party, Region, Seat, Vote
+from models import Election, ElectionSeatStatus, ElectionType, Map, Party, Region, Seat, Vote
 from scripts.export.naming import (
     PARTY_NAME_TO_KEY,
     normalize_token,
@@ -61,19 +62,26 @@ from scripts.export.naming import (
     choose_map_template_filename,
     map_filename_for_map_id,
     file_stem_for_election,
+    is_folded_senate_special,
     manifest_id_for_election,
     manifest_name_for_election,
     party_key_for_party,
 )
 from scripts.export.payload import (
+    SenateResults,
     SeatRow,
-    choose_winner,
-    party_id_for_vote,
+    add_previous_senate_results,
     build_result_payload,
+    build_special_entries,
+    choose_winner,
     compact_votes_to_dict,
     convert_legacy_seatinfo_to_v4,
+    party_id_for_vote,
+    senate_class_by_name,
+    senate_results_by_class,
     set_others_party_id,
 )
+from scripts.export.seat_overrides import apply_seat_overrides, load_seat_overrides
 from scripts.export.serialize import (
     write_json,
     write_manifest,
@@ -124,12 +132,40 @@ PAGE_PARLIAMENTS = {
 }
 
 
+# Whether the US House and Senate forecast ("2026 Prediction") elections, types
+# ``us_house_model`` / ``us_senate_model``, are exported. OFF: they are dropped before any
+# page is exported, so no ``current-us-house`` / ``current-us-senate`` manifest entry, no
+# ``us-house-forecast.json`` / ``us-senate-forecast.json`` result file is written, and an
+# old manifest entry cannot return (the preservation pass only restores UK/Holyrood types).
+# The forecast code (naming, comparison ids, the front-end forecast view) is kept dormant;
+# set this to True to publish chamber forecasts again, e.g. for the 2028 cycle. The
+# presidential forecast (``us_presidential_model``) is independent of this flag.
+EXPORT_US_CHAMBER_FORECASTS = False
+US_CHAMBER_FORECAST_TYPES = (ElectionType.us_house_model, ElectionType.us_senate_model)
+
+
+def drop_disabled_forecasts(elections: Sequence[Election]) -> list[Election]:
+    """Return ``elections`` without the US House/Senate forecasts unless they are enabled.
+
+    Governed by :data:`EXPORT_US_CHAMBER_FORECASTS`, read at call time. Every other
+    election, including the presidential forecast, is kept in its original order.
+    """
+    if EXPORT_US_CHAMBER_FORECASTS:
+        return list(elections)
+    return [e for e in elections if e.type not in US_CHAMBER_FORECAST_TYPES]
+
+
 # mapMode keys that the shell doesn't hold verbatim: ``build_map_modes_with_regions`` derives
 # each one at export time (the Senate class cycle resolved to concrete years; the special
-# elections filtered to the ones the next Senate election holds). A ``--metadata-only`` refresh therefore has to
+# elections filtered to the ones the next Senate election holds; the per-seat baseline
+# overrides cleaned of malformed records). A ``--metadata-only`` refresh therefore has to
 # re-copy them from the rebuilt mode — and drop the key when the rebuild no longer produces it,
 # so a removed shell entry (or a special whose cycle has passed) disappears from the manifest.
-DERIVED_MODE_KEYS: tuple[str, ...] = ("senateClassNextElection", "senateSpecialElections")
+DERIVED_MODE_KEYS: tuple[str, ...] = (
+    "senateClassNextElection",
+    "senateSpecialElections",
+    "senateBaselineOverrides",
+)
 
 
 def refresh_manifest_modes(
@@ -214,6 +250,123 @@ def partition_elections_by_page(elections: Sequence[Election]) -> dict[str, list
                 by_page[page_name].append(election)
                 break
     return by_page
+
+
+def seat_statuses_for_election(session: Session, election_id: int) -> dict[int, SeatStatus]:
+    """Return an election's seat statuses keyed by seat id (seats without a row are absent).
+
+    The in-session counterpart of :meth:`db.Database.get_seat_statuses`, so the export
+    reads statuses in the same session as the votes.
+    """
+    rows = session.execute(
+        select(ElectionSeatStatus).where(ElectionSeatStatus.election_id == election_id)
+    ).scalars()
+    return {
+        row.seat_id: SeatStatus(
+            seat_id=row.seat_id,
+            called=row.called,
+            pct_counted=row.pct_counted,
+            same_party=row.same_party,
+            decisive_round=row.decisive_round,
+            senate_class=row.senate_class,
+        )
+        for row in rows
+    }
+
+
+def senate_special_entries(
+    session: Session, election: Election, seats: list[SeatRow]
+) -> list[dict[str, Any]]:
+    """Build the ``specials`` list for a regular Senate election from its child specials.
+
+    Children are the ``us_senate`` elections whose ``parent_election_id`` is
+    ``election`` (see :func:`scripts.export.naming.is_folded_senate_special`). They
+    share the parent's map, so ``seats`` (the parent's) serve both.
+
+    Raises:
+        RuntimeError: If a child special is on a different map from its parent; its
+            seat names would not match the parent's states.
+    """
+    children = session.execute(
+        select(Election)
+        .where(
+            Election.parent_election_id == election.id,
+            Election.type == ElectionType.us_senate,
+        )
+        .order_by(Election.id)
+    ).scalars().all()
+    entries: list[dict[str, Any]] = []
+    for child in children:
+        if child.map_id != election.map_id:
+            raise RuntimeError(
+                f"Senate special {child.name!r} is on map {child.map_id}, "
+                f"but its parent {election.name!r} is on map {election.map_id}"
+            )
+        child_votes = list(session.execute(
+            select(Vote)
+            .where(Vote.election_id == child.id)
+            .options(joinedload(Vote.party))
+        ).scalars().all())
+        entries.extend(build_special_entries(
+            seats,
+            child_votes,
+            seat_statuses_for_election(session, child.id),
+            election_year=child.year,
+        ))
+    entries.sort(key=lambda entry: str(entry["n"]))
+    return entries
+
+
+def earlier_senate_results(
+    session: Session, election: Election, cache: dict[int, SenateResults]
+) -> list[SenateResults]:
+    """Return the results of every ``us_senate`` election before ``election``.
+
+    The list is ordered oldest first, so the caller takes the latest match by scanning
+    it backwards. It includes folded same-day specials, which are elections of their
+    own, but never ``election`` itself or its own child specials. "Before" is strictly
+    earlier by election date (the year's 1 January when undated); a child special is
+    dated with its parent, so a parent without a date and a child with one cannot
+    order each other. Among elections on the same date the regular one sorts last
+    (so it is preferred), then the lower id. Each election's results are keyed by
+    ``(state, senate_class)`` (see :func:`scripts.export.payload.senate_results_by_class`);
+    ``cache`` memoises them by election id across calls.
+    """
+    all_rows = {
+        row.id: row
+        for row in session.execute(
+            select(Election).where(Election.type == ElectionType.us_senate)
+        ).scalars()
+    }
+
+    def when(row: Election) -> date:
+        parent = all_rows.get(row.parent_election_id) if row.parent_election_id is not None else None
+        dated = parent if parent is not None else row
+        return dated.election_date or date(dated.year, 1, 1)
+
+    cutoff = when(election)
+    rows = [
+        row
+        for row in all_rows.values()
+        if row.id != election.id and row.parent_election_id != election.id and when(row) < cutoff
+    ]
+    rows.sort(key=lambda row: (when(row), row.parent_election_id is None, -row.id))
+    results: list[SenateResults] = []
+    for row in rows:
+        if row.id not in cache:
+            seats = [
+                SeatRow(seat_id=seat.id, seat_name=seat.seat_name, region_id=seat.region_id,
+                        region_name=None, electorate=None)
+                for seat in session.execute(select(Seat).where(Seat.map_id == row.map_id)).scalars()
+            ]
+            votes = list(session.execute(
+                select(Vote).where(Vote.election_id == row.id).options(joinedload(Vote.party))
+            ).scalars().all())
+            statuses = seat_statuses_for_election(session, row.id)
+            payload = build_result_payload(seats, votes, election_year=row.year, statuses=statuses)
+            cache[row.id] = senate_results_by_class(payload["seats"], senate_class_by_name(seats, statuses))
+        results.append(cache[row.id])
+    return results
 
 
 def parse_args() -> argparse.Namespace:
@@ -331,11 +484,12 @@ def main() -> None:
     Exits without writing any files when ``--dry-run`` is set.
 
     Raises:
-        FileNotFoundError: If a required map template or legacy source file
-            is missing.
+        FileNotFoundError: If a required pre-built map, map template or legacy
+            source file is missing (checked before anything is written).
         RuntimeError: If the ``"Others"`` party is absent from the DB, a
-            required election is not found, or ``--output-file`` is used
-            with more than one matching election.
+            required election is not found, ``--output-file`` is used
+            with more than one matching election, or ``--election-name``
+            names a folded Senate special (export its parent instead).
     """
     args = parse_args()
     single_election_mode = bool(args.election_name or args.current_simulation)
@@ -520,12 +674,20 @@ def main() -> None:
             # UK model_uns run, only the most recent run per type ships as the
             # "current forecast" anchor; earlier runs stay in the DB for the
             # poll-tracker trend history only.
+            # The House and Senate forecasts are skipped here while
+            # EXPORT_US_CHAMBER_FORECASTS is off, to save their queries; export_pages
+            # drops them again, which covers the other ways elections are selected.
             latest_us_models: list[Election] = []
             for _us_model_type in (
                 ElectionType.us_house_model,
                 ElectionType.us_presidential_model,
                 ElectionType.us_senate_model,
             ):
+                if (
+                    _us_model_type in US_CHAMBER_FORECAST_TYPES
+                    and not EXPORT_US_CHAMBER_FORECASTS
+                ):
+                    continue
                 latest_us_model = session.execute(
                     select(Election)
                     .where(Election.type == _us_model_type)
@@ -558,20 +720,155 @@ def main() -> None:
             else None
         )
 
-        elections_by_page = partition_elections_by_page(elections)
-        for _page_name, _page_parliaments in PAGE_PARLIAMENTS.items():
-            _export_page(
-                session=session,
-                elections=elections_by_page[_page_name],
-                output_root=page_roots[_page_name],
-                parliaments=_page_parliaments,
-                args=args,
-                manifest_parties=manifest_parties,
-                manifest_regions_by_map_id=manifest_regions_by_map_id,
-                has_electorate=has_electorate,
-                single_election_mode=single_election_mode,
-                model_uncertainty=model_uncertainty,
+        export_pages(
+            session=session,
+            elections=elections,
+            page_roots=page_roots,
+            args=args,
+            manifest_parties=manifest_parties,
+            manifest_regions_by_map_id=manifest_regions_by_map_id,
+            has_electorate=has_electorate,
+            single_election_mode=single_election_mode,
+            model_uncertainty=model_uncertainty,
+        )
+
+
+def missing_export_inputs(
+    elections_by_page: Mapping[str, Sequence[Election]],
+    page_roots: Mapping[str, Path],
+    legacy_files_dir: Path,
+    *,
+    single_election_mode: bool,
+) -> list[str]:
+    """List every input the page exports need on disk but cannot find.
+
+    Mirrors the checks :func:`_export_page` and
+    :func:`scripts.export.legacy.apply_supplemental_legacy_elections` make as they go,
+    so a missing input is reported before anything is written rather than after one
+    page and part of another are already out:
+
+    - a non-Westminster map's pre-built ``maps/map-{id}.topo.json`` under its page root;
+    - a Westminster map's legacy template under ``legacy_files_dir``;
+    - in a full export, each supplemental entry's prebuilt result file or legacy
+      source file.
+
+    Folded Senate specials and by-elections write no file of their own, so they are
+    skipped. Elections with no map are left to the export's own error.
+
+    Args:
+        elections_by_page: Elections per page, as :func:`partition_elections_by_page` returns.
+        page_roots: Output root per page to check; pages not listed are skipped.
+        legacy_files_dir: Directory holding the Westminster templates and legacy sources.
+        single_election_mode: True for ``--election-name``, which writes no supplementals.
+
+    Returns:
+        One description per missing file, empty when nothing is missing: map files
+        first (``"pre-built map <path> (needed by 'A', 'B')"`` or ``"map template
+        <path> (needed by …)"``), then ``"supplemental '<id>' file <path>"``.
+    """
+    # Each missing map file is reported once, naming every election that needs it.
+    needed_by: dict[str, list[str]] = {}
+    supplementals: list[str] = []
+    for page_name, page_root in page_roots.items():
+        for election in elections_by_page.get(page_name, []):
+            map_row = election.map
+            if (
+                map_row is None
+                or is_folded_senate_special(election)
+                or election.type == ElectionType.by_election
+            ):
+                continue
+            if getattr(map_row, "parliament", "westminster") != "westminster":
+                path = page_root / "maps" / map_filename_for_map_id(election.map_id)
+                kind = "pre-built map"
+            else:
+                path = legacy_files_dir / choose_map_template_filename(map_row)
+                kind = "map template"
+            if not path.exists():
+                needed_by.setdefault(f"{kind} {path}", []).append(repr(election.name))
+        if single_election_mode:
+            continue
+        for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS:
+            if supplemental.get("parliament", "westminster") not in PAGE_PARLIAMENTS[page_name]:
+                continue
+            if supplemental.get("prebuilt"):
+                source_path = page_root / "results" / str(supplemental["resultFile"])
+            elif supplemental.get("sourceFile"):
+                source_path = legacy_files_dir / str(supplemental["sourceFile"])
+            else:
+                continue  # A config slip the supplemental pass reports itself.
+            if not source_path.exists():
+                supplementals.append(f"supplemental {supplemental['id']!r} file {source_path}")
+    maps = [f"{item} (needed by {', '.join(names)})" for item, names in needed_by.items()]
+    return maps + supplementals
+
+
+def export_pages(
+    session: Session,
+    elections: Sequence[Election],
+    page_roots: Mapping[str, Path],
+    args: argparse.Namespace,
+    manifest_parties: list[dict[str, Any]],
+    manifest_regions_by_map_id: dict[str, list[dict[str, Any]]],
+    has_electorate: bool,
+    single_election_mode: bool,
+    model_uncertainty: ModelUncertaintyExport | None = None,
+) -> None:
+    """Check every page's inputs up front, then export each page in ``page_roots``.
+
+    ``main`` passes :func:`resolve_page_roots`'s result, so every page is exported; tests
+    pass temp roots. ``model_uncertainty`` goes to every page: see :func:`_export_page`.
+
+    Raises:
+        RuntimeError: If a single-election export names a folded Senate special,
+            which has no result file of its own.
+        FileNotFoundError: On a real (non-dry-run) export, when
+            :func:`missing_export_inputs` finds anything missing; nothing has been
+            written. A dry run prints the missing files instead and carries on.
+    """
+    # Switched-off chamber forecasts are dropped here, so every path that selects elections
+    # (full export, --election-name, tests) skips them alike.
+    kept = drop_disabled_forecasts(elections)
+    for dropped in (e for e in elections if e not in kept):
+        print(f"Skipping {dropped.name!r}: US chamber forecast export is switched off")
+    elections = kept
+
+    if single_election_mode:
+        folded = [election.name for election in elections if is_folded_senate_special(election)]
+        if folded:
+            raise RuntimeError(
+                f"{', '.join(repr(name) for name in folded)} is a folded Senate special, "
+                "exported inside its parent's results; export its parent election instead"
             )
+
+    elections_by_page = partition_elections_by_page(elections)
+    if not args.output_file:
+        missing = missing_export_inputs(
+            elections_by_page,
+            page_roots,
+            args.legacy_files_dir,
+            single_election_mode=single_election_mode,
+        )
+        if missing and not args.dry_run:
+            raise FileNotFoundError(
+                "Export inputs missing; nothing was written:\n  " + "\n  ".join(missing)
+            )
+        for item in missing:
+            print(f"Missing (a real export would fail): {item}")
+
+    for page_name, page_root in page_roots.items():
+        _export_page(
+            session=session,
+            elections=elections_by_page[page_name],
+            output_root=page_root,
+            parliaments=PAGE_PARLIAMENTS[page_name],
+            args=args,
+            manifest_parties=manifest_parties,
+            manifest_regions_by_map_id=manifest_regions_by_map_id,
+            has_electorate=has_electorate,
+            single_election_mode=single_election_mode,
+            model_uncertainty=model_uncertainty,
+        )
 
 
 def _export_page(
@@ -610,8 +907,16 @@ def _export_page(
     written_map_ids: set[int] = set()
     manifest_id_by_db_id: dict[int, str] = {}
     pending_by_election_rows: list[dict[str, Any]] = []
+    senate_results_cache: dict[int, SenateResults] = {}
+    seat_overrides = load_seat_overrides()
 
     for election in elections:
+        if is_folded_senate_special(election):
+            # Exported inside its parent's payload (``specials``) when the parent is;
+            # export_pages refuses it as a single-election target.
+            print(f"Folding {election.name!r} into its parent election's results")
+            continue
+
         map_row = election.map
         if map_row is None:
             raise RuntimeError(f"Election {election.id} has no map")
@@ -686,13 +991,32 @@ def _export_page(
         published: ModelUncertaintyExport | None = None
         if election.type == ElectionType.model_uns:
             published = model_uncertainty or ModelUncertaintyExport(None, None)
+        election_statuses = seat_statuses_for_election(session, election.id)
         result_payload = build_result_payload(
             seats,
             votes,
             election_year=election.year,
             ev_by_unit=ev_by_unit,
             seat_uncertainty=published.seat_bands if published is not None else None,
+            statuses=election_statuses,
         )
+        apply_seat_overrides(
+            result_payload,
+            election.name,
+            {party["key"]: party["id"] for party in manifest_parties},
+            seat_overrides,
+        )
+        if election.type == ElectionType.us_senate:
+            specials = senate_special_entries(session, election, seats)
+            add_previous_senate_results(
+                result_payload["seats"],
+                specials,
+                senate_class_by_name(seats, election_statuses),
+                earlier_senate_results(session, election, senate_results_cache),
+            )
+            if specials:
+                result_payload["specials"] = specials
+        # Last, because its fingerprint covers the finished public results.
         uncertainty_document = link_uncertainty_payload(
             result_payload, published.document if published is not None else None
         )
@@ -764,7 +1088,8 @@ def _export_page(
             # need to verify it exists.
             if args.dry_run:
                 print(f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)")
-                if election.map_id not in written_map_ids:
+                # A missing map was already reported by export_pages' preflight.
+                if election.map_id not in written_map_ids and map_path.exists():
                     print(f"Pre-built map already in place: {map_path}")
             else:
                 if election.map_id not in written_map_ids and not map_path.exists():
@@ -827,6 +1152,10 @@ def _export_page(
             "mapId": election.map_id,
             "parliament": parliament,
         }
+        # The results' source credit, shown under the map. Recomputed from the DB on every
+        # export (not in PRESERVED_ENTRY_FIELDS), so clearing the note drops the field.
+        if election.source_note:
+            manifest_entry["sourceNote"] = election.source_note
         # Prediction elections carry ``model: true`` so the front-end shows the
         # predict UI / hides raw vote counts for them.
         if election.type in (
@@ -1062,16 +1391,29 @@ def _export_page(
     assign_comparison_elections(manifest_entries)
     remove_comparison_for_supplemental_entries(manifest_entries)
 
+    map_modes = build_map_modes_with_regions(
+        config.get("mapModes", {}),
+        manifest_regions_by_map_id,
+        parliament_features=config.get("parliamentFeatures", {}),
+    )
+    unmoded_map_ids = sorted(
+        {
+            int(entry["mapId"])
+            for entry in manifest_entries
+            if entry.get("mapId") is not None and str(entry["mapId"]) not in map_modes
+        }
+    )
+    if unmoded_map_ids:
+        # The front end needs a mapMode (projection, regions) to draw a map; add it to
+        # the page's map-modes-shell.json.
+        print(f"Warning: no mapModes entry for map id(s) {unmoded_map_ids} in {shell_path}")
+
     manifest_payload = {
         "defaultElection": default_election_id,
         "elections": manifest_entries,
         "misc": config.get("misc", {}),
         "parliamentFeatures": config.get("parliamentFeatures", {}),
-        "mapModes": build_map_modes_with_regions(
-            config.get("mapModes", {}),
-            manifest_regions_by_map_id,
-            parliament_features=config.get("parliamentFeatures", {}),
-        ),
+        "mapModes": map_modes,
         # Hand-authored, jurisdiction-specific party-key aliases (carried through from the
         # page's shell); the front-end's resolvePartyRef reads them so no aliases live in JS.
         "partyKeyAliases": config.get("partyKeyAliases", {}),

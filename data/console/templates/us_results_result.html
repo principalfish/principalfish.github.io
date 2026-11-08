@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>{{ year }} US {{ chamber_label }} Results Imported</h2>
+    <p>The site has not been exported. Export when you want these results published.</p>
+    <form method="post" action="{{ url_for('us_results.us_results_export') }}" class="inline-form button-form">
+      <button type="submit" class="button primary">Export to site</button>
+      <small>Runs export_elections.py, which rewrites every map's static data.</small>
+    </form>
+    <p>
+      <a class="button" href="{{ url_for('us_results.us_results_form') }}">Back to US results</a>
+    </p>
+  </section>
+
+  <section class="card">
+    <h3>Elections</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Election</th>
+            <th scope="col">Id</th>
+            <th scope="col">Map</th>
+            <th scope="col">File</th>
+            <th scope="col">Seats</th>
+            <th scope="col">Called</th>
+            <th scope="col">Elected per party</th>
+            <th scope="col">Status rows</th>
+            <th scope="col">Source note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for election in elections %}
+            <tr>
+              <td>{{ election.name }}</td>
+              <td>{{ election.election_id }}</td>
+              <td>{{ election.map_id }}</td>
+              <td><code>{{ election.file }}</code></td>
+              <td>{{ election.seats }}</td>
+              <td>{{ election.called }}</td>
+              <td>{% for party, count in election.elected %}{{ party }} {{ count }}{{ ", " if not loop.last }}{% endfor %}</td>
+              <td>{{ election.status_rows }}</td>
+              <td>{{ election.source_note or "" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Import report</h3>
+    <pre class="terminal-output">{{ report }}</pre>
+  </section>
+{% endblock %}

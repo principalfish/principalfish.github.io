@@ -6,22 +6,32 @@ from collections import defaultdict
 from datetime import date
 import json
 import math
+import re
 from typing import Any, Sequence
 
 from models import Election, ElectionType, Party, Region
 from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
 from scripts.export.naming import party_key_for_party
 
-# Election types that must never auto-chain to a comparison election. The US Senate's
-# staggered classes contest a different ~third of the states each cycle, so a delta against
-# the preceding cycle would compare unrelated seats. See ``assign_comparison_elections``.
-NO_AUTO_COMPARISON_TYPES: frozenset[str] = frozenset({ElectionType.us_senate.value})
+# Election types that compare with the election of the same type exactly N years earlier
+# rather than the preceding one. The US Senate's staggered classes contest a different
+# third of the states each cycle, so only the cycle six years back contests the same class
+# of seats; when that election is not in the list the entry has no comparison. See
+# ``assign_comparison_elections``.
+FIXED_GAP_COMPARISON_YEARS: dict[str, int] = {ElectionType.us_senate.value: 6}
 
-# Each US forecast entry compares against the same baseline its model swings from
-# (``models/us/run_us_*_model.py``), so gains / comparison columns read against the
-# result the projection actually moved. The Senate forecast projects the 2026
-# Class-2 field, last contested in 2020 — hence 2020, not the latest Senate cycle.
-# Bump alongside the model baselines when the cycles roll.
+# Election types that chain to the preceding election of the same type and parliament even
+# across a boundary change (a different mapId). US House districts are redrawn each census
+# and mid-decade, but every cycle contests the same district keys (``ST-NN``), so a seat is
+# compared with the same-numbered district of the previous House election — knowingly
+# comparing a redrawn district against its old namesake. See ``assign_comparison_elections``.
+CROSS_MAP_COMPARISON_TYPES: frozenset[str] = frozenset({ElectionType.us_house.value})
+
+# Each US forecast entry compares against the same baseline its model swings from, so
+# gains / comparison columns read against the result the projection actually moved. These
+# are the baselines of the archived 2026 forecasts, which stay listed after the model
+# runners (``models/us/run_us_*_model.py``) roll on to 2028. The Senate forecast projected
+# the 2026 Class-2 field, last contested in 2020 — hence 2020, not the latest Senate cycle.
 US_MODEL_COMPARISON_IDS: dict[str, str] = {
     ElectionType.us_house_model.value: "2024-us-house",
     ElectionType.us_presidential_model.value: "2024-us-president",
@@ -110,13 +120,15 @@ def build_map_modes_with_regions(
         map_modes: Per-map config keyed by string map id.
         regions_by_map_id: Region lists keyed by string map id, as built by
             :func:`build_manifest_regions_by_map_id`.
-        current_year: Year to resolve Senate ``senateClassCycle`` "next up" years against, and
-            to expire past ``senateSpecialElections`` entries at; defaults to the current
-            calendar year. Injectable so exports (and tests) can pin a year rather than
-            depend on the wall clock.
+        current_year: The export year, which expires past ``senateSpecialElections`` entries
+            and floors the Senate ``senateClassCycle`` "next up" years; defaults to the
+            current calendar year. Injectable so exports (and tests) can pin a year rather
+            than depend on the wall clock.
         parliament_features: The page's ``parliamentFeatures`` block. Its
             ``us_senate.nextElectionYear`` picks the ``senateSpecialElections`` entries
-            that are live (see :func:`_live_senate_specials`).
+            that are live (see :func:`_live_senate_specials`) and, when later than
+            ``current_year``, floors each class's next-up year so a class that has just
+            voted rolls on to its following term.
 
     Returns:
         A new dict keyed by string map id, each value being the mapMode config with a
@@ -125,6 +137,11 @@ def build_map_modes_with_regions(
     if current_year is None:
         current_year = date.today().year
     special_year = senate_next_election_year(parliament_features)
+    # No class is next up before the Senate's own next election: a class that voted in the
+    # cycle already held (2026's Class 2, exported late in 2026) must roll on to its following
+    # term, not read as "up this year". The floor is the shell's ``nextElectionYear`` (or the
+    # export year, if later, so a stale shell still rolls forward).
+    cycle_floor = current_year if special_year is None else max(current_year, special_year)
     merged: dict[str, Any] = {}
     for map_id_str, mode in map_modes.items():
         entry = dict(mode)
@@ -139,13 +156,20 @@ def build_map_modes_with_regions(
         # lookup and the cycle rolls forward on its own without editing the shell.
         cycle = entry.pop("senateClassCycle", None)
         if cycle:
-            entry["senateClassNextElection"] = _senate_class_next_election(cycle, current_year)
+            entry["senateClassNextElection"] = _senate_class_next_election(cycle, cycle_floor)
         # Senate special elections (an off-cycle vacancy contested alongside the regular class,
         # e.g. Ohio and Florida's Class-3 seats in 2026) are filtered here, once, to the ones the
         # next Senate election holds; the front end then uses the list as-is.
         if "senateSpecialElections" in entry:
             entry["senateSpecialElections"] = _live_senate_specials(
                 entry["senateSpecialElections"], special_year, current_year
+            )
+        # Per-seat Senate baseline overrides (a seat that swings from a different election
+        # than the rest of the field, e.g. a seat filled at an off-cycle special since the
+        # regular class last voted) are valid whatever the cycle, so they are only cleaned.
+        if "senateBaselineOverrides" in entry:
+            entry["senateBaselineOverrides"] = senate_baseline_overrides(
+                entry["senateBaselineOverrides"]
             )
         merged[map_id_str] = entry
     return merged
@@ -206,6 +230,75 @@ def senate_specials_for_year(entries: object, year: int) -> list[dict[str, Any]]
             continue
         kept.append(dict(entry))
     return kept
+
+
+def senate_baseline_overrides(entries: object) -> list[dict[str, Any]]:
+    """Keep the well-formed ``senateBaselineOverrides`` entries.
+
+    An override names a seat of one Senate ``class`` whose last contest was a different
+    election from the rest of its class (``baselineElectionId``): it was filled at an
+    off-cycle special, so the class's next cycle swings from that result rather than from
+    the class's regular one. The class matters because a state holds seats of more than
+    one class, and the override only applies when that class is the one being contested.
+    Unlike ``senateSpecialElections`` it carries no ``year`` and is never expired. The
+    shared parser for the export and the Senate model.
+
+    An entry is skipped when it is not an object, lacks a non-blank string ``seat`` or
+    ``baselineElectionId``, or lacks an integer ``class`` of 1 to 3; a later entry for an
+    already-named (seat, class) is skipped too, so a seat has one baseline per class.
+
+    Args:
+        entries: The shell's ``senateBaselineOverrides`` value; anything but a list
+            keeps nothing.
+
+    Returns:
+        Copies of the valid entries, in shell order.
+    """
+    if not isinstance(entries, list):
+        return []
+    kept: list[dict[str, Any]] = []
+    seen: set[tuple[str, int]] = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if not all(
+            isinstance(entry.get(key), str) and entry[key].strip()
+            for key in ("seat", "baselineElectionId")
+        ):
+            continue
+        seat_class: Any = entry.get("class")
+        if not _is_int(seat_class) or not 1 <= seat_class <= 3:
+            continue
+        key: tuple[str, int] = (entry["seat"], int(seat_class))
+        if key in seen:
+            continue
+        seen.add(key)
+        kept.append(dict(entry))
+    return kept
+
+
+def senate_class_up_in(cycle: object, year: int) -> int | None:
+    """The Senate class a regular election in ``year`` contests, or ``None``.
+
+    Resolves the shell's durable ``senateClassCycle`` (``{"base": {class: year}, "period": n}``)
+    with :func:`_senate_class_next_election`, so the model and the export read the cycle
+    through one resolver. ``None`` when ``cycle`` is malformed or no class (or more than
+    one) is up in exactly ``year``.
+    """
+    if not isinstance(cycle, dict) or not isinstance(cycle.get("base"), dict):
+        return None
+    period = cycle.get("period", 6)
+    if not _is_int(period) or period <= 0:
+        return None
+    base = cycle["base"]
+    if not all(_is_int(value) and str(key).isdigit() for key, value in base.items()):
+        return None
+    up = [
+        int(seat_class)
+        for seat_class, next_year in _senate_class_next_election(cycle, year).items()
+        if next_year == year
+    ]
+    return up[0] if len(up) == 1 else None
 
 
 def _live_senate_specials(
@@ -276,10 +369,21 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
       ``type`` stops a general election from comparing against a same-map
       election of another kind (e.g. the EU referendum); and the ``parliament``
       check prevents cross-parliament comparisons.
-    - The last entry of each (parliament, mapId, type) receives no comparison.
-    - Types in ``NO_AUTO_COMPARISON_TYPES`` (US Senate) never auto-chain: their
-      staggered classes contest different states each cycle, so a delta against
-      the preceding cycle would compare unrelated seats.
+    - Types in ``CROSS_MAP_COMPARISON_TYPES`` (US House) drop the ``mapId`` match:
+      each House election compares against the previous House election whatever its
+      district map (2026 on map 24 against 2024 on map 21, 2020 on map 25 against
+      2018), seat by seat through the shared district keys. The match must be from
+      an earlier year (read from the id), whatever the list order.
+    - The last entry of each (parliament, mapId, type) receives no comparison (for
+      US House, the oldest House election).
+    - Types in ``FIXED_GAP_COMPARISON_YEARS`` (US Senate) compare with the election of
+      the same parliament and type exactly that many years earlier (six): the staggered
+      classes contest a different third of the states each cycle, so only the same class,
+      six years back, is like for like (2026 against 2020, 2024 against 2018). The earlier
+      election's year is read from its id; when none is in the list (for example 2022, 2020 and
+      2018 while only the latest cycles are imported) the entry gets no comparison, and a later import of the earlier cycle is
+      picked up automatically. Entries without a year in their id (``current-senate``)
+      get none.
 
     Idempotent and safe to call more than once: entries that already have a
     comparison are skipped, so a second pass only fills entries left unresolved
@@ -301,14 +405,28 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
         if entry.get("comparisonElectionId"):
             continue
 
-        # Staggered-class chambers (US Senate) contest different states each cycle, so
-        # auto-chaining against the previous cycle would compare unrelated seats — skip them.
-        if entry.get("type") in NO_AUTO_COMPARISON_TYPES:
-            continue
-
         comparison_id: str | None = None
 
-        if entry.get("type") == ElectionType.model_uns.value:
+        if entry.get("type") in FIXED_GAP_COMPARISON_YEARS:
+            # Staggered-class chambers (US Senate): the same class last voted a fixed gap
+            # earlier. Auto-chaining to the previous cycle would compare unrelated seats.
+            entry_year = _entry_year(entry)
+            if entry_year is not None:
+                earlier_year = entry_year - FIXED_GAP_COMPARISON_YEARS[str(entry.get("type"))]
+                candidates = [
+                    other
+                    for other in manifest_entries
+                    if other.get("parliament") == entry.get("parliament")
+                    and other.get("type") == entry.get("type")
+                    and _entry_year(other) == earlier_year
+                ]
+                # Two entries can share a year; the plain "<year>-<type slug>" id wins,
+                # otherwise the first in list order.
+                plain_id = f"{earlier_year}-{str(entry.get('type')).replace('_', '-')}"
+                preferred = [other for other in candidates if other.get("id") == plain_id]
+                if preferred or candidates:
+                    comparison_id = (preferred or candidates)[0]["id"]
+        elif entry.get("type") == ElectionType.model_uns.value:
             comparison_id = latest_general_id
         elif entry.get("type") in US_MODEL_COMPARISON_IDS:
             # US forecasts compare against their model's baseline; only when that
@@ -319,17 +437,37 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
             parliament = entry.get("parliament")
             map_id = entry.get("mapId")
             entry_type = entry.get("type")
+            any_map = entry_type in CROSS_MAP_COMPARISON_TYPES
+            entry_year = _entry_year(entry)
             for later_entry in manifest_entries[index + 1:]:
                 if (
                     later_entry.get("parliament") == parliament
-                    and later_entry.get("mapId") == map_id
                     and later_entry.get("type") == entry_type
+                    and (
+                        later_entry.get("mapId") == map_id
+                        if not any_map
+                        # Across maps nothing else ties the pair, so only an earlier
+                        # year may serve: a hand-reordered manifest must never give
+                        # the oldest House election a newer one.
+                        else _is_earlier(_entry_year(later_entry), entry_year)
+                    )
                 ):
                     comparison_id = later_entry["id"]
                     break
 
         if comparison_id:
             entry["comparisonElectionId"] = comparison_id
+
+
+def _entry_year(entry: dict[str, Any]) -> int | None:
+    """Return the year leading an entry's id (``"2024-us-house"`` → 2024), or ``None``."""
+    match = re.match(r"(\d{4})-", str(entry.get("id") or ""))
+    return int(match.group(1)) if match else None
+
+
+def _is_earlier(candidate_year: int | None, year: int | None) -> bool:
+    """True when both years are known and ``candidate_year`` comes before ``year``."""
+    return candidate_year is not None and year is not None and candidate_year < year
 
 
 def remove_comparison_for_supplemental_entries(manifest_entries: list[dict[str, Any]]) -> None:

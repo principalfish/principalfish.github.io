@@ -1,0 +1,58 @@
+{
+  "meta": {"version": "2", "timestamp": "2021-01-20T12:00:00Z"},
+  "data": {
+    "races": [
+      {
+        "race_id": "GA-S-S-2021-01-05",
+        "race_type": "senate",
+        "election_type": "special-general-election-runoff",
+        "election_date": "2021-01-05",
+        "runoff": true,
+        "officeid": "S",
+        "seat": "",
+        "state_id": "GA",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": 100,
+        "candidates": [
+          {"candidate_id": "war-16", "first_name": "Ray", "last_name": "War", "party_id": "democrat", "winner": true, "runoff": false, "votes": 2288923},
+          {"candidate_id": "loe-17", "first_name": "Kel", "last_name": "Loe", "party_id": "republican", "winner": false, "runoff": false, "votes": 2195373}
+        ]
+      },
+      {
+        "race_id": "GA-G-S-2021-01-05",
+        "race_type": "senate",
+        "election_type": "general-election-runoff",
+        "election_date": "2021-01-05",
+        "runoff": true,
+        "officeid": "S",
+        "seat": "",
+        "state_id": "GA",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": 100,
+        "candidates": [
+          {"candidate_id": "oss-14", "first_name": "Jon", "last_name": "Oss", "party_id": "democrat", "winner": true, "runoff": false, "votes": 2269738},
+          {"candidate_id": "per-15", "first_name": "Dave", "last_name": "Per", "party_id": "republican", "winner": false, "runoff": false, "votes": 2214506}
+        ]
+      },
+      {
+        "race_id": "GA-G-psc-4-2021-01-05",
+        "race_type": "public-service-commission",
+        "election_type": "general-election-runoff",
+        "election_date": "2021-01-05",
+        "runoff": true,
+        "officeid": "0",
+        "seat": "4",
+        "state_id": "GA",
+        "uncontested": false,
+        "result": "winner",
+        "eevp": null,
+        "candidates": [
+          {"candidate_id": "mcd-18", "first_name": "Lu", "last_name": "Mcd", "party_id": "republican", "winner": true, "runoff": false, "votes": 2234206},
+          {"candidate_id": "bla-19", "first_name": "Dan", "last_name": "Bla", "party_id": "democrat", "winner": false, "runoff": false, "votes": 2200791}
+        ]
+      }
+    ]
+  }
+}

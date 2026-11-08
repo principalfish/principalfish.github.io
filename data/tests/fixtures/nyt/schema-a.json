@@ -1,0 +1,274 @@
+{
+  "resultsMeta": {"resultsUpdatedAt": "2026-11-06T23:00:00.000Z"},
+  "races": [
+    {
+      "nyt_id": "US-G-H-2026-11-03",
+      "election_date": "2026-11-03",
+      "office_id": "H",
+      "seat_number": "1",
+      "type": "General",
+      "uncontested": false,
+      "race_call_status": null,
+      "tabulation_method": "single-round",
+      "rounds": null,
+      "candidate_metadata": {
+        "democrat": {"nyt_id": "democrat", "first_name": null, "last_name": "Democrat", "party": {"nyt_id": "DEM"}},
+        "republican": {"nyt_id": "republican", "first_name": null, "last_name": "Republican", "party": {"nyt_id": "GOP"}}
+      },
+      "outcome": {"won": [], "advanced_to_runoff": [], "called_by": []},
+      "reporting_units": [
+        {"level": "national", "state_postal": "US", "eevp": 94, "candidates": [
+          {"nyt_id": "democrat", "votes": {"total": 6000000}},
+          {"nyt_id": "republican", "votes": {"total": 5000000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "TX-G-H-28-2026-11-03",
+      "election_date": "2026-11-03",
+      "office_id": "H",
+      "seat_number": "28",
+      "type": "General",
+      "uncontested": false,
+      "certified": true,
+      "race_call_status": "called",
+      "tabulation_method": "single-round",
+      "rounds": null,
+      "candidate_metadata": {
+        "garcia-a": {"nyt_id": "garcia-a", "nyt_candidate_race_id": 101, "first_name": "Ana", "last_name": "Garcia", "party": {"nyt_id": "DEM", "name": "Democrat"}},
+        "lopez-b": {"nyt_id": "lopez-b", "nyt_candidate_race_id": 102, "first_name": "Ben", "last_name": "Lopez", "party": {"nyt_id": "GOP", "name": "Republican"}},
+        "total_writeins": {"nyt_id": "total_writeins", "nyt_candidate_race_id": 103, "first_name": null, "last_name": "Total Write-ins", "party": {"nyt_id": "OTH", "name": ""}}
+      },
+      "outcome": {"won": ["garcia-a"], "advanced_to_runoff": [], "called_by": ["ap"]},
+      "reporting_units": [
+        {"level": "state", "state_postal": "TX", "eevp": 99.5, "candidates": [
+          {"nyt_id": "lopez-b", "votes": {"total": 100000}, "leader": false},
+          {"nyt_id": "garcia-a", "votes": {"total": 120000}, "leader": true},
+          {"nyt_id": "total_writeins", "votes": {"total": 500}, "leader": false}
+        ]},
+        {"level": "county", "state_postal": "TX", "eevp": 100, "candidates": [
+          {"nyt_id": "garcia-a", "votes": {"total": 9000}},
+          {"nyt_id": "lopez-b", "votes": {"total": 8000}},
+          {"nyt_id": "total_writeins", "votes": {"total": 10}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "AZ-G-H-6-2026-11-03",
+      "election_date": "2026-11-03",
+      "office_id": "H",
+      "seat_number": "6",
+      "type": "General",
+      "uncontested": false,
+      "certified": false,
+      "race_call_status": "too_early",
+      "tabulation_method": "single-round",
+      "rounds": null,
+      "candidate_metadata": {
+        "reed-c": {"nyt_id": "reed-c", "first_name": "Cal", "last_name": "Reed", "party": {"nyt_id": "GOP"}},
+        "cho-d": {"nyt_id": "cho-d", "first_name": "Dana", "last_name": "Cho", "party": {"nyt_id": "DEM"}}
+      },
+      "outcome": {"won": [], "advanced_to_runoff": [], "called_by": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "AZ", "eevp": 80.5, "candidates": [
+          {"nyt_id": "cho-d", "votes": {"total": 91000}},
+          {"nyt_id": "reed-c", "votes": {"total": 90000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "CA-G-H-12-2026-11-03",
+      "election_date": "2026-11-03",
+      "office_id": "H",
+      "seat_number": "12",
+      "type": "General",
+      "uncontested": false,
+      "race_call_status": "called",
+      "tabulation_method": "single-round",
+      "rounds": null,
+      "candidate_metadata": {
+        "park-e": {"nyt_id": "park-e", "first_name": "Eve", "last_name": "Park", "party": {"nyt_id": "DEM"}},
+        "quinn-f": {"nyt_id": "quinn-f", "first_name": "Finn", "last_name": "Quinn", "party": {"nyt_id": "DEM"}}
+      },
+      "outcome": {"won": ["park-e"], "advanced_to_runoff": [], "called_by": ["ap"]},
+      "reporting_units": [
+        {"level": "state", "state_postal": "CA", "eevp": 70.25, "candidates": [
+          {"nyt_id": "park-e", "votes": {"total": 150000}},
+          {"nyt_id": "quinn-f", "votes": {"total": 60000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "AK-G-H-1-2026-11-03",
+      "election_date": "2026-11-03",
+      "office_id": "H",
+      "seat_number": "1",
+      "type": "General",
+      "uncontested": false,
+      "race_call_status": "called",
+      "tabulation_method": "ranked-choice",
+      "candidate_metadata": {
+        "north-g": {"nyt_id": "north-g", "nyt_candidate_race_id": 501, "first_name": "Gil", "last_name": "North", "party": {"nyt_id": "GOP"}},
+        "south-h": {"nyt_id": "south-h", "nyt_candidate_race_id": 502, "first_name": "Hana", "last_name": "South", "party": {"nyt_id": "DEM"}},
+        "west-i": {"nyt_id": "west-i", "nyt_candidate_race_id": 503, "first_name": "Ivo", "last_name": "West", "party": {"nyt_id": "NPA"}},
+        "blank_votes": {"nyt_id": "blank_votes", "nyt_candidate_race_id": 504, "first_name": null, "last_name": "Blank Votes", "party": {"nyt_id": "OTH"}}
+      },
+      "rounds": [
+        {"order": 2, "round_type": "final", "candidates": [
+          {"nyt_candidate_race_id": 501, "total": 150000, "previously_eliminated": false},
+          {"nyt_candidate_race_id": 502, "total": 140000, "previously_eliminated": false},
+          {"nyt_candidate_race_id": 503, "total": 0, "previously_eliminated": true},
+          {"nyt_candidate_race_id": 504, "total": 300, "previously_eliminated": false}
+        ]},
+        {"order": 1, "round_type": "initial", "candidates": [
+          {"nyt_candidate_race_id": 501, "total": 140000, "previously_eliminated": false},
+          {"nyt_candidate_race_id": 502, "total": 130000, "previously_eliminated": false},
+          {"nyt_candidate_race_id": 503, "total": 25000, "previously_eliminated": false},
+          {"nyt_candidate_race_id": 504, "total": 300, "previously_eliminated": false}
+        ]}
+      ],
+      "outcome": {"won": ["north-g"], "advanced_to_runoff": [], "called_by": ["ap"]},
+      "reporting_units": [
+        {"level": "state", "state_postal": "AK", "eevp": 100, "candidates": [
+          {"nyt_id": "north-g", "votes": {"total": 140000}},
+          {"nyt_id": "south-h", "votes": {"total": 130000}},
+          {"nyt_id": "west-i", "votes": {"total": 25000}},
+          {"nyt_id": "blank_votes", "votes": {"total": 300}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "LA-L-H-5-2026-11-03",
+      "election_date": "2026-11-03",
+      "office_id": "H",
+      "seat_number": "5",
+      "type": "Nonpartisan Election",
+      "uncontested": false,
+      "race_call_status": "runoff",
+      "tabulation_method": "single-round",
+      "max_runoff": 2,
+      "rounds": null,
+      "candidate_metadata": {
+        "moss-j": {"nyt_id": "moss-j", "first_name": "Jo", "last_name": "Moss", "party": {"nyt_id": "GOP"}},
+        "fry-k": {"nyt_id": "fry-k", "first_name": "Kit", "last_name": "Fry", "party": {"nyt_id": "GOP"}},
+        "dunn-l": {"nyt_id": "dunn-l", "first_name": "Lee", "last_name": "Dunn", "party": {"nyt_id": "DEM"}}
+      },
+      "outcome": {"won": [], "advanced_to_runoff": ["moss-j", "fry-k"], "called_by": ["ap"]},
+      "reporting_units": [
+        {"level": "state", "state_postal": "LA", "eevp": 99, "candidates": [
+          {"nyt_id": "moss-j", "votes": {"total": 40000}},
+          {"nyt_id": "fry-k", "votes": {"total": 39000}},
+          {"nyt_id": "dunn-l", "votes": {"total": 30000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "FL-G-H-10-2026-11-03",
+      "election_date": "2026-11-03",
+      "office_id": "H",
+      "seat_number": "10",
+      "type": "General",
+      "uncontested": true,
+      "race_call_status": "called",
+      "tabulation_method": "single-round",
+      "rounds": null,
+      "candidate_metadata": {
+        "frost-m": {"nyt_id": "frost-m", "first_name": "Max", "last_name": "Frost", "party": {"nyt_id": "DEM"}}
+      },
+      "outcome": {"won": ["frost-m"], "advanced_to_runoff": [], "called_by": ["ap"]},
+      "reporting_units": [
+        {"level": "state", "state_postal": "FL", "eevp": null, "candidates": [
+          {"nyt_id": "frost-m", "votes": {"total": 0}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "DC-G-H-1-2026-11-03",
+      "election_date": "2026-11-03",
+      "office_id": "H",
+      "seat_number": "1",
+      "type": "General",
+      "uncontested": false,
+      "race_call_status": "called",
+      "tabulation_method": "single-round",
+      "rounds": null,
+      "candidate_metadata": {
+        "kane-n": {"nyt_id": "kane-n", "first_name": "Nia", "last_name": "Kane", "party": {"nyt_id": "DEM"}}
+      },
+      "outcome": {"won": ["kane-n"], "advanced_to_runoff": [], "called_by": ["ap"]},
+      "reporting_units": [
+        {"level": "state", "state_postal": "DC", "eevp": 99, "candidates": [
+          {"nyt_id": "kane-n", "votes": {"total": 200000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "OH-S_W-S-2026-11-03",
+      "election_date": "2026-11-03",
+      "office_id": "S",
+      "seat_number": "3",
+      "type": "Special General",
+      "uncontested": false,
+      "race_call_status": "called",
+      "tabulation_method": "single-round",
+      "rounds": null,
+      "candidate_metadata": {
+        "bell-o": {"nyt_id": "bell-o", "first_name": "Otto", "last_name": "Bell", "party": {"nyt_id": "DEM"}},
+        "hart-p": {"nyt_id": "hart-p", "first_name": "Pia", "last_name": "Hart", "party": {"nyt_id": "GOP"}}
+      },
+      "outcome": {"won": ["bell-o"], "advanced_to_runoff": [], "called_by": ["ap"]},
+      "reporting_units": [
+        {"level": "state", "state_postal": "OH", "eevp": 97.75, "candidates": [
+          {"nyt_id": "bell-o", "votes": {"total": 2500000}},
+          {"nyt_id": "hart-p", "votes": {"total": 2400000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "MN-G-S-2026-11-03",
+      "election_date": "2026-11-03",
+      "office_id": "S",
+      "seat_number": "2",
+      "type": "General",
+      "uncontested": false,
+      "race_call_status": "called",
+      "tabulation_method": "single-round",
+      "rounds": null,
+      "candidate_metadata": {
+        "lund-q": {"nyt_id": "lund-q", "first_name": "Quin", "last_name": "Lund", "party": {"nyt_id": "DFL"}},
+        "berg-r": {"nyt_id": "berg-r", "first_name": "Rae", "last_name": "Berg", "party": {"nyt_id": "GOP"}},
+        "olson-s": {"nyt_id": "olson-s", "first_name": "Sam", "last_name": "Olson", "party": {"nyt_id": "LIB"}}
+      },
+      "outcome": {"won": ["lund-q"], "advanced_to_runoff": [], "called_by": ["ap"]},
+      "reporting_units": [
+        {"level": "state", "state_postal": "MN", "eevp": 100, "candidates": [
+          {"nyt_id": "lund-q", "votes": {"total": 1500000}},
+          {"nyt_id": "berg-r", "votes": {"total": 1300000}},
+          {"nyt_id": "olson-s", "votes": {"total": 40000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "MN-S_W-S-2026-11-03",
+      "election_date": "2026-11-03",
+      "office_id": "S",
+      "seat_number": "1",
+      "type": "Special General",
+      "uncontested": false,
+      "race_call_status": "called",
+      "tabulation_method": "single-round",
+      "rounds": null,
+      "candidate_metadata": {
+        "voss-t": {"nyt_id": "voss-t", "first_name": "Tia", "last_name": "Voss", "party": {"nyt_id": "GOP"}},
+        "ames-u": {"nyt_id": "ames-u", "first_name": "Uma", "last_name": "Ames", "party": {"nyt_id": "GRN"}}
+      },
+      "outcome": {"won": ["voss-t"], "advanced_to_runoff": [], "called_by": ["ap"]},
+      "reporting_units": [
+        {"level": "state", "state_postal": "MN", "eevp": 100, "candidates": [
+          {"nyt_id": "voss-t", "votes": {"total": 1450000}},
+          {"nyt_id": "ames-u", "votes": {"total": 1400000}}
+        ]}
+      ]
+    }
+  ]
+}

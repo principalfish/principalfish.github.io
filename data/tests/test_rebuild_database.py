@@ -1,5 +1,7 @@
 """Tests for the database-rebuild orchestrator: step building + run accounting."""
 
+import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -8,6 +10,7 @@ import scripts.rebuild_database as rebuild
 from scripts.rebuild_database import (
     BY_ELECTION_IMPORT,
     ByElectionEntry,
+    RebuildError,
     Step,
     build_steps,
     by_election_steps,
@@ -77,6 +80,44 @@ class TestUsElectionSteps:
     def _write(self, d: Path, name: str) -> None:
         (d / name).write_text("{}", encoding="utf-8")
 
+    def _write_named(self, d: Path, name: str, special_file: str | None) -> None:
+        (d / name).write_text(
+            json.dumps({"meta": {"special_file": special_file}}), encoding="utf-8"
+        )
+
+    @pytest.mark.parametrize("special_file", [None, "senate-2018-special.json"])
+    def test_special_file_not_named_by_its_regular_file_is_refused(
+        self, tmp_path: Path, special_file: str | None
+    ) -> None:
+        self._write_named(tmp_path, "senate-2020.json", special_file)
+        self._write(tmp_path, "senate-2020-special.json")
+        with pytest.raises(RebuildError, match="left over"):
+            us_election_steps(tmp_path)
+
+    def test_regular_file_with_invalid_json_is_refused(self, tmp_path: Path) -> None:
+        (tmp_path / "senate-2020.json").write_text("{nope", encoding="utf-8")
+        self._write(tmp_path, "senate-2020-special.json")
+        with pytest.raises(RebuildError, match="is not valid JSON"):
+            us_election_steps(tmp_path)
+
+    def test_special_file_without_its_regular_file_is_refused(self, tmp_path: Path) -> None:
+        self._write(tmp_path, "senate-2020-special.json")
+        with pytest.raises(RebuildError, match="not named by senate-2020.json"):
+            us_election_steps(tmp_path)
+
+    def test_main_refuses_before_running_anything(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        self._write(tmp_path, "senate-2020-special.json")
+        monkeypatch.setattr(rebuild, "USA_FILES", tmp_path)
+        monkeypatch.setattr(sys, "argv", ["rebuild_database.py", "--dry-run"])
+
+        assert rebuild.main() == 1
+        assert "left over" in capsys.readouterr().err
+
     def test_maps_chamber_year_to_name_and_importer(self, tmp_path: Path) -> None:
         self._write(tmp_path, "house-2024.json")
         self._write(tmp_path, "senate-2020.json")
@@ -99,7 +140,43 @@ class TestUsElectionSteps:
     def test_ignores_unrecognised_files(self, tmp_path: Path) -> None:
         self._write(tmp_path, "notes.json")
         self._write(tmp_path, "house-notayear.json")
+        self._write(tmp_path, "house-2020-special.json")
+        self._write(tmp_path, "house-2024-special.json")
+        self._write(tmp_path, "senate-2020-runoff.json")
+        self._write(tmp_path, "senate-2020-special-extra.json")
         assert us_election_steps(tmp_path) == []
+
+    def test_special_file_follows_its_regular_year(self, tmp_path: Path) -> None:
+        for name in (
+            "senate-2022.json",
+            "senate-2020-special.json",
+            "house-2020.json",
+        ):
+            self._write(tmp_path, name)
+        self._write_named(tmp_path, "senate-2020.json", "senate-2020-special.json")
+        steps = us_election_steps(tmp_path)
+        assert [s.label for s in steps] == [
+            "Import 2020 US House Election",
+            "Import 2020 US Senate Election",
+            "Import 2020 US Senate Special Election",
+            "Import 2022 US Senate Election",
+        ]
+        special = steps[2]
+        assert special.script.name == "import_senate_elections.py"
+        assert special.args == (
+            "--file", str(tmp_path / "senate-2020-special.json"),
+            "--year", "2020",
+            "--name", "2020 US Senate Special Election",
+            "--parent-name", "2020 US Senate Election",
+            "--refresh",
+        )
+        # Regular files keep their exact arguments.
+        assert steps[1].args == (
+            "--file", str(tmp_path / "senate-2020.json"),
+            "--year", "2020",
+            "--name", "2020 US Senate Election",
+            "--refresh",
+        )
 
 
 class TestBuildSteps:

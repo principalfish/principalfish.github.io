@@ -309,6 +309,17 @@ def _columns(conn: sqlite3.Connection, table: str) -> list[tuple[object, ...]]:
     return [tuple(row[1:]) for row in conn.execute(f"PRAGMA table_info({table})")]
 
 
+def _column(conn: sqlite3.Connection, table: str, name: str) -> tuple[object, ...]:
+    """Return one column's PRAGMA table_info row (minus cid), looked up by name.
+
+    Looked up by name rather than position so later migrations that append
+    columns to the same table don't break the comparison.
+    """
+    matches = [col for col in _columns(conn, table) if col[0] == name]
+    assert len(matches) == 1, f"{table}.{name} not found exactly once"
+    return matches[0]
+
+
 def test_fresh_orm_and_migration_schema_parity(
     db: Database, legacy: sqlite3.Connection,
 ) -> None:
@@ -320,14 +331,18 @@ def test_fresh_orm_and_migration_schema_parity(
             assert expected == legacy.execute(
                 f"PRAGMA foreign_key_list({table})",
             ).fetchall()
-        assert _columns(orm, "elections")[-1] == _columns(legacy, "elections")[-1]
+        assert _column(orm, "elections", "target_election_year") == _column(
+            legacy, "elections", "target_election_year",
+        )
 
 
 def test_raw_bootstrap_target_matches_orm(db: Database) -> None:
     with closing(sqlite3.connect(":memory:")) as raw:
         ensure_elections_sqlite_schema(raw)
         with closing(sqlite3.connect(db.config.database_path)) as orm:
-            assert _columns(raw, "elections")[-1] == _columns(orm, "elections")[-1]
+            assert _column(raw, "elections", "target_election_year") == _column(
+                orm, "elections", "target_election_year",
+            )
 
 
 @pytest.mark.parametrize("ddl", [ERAS_DDL, ALLOCATIONS_DDL])

@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import shlex
 import subprocess
 import sys
@@ -42,12 +43,19 @@ BY_ELECTION_IMPORT = DATA_DIR / "scripts" / "by_election_import.py"
 # Boundary downloads + a full reseed are slow; give each step plenty of room.
 DEFAULT_STEP_TIMEOUT = 1800
 
+# File-name suffix of a year's same-day Senate specials, ``senate-<year>-special.json``.
+SENATE_SPECIAL_SUFFIX = "special"
+
 # US data-file prefix -> (importer script name, election-name chamber label).
 US_CHAMBERS: dict[str, tuple[str, str]] = {
     "house": ("import_house_elections.py", "House"),
     "senate": ("import_senate_elections.py", "Senate"),
     "presidential": ("import_presidential_elections.py", "Presidential"),
 }
+
+
+class RebuildError(Exception):
+    """Raised when the committed files cannot be turned into a safe pipeline."""
 
 
 @dataclass(frozen=True)
@@ -109,23 +117,44 @@ def us_election_steps(usa_files_dir: Path) -> list[Step]:
     A file named ``<chamber>-<year>.json`` maps to that chamber's importer with
     ``--file/--year/--name/--refresh``; the ``--name`` matches the stored DB
     election name (``"<year> US <Chamber> Election"``) so the refresh reuses the
-    existing row.
+    existing row. The importer reads the map id from the file itself.
+
+    ``senate-<year>-special.json`` holds that year's Senate specials held in a
+    state that also had its regular race. It imports as ``"<year> US Senate
+    Special Election"`` with ``--parent-name`` the regular election, so its
+    step runs straight after that year's regular Senate step. The regular
+    file's ``meta.special_file`` must name it; a specials file it does not
+    name is left over from an earlier conversion and is refused.
 
     Args:
         usa_files_dir: Directory holding the committed US election JSON files.
 
     Returns:
-        One :class:`Step` per recognised JSON file, sorted by filename.
+        One :class:`Step` per recognised JSON file, sorted by filename, with each
+        specials file right after its regular file.
+
+    Raises:
+        RebuildError: If a specials file is not named by its year's regular file.
     """
     steps: list[Step] = []
-    for json_file in sorted(usa_files_dir.glob("*.json")):
-        prefix, _, year_text = json_file.stem.partition("-")
+    for json_file in sorted(usa_files_dir.glob("*.json"), key=_us_file_order):
+        prefix, _, rest = json_file.stem.partition("-")
+        year_text, _, suffix = rest.partition("-")
         chamber = US_CHAMBERS.get(prefix)
         if chamber is None or not year_text.isdigit():
             continue
         script_name, label = chamber
         year = int(year_text)
-        name = f"{year} US {label} Election"
+        args: tuple[str, ...]
+        if suffix == "":
+            name = f"{year} US {label} Election"
+            args = ()
+        elif suffix == SENATE_SPECIAL_SUFFIX and prefix == "senate":
+            _check_special_is_named(json_file, usa_files_dir / f"senate-{year}.json")
+            name = f"{year} US Senate Special Election"
+            args = ("--parent-name", f"{year} US Senate Election")
+        else:
+            continue
         steps.append(
             Step(
                 label=f"Import {name}",
@@ -134,11 +163,41 @@ def us_election_steps(usa_files_dir: Path) -> list[Step]:
                     "--file", str(json_file),
                     "--year", str(year),
                     "--name", name,
+                    *args,
                     "--refresh",
                 ),
             )
         )
     return steps
+
+
+def _check_special_is_named(special: Path, regular: Path) -> None:
+    """Refuse a specials file its year's regular file does not name."""
+    named: object = None
+    if regular.exists():
+        try:
+            data = json.loads(regular.read_text(encoding="utf-8"))
+        except ValueError as err:
+            raise RebuildError(f"{regular} is not valid JSON: {err}") from err
+        meta = data.get("meta") if isinstance(data, dict) else None
+        named = meta.get("special_file") if isinstance(meta, dict) else None
+    if named != special.name:
+        raise RebuildError(
+            f"{special} is not named by {regular.name}'s meta.special_file "
+            f"({named!r}); it is left over from an earlier conversion — remove it "
+            "or re-convert that year"
+        )
+
+
+def _us_file_order(path: Path) -> tuple[str, str]:
+    """Sort key putting ``senate-<year>-special.json`` right after ``senate-<year>.json``.
+
+    Plain file-name order would run the special first (``-`` sorts before ``.``),
+    before the parent election it links to exists.
+    """
+    prefix, _, rest = path.stem.partition("-")
+    year_text, _, suffix = rest.partition("-")
+    return (f"{prefix}-{year_text}", suffix)
 
 
 def by_election_steps(entries: list[ByElectionEntry]) -> list[Step]:
@@ -270,7 +329,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    steps = build_steps()
+    try:
+        steps = build_steps()
+    except RebuildError as err:
+        print(f"error: {err}", file=sys.stderr)
+        return 1
 
     if args.dry_run:
         print(f"Rebuild pipeline: {len(steps)} steps (dry run — nothing executed)\n")

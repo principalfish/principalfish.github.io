@@ -1,0 +1,13 @@
+{
+  "2026 US Senate Election": {
+    "Alaska": {
+      "w": "democrat",
+      "p": [
+        ["democrat", 102962, "Mary Peltola"],
+        ["republican", 102325, "Dan Sullivan"],
+        ["republican", 4846, "Gerald Heikes"],
+        ["others", 3600, "Daniel Sullivan"]
+      ]
+    }
+  }
+}

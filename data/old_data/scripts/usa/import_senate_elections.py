@@ -6,12 +6,21 @@ one Region per state, one Seat per state with a race that cycle (named by state)
 per-party Vote rows. States not up that cycle have no seat and render with the map's
 neutral fill. Seat geometry lives in ``uselectionmaps/data/maps/map-23.topo.json``.
 
+A special election held the same day as the state's regular race (e.g. Georgia 2020)
+cannot share the regular election's seat, so it is converted into its own
+``senate-YYYY-special.json`` and imported as a separate election on the same map, linked
+to the regular one with ``--parent-name``.
+
 Run ``import_parties.py`` first so the US Party rows exist.
 
 Usage:
     python old_data/scripts/usa/import_senate_elections.py \
         --file old_data/files/usa/senate-2024.json \
         --year 2024 --name "2024 US Senate Election"
+    python old_data/scripts/usa/import_senate_elections.py \
+        --file old_data/files/usa/senate-2024-special.json \
+        --year 2024 --name "2024 US Senate Special Election" \
+        --parent-name "2024 US Senate Election"
 """
 
 from __future__ import annotations
@@ -26,7 +35,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from db import Database
 from models import ElectionType
-from us_import import ensure_us_map, import_us_election
+from us_import import (
+    check_election_map,
+    ensure_us_map,
+    import_us_election,
+    map_from_meta,
+    plan_us_election,
+)
 
 # Fixed map id for US Senate (convention: 21 house, 22 president, 23 senate).
 MAP_ID = 23
@@ -40,6 +55,7 @@ def import_senate(
     name: str,
     replace: bool = False,
     refresh: bool = False,
+    parent_name: str | None = None,
 ) -> int:
     """Load a US Senate election JSON file into ``db`` and return the vote count.
 
@@ -53,22 +69,47 @@ def import_senate(
         refresh: If True, reuse an existing election and clear its votes before
             re-inserting, preserving ids. Implies not ``replace`` (the map is
             never rebuilt), so no seats or votes are cascade-deleted.
+        parent_name: Name of the election this one hangs off, for a special held
+            alongside the state's regular race; it must already be imported.
 
     Returns:
         The number of Vote rows inserted.
+
+    Raises:
+        SystemExit: If ``parent_name`` names no election, or one of another chamber.
     """
-    senate_map = ensure_us_map(
-        db, MAP_ID, MAP_NAME, "us_senate", replace=replace and not refresh
-    )
     data = json.loads(file.read_text(encoding="utf-8"))
+    map_id, map_name = map_from_meta(data, MAP_ID, MAP_NAME)
+    parent_id: int | None = None
+    if parent_name is not None:
+        parent = db.get_election_by_name(parent_name)
+        if parent is None:
+            raise SystemExit(f"Parent election {parent_name!r} not found — import it first.")
+        if parent.type != ElectionType.us_senate:
+            raise SystemExit(f"Parent election {parent_name!r} is not a US Senate election.")
+        parent_id = parent.id
+    check_election_map(db, name, map_id)
+    # Check the whole file before the map exists, so a refused import leaves no map.
     # Senate seats are keyed by the full state name, which is already the division key.
+    plan = plan_us_election(db, data, state_for_key=_senate_state)
+    # A special shares the regular election's map, so it must never rebuild it.
+    senate_map = ensure_us_map(
+        db, map_id, map_name, "us_senate",
+        replace=replace and not refresh and parent_name is None,
+    )
     return import_us_election(
         db, data, senate_map,
         election_type=ElectionType.us_senate,
         year=year, name=name,
-        state_for_key=lambda state: state,
+        state_for_key=_senate_state,
         refresh=refresh,
+        parent_election_id=parent_id,
+        plan=plan,
     )
+
+
+def _senate_state(key: str) -> str:
+    return key
 
 
 def main() -> None:
@@ -83,14 +124,21 @@ def main() -> None:
         action="store_true",
         help="Reuse an existing election and clear its votes before re-import (preserves ids)",
     )
+    parser.add_argument(
+        "--parent-name",
+        help="Parent election for a same-day special (e.g. '2020 US Senate Election')",
+    )
     args = parser.parse_args()
 
     db = Database()
     db.create_tables()
     inserted = import_senate(
-        db, args.file, args.year, args.name, replace=args.replace, refresh=args.refresh
+        db, args.file, args.year, args.name,
+        replace=args.replace, refresh=args.refresh, parent_name=args.parent_name,
     )
-    print(f"Imported {args.name}: {inserted} votes, map id {MAP_ID}")
+    election = db.get_election_by_name(args.name)
+    map_id = election.map_id if election is not None else MAP_ID
+    print(f"Imported {args.name}: {inserted} votes, map id {map_id}")
 
 
 if __name__ == "__main__":

@@ -11,7 +11,9 @@ Source (canonical, maintained): @unitedstates/congress-legislators
     https://unitedstates.github.io/congress-legislators/legislators-current.json
 
 This is a snapshot, not an election, so it is generated directly to a JSON file (not via
-the DB/election export); re-run it when the chamber changes.
+the DB/election export); re-run it when the chamber changes. After the 2026 import the
+file is owned by scripts/us_results/current_senate.py; re-running this converter over it
+would revert to the pre-2026 chamber.
 
 Usage:
     python old_data/scripts/usa/convert_senate_current.py \

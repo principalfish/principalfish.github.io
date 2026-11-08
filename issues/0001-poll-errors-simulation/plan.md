@@ -187,7 +187,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
    - Supersedes: W-4 / 6b / 6e "median" wording becomes "mean" for the headline and table.
    - Tests: the mean in the table and headline, national and region; largest-remainder rounding sums to the seat total (including a case where plain rounding wouldn't); ± from the mean; no note; filtered views and other pages unchanged; the export carries the mean, and it sums to the seat total.
    - Acceptance: `./run_tests.sh` (then restore any test-written trends file), `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, an export dry-run, the jsdom harness on both pages, and the rendered headline and table shown.
-6h. **Split the map page into a UNS default and an opt-in modelled-uncertainty view** (Phil, 2026-11-08, after PR #74's description was final). Model: frontier. Depends on: 6g.
+7. **Split the map page into a UNS default and an opt-in modelled-uncertainty view** (Phil, 2026-11-08, after PR #74's description was final). Model: frontier. Depends on: 6g.
    - Phil asked: "remove show uncertainty · default open to how it was before with UNS (and the text at the top) · have a tickbox button below the subheader text labelled Show with modelled uncertainty. Ticking this shows the map as it is. and the subheader text as it is · vote totals table and seats will need to account for whether that box is ticked · move Latest poll used: … to the bottom below the map in smaller non bold text, along with Nowcast: … (if appropriate to the mode)".
    - Facts: one gate already decides every uncertainty surface on the map page: `activeUncertainty(state)` (`electionmapslogic/uncertainty.js:62`) feeds the subtitle (`simulatedSubtitle`, `renderUncertaintyHeader`, `renderUncertaintyBasis` in `dom.js` `renderSubtitleText`), the table (`uncertaintyForTotals`) and the map-colour note; the seat popup checks the model run itself (`dom.js` ~1522, `seat.u`). The Show uncertainty button is `#mapsUncertaintyToggle` (`shell.html:143`, `uncertainty-view.js` `renderUncertaintyToggle`/`wireUncertaintyToggle`, state `voteTotals.showUncertainty`). Master's subtitle is the election summary line plus the latest-poll span. Every tracker run with polls carries both `s` (UNS) and `sm` (mean) (383 of 384; the election-day point has neither band nor mean), so the tracker switch needs no data change.
    - What (code only; no DB, model or export step):
@@ -202,9 +202,9 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
    - Supersedes: 6d's placement of the latest poll and the nowcast note in the header; 6e's Show uncertainty toggle; the default (unticked) view no longer leads with the simulation (6b stays as the ticked view); 6g's tracker line is the mean only when the tracker's box is ticked.
    - Files: `electionmapslogic/shell.html`, `electionmaps/index.html` if the checkbox lives in the page header, `electionmapslogic/dom.js`, `uncertainty.js`, `uncertainty-view.js`, `state.js`, `features/polltracker.js`, `features/polltracker-view.js`, `features/polltracker-uncertainty.js`, `maps.css`, their tests, `electionmaps/data/map-modes.md` if it describes the toggle, and the rebuilt bundles.
    - Tests: default load shows the UNS subtitle, UNS seats and no ranges, popups without ranges, no map-colour note, and the checkbox present and unticked; ticking shows today's subtitle, mean seats with ranges, popup ranges and the note; unticking restores the UNS view; the choice survives a region change and an election change and resets on reload; the checkbox is hidden for a historical election, predict and the US page; the latest poll renders below the map in both modes, and the nowcast note only when ticked; the tracker starts unticked on the UNS line, and ticking switches to the mean with bands; no Show uncertainty button remains.
-   - Manual review: proposed (see the 6h briefing).
+   - Manual review (kept: Phil accepted the briefing, 2026-11-08): with the bundles rebuilt (`npm run minify:electionmaps` in the builder's worktree), reload http://127.0.0.1:8000/electionmaps/ (the planner chat's static server serves that worktree). Check the page opens unticked on the UNS view; tick and untick; change region; open a seat popup in both modes; check the footer below the map; then open the poll tracker and check its checkbox starts unticked and switches the line..
    - Acceptance: `./run_tests.sh` (then restore any test-written trends file), `npm test` with 0 jsdom skips, `npm run minify:electionmaps`, the jsdom harness on both pages (Westminster and the US page), and the rendered header, footer, table and popup shown in both modes.
-7. **PR text.** `/publish poll-errors-simulation`, run from the planner chat: it drafts the final description into `pr.md` and, once Phil approves, puts it on PR #74 (opened by Phil 2026-10-13). Merging is Phil's.
+8. **PR text.** `/publish poll-errors-simulation`, run from the planner chat: it drafts the final description into `pr.md` and, once Phil approves, puts it on PR #74 (opened by Phil 2026-10-13). Merging is Phil's.
 
 ## Checkpoints
 
@@ -229,8 +229,8 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6e · Vote-totals table: Seats column from the simulated median; toggle adds only ranges (`b788ae28`).
 - [x] 6f · Poll tracker Chances view: no blank space on the left (`8d7c9d42`).
 - [x] 6g · Seats as the simulated mean in the table and headline (`be4222f5`, `789e36ae`).
-- [ ] 6h · Map page split: UNS by default, "Show with modelled uncertainty" checkbox, latest poll and nowcast note below the map, tracker line follows its checkbox.
-- [ ] 7 · PR text updated for 6h (the first final description went on PR #74 on 2026-11-08; `/publish` again after 6h).
+- [ ] 7 · Map page split: UNS by default, "Show with modelled uncertainty" checkbox, latest poll and nowcast note below the map, tracker line follows its checkbox.
+- [ ] 8 · PR text updated for piece 7 (the first final description went on PR #74 on 2026-11-08; `/publish` again after piece 7).
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
 

@@ -9,7 +9,7 @@
   "gh_issue": 81,
   "build_model": null,
   "created": "2026-10-30 10:54",
-  "updated": "2026-11-08 15:05",
+  "updated": "2026-11-08 15:06",
   "done": "2026-11-08 15:05",
   "pr": 74,
   "local": [
@@ -17,7 +17,8 @@
       "kind": "session",
       "name": "local_c2004f9a-b155-458f-ada1-ebe8ad8b0b0d",
       "added": "2026-11-08 11:05",
-      "note": "builder: poll-errors-simulation"
+      "note": "builder: poll-errors-simulation",
+      "removed": "2026-11-08 15:06"
     },
     {
       "kind": "worktree",

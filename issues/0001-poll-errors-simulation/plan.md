@@ -212,7 +212,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6e · Vote-totals table: Seats column from the simulated median; toggle adds only ranges (`b788ae28`).
 - [x] 6f · Poll tracker Chances view: no blank space on the left (`8d7c9d42`).
 - [x] 6g · Seats as the simulated mean in the table and headline (`be4222f5`, `789e36ae`).
-- [ ] 7 · PR text drafted.
+- [x] 7 · PR text drafted; PR #74 final (2026-11-08).
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
 

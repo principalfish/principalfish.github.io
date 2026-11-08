@@ -30,3 +30,4 @@
 - 2026-11-08 10:37 · import-2026-us-midterm-results (0002) · PR #80 marked ready for review
 - 2026-11-08 10:42 · import-2026-us-midterm-results (0002) · merged → done
 - 2026-11-08 10:42 · import-2026-us-midterm-results (0002) · builder archived after merge
+- 2026-11-08 11:05 · poll-errors-simulation (0001) · tracking session local_c2004f9a-b155-458f-ada1-ebe8ad8b0b0d

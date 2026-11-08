@@ -21,7 +21,7 @@ kept); House 2018 and 2020 and Senate 2018 are new.
 ## Commands
 
 From `data/`, once per cycle and chamber. `fetch` downloads, `convert` writes
-`old_data/files/usa/{house,senate}-<year>.json` (plus `senate-<year>-special.json` when a
+`inputs/us/{house,senate}-<year>.json` (plus `senate-<year>-special.json` when a
 special shares a state with its regular race), `import` loads the committed files, `all`
 does the three. Every run prints a diff against the committed file and the database
 (winner changes, newly called seats, % counted, the largest vote changes); against the 538

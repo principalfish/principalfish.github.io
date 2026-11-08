@@ -116,7 +116,7 @@ DEM_PARTY_ID = 20   # Democratic — see uselectionmaps/data/map-modes.json part
 REP_PARTY_ID = 21   # Republican
 
 REPO_ROOT = DATA_DIR.parent
-LEGACY_FILES_DIR_DEFAULT = DATA_DIR / "old_data" / "files" / "westminster"
+LEGACY_FILES_DIR_DEFAULT = DATA_DIR / "inputs" / "westminster"
 
 # Each front-end page owns its own data directory + manifest. The full export partitions
 # elections by parliament and writes each page's maps/, results/, and map-modes.json under its

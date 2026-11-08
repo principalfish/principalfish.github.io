@@ -67,7 +67,7 @@ META_KEY = "meta"
 DEFAULT_SNAPSHOT = (
     REPO_ROOT / "uselectionmaps" / "data" / "results" / "senate-current.json"
 )
-DEFAULT_ELECTION_FILE = DATA_DIR / "old_data" / "files" / "usa" / "senate-2026.json"
+DEFAULT_ELECTION_FILE = DATA_DIR / "inputs" / "us" / "senate-2026.json"
 
 # The class contested at the regular 2026 election, and the standalone specials
 # of that cycle (state -> class of the seat filled). The election must hold all

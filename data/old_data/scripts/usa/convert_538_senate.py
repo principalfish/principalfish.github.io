@@ -24,7 +24,7 @@ Usage:
     python old_data/scripts/usa/convert_538_senate.py \
         --csv /path/to/election_results_senate.csv \
         --year 2024 \
-        --out old_data/files/usa/senate-2024.json
+        --out inputs/us/senate-2024.json
 """
 
 from __future__ import annotations

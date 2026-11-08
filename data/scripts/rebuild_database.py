@@ -32,8 +32,8 @@ from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parents[1]
 OLD_SCRIPTS = DATA_DIR / "old_data" / "scripts"
-USA_FILES = DATA_DIR / "old_data" / "files" / "usa"
-WESTMINSTER_FILES = DATA_DIR / "old_data" / "files" / "westminster"
+USA_FILES = DATA_DIR / "inputs" / "us"
+WESTMINSTER_FILES = DATA_DIR / "inputs" / "westminster"
 BY_ELECTIONS_FILE = WESTMINSTER_FILES / "by_elections.txt"
 REGION_POPULATIONS_CSV = WESTMINSTER_FILES / "region_populations.csv"
 REGION_POPULATIONS_MAP = "UK Constituencies post 2022"
@@ -112,7 +112,7 @@ def parse_by_elections_file(path: Path) -> list[ByElectionEntry]:
 
 
 def us_election_steps(usa_files_dir: Path) -> list[Step]:
-    """Build the per-file US import steps from ``old_data/files/usa/*.json``.
+    """Build the per-file US import steps from ``inputs/us/*.json``.
 
     A file named ``<chamber>-<year>.json`` maps to that chamber's importer with
     ``--file/--year/--name/--refresh``; the ``--name`` matches the stored DB

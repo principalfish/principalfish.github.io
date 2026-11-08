@@ -29,7 +29,7 @@ allocations from the database for each actual election year or forecast target.
 Usage:
     python old_data/scripts/usa/convert_wiki_presidential.py \
         --year 1968 \
-        --out old_data/files/usa/presidential-1968.json
+        --out inputs/us/presidential-1968.json
 """
 
 from __future__ import annotations

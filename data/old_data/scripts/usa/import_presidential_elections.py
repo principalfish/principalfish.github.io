@@ -13,7 +13,7 @@ Run ``import_parties.py`` and the electoral-vote migration/bootstrap first.
 
 Usage:
     python old_data/scripts/usa/import_presidential_elections.py \
-        --file old_data/files/usa/presidential-2024.json \
+        --file inputs/us/presidential-2024.json \
         --year 2024 --name "2024 US Presidential Election"
 """
 

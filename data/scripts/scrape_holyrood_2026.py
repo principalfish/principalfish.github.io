@@ -21,7 +21,7 @@ Usage from CLI:
     python scripts/scrape_holyrood_2026.py --dry-run
 
     python scripts/scrape_holyrood_2026.py \
-        --out-dir old_data/files/holyrood
+        --out-dir inputs/holyrood
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ WIKI_URL = (
 DEFAULT_MAP_NAME = "Scottish Parliament Constituencies 2026"
 
 DEFAULT_OUT_DIR = (
-    Path(__file__).resolve().parent.parent / "old_data" / "files" / "holyrood"
+    Path(__file__).resolve().parent.parent / "inputs" / "holyrood"
 )
 
 CONSTITUENCY_FILENAME = "holyrood-2026.json"
@@ -1054,7 +1054,7 @@ def main() -> None:
         --map-name (str, optional): Map used for seat and region resolution;
             defaults to :data:`DEFAULT_MAP_NAME`.
         --out-dir (Path, optional): Directory to write the JSON files into;
-            defaults to ``data/old_data/files/holyrood/``.
+            defaults to ``data/inputs/holyrood/``.
         --dry-run (flag): If set, parse and print only — no files are written.
     """
     parser = argparse.ArgumentParser(

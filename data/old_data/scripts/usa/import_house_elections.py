@@ -14,7 +14,7 @@ Run ``import_parties.py`` first so the US Party rows exist.
 
 Usage:
     python old_data/scripts/usa/import_house_elections.py \
-        --file old_data/files/usa/house-2024.json \
+        --file inputs/us/house-2024.json \
         --year 2024 --name "2024 US House Election"
 """
 

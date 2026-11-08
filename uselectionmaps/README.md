@@ -22,7 +22,7 @@ Senate class 1/2/3. Two generators write it:
 - `scripts/us_results/current_senate.py` derives it from the 2026 results: the 65 holdovers
   (every senator whose seat the 2026 election did not contest) plus the 2026 winners, being
   the 33 class 2 regular winners and the Florida and Ohio special winners (class 3), named
-  from the winning party's row. It reads the committed `old_data/files/usa/senate-2026.json`
+  from the winning party's row. It reads the committed `inputs/us/senate-2026.json`
   (and the specials file its `meta.special_file` names, a plain file name in the same
   folder), never the database.
 

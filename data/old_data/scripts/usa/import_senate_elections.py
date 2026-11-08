@@ -15,10 +15,10 @@ Run ``import_parties.py`` first so the US Party rows exist.
 
 Usage:
     python old_data/scripts/usa/import_senate_elections.py \
-        --file old_data/files/usa/senate-2024.json \
+        --file inputs/us/senate-2024.json \
         --year 2024 --name "2024 US Senate Election"
     python old_data/scripts/usa/import_senate_elections.py \
-        --file old_data/files/usa/senate-2024-special.json \
+        --file inputs/us/senate-2024-special.json \
         --year 2024 --name "2024 US Senate Special Election" \
         --parent-name "2024 US Senate Election"
 """

@@ -20,7 +20,7 @@ Usage:
     python old_data/scripts/usa/convert_538_presidential.py \
         --csv /path/to/election_results_presidential.csv \
         --year 2024 \
-        --out old_data/files/usa/presidential-2024.json
+        --out inputs/us/presidential-2024.json
 """
 
 from __future__ import annotations

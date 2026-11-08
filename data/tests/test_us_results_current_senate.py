@@ -761,5 +761,5 @@ class TestCli:
 
         assert args.snapshot == DEFAULT_SNAPSHOT
         assert args.election_file.name == "senate-2026.json"
-        assert args.election_file.parent.name == "usa"
+        assert args.election_file.parent.name == "us"
         assert args.out is None and args.dry_run is False

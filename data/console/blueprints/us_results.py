@@ -26,7 +26,7 @@ repeating them:
 
 The out-dir and the NYT cache come from the app config keys
 :data:`OUT_DIR_CONFIG` and :data:`CACHE_DIR_CONFIG`, defaulting to the CLI's
-``old_data/files/usa`` and ``config.NYT_CACHE_DIR``; the Current Senate file
+``inputs/us`` and ``config.NYT_CACHE_DIR``; the Current Senate file
 from :data:`SNAPSHOT_CONFIG`, defaulting to the committed snapshot. Tests point
 all three at a temporary folder.
 

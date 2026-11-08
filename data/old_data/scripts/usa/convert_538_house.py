@@ -43,7 +43,7 @@ Usage:
     python old_data/scripts/usa/convert_538_house.py \
         --csv /path/to/election_results_house.csv \
         --year 2024 \
-        --out old_data/files/usa/house-2024.json
+        --out inputs/us/house-2024.json
 """
 
 from __future__ import annotations

@@ -100,7 +100,7 @@ from us_import import (  # noqa: E402
     plan_us_election,
 )
 
-DEFAULT_OUT_DIR = DATA_DIR / "old_data" / "files" / "usa"
+DEFAULT_OUT_DIR = DATA_DIR / "inputs" / "us"
 DEFAULT_TOP_N = 10
 # The subcommand with its own options (no year or chamber); see _run_current_senate.
 CURRENT_SENATE_COMMAND = "current-senate"

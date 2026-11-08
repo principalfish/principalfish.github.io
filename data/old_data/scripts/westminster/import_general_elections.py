@@ -45,7 +45,7 @@ PRE_2019_MAP_NAME_CANDIDATES = (
     "UK Constituencies pre-2019",
 )
 
-FILES_DIR = Path(__file__).resolve().parents[2] / "files" / "westminster"
+FILES_DIR = Path(__file__).resolve().parents[3] / "inputs" / "westminster"
 
 
 @dataclass(frozen=True)

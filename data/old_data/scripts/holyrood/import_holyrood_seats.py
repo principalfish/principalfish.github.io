@@ -7,7 +7,7 @@ Seat geometry is not stored in the database — the site renders from the commit
 That constituency -> region mapping has no other clean upstream source (the
 boundary GeoJSON carries names but no region, and the election results carry
 neither), so it is committed as genuine source data at
-``old_data/files/holyrood/constituency_regions.json`` (canonical full region
+``inputs/holyrood/constituency_regions.json`` (canonical full region
 names). This importer reads only that file — it never reads the render-tree
 TopoJSON, so the rebuild is not circular.
 
@@ -33,8 +33,8 @@ from db import Database
 from schema import Map
 
 SOURCE_FILE = (
-    Path(__file__).resolve().parents[2]
-    / "files"
+    Path(__file__).resolve().parents[3]
+    / "inputs"
     / "holyrood"
     / "constituency_regions.json"
 )

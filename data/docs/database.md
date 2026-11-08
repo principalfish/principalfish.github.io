@@ -95,16 +95,16 @@ you can also run any one directly with `--refresh`:
 ./election_data/bin/python old_data/scripts/westminster/import_topojson.py --refresh
 ./election_data/bin/python old_data/scripts/import_region_populations.py \
 	--map-name "UK Constituencies post 2022" \
-	--input old_data/files/westminster/region_populations.csv
+	--input inputs/westminster/region_populations.csv
 ./election_data/bin/python old_data/scripts/westminster/import_general_elections.py --refresh
 ./election_data/bin/python old_data/scripts/holyrood/import_holyrood_seats.py --refresh
 ./election_data/bin/python old_data/scripts/holyrood/import_holyrood_elections.py --refresh
 ./election_data/bin/python old_data/scripts/usa/import_house_elections.py \
-	--file old_data/files/usa/house-2024.json --year 2024 \
+	--file inputs/us/house-2024.json --year 2024 \
 	--name "2024 US House Election" --refresh      # + senate / presidential per file
 ./election_data/bin/python scripts/by_election_import.py \
 	--url <wikipedia-url> --refresh                # one per line in
-	                                               # old_data/files/westminster/by_elections.txt
+	                                               # inputs/westminster/by_elections.txt
 ```
 
 Seat boundary geometry is **not** stored in the database — the site renders from

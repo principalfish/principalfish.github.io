@@ -6,8 +6,8 @@ Usage:
     python old_data/scripts/westminster/import_topojson.py --skip-existing
 
 Loads:
-    - old_data/files/westminster/650map.json     → map "UK Constituencies pre 2019"
-    - old_data/files/westminster/650map_new.json → map "UK Constituencies post 2022"
+    - inputs/westminster/650map.json           → map "UK Constituencies pre 2019"
+    - inputs/westminster/650map_new.json       → map "UK Constituencies post 2022"
 """
 
 import argparse
@@ -268,7 +268,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    base = Path(__file__).resolve().parents[2] / "files" / "westminster"
+    base = Path(__file__).resolve().parents[3] / "inputs" / "westminster"
     db = Database()
     db.create_tables()
 

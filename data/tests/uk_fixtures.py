@@ -55,7 +55,7 @@ WESTMINSTER_REGION_NAMES: tuple[str, ...] = (
     "Yorkshire and The Humber",
 )
 
-# Region populations as the live map holds them (old_data region_populations.csv),
+# Region populations as the live map holds them (inputs/westminster/region_populations.csv),
 # so the poll-base apportioning and the n resolver's estimate have real weights.
 WESTMINSTER_REGION_POPULATIONS: Mapping[str, int] = MappingProxyType(
     {

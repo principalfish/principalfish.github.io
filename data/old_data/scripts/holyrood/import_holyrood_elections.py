@@ -3,7 +3,7 @@
 Imports constituency results (73 FPTP seats) and regional list results
 (56 d'Hondt seats, 7 per region) for the 2011, 2016, 2021 and 2026 elections.
 
-Data files are expected in old_data/files/holyrood/:
+Data files are expected in inputs/holyrood/:
     holyrood-2011.json    — 2011 constituency results
     holyrood-2016.json    — 2016 constituency results
     holyrood-2021.json    — 2021 constituency results
@@ -69,7 +69,7 @@ MAP_NAME_CANDIDATES = (
     "Scottish Parliament Constituencies 2021",
 )
 
-FILES_DIR = Path(__file__).resolve().parents[2] / "files" / "holyrood"
+FILES_DIR = Path(__file__).resolve().parents[3] / "inputs" / "holyrood"
 
 LIST_SEATS_PER_REGION = 7
 

@@ -17,6 +17,7 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 | `console/` | Local web console for the data (`create_app`) |
 | `server.py` | Local data preview server (`:5055`) |
 | `archive/` | Finished one-offs and retired setup files (not maintained, not type-checked; see its README) |
+| `inputs/` | Committed source data files per jurisdiction (`westminster/`, `holyrood/`, `us/`) read by the importers |
 | `old_data/` | Base-data importers (TopoJSON maps, parties, general elections) |
 | `polls/` | Wikipedia-driven poll importers |
 | `models/` | Election models — `westminster/`, `holyrood/` (UNS retrospective), `us/` (House, President, Senate forecasts) |

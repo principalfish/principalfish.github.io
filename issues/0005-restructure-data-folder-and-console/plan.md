@@ -180,7 +180,7 @@ Every piece also meets the standard proof in **Verification**.
 
 ## Checkpoints
 
-- [ ] 1: Editable install, archive folder, dead files, baselines
+- [x] 1: Editable install, archive folder, dead files, baselines
 - [ ] 2: `schema.py` and `models/` package
 - [ ] 3: `inputs/`
 - [ ] 4: UK and poll importers
@@ -213,4 +213,4 @@ Every piece also meets the standard proof in **Verification**.
 - 2026-11-08: Updated for `bd9d4879`, which split the root README into `data/README.md`, `data/docs/*.md` and per-area READMEs. Piece 1 now documents the install, piece 10's docs list follows the new files, and `callers.md` was regenerated at that commit. `findings/*.md` keep their older README line numbers as history.
 - 2026-11-08, piece 1: built on Sonnet (experiment), inline (small piece). One analysis round: style raised 3 doc fixes (root README install line, `archive/` row in the Layout table, Python version), correctness raised the same version mismatch and an over-claim in the data/README install paragraph; all fixed (`requires-python` loosened to `>=3.10` to match the docs). Security and common-mistakes clean. Verifier not spawned: every finding was a checked doc fact, fixed rather than disputed. No changed-lines coverage run: the only changed Python is the new test file.
 - Baselines for later pieces are in `baselines/` in this folder: `pytest-ids.txt` (6569 IDs), `url-map.txt` (75 rules), `export-dry-run.txt`, `rebuild-dry-run.txt`. Piece 1 adds 4 tests (`test_project_layout.py`), so pytest IDs are 6573 now.
-- `tests/conftest.py:15` still does a `sys.path.insert` that masks the editable install in tests; piece 10 removes it. The planner tools' `setup-worktree.sh` doesn't run the editable install yet; new worktrees need it by hand until it does.
+- `tests/conftest.py:15` still does a `sys.path.insert` that masks the editable install in tests; piece 10 removes it. `tests/test_project_layout.py` uses `import db`; piece 9 must update it when `db.py` moves. (The planner tools' `setup-worktree.sh` runs the editable install once `data/pyproject.toml` exists.)

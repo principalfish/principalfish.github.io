@@ -13,12 +13,13 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - Also in scope: consolidated templates, consistent URLs with redirects on GET pages only, missing confirms and small fixes, a run log, new Holyrood and US diagnostic views, and background runs with live progress as the final pieces (user, 2026-11-08)
 - The pain to fix: finding things, running and waiting, inconsistent pages, looks and readability (user, 2026-11-08)
 - Must stay exactly: every transparency view and number, CSRF and host pinning, the backup hook, preview tokens, `expected_index`, locks, dry-run defaults, existing confirms
+- Each model run form has an "export when done" tick box, on by default for real runs (user, 2026-11-08)
+- Run log and background job records are files beside the database, one per run and pruned to a set number; no schema change (user, 2026-11-08)
+- No "run all US" action: House, Senate and President each run on their own (user, 2026-11-08)
+- Holyrood and US diagnostics should match Westminster's depth (user, 2026-11-08); what that covers is open
 
 ## Open
-- Does a model run still export automatically, now that export has its own page?
-- Where the run log and background job state live.
-- How deep the new Holyrood and US diagnostics go.
-- Whether a "run all US" action survives the split into three sections.
+- What "match Westminster's depth" covers. Westminster's 12 pages sit on a Monte Carlo uncertainty model that Holyrood and US don't have on master. Showing every stage of the existing models is console and runner work; adding simulations is modelling work.
 
 ## Assumed
 - US matchups go to their own section (President, Senate, House); NYT results to House and Senate (there is no presidential NYT source); Current Senate to Senate

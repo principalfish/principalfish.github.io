@@ -96,6 +96,33 @@ config reliability uses the deployed scales, rounded to 2 dp (σ_seat 4.90,
 `swing.pooled.sigma_seat_raw` and `swing.pooled.sigma_lambda` in
 `data/models/westminster/uncertainty_calibration_report.json`).
 
+### One-off upgrade and evidence scripts
+
+`SIMULATIONS_PATH` (see `.env_example`; default
+`/home/philiph/dbs/simulations/westminster-latest.npz`) is where each
+Westminster model run saves its raw Monte Carlo draws, unless run with
+`--no-raw-sims`. The console's Explore simulations pages read that file. It is
+reproducible and not part of the database backups.
+
+An existing database needs these once, in this order, from `data/`. Back up
+first (`scripts/backup_db.py`). Each takes `--dry-run`, which writes nothing:
+
+```bash
+./election_data/bin/python scripts/migrate_add_poll_bases.py          # 1. create poll_bases
+./election_data/bin/python scripts/migrate_add_model_uncertainty.py   # 2. create model_uncertainty
+./election_data/bin/python scripts/repair_poll_records.py             # 3. fix wrong sample sizes and dates
+./election_data/bin/python scripts/repair_regional_poll_rows.py       # 4. fix wrong regional shares
+./election_data/bin/python scripts/backfill_poll_bases.py             # 5. fill poll_bases from the sources
+```
+
+Steps 3 to 5 re-fetch poll sources, and step 5's matching relies on the values
+steps 3 and 4 correct, so keep that order. All five are safe to re-run.
+
+`scripts/build_final_poll_errors.py PATH/TO/PollBase.xlsx` is separate and
+needs no database: it rebuilds `data/models/westminster/uk_final_poll_errors.json`
+from a new PollBase edition, and `scripts/calibrate_uncertainty.py` then reads
+that table.
+
 ## Static site local preview (`/`, `/bio`, `/electionmaps`)
 
 Prerequisites:

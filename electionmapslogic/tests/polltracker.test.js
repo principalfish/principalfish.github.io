@@ -155,6 +155,20 @@ describe('parsePollTrackerData', () => {
     },
   );
 
+  it("skips every break with segmentBreaks off, so the series carry through a changed run", () => {
+    const parsed = parsePollTrackerData([
+      { as_of_date: "2026-06-01", parties: { 1: { s: 300, v: 40 } } },
+      { as_of_date: "2026-06-03", segment_id: "a", hung: 0.5, parties: { 2: { s: 10, v: 5, sl: 5, sh: 15 } } },
+      { as_of_date: "2026-06-05", segment_id: "b", hung: 0.5, parties: { 1: { s: 310, v: 41, sl: 210, sh: 410 } } },
+    ], { segmentBreaks: false });
+    expect(parsed.timeline.map((entry) => entry.dateKey))
+      .toEqual(["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04", "2026-06-05"]);
+    const party = parsed.seriesByParty.get("1");
+    expect(party.seats).toEqual([300, 300, 300, 300, 310]);
+    expect(party.votePct).toEqual([40, 40, 40, 40, 41]);
+    expect(party.latestSeats).toBe(310);
+  });
+
   it("keeps central-only Westminster history continuous without any segment metadata", () => {
     const parsed = parsePollTrackerData([
       { as_of_date: "2026-06-01", parties: { 1: { s: 300, v: 40 } } },

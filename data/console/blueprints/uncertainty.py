@@ -407,18 +407,24 @@ def uncertainty_validation() -> str:
     """Show saved offline diagnostics without running simulations or reading DB."""
     report = None
     error = None
+    config_error = None
     stale = False
     try:
         report = westminster_validation.read_report()
-        stale = report["identity"].get("config_hash") != config_hash(
-            load_uncertainty_config()
-        )
-    except (CalibrationError, UncertaintyConfigError) as exc:
+    except CalibrationError as exc:
         error = str(exc)
+    if report is not None:
+        try:
+            stale = report["identity"].get("config_hash") != config_hash(
+                load_uncertainty_config()
+            )
+        except UncertaintyConfigError as exc:
+            config_error = str(exc)
     return render_template(
         "uncertainty_validation.html",
         report=report,
         error=error,
+        config_error=config_error,
         stale=stale,
         fmt=fmt,
     )

@@ -143,7 +143,12 @@ def _require(
     requirement: str,
 ) -> None:
     value = getattr(config, name)
-    if not math.isfinite(value) or not is_valid(value):
+    try:
+        is_finite = math.isfinite(value)
+    except OverflowError as err:
+        # A JSON integer literal too large for a float.
+        raise UncertaintyConfigError(f"{name} is out of range, got {value!r}") from err
+    if not is_finite or not is_valid(value):
         raise UncertaintyConfigError(f"{name} must {requirement}, got {value!r}")
 
 
@@ -175,7 +180,9 @@ def load_uncertainty_config(path: Path | None = None) -> UncertaintyConfig:
         raise UncertaintyConfigError(f"cannot read {config_path}: {err}") from err
     try:
         data = json.loads(text)
-    except json.JSONDecodeError as err:
+    except ValueError as err:
+        # JSONDecodeError, or plain ValueError for an integer literal over
+        # Python's digit limit.
         raise UncertaintyConfigError(f"{config_path} is not valid JSON") from err
     if not isinstance(data, dict):
         raise UncertaintyConfigError(f"{config_path} must hold a JSON object")

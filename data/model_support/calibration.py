@@ -1297,7 +1297,11 @@ def _require_type(value: object, kind: type, where: str) -> Any:
 def _require_number(value: object, where: str) -> float:
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise CalibrationError(f"{where} must be a number")
-    number = float(value)
+    try:
+        number = float(value)
+    except OverflowError as err:
+        # A JSON integer literal too large for a float.
+        raise CalibrationError(f"{where} is out of range") from err
     if not math.isfinite(number):
         raise CalibrationError(f"{where} must be finite")
     return number
@@ -1308,7 +1312,9 @@ def _read_json(path: Path) -> object:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError) as err:
         raise CalibrationError(f"cannot read {path}: {err}") from err
-    except json.JSONDecodeError as err:
+    except ValueError as err:
+        # JSONDecodeError, or plain ValueError for an integer literal over
+        # Python's digit limit.
         raise CalibrationError(f"{path} is not valid JSON") from err
 
 

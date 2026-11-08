@@ -185,6 +185,37 @@ def test_cli_report_and_console(
     assert b"content hash" in response.data
 
 
+def test_malformed_config_keeps_a_valid_report_visible(
+    historical_database: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    app: Flask,
+) -> None:
+    output = tmp_path / "report.json"
+    assert (
+        validate_westminster_uncertainty.main(
+            [
+                "--database",
+                str(historical_database),
+                "--skip-replay",
+                "--simulations",
+                "10",
+                "--output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+    malformed = tmp_path / "uncertainty_config.json"
+    malformed.write_text("{", encoding="utf-8")
+    monkeypatch.setattr("model_support.westminster_validation.REPORT_PATH", output)
+    monkeypatch.setattr("model_support.uncertainty.UNCERTAINTY_CONFIG_PATH", malformed)
+    response = app.test_client().get("/westminster/uncertainty/validation")
+    assert response.status_code == 200
+    assert b"National leave-one-out coverage" in response.data
+    assert b"Cannot compare this report with the current config" in response.data
+
+
 def test_cli_refuses_input_output_overlap(historical_database: Path) -> None:
     before = historical_database.read_bytes()
     assert (

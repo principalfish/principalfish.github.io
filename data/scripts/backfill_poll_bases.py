@@ -22,8 +22,10 @@ Anything else — no importer for the pollster, no ``source_url``, a fetch or
 parse failure (404, layout change), a mismatch, a source that prints no
 usable base — is reported as a skip with its reason and left for the n
 resolver's fallbacks (``model_support.poll_bases``). Run
-``repair_regional_poll_rows.py`` first: polls whose stored regional rows that
-script repairs would otherwise fail the regional share check here.
+``repair_poll_records.py`` and then ``repair_regional_poll_rows.py`` first: a
+poll whose stored sample size the former corrects would otherwise fail the
+sample-size check here, and one whose stored regional rows the latter repairs
+would fail the regional share check.
 
 ``--dry-run`` opens the database read-only and prints the plan and the
 coverage it would reach. Without it, every insert is written in one

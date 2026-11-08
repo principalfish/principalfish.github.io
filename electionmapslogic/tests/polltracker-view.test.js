@@ -86,10 +86,10 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
     input.dispatchEvent(new window.Event("change"));
   };
 
-  it("defaults to seats without uncertainty, selects both parties, and draws the real chart", async () => {
+  it("defaults to seats and Vote % without uncertainty, selects both parties, and draws the real chart", async () => {
     await view.activatePollTrackerMode();
     expect(document.getElementById("mapsPollTrackerMetricSeats").checked).toBe(true);
-    expect(document.getElementById("mapsPollTrackerMetricVotes").checked).toBe(false);
+    expect(document.getElementById("mapsPollTrackerMetricVotes").checked).toBe(true);
     expect(document.getElementById("mapsPollTrackerShowUncertainty").checked).toBe(false);
     expect(document.getElementById("mapsPollTrackerUncertaintyToggle").hidden).toBe(false);
     expect([...document.querySelectorAll(".maps-polltracker-party-toggle input")].map((node) => [node.value, node.checked]))
@@ -98,7 +98,72 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
     expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(0);
     tickUncertainty();
     expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(2);
-    expect(document.querySelectorAll(".maps-polltracker-band-shade")).toHaveLength(32);
+    expect(document.querySelectorAll(".maps-polltracker-band--votes")).toHaveLength(2);
+    expect(document.querySelectorAll(".maps-polltracker-band-shade")).toHaveLength(64);
+  });
+
+  it("shows the radios and note only while Uncertainty is ticked", async () => {
+    await view.activatePollTrackerMode();
+    const radios = document.getElementById("mapsPollTrackerViewControls");
+    const note = document.getElementById("mapsPollTrackerUncertaintyNote");
+    expect([radios.hidden, note.hidden, note.textContent]).toEqual([true, true, ""]);
+    tickUncertainty();
+    expect([radios.hidden, note.hidden]).toEqual([false, false]);
+    expect(note.textContent).toContain("Shaded bands show 90%");
+    tickUncertainty(false);
+    expect([radios.hidden, note.hidden, note.textContent]).toEqual([true, true, ""]);
+  });
+
+  it("returns to Seats & votes when Uncertainty is unticked on Chances, the box staying reachable", async () => {
+    await view.activatePollTrackerMode();
+    tickUncertainty();
+    const chance = document.querySelector('[data-polltracker-view="chances"]');
+    chance.checked = true;
+    chance.dispatchEvent(new window.Event("change"));
+    const toggle = document.getElementById("mapsPollTrackerUncertaintyToggle");
+    expect(document.getElementById("mapsPollTrackerMetrics").hidden).toBe(true);
+    expect(toggle.hidden).toBe(false);
+    expect(toggle.closest("[hidden]")).toBeNull();
+    expect(document.getElementById("mapsPollTrackerChartWrap").textContent).toContain("Dotted = Hung");
+    tickUncertainty(false);
+    expect(document.querySelector('[data-polltracker-view="totals"]').checked).toBe(true);
+    expect(chance.checked).toBe(false);
+    expect(document.getElementById("mapsPollTrackerMetrics").hidden).toBe(false);
+    expect(document.getElementById("mapsPollTrackerChanceControls").hidden).toBe(true);
+    expect(document.getElementById("mapsPollTrackerChartWrap").textContent).toContain("Solid = Seats, Dashed = Vote %");
+  });
+
+  it("keeps the Seats and Vote % controls on the one row with the date range unless ticked", async () => {
+    const css = document.createElement("style");
+    css.textContent = readFileSync(new URL("../maps.css", import.meta.url), "utf8");
+    document.head.appendChild(css);
+    await view.activatePollTrackerMode();
+    const display = (selector) => window.getComputedStyle(document.querySelector(selector)).display;
+    const card = window.getComputedStyle(document.querySelector(".maps-polltracker-card"));
+    const flow = [...document.querySelectorAll(
+      "#mapsPollTrackerMetricSeats, #mapsPollTrackerMetricVotes, #mapsPollTrackerShowUncertainty, .maps-polltracker-range-group",
+    )].map((node) => node.id || "range");
+    expect(flow).toEqual(["mapsPollTrackerMetricSeats", "mapsPollTrackerMetricVotes", "mapsPollTrackerShowUncertainty", "range"]);
+    expect(display(".maps-polltracker-secondary")).toBe("contents");
+    expect(display("#mapsPollTrackerMetrics")).toBe("contents");
+    expect(card.gridTemplateRows).toBe("auto auto auto minmax(0, 1fr)");
+    tickUncertainty();
+    expect(display(".maps-polltracker-secondary")).toBe("flex");
+    expect(display("#mapsPollTrackerMetrics")).toBe("inline-flex");
+    expect(window.getComputedStyle(document.querySelector(".maps-polltracker-card")).gridTemplateRows)
+      .toBe("auto auto auto auto minmax(0, 1fr)");
+  });
+
+  it("names the vote figure Vote % in the tooltip, with no ranges unticked", async () => {
+    await view.activatePollTrackerMode();
+    const hover = () => {
+      document.querySelector('#mapsPollTrackerChartWrap path[stroke="transparent"]')
+        .dispatchEvent(new window.MouseEvent("mousemove", { clientX: 300, clientY: 100, bubbles: true }));
+      return [...document.querySelector(".maps-polltracker-tooltip").children].map((node) => node.textContent);
+    };
+    expect(hover().slice(2)).toEqual(["Seats: 320", "Vote %: 38.00%"]);
+    tickUncertainty();
+    expect(hover().slice(2)).toEqual(["Seats: 320", "Vote %: 38.00%", "90% seat range: 280–360", "90% vote range: 35.00–41.00%"]);
   });
 
   it("puts the latest poll below the chart, outside the tracker card and the subtitle", async () => {
@@ -125,6 +190,7 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
 
   it("switches to majority / hung chances with the largest-party measure available", async () => {
     await view.activatePollTrackerMode();
+    tickUncertainty();
     expect(document.getElementById("mapsPollTrackerViewControls").hidden).toBe(false);
     const chance = document.querySelector('[data-polltracker-view="chances"]');
     chance.checked = true;
@@ -182,14 +248,15 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
       input.dispatchEvent(new window.Event("change"));
     };
     const MODES = {
-      "Seats only": () => {},
-      "Seats and Vote %": () => change("#mapsPollTrackerMetricVotes"),
-      "Vote % only": () => {
-        change("#mapsPollTrackerMetricVotes");
-        change("#mapsPollTrackerMetricSeats", false);
+      "Seats only": () => change("#mapsPollTrackerMetricVotes", false),
+      "Seats and Vote %": () => {},
+      "Vote % only": () => change("#mapsPollTrackerMetricSeats", false),
+      "Chances, majority": () => {
+        tickUncertainty();
+        change('[data-polltracker-view="chances"]');
       },
-      "Chances, majority": () => change('[data-polltracker-view="chances"]'),
       "Chances, largest party": () => {
+        tickUncertainty();
         change('[data-polltracker-view="chances"]');
         change('[data-polltracker-chance="pLargest"]');
       },
@@ -296,11 +363,47 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
       fetchJson.mockResolvedValue(historyWithElectionDay());
       await view.activatePollTrackerMode();
       MODES["Seats and Vote %"]();
-      const length = state.pollTrackerData.timeline.length;
+      const length = state.pollTrackerData.continuous.timeline.length;
       expect(length).toBeGreaterThan(40);
       expect(labourPath().__data__).toHaveLength(length);
       expect(labourPath().__data__[0]).toBe(411);
       expect(labourPath().getAttribute("d")).toMatch(/^M0,/);
+    });
+
+    const axisTops = () => {
+      const labels = [...document.querySelectorAll(".maps-polltracker-axis .tick text")].map((node) => node.textContent);
+      const top = (pattern) => Math.max(...labels.filter((label) => pattern.test(label)).map(Number.parseFloat));
+      return { seats: top(/^[\d,]+$/), votes: top(/%$/) };
+    };
+
+    it("sizes the axes to the drawn bands only while they are shown", async () => {
+      fetchJson.mockResolvedValue(history().map((run) => ({
+        ...run, parties: { ...run.parties, 20: { ...run.parties[20], sh: 500, vh: 60 } },
+      })));
+      await view.activatePollTrackerMode();
+      expect(axisTops()).toEqual({ seats: 350, votes: 45 });
+      tickUncertainty();
+      expect(axisTops()).toEqual({ seats: 500, votes: 60 });
+      tickUncertainty(false);
+      expect(axisTops()).toEqual({ seats: 350, votes: 45 });
+    });
+
+    it("runs each line through the election-day point unticked, and keeps it separate ticked", async () => {
+      fetchJson.mockResolvedValue(historyWithElectionDay());
+      await view.activatePollTrackerMode();
+      const votePath = () => document.querySelector('#mapsPollTrackerChartWrap path[stroke="#e4003b"][stroke-dasharray]');
+      expect(labourPath().__data__).not.toContain(null);
+      expect(labourPath().getAttribute("d").match(/M/g)).toHaveLength(1);
+      expect(votePath().__data__).not.toContain(null);
+      expect(votePath().getAttribute("d").match(/M/g)).toHaveLength(1);
+      expect(labourPath().__data__).toHaveLength(state.pollTrackerData.continuous.timeline.length);
+      tickUncertainty();
+      expect(labourPath().__data__).toContain(null);
+      expect(labourPath().getAttribute("d").match(/M/g)).toHaveLength(2);
+      expect(votePath().getAttribute("d").match(/M/g)).toHaveLength(2);
+      expect(labourPath().__data__).toHaveLength(state.pollTrackerData.timeline.length);
+      tickUncertainty(false);
+      expect(labourPath().getAttribute("d").match(/M/g)).toHaveLength(1);
     });
 
     it("draws the uniform-swing seats unticked, and each run's mean with the bands ticked", async () => {
@@ -311,13 +414,13 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
       await view.activatePollTrackerMode();
       MODES["Seats only"]();
       const note = () => document.getElementById("mapsPollTrackerUncertaintyNote").textContent;
-      // Unticked (the default): the uniform-swing `s` line, no bands.
+      // Unticked (the default): the uniform-swing `s` line, no bands, no note.
       let seats = labourPath().__data__;
       expect(seats[0]).toBe(411);
       expect(seats.at(-1)).toBe(320);
       expect(seats).not.toContain(317.4);
       expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(0);
-      expect(note()).toBe("Seat lines show the uniform-swing count. Tick Uncertainty for the simulated mean seats and 90% ranges.");
+      expect(note()).toBe("");
       // Ticked: the mean `sm` line, the election-day result kept, and the bands.
       tickUncertainty();
       seats = labourPath().__data__;

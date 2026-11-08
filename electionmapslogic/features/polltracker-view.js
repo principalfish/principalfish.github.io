@@ -127,12 +127,16 @@ export function renderPollTracker() {
 
 function renderPollTrackerUncertaintyControls() {
   const capabilities = pollTrackerCapabilities(state.pollTrackerData);
-  if (!capabilities.chances) chartMode = "totals";
+  const offered = capabilities.bands || capabilities.chances;
+  const shown = offered && pollTrackerUncertaintyShown();
+  // Chances sit behind the Uncertainty box, so unticking it leaves that view.
+  if (!capabilities.chances || !shown) chartMode = "totals";
   const chances = chartMode === "chances";
-  document.getElementById("mapsPollTrackerViewControls").hidden = !capabilities.chances;
+  document.getElementById("mapsPollTrackerView").classList.toggle("is-uncertainty-shown", shown);
+  document.getElementById("mapsPollTrackerViewControls").hidden = !(shown && capabilities.chances);
   document.getElementById("mapsPollTrackerChanceControls").hidden = !chances;
   document.getElementById("mapsPollTrackerMetrics").hidden = chances;
-  document.getElementById("mapsPollTrackerUncertaintyToggle").hidden = !capabilities.bands;
+  document.getElementById("mapsPollTrackerUncertaintyToggle").hidden = !offered;
   for (const [attribute, selected] of [["data-polltracker-view", chartMode], ["data-polltracker-chance", chanceMetric]]) {
     // Keeps the radios in step with the mode (e.g. falling back to totals when the
     // data has no chances).
@@ -141,11 +145,10 @@ function renderPollTrackerUncertaintyControls() {
     });
   }
   const note = document.getElementById("mapsPollTrackerUncertaintyNote");
-  note.hidden = !capabilities.bands && !capabilities.chances;
-  note.textContent = pollTrackerUncertaintyNote(capabilities, {
+  note.hidden = !shown;
+  note.textContent = shown ? pollTrackerUncertaintyNote(capabilities, {
     chances, seats: pollTrackerMetricSeatsInput?.checked, votes: pollTrackerMetricVotesInput?.checked,
-    bands: pollTrackerUncertaintyShown(),
-  });
+  }) : "";
 }
 
 /**
@@ -156,6 +159,15 @@ function renderPollTrackerUncertaintyControls() {
  */
 function pollTrackerUncertaintyShown() {
   return pollTrackerShowUncertaintyInput ? pollTrackerShowUncertaintyInput.checked : true;
+}
+
+/**
+ * The parsed data the chart draws: unticked, the series with no segment breaks; ticked, the
+ * series broken at each segment boundary so a run's bands never join across one.
+ * @returns {{timeline: Array, seriesByParty: Map}}
+ */
+function pollTrackerDrawnData() {
+  return pollTrackerUncertaintyShown() ? state.pollTrackerData : state.pollTrackerData.continuous ?? state.pollTrackerData;
 }
 
 /**
@@ -187,7 +199,7 @@ function renderPollTrackerChart() {
 
   // Bail with a friendly message if there's no data, or if the user
   //    has deselected everything (no parties, or no metric).
-  if (!state.pollTrackerData.timeline.length) {
+  if (!pollTrackerDrawnData().timeline.length) {
     pollTrackerChartWrap.innerHTML = `<div class="${POLLTRACKER_EMPTY_CLASS}">No poll tracker data available.</div>`;
     return;
   }
@@ -212,7 +224,7 @@ function renderPollTrackerChart() {
     ? chanceSeries(ordinarySeries, chanceMetric, state.pollTrackerData.hung.slice(windowStart)) : ordinarySeries;
   const { ySeats, yVotePct } = chances
     ? { ySeats: null, yVotePct: d3.scaleLinear().domain([0, 100]).range([innerHeight, 0]) }
-    : pollTrackerYScales(selectedSeries, innerHeight);
+    : pollTrackerYScales(selectedSeries, innerHeight, pollTrackerUncertaintyShown());
   const { seatsLine, votePctLine } = pollTrackerLineGenerators({ useTimeScale, x, visibleTimeline, ySeats, yVotePct });
 
   // Paint background grid and axes.
@@ -254,7 +266,7 @@ function renderPollTrackerChart() {
  * @returns {{visibleTimeline: Array<{dateKey: string, dateValue: Date}>, windowStart: number}}
  */
 function pollTrackerWindow(chances = false) {
-  const timeline = state.pollTrackerData.timeline;
+  const timeline = pollTrackerDrawnData().timeline;
   const activeBtn = document.querySelector(`[${POLLTRACKER_RANGE_ATTR}].is-active`);
   const requested = Number(activeBtn?.getAttribute(POLLTRACKER_RANGE_ATTR));
   const windowSize = Number.isFinite(requested) && requested > 0
@@ -360,7 +372,7 @@ function pollTrackerXScale(visibleTimeline, innerWidth) {
  */
 function pollTrackerSelectedSeries(selectedParties, windowStart, showMean = true) {
   return selectedParties
-    .map((partyKey) => state.pollTrackerData.seriesByParty.get(partyKey))
+    .map((partyKey) => pollTrackerDrawnData().seriesByParty.get(partyKey))
     .filter(Boolean)
     .map((series) => ({
       ...series,
@@ -379,14 +391,19 @@ function pollTrackerSelectedSeries(selectedParties, windowStart, showMean = true
 
 /**
  * Builds the two Y scales. Each metric gets 8% headroom (`* 1.08`); vote-% is capped at 100.
- * `.nice()` rounds the domain to friendly tick boundaries.
- * @param {Array<{seats: Array<number|null>, votePct: Array<number|null>}>} selectedSeries
+ * `.nice()` rounds the domain to friendly tick boundaries. The bands' upper edges count towards
+ * the domain only while the bands are drawn.
+ * @param {Array<{seats: Array<number|null>, votePct: Array<number|null>, seatHi: Array<number|null>, voteHi: Array<number|null>}>} selectedSeries
  * @param {number} innerHeight
+ * @param {boolean} withBands - Whether the 90% bands are drawn
  * @returns {{ySeats: object, yVotePct: object}}
  */
-function pollTrackerYScales(selectedSeries, innerHeight) {
-  const seatsMax = d3.max(selectedSeries.flatMap((series) => [...series.seats, ...series.seatHi].filter(Number.isFinite))) || 1;
-  const votePctMax = d3.max(selectedSeries.flatMap((series) => [...series.votePct, ...series.voteHi].filter(Number.isFinite))) || 1;
+function pollTrackerYScales(selectedSeries, innerHeight, withBands) {
+  const maxOf = (key, bandKey) => d3.max(selectedSeries.flatMap((series) => (
+    withBands ? [...series[key], ...series[bandKey]] : series[key]
+  ).filter(Number.isFinite))) || 1;
+  const seatsMax = maxOf("seats", "seatHi");
+  const votePctMax = maxOf("votePct", "voteHi");
   return {
     ySeats: d3.scaleLinear().domain([0, seatsMax * 1.08]).nice().range([innerHeight, 0]),
     yVotePct: d3.scaleLinear().domain([0, Math.min(100, votePctMax * 1.08)]).nice().range([innerHeight, 0]),
@@ -658,7 +675,7 @@ function pollTrackerDrawLegend(svg, { width, margin, chances }) {
 function renderPollTrackerPartyControls() {
   // 1. Order parties so the largest (most recent projected seats) appears first;
   //    party name is used as a stable alphabetical tiebreaker on ties.
-  const partyRows = Array.from(state.pollTrackerData.seriesByParty.values())
+  const partyRows = Array.from(pollTrackerDrawnData().seriesByParty.values())
     .sort((a, b) => b.latestSeats - a.latestSeats || a.partyName.localeCompare(b.partyName));
 
   // 2. Decide which checkboxes start checked from the manifest's default party IDs.
@@ -710,7 +727,10 @@ export async function activatePollTrackerMode() {
   const dataPath = manifest.parliamentFeatures[state.currentParliament].polltrackerDataPath;
   const data = await fetchJson(`${DATA_BASE}/${dataPath}`);
   if (version !== activationVersion || state.currentParliament !== parliament || state.view !== "polltracker") return;
-  state.pollTrackerData = parsePollTrackerData(data);
+  state.pollTrackerData = {
+    ...parsePollTrackerData(data),
+    continuous: parsePollTrackerData(data, { segmentBreaks: false }),
+  };
   partyControlsRendered = false;
   chartMode = "totals";
   chanceMetric = "pMaj";

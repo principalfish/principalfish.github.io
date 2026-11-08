@@ -49,6 +49,9 @@ _OPTIONAL_REGION_PARTY_FIELDS = frozenset({"pm", "pl"})
 # last published place, after half a unit in the last stored place (the
 # published value is rounded again from an already rounded stored one).
 _ROUNDING = 0.5 * 10**-PROBABILITY_DIGITS + 0.5 * 10**-_STORED_PROBABILITY_DIGITS
+# The largest count a float holds exactly; seat and simulation counts are far
+# below it, and the means divide these counts as floats.
+_MAX_COUNT = 2**53
 
 
 class PublicUncertaintyError(ValueError):
@@ -97,14 +100,21 @@ def _number(value: object, where: str) -> float:
     # bool is an int subclass; a stored true/false is never a number here.
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise PublicUncertaintyError(f"{where}: expected a number")
-    if not math.isfinite(value):
+    try:
+        number = float(value)
+    except OverflowError as err:
+        # A JSON integer literal too large for a float.
+        raise PublicUncertaintyError(f"{where}: out of range") from err
+    if not math.isfinite(number):
         raise PublicUncertaintyError(f"{where}: not finite")
-    return float(value)
+    return number
 
 
 def _count(value: object, where: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise PublicUncertaintyError(f"{where}: expected a non-negative integer")
+    if value > _MAX_COUNT:
+        raise PublicUncertaintyError(f"{where}: out of range")
     return value
 
 
@@ -143,6 +153,8 @@ def _seat_mean(value: object, where: str) -> float:
     number = _number(value, where)
     if number < 0:
         raise PublicUncertaintyError(f"{where}: {number} is negative")
+    if number > _MAX_COUNT:
+        raise PublicUncertaintyError(f"{where}: out of range")
     return round(number, MEAN_SEAT_DIGITS)
 
 

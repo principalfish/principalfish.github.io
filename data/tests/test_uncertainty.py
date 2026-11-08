@@ -192,6 +192,7 @@ class TestLoadUncertaintyConfig:
             ('{"n_eff_cap": 1' + "0" * 400 + "}", "n_eff_cap is out of range"),
             ("[1.5]", "must hold a JSON object"),
             ("{not json", "is not valid JSON"),
+            ('{"simulations": 1' + "0" * 5000 + "}", "is not valid JSON"),
         ],
     )
     def test_malformed_file_raises(
@@ -201,6 +202,13 @@ class TestLoadUncertaintyConfig:
         path.write_text(text, encoding="utf-8")
 
         with pytest.raises(UncertaintyConfigError, match=message):
+            load_uncertainty_config(path)
+
+    def test_integer_too_large_for_a_float_raises(self, tmp_path: Path) -> None:
+        path = tmp_path / "uncertainty_config.json"
+        path.write_text(f'{{"simulations": 1{"0" * 400}}}', encoding="utf-8")
+
+        with pytest.raises(UncertaintyConfigError, match="simulations is out of range"):
             load_uncertainty_config(path)
 
     def test_non_utf8_file_raises(self, tmp_path: Path) -> None:

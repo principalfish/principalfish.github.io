@@ -528,6 +528,20 @@ class TestApplyRepairs:
         with pytest.raises(repair.StaleRowError):
             repair.apply_repairs(conn, items)
 
+    def test_poll_details_changed_since_planning_are_stale(
+        self, conn: sqlite3.Connection, seeded: _Seeded
+    ) -> None:
+        """Rows and bases can match while the poll itself has been edited."""
+        items = repair.plan_repairs(conn, _fetcher(_SOURCES), ["yougov"])
+        conn.execute(
+            "UPDATE polls SET source_url = source_url || '?edited' WHERE id = ?",
+            (seeded.broken_yougov.id,),
+        )
+        conn.commit()
+
+        with pytest.raises(repair.StaleRowError, match="poll details"):
+            repair.apply_repairs(conn, items)
+
     def test_a_re_parse_without_bases_keeps_the_stored_ones(
         self, conn: sqlite3.Connection, seeded: _Seeded
     ) -> None:

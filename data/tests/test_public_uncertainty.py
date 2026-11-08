@@ -216,6 +216,7 @@ class TestPublicDocument:
             (lambda n: n["parties"]["2"].update(v=[22.8]), r"\[lo, hi\]"),
             (lambda n: n["parties"]["2"].update(pm=-0.1), "outside 0-1"),
             (lambda n: n["parties"]["2"].update(pm=float("nan")), "not finite"),
+            (lambda n: n["parties"]["2"].update(pm=10**400), "out of range"),
             (lambda n: n.update(parties={"Labour": {}}), "integers"),
             (lambda n: n.pop("hung"), "national.hung"),
             # The mean is the histogram's, to its 2 dp.
@@ -231,6 +232,15 @@ class TestPublicDocument:
         change(stored)
         with pytest.raises(PublicUncertaintyError, match=message):
             publish(stored, regions())
+
+    @pytest.mark.parametrize("mean", [10**307, 1e308])
+    def test_region_mean_too_large_for_the_seat_rounding_is_refused(
+        self, mean: float
+    ) -> None:
+        stored_regions = regions()
+        stored_regions["14"]["parties"]["2"]["mean"] = mean
+        with pytest.raises(PublicUncertaintyError, match="out of range"):
+            publish(national(), stored_regions)
 
     def test_rounding_slack_is_accepted(self) -> None:
         stored = national()
@@ -410,6 +420,12 @@ class TestTrendUncertainty:
         stored = national()
         stored["parties"]["2"]["hist"]["counts"] = [1, 2]
         with pytest.raises(PublicUncertaintyError, match="!= 200"):
+            trend_uncertainty(stored)
+
+    def test_histogram_start_too_large_for_a_float_is_rejected(self) -> None:
+        stored = national()
+        stored["parties"]["2"]["hist"]["start"] = 10**400
+        with pytest.raises(PublicUncertaintyError, match="start: out of range"):
             trend_uncertainty(stored)
 
     @pytest.mark.parametrize(

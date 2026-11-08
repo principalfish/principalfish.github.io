@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from collections.abc import Callable
 from contextlib import closing
 from dataclasses import replace
 from datetime import timedelta
@@ -668,3 +669,144 @@ def test_hub_preview_ships_the_latest_date_after_an_older_rerun(
     assert f"<strong>UNS {DAY}</strong>" in body
     assert "4 of 4 seats gain u" in body
     assert "Not written" not in body
+
+
+EXPLORER_ROUTES = ["", "/0", "/0/seat/{seat}", "/seat/{seat}"]
+
+
+def _explorer_body(app: Flask, saved: dict[str, Any], suffix: str) -> str:
+    """Fetch one explorer page, which must render even when it reports an error."""
+    url = "/westminster/uncertainty/sims" + suffix.format(
+        seat=saved["draws"].seat_ids[0]
+    )
+    response = app.test_client().get(url)
+    assert response.status_code == 200
+    return response.get_data(as_text=True)
+
+
+@pytest.mark.parametrize("suffix", EXPLORER_ROUTES)
+def test_explorer_reports_a_bad_election_id(
+    app: Flask, saved: dict[str, Any], suffix: str
+) -> None:
+    body = _explorer_body(app, saved, f"{suffix}?election_id=oops")
+    assert "Invalid election id." in body
+
+
+@pytest.mark.parametrize("suffix", EXPLORER_ROUTES)
+def test_explorer_reports_an_unreadable_raw_file(
+    app: Flask, saved: dict[str, Any], suffix: str
+) -> None:
+    saved["path"].write_text("not zip")
+    assert "cannot read" in _explorer_body(app, saved, suffix)
+
+
+@pytest.mark.parametrize(
+    "suffix, message",
+    [
+        ("/50", "Simulation number is outside this run."),
+        ("/50/seat/{seat}", "Simulation number is outside this run"),
+    ],
+)
+def test_explorer_reports_a_simulation_out_of_range(
+    app: Flask, saved: dict[str, Any], suffix: str, message: str
+) -> None:
+    assert message in _explorer_body(app, saved, suffix)
+
+
+@pytest.mark.parametrize("suffix", ["/seat/999999", "/0/seat/999999"])
+def test_explorer_reports_an_unknown_seat(
+    app: Flask, saved: dict[str, Any], suffix: str
+) -> None:
+    assert "Seat is not in this simulation run" in _explorer_body(app, saved, suffix)
+
+
+@pytest.mark.parametrize("failure", [SimulationFileError, OSError])
+@pytest.mark.parametrize("suffix", ["/0", "/0/seat/{seat}", "/seat/{seat}"])
+def test_explorer_reports_a_replay_failure(
+    app: Flask,
+    saved: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+    suffix: str,
+    failure: type[Exception],
+) -> None:
+    def fail(path: Path, index: int) -> None:
+        raise failure("replay broke")
+
+    monkeypatch.setattr(explorer_blueprint, "replay", fail)
+    body = _explorer_body(app, saved, suffix)
+    assert '<p class="alert">replay broke</p>' in body
+
+
+def test_seat_page_explains_a_file_without_a_snapshot(
+    app: Flask, saved: dict[str, Any]
+) -> None:
+    save_draws(saved["path"], replace(saved["draws"], replay=None), saved["meta"])
+    body = _explorer_body(app, saved, "/seat/{seat}")
+    assert "Seat error SDs unavailable: no supported input snapshot." in body
+
+
+Corruption = Callable[[Any, Any], tuple[Any, Any]]
+
+
+def _stored_seat_removed(draws: Any, record: Any) -> tuple[Any, Any]:
+    seats = dict(list(record.stored.seats.items())[1:])
+    return draws, replace(record, stored=replace(record.stored, seats=seats))
+
+
+def _stored_region_removed(draws: Any, record: Any) -> tuple[Any, Any]:
+    regions = dict(list(record.stored.regions.items())[1:])
+    return draws, replace(record, stored=replace(record.stored, regions=regions))
+
+
+def _non_finite_draw(draws: Any, record: Any) -> tuple[Any, Any]:
+    lam = draws.lam.copy()
+    lam[0] = np.nan
+    return replace(draws, lam=lam, replay=None), record
+
+
+def _winner_changed(draws: Any, record: Any) -> tuple[Any, Any]:
+    winner = draws.winner.copy()
+    winner[0, 0] = (int(winner[0, 0]) + 1) % len(draws.party_ids)
+    return replace(draws, winner=winner, replay=None), record
+
+
+@pytest.mark.parametrize(
+    "corrupt, message",
+    [
+        (_stored_seat_removed, "Raw seat ids do not match"),
+        (_stored_region_removed, "Raw region ids do not match"),
+        (_non_finite_draw, "non-finite"),
+        (_winner_changed, "Raw seat winners do not match"),
+    ],
+)
+def test_corrupted_run_is_rejected(
+    saved: dict[str, Any], corrupt: Corruption, message: str
+) -> None:
+    draws, record = corrupt(saved["draws"], saved["record"])
+    save_draws(saved["path"], draws, saved["meta"])
+    with pytest.raises(SimulationFileError, match=message):
+        raw_run(saved["path"], record)
+
+
+@pytest.mark.parametrize("name", ["majority", "hung"])
+def test_threshold_filters_need_a_stored_threshold(
+    saved: dict[str, Any], name: str
+) -> None:
+    draws = saved["draws"]
+    value = str(draws.party_ids[0]) if name == "majority" else "yes"
+    with pytest.raises(SimulationFileError, match="Majority threshold was not stored"):
+        filter_draws(draws, {name: value}, None)
+
+
+def test_seat_decomposition_needs_a_snapshot(saved: dict[str, Any]) -> None:
+    draws = saved["draws"]
+    result = replay_simulation(draws, 0)
+    with pytest.raises(SimulationFileError, match="No supported input snapshot"):
+        seat_decomposition(replace(draws, replay=None), result, draws.seat_ids[0])
+
+
+def test_seat_decomposition_rejects_an_unknown_seat(saved: dict[str, Any]) -> None:
+    draws = saved["draws"]
+    result = replay_simulation(draws, 0)
+    with pytest.raises(SimulationFileError, match="Seat is not in this simulation"):
+        seat_decomposition(draws, result, 999999)

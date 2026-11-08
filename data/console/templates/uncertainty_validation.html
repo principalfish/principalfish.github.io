@@ -10,6 +10,9 @@
       {% if stale %}
         <p class="alert">This report uses different settings from the current config.</p>
       {% endif %}
+      {% if config_error %}
+        <p class="alert">Cannot compare this report with the current config: {{ config_error }}</p>
+      {% endif %}
       <p>
         Conditional seat-total coverage:
         <strong>{{ report.historical.coverage.covered }}/{{ report.historical.coverage.count }}</strong>

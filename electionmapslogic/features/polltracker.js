@@ -55,6 +55,8 @@ function seatMean(party) {
  *      forward only through calendar days with no run. Probabilities remain on a 0–1 scale.
  *
  * @param {Array} data - Parsed JSON array from the poll tracker data file.
+ * @param {{segmentBreaks?: boolean}} [options] - With `segmentBreaks: false`, no boundary entries
+ *   are inserted, so every line runs unbroken and carries forward across segment changes.
  * @returns {{
  *   timeline: Array<{dateKey: string, dateValue: Date}>,
  *   seriesByParty: Map<string, {
@@ -75,7 +77,7 @@ function seatMean(party) {
  *   hung: Array<number|null>
  * }} Chart-ready timeline and per-party series.
  */
-export function parsePollTrackerData(data) {
+export function parsePollTrackerData(data, { segmentBreaks = true } = {}) {
   const partiesById = manifest.partiesById;
 
   // 1. Flatten: one row per (entry, party).
@@ -156,7 +158,7 @@ export function parsePollTrackerData(data) {
   // For Westminster (model_uns) only, data/model_support/trends.py keeps equal-central
   // duplicates wherever this rule would break, so the exported rows carry every break.
   // Central-only history has no uncertainty to separate, so it never breaks.
-  {
+  if (segmentBreaks) {
     let previous;
     let lastSegment = null;
     timeline = timeline.flatMap((entry) => {

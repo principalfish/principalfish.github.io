@@ -34,20 +34,14 @@ export function pollTrackerCapabilities(data) {
 }
 
 /**
- * The note under the tracker controls. It says what the Uncertainty box switches: unticked, the
- * seat lines are the uniform-swing count with no bands; ticked, they are the simulated mean seats
- * with 90% bands. The seat-line sentence appears only while seats are drawn and the data has means.
+ * The note under the tracker controls, shown only while the Uncertainty box is ticked: the seat
+ * lines are the simulated mean seats with 90% bands. The seat-line sentence appears only while
+ * seats are drawn and the data has means.
  */
-export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes, bands = true }) {
+export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes }) {
   const basis = "if an election were held today, conditional on current polls and the model's error assumptions.";
   if (chances) return `Chances ${basis} Hung means no party wins a majority.`;
-  const seatLines = Boolean(seats && capabilities.seatMeans);
-  if (!bands) {
-    return seatLines
-      ? "Seat lines show the uniform-swing count. Tick Uncertainty for the simulated mean seats and 90% ranges."
-      : "Uncertainty hidden. Tick Uncertainty to show 90% ranges.";
-  }
-  const lead = seatLines ? "Seat lines show the simulated mean seats. " : "";
+  const lead = seats && capabilities.seatMeans ? "Seat lines show the simulated mean seats. " : "";
   const metrics = [];
   if (seats && capabilities.seatBands) metrics.push("seat");
   if (votes && capabilities.voteBands) metrics.push("vote-share");
@@ -75,11 +69,11 @@ export function chanceSeries(series, metric, hung) {
 }
 
 /**
- * Only finite values are formatted; missing optional observations never become zero.
- * With `ranges: false` (uncertainty hidden) the 90% seat and vote ranges are left out.
- * With a simulated mean (uncertainty shown), a run's seats are that mean, labelled so and kept to
- * the trend file's 1 dp; otherwise (uncertainty hidden, or a central-only run such as the
- * election result) they are its whole uniform-swing seats.
+ * With `ranges: false` (uncertainty hidden) the tooltip is the plain whole seats and vote %, a
+ * missing value reading as zero, with no 90% ranges.
+ * With uncertainty shown, only finite values are formatted, so a missing optional observation
+ * never becomes zero. A run with a simulated mean shows that mean, labelled so and kept to the
+ * trend file's 1 dp; a central-only run such as the election result shows its whole seats.
  */
 export function pollTrackerTooltipValues(series, index, { ranges = true } = {}) {
   const percent = (value) => Number.isFinite(value) ? `${formatPct(value)}%` : "Unavailable";
@@ -87,13 +81,18 @@ export function pollTrackerTooltipValues(series, index, { ranges = true } = {}) 
     const chance = series.chance[index];
     return [[series.chanceLabel, Number.isFinite(chance) ? formatProbability(chance) : "Unavailable"]];
   }
+  if (!ranges) {
+    return [
+      ["Seats", formatInt(Number(series.seats[index] || 0))],
+      ["Vote %", `${formatPct(Number(series.votePct[index] || 0))}%`],
+    ];
+  }
   const mean = series.seatMean?.[index];
   const values = [
     Number.isFinite(mean) ? ["Seats (simulated mean)", mean.toFixed(1)]
       : ["Seats", Number.isFinite(series.seats[index]) ? formatInt(series.seats[index]) : "Unavailable"],
-    ["Vote share", percent(series.votePct[index])],
+    ["Vote %", percent(series.votePct[index])],
   ];
-  if (!ranges) return values;
   if (Number.isFinite(series.seatLo?.[index]) && Number.isFinite(series.seatHi?.[index])) {
     values.push(["90% seat range", `${formatInt(series.seatLo[index])}–${formatInt(series.seatHi[index])}`]);
   }

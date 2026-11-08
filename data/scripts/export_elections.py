@@ -9,6 +9,7 @@ Outputs (per page root):
     - <root>/results/*.json (pf-results-v4 payloads)
         - <root>/maps/*.topo.json (TopoJSON map per map_id)
         - <root>/map-modes.json (manifest, built from that page's map-modes-shell.json)
+        - <root>/results/prediction-uncertainty.json (latest forecast's uncertainty)
 
 Page roots are also read: each page's map-modes-shell.json, existing map-modes.json,
 maps/ and parent results. ``--output-base DIR`` moves every page root to

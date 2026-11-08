@@ -790,9 +790,16 @@ class TestFinalPollTable:
         monkeypatch.setattr("model_support.calibration.FINAL_POLL_ERRORS_PATH", path)
         assert load_final_poll_table().elections[0].year == 2019
 
-    def test_load_reports_bad_json(self, tmp_path: Path) -> None:
+    def test_rejects_an_integer_too_large_for_a_float(self) -> None:
+        table = _table()
+        _con(table)["average"] = 10**400
+        with pytest.raises(CalibrationError, match="average is out of range"):
+            parse_final_poll_table(table)
+
+    @pytest.mark.parametrize("text", ["{", '{"credit": 1' + "0" * 5000 + "}"])
+    def test_load_reports_bad_json(self, tmp_path: Path, text: str) -> None:
         path = tmp_path / "table.json"
-        path.write_text("{", encoding="utf-8")
+        path.write_text(text, encoding="utf-8")
         with pytest.raises(CalibrationError, match="not valid JSON"):
             load_final_poll_table(path)
 

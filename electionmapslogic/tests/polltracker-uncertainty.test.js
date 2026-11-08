@@ -42,9 +42,9 @@ describe("poll tracker uncertainty display", () => {
 
   it("shows vote intervals at two decimals and chances as whole percentages without inventing missing values", () => {
     expect(pollTrackerTooltipValues(series, 0)).toEqual([
-      ["Seats", "300"], ["Vote share", "40.12%"], ["90% vote range", "35.12–45.99%"],
+      ["Seats", "300"], ["Vote %", "40.12%"], ["90% vote range", "35.12–45.99%"],
     ]);
-    expect(pollTrackerTooltipValues(series, 1)).toEqual([["Seats", "Unavailable"], ["Vote share", "Unavailable"]]);
+    expect(pollTrackerTooltipValues(series, 1)).toEqual([["Seats", "Unavailable"], ["Vote %", "Unavailable"]]);
     expect(pollTrackerTooltipValues(chanceSeries([series], "pMaj", [0])[0], 0))
       .toEqual([["Majority chance", "12%"]]);
     expect(pollTrackerTooltipValues(chanceSeries([series], "pLargest", [0])[0], 2))
@@ -64,8 +64,9 @@ describe("poll tracker uncertainty display", () => {
     expect(pollTrackerTooltipValues(tracked, 0)[0]).toEqual(["Seats", "411"]);
     expect(pollTrackerTooltipValues(tracked, 1).slice(0, 1)).toEqual([["Seats (simulated mean)", "297.4"]]);
     expect(pollTrackerTooltipValues(tracked, 1)).toContainEqual(["90% seat range", "238–389"]);
+    // With uncertainty hidden the tooltip reads the plain uniform-swing seats, whatever means exist.
     expect(pollTrackerTooltipValues(tracked, 2, { ranges: false })).toEqual([
-      ["Seats (simulated mean)", "305.0"], ["Vote share", "0.00%"],
+      ["Seats", "305"], ["Vote %", "0.00%"],
     ]);
   });
 
@@ -175,25 +176,18 @@ describe("poll tracker uncertainty display", () => {
     expect(pollTrackerTooltipValues(chanceSeries([row], "pMaj", [0])[0], 0)).toHaveLength(1);
   });
 
-  it("leaves 90% ranges out of tooltips and the note when uncertainty is hidden", () => {
+  it("reads plain seats and Vote % with no ranges when uncertainty is hidden, a missing value as zero", () => {
     const row = { ...series, seatLo: [220], seatHi: [376] };
-    expect(pollTrackerTooltipValues(row, 0, { ranges: false })).toEqual([["Seats", "300"], ["Vote share", "40.12%"]]);
+    expect(pollTrackerTooltipValues(row, 0, { ranges: false })).toEqual([["Seats", "300"], ["Vote %", "40.12%"]]);
+    expect(pollTrackerTooltipValues(row, 1, { ranges: false })).toEqual([["Seats", "0"], ["Vote %", "0.00%"]]);
     expect(pollTrackerTooltipValues(row, 0, { ranges: true })).toContainEqual(["90% seat range", "220–376"]);
-    const capabilities = { seatBands: true, voteBands: true };
-    const hidden = pollTrackerUncertaintyNote(capabilities, { seats: true, votes: true, bands: false });
-    expect(hidden).toContain("Uncertainty hidden");
-    expect(hidden).not.toContain("Shaded bands");
-    // With stored means, the note says the box switches the seat line as well as the bands.
-    const withMeans = { ...capabilities, seatMeans: true };
-    expect(pollTrackerUncertaintyNote(withMeans, { seats: true, votes: false, bands: false })).toBe(
-      "Seat lines show the uniform-swing count. Tick Uncertainty for the simulated mean seats and 90% ranges.",
-    );
-    expect(pollTrackerUncertaintyNote(withMeans, { seats: true, votes: false, bands: true }))
+  });
+
+  it("names the seat line in the ticked note only when seats are drawn and the data has means", () => {
+    const capabilities = { seatBands: true, voteBands: true, seatMeans: true };
+    expect(pollTrackerUncertaintyNote(capabilities, { seats: true, votes: false }))
       .toMatch(/^Seat lines show the simulated mean seats\. Shaded bands show 90% seat ranges/);
-    // Without seat lines drawn there is no seat-line sentence.
-    expect(pollTrackerUncertaintyNote(withMeans, { seats: false, votes: true, bands: false })).toContain("Uncertainty hidden");
-    expect(pollTrackerUncertaintyNote(withMeans, { seats: false, votes: true, bands: true })).not.toContain("Seat lines");
-    // Chances never draw bands, so hiding uncertainty doesn't change their note.
-    expect(pollTrackerUncertaintyNote(capabilities, { chances: true, bands: false })).toContain("Chances");
+    expect(pollTrackerUncertaintyNote(capabilities, { seats: false, votes: true })).not.toContain("Seat lines");
+    expect(pollTrackerUncertaintyNote(capabilities, { chances: true })).toContain("Chances");
   });
 });

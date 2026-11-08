@@ -290,6 +290,12 @@ def parse_args() -> argparse.Namespace:
 
     - ``--map-name``, ``--baseline-election-name``, ``--dry-run``.
     - ``--half-life-days`` (float > 0, default 15): poll-weighting half-life.
+    - ``--simulations`` (int, optional): Monte Carlo elections per date; the
+      calibrated configuration's count when absent.
+    - ``--no-uncertainty`` (flag): run only the deterministic projection,
+      without uncertainty or raw draws.
+    - ``--no-raw-sims`` (flag): store uncertainty summaries without writing
+      the raw simulations file.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--map-name", default="UK Constituencies post 2022")

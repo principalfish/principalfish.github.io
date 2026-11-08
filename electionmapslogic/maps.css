@@ -1231,8 +1231,13 @@ a {
 .maps-polltracker-card {
   min-height: 630px;
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 0.5rem;
+}
+
+/* The note under the controls takes a row while Uncertainty is ticked. */
+.is-uncertainty-shown .maps-polltracker-card {
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
 }
 
 .maps-polltracker-status {
@@ -1287,10 +1292,17 @@ a {
   margin-left: auto;
 }
 
-/* Mode-specific controls (Seats / Vote % / Uncertainty, or Majority / Largest party)
-   take a full row of their own under the view switch and date range. */
-.maps-polltracker-secondary {
+/* Unticked, the controls are flex items of the one controls row. With Uncertainty ticked, the
+   mode-specific controls (Seats / Vote % / Uncertainty, or Majority / Largest party) take a full
+   row of their own under the view switch and date range. */
+.maps-polltracker-view:not(.is-uncertainty-shown) .maps-polltracker-secondary,
+.maps-polltracker-view:not(.is-uncertainty-shown) #mapsPollTrackerMetrics {
+  display: contents;
+}
+
+.is-uncertainty-shown .maps-polltracker-secondary {
   display: flex;
+  order: 1;
   flex-basis: 100%;
   flex-wrap: wrap;
   align-items: center;

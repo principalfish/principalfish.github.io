@@ -48,9 +48,10 @@ skip. National rows and bases are kept; for a poll with no national rows
 ``poll_rows`` at all, which is harmless: the model skips row-less polls.
 
 Everything is written in one transaction. Each poll is guarded at write
-time against the fingerprint (every row and base) read together with the
-rows its test judged: if anything changed since planning, the whole
-transaction aborts. Re-running finds the repaired polls pass their test (and
+time (``scripts.poll_sources.stale_reason``) against its own columns and the
+fingerprint (every row and base) read together with the rows its test
+judged: if anything changed since planning, the whole transaction aborts.
+Re-running finds the repaired polls pass their test (and
 the deleted ones empty) and leaves them alone. ``poll_bases`` must exist
 (``scripts/migrate_add_poll_bases.py``).
 
@@ -98,12 +99,13 @@ from scripts.poll_sources import (
     Fetcher,
     Fingerprint,
     MissingTableError,
+    PollHead,
     StoredPoll,
     fetch_with_importer,
     insert_poll_bases,
     load_stored_polls,
-    poll_fingerprint,
     source_mismatch,
+    stale_reason,
 )
 
 YOUGOV_MIN_REGION_TOTAL = 85.0
@@ -209,7 +211,7 @@ class RepairError(Exception):
 
 
 class StaleRowError(RepairError):
-    """A poll's rows or bases changed between planning and applying."""
+    """A poll's columns, rows or bases changed between planning and applying."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -228,6 +230,9 @@ class RegionalRepair:
             for a deletion.
         bases: Replacement bases; empty keeps the stored bases.
         fingerprint: The poll's rows and bases, read with the rows judged.
+        head: The poll's own columns, read with the rows judged. The empty
+            default matches no stored poll, so a change planned without one
+            aborts instead of writing.
         old_row_count: How many regional rows the change removes.
         telltales: ``(region, party, old, new)`` cells for the report.
     """
@@ -240,6 +245,7 @@ class RegionalRepair:
     rows: tuple[tuple[int, int, float], ...] = ()
     bases: tuple[PlannedPollBase, ...] = ()
     fingerprint: Fingerprint = ((), ())
+    head: PollHead = ("", "", "", None, None)
     old_row_count: int = 0
     telltales: tuple[tuple[str, str, float | None, float | None], ...] = field(
         default=()
@@ -299,6 +305,7 @@ def _plan_deletion(poll: StoredPoll, deletion: RegionalDeletion) -> RegionalRepa
         "change",
         deletion.source,
         fingerprint=poll.fingerprint,
+        head=poll.head,
         old_row_count=count,
     )
 
@@ -382,6 +389,7 @@ def _plan_repair(
         rows=rows,
         bases=bases,
         fingerprint=poll.fingerprint,
+        head=poll.head,
         old_row_count=_regional_row_count(poll),
         telltales=telltales,
     )
@@ -455,8 +463,8 @@ def apply_repairs(conn: sqlite3.Connection, repairs: Sequence[RegionalRepair]) -
         The number of polls changed.
 
     Raises:
-        StaleRowError: If a poll's rows or bases changed since planning.
-            Nothing is written.
+        StaleRowError: If a poll's columns, rows or bases changed since
+            planning. Nothing is written.
     """
     changes = [r for r in repairs if r.status == "change"]
     if not changes:
@@ -465,10 +473,12 @@ def apply_repairs(conn: sqlite3.Connection, repairs: Sequence[RegionalRepair]) -
     conn.execute("BEGIN IMMEDIATE")
     with conn:
         for repair in changes:
-            if poll_fingerprint(conn, repair.poll_id) != repair.fingerprint:
+            reason = stale_reason(
+                conn, repair.poll_id, repair.head, repair.fingerprint
+            )
+            if reason is not None:
                 raise StaleRowError(
-                    f"poll {repair.poll_id}'s rows or bases changed since"
-                    " planning; re-run to re-plan"
+                    f"poll {repair.poll_id}: {reason}; re-run to re-plan"
                 )
             conn.execute(
                 "DELETE FROM poll_rows WHERE poll_id = ? AND region_id IS NOT NULL",

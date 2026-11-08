@@ -5,7 +5,7 @@ Both maps pages use this contract: the [UK manifest](map-modes.json) and the
 [UK shell](map-modes-shell.json) or
 [US shell](../../uselectionmaps/data/map-modes-shell.json), then regenerate the
 manifests with the [exporter](../../data/scripts/export_elections.py). See the
-[export runbook](../../README.md#10-static-election-map-export-manifest--files).
+[export runbook](../../data/docs/export.md).
 
 The shells supply page branding, parliament features, map options, party aliases,
 and the preferred default election. The exporter assembles election entries,

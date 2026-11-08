@@ -1,7 +1,9 @@
 # principalfish.github.io
 
 A GitHub Pages static site with a Python data pipeline. Read
-[README.md](README.md) for the repository structure and setup/runbook.
+[README.md](README.md) for the repository overview, setup and key commands; each
+area's own README holds its detail, and [data/README.md](data/README.md) leads to
+the data runbook.
 
 ## Testing
 

@@ -229,7 +229,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6e · Vote-totals table: Seats column from the simulated median; toggle adds only ranges (`b788ae28`).
 - [x] 6f · Poll tracker Chances view: no blank space on the left (`8d7c9d42`).
 - [x] 6g · Seats as the simulated mean in the table and headline (`be4222f5`, `789e36ae`).
-- [ ] 7 · Map page split: UNS by default, "Show with modelled uncertainty" checkbox, latest poll and nowcast note below the map, tracker line follows its checkbox.
+- [x] 7 · Map page split: UNS by default, "Show with modelled uncertainty" checkbox, latest poll and nowcast note below the map, tracker line follows its checkbox (`5902f98f`).
 - [ ] 8 · PR text updated for piece 7 (the first final description went on PR #74 on 2026-11-08; `/publish` again after piece 7).
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
@@ -394,3 +394,4 @@ From thread 4, the latest and most complete set. Run from `data/` unless noted.
   - The staged page renders "Labour 317 seats (238–389) · majority 44%" with the map-colour note, 0 errors.
 - 2026-11-07, 6g step 4 (Phil: "Go ahead with export"): `export_elections.py --current-simulation` (exit 0) wrote only `prediction-simulation.json` and `prediction-uncertainty.json`, byte-identical to the scratch output. The worktree has exactly the 4 data files modified. The jsdom harness on the real repo data: electionmaps "Labour 317 seats (238–389) · majority 44%", uselectionmaps unchanged, 0 errors. Next: data-commit review.
 - 2026-11-07: Piece 6g data committed as `789e36ae` and pushed with Phil's approval ("Approve, commit and push"). Every builder piece is done; Piece 7 is `/publish` in the planner chat.
+- 2026-11-08: Piece 7 committed as `5902f98f` and pushed with Phil's approval ("Tried it, approve"). Persistence settled as "Memory only" (Phil, 2026-11-08): the choice holds across region and filter changes, and any page load resets it, election changes included, because the nav links are full page loads. Analysis loop: one correctness finding verified and fixed (right panel height re-synced on toggle), its test tightened to catch ordering; a claimed late-load variant was dropped as unreachable. After those small fixes only correctness was re-run. Piece 8 (`/publish`) is the planner chat's.

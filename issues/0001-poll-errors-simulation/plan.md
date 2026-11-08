@@ -230,7 +230,7 @@ Get the branch to a mergeable, honest state with the smallest set of changes. Co
 - [x] 6f · Poll tracker Chances view: no blank space on the left (`8d7c9d42`).
 - [x] 6g · Seats as the simulated mean in the table and headline (`be4222f5`, `789e36ae`).
 - [x] 7 · Map page split: UNS by default, "Show with modelled uncertainty" checkbox, latest poll and nowcast note below the map, tracker line follows its checkbox (`5902f98f`).
-- [ ] 8 · PR text updated for piece 7 (the first final description went on PR #74 on 2026-11-08; `/publish` again after piece 7).
+- [x] 8 · PR text updated for piece 7, the beta note and the master merge (`gh pr edit 74`, 2026-11-08, Phil: "Approve PR text").
 
 When ticking a checkpoint here, also tick it in its thread plan and add the commit there, so the two never disagree.
 

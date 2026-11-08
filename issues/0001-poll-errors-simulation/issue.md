@@ -8,11 +8,11 @@ Add honest uncertainty to the Westminster nowcast. Poll sample sizes and bases f
 
 **Out of scope.** Westminster only. US uncertainty moved to issue 0004 (branch `us-poll-errors-uncertainty`). The offline conversion-error experiment and the model refinements (correlated conversion error, heavier seat tails, parameter uncertainty) moved to #78. The seat ranges are known to be on the narrow side; that work is where they get revisited.
 
-**Where it stands.** The code is on branch `poll-errors-simulation`, PR #74. Still to do: a beta note below the map, merging master (#80 landed, and the branch now conflicts in 14 files), and the final PR text.
+**Where it stands.** The code is on branch `poll-errors-simulation`, PR #74. The work is finished and master is merged in. PR #74 has its final description and is waiting to be merged.
 
 ## Plan
 
-_2026-11-08 · 19 of 20 pieces done · now: adding a beta note below the map, then merge master and PR text_
+_2026-11-08 · 22 of 22 pieces done · now: waiting on the merge of PR #74_
 
 - [x] **Threads 1–4** · 40 checkpoints, commits in each thread plan
   The calibrated Monte Carlo engine, poll bases and effective n, console diagnostics, map and tracker uncertainty, and the frozen validation replay.
@@ -54,5 +54,9 @@ _2026-11-08 · 19 of 20 pieces done · now: adding a beta note below the map, th
   Added 2026-11-08: a "Show with modelled uncertainty" checkbox replaces Show uncertainty; the latest poll and nowcast note move below the map; the tracker line follows its checkbox.
 - [x] **Review fixes (round 3)** · 1f89732b
   Poll tracker back to master on initial load, with new features behind its checkbox; docs, console error tests and validator fixes.
-- [ ] **8/8 PR text** · not started
-  The first final description went on PR #74 on 2026-11-08; `/publish` again after piece 7.
+- [x] **Beta note** · `a947645e`
+  Added 2026-11-08: a line below the map, when the box is ticked, saying the model is beta and may change significantly.
+- [x] **Merge master** · `c1993040`
+  Brings in the US results import (#80); 14 conflicts resolved.
+- [x] **8/8 PR text** · on PR #74, 2026-11-08
+  Final description, updated for the tickbox, the beta note and the merge.

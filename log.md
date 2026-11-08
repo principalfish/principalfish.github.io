@@ -36,3 +36,4 @@
 - 2026-11-08 12:22 · poll-errors-simulation (0001) · Piece 7 committed as 5902f98f and pushed (Phil: "Tried it, approve")
 - 2026-11-08 12:32 · poll-errors-simulation (0001) · GitHub issue #81
 - 2026-11-08 12:32 · poll-errors-simulation (0001) · GitHub issue #81 created with the plan checklist (Phil: "Create one (Recommended)")
+- 2026-11-08 14:57 · poll-errors-simulation (0001) · review → ready

@@ -42,3 +42,4 @@
 - 2026-11-08 15:05 · poll-errors-simulation (0001) · merged → done
 - 2026-11-08 15:06 · poll-errors-simulation (0001) · session local_c2004f9a-b155-458f-ada1-ebe8ad8b0b0d removed
 - 2026-11-08 15:06 · poll-errors-simulation (0001) · cleanup: removed worktree /home/philiph/workspace/principalfish.github.io/.claude/worktrees/poll-errors-simulation-de9775, branch poll-errors-simulation
+- 2026-11-08 15:09 · restructure-data-folder-and-console (0005) · created (refactor): Restructure the data folder and rethink the data console

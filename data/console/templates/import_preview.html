@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% from "_poll_rows_table.html" import plan_row_columns, poll_rows_table %}
+{% from "_poll_rows_table.html" import
+  plan_base_columns, plan_row_columns, poll_rows_table %}
 {% block content %}
   <section class="card">
     <h2>Import Preview</h2>
@@ -24,4 +25,7 @@
   </section>
 
   {{ poll_rows_table(plan.rows, plan_row_columns, title="Row Preview") }}
+  {% if plan.bases %}
+    {{ poll_rows_table(plan.bases, plan_base_columns, title="Respondent Bases") }}
+  {% endif %}
 {% endblock %}

@@ -29,7 +29,8 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from db import Database
-from models import Poll, Pollster
+from models import Poll, PollBase, Pollster
+from polls.importers.bases import PlannedPollBase
 from polls.importers.types import PollImportResult
 from polls.importers.westminster import (
     bmg_research_import,
@@ -95,7 +96,9 @@ def _over(importers: Sequence[ModuleType]) -> pytest.MarkDecorator:
 # ── Per-module model kwargs ───────────────────────────────────────────────────
 
 # The ParsedPoll fields every module shares.
-_PARSED_COMMON_FIELDS = frozenset({"sample_size", "fieldwork_start", "fieldwork_end"})
+_PARSED_COMMON_FIELDS = frozenset(
+    {"sample_size", "fieldwork_start", "fieldwork_end", "bases"}
+)
 
 # Each module's remaining ParsedPoll fields. ``commit_import_plan`` never reads
 # them, so a single Labour figure is enough to satisfy the model.
@@ -676,6 +679,166 @@ class TestCommitExistingRows:
         )
         assert _stored_rows(db, seeded_poll.id) == _expected_plan_rows(world)
         assert _stored_rows(db, sibling.id) == sibling_rows_before
+
+
+# ── Bases ─────────────────────────────────────────────────────────────────────
+
+_StoredBase = tuple[int | None, int | None, int | None, str, bool]
+
+
+def _planned_bases(world: WestminsterWorld) -> list[PlannedPollBase]:
+    """A national, a direct regional and a population-split regional base."""
+    return [
+        PlannedPollBase(
+            region_id=None, region_name="National", unweighted_n=1210,
+            weighted_n=1188, kind="decided",
+        ),
+        PlannedPollBase(
+            region_id=world.region_ids["London"], region_name="London",
+            unweighted_n=151, weighted_n=163, kind="likely_voters",
+        ),
+        PlannedPollBase(
+            region_id=world.region_ids["Scotland"], region_name="Scotland",
+            unweighted_n=97, kind="all_adults", split_from_macro=True,
+        ),
+    ]
+
+
+def _expected_bases(world: WestminsterWorld) -> list[_StoredBase]:
+    return sorted(
+        (
+            (b.region_id, b.unweighted_n, b.weighted_n, b.kind, b.split_from_macro)
+            for b in _planned_bases(world)
+        ),
+        key=lambda row: -1 if row[0] is None else row[0],
+    )
+
+
+def _stored_bases(db: Database, poll_id: int) -> list[_StoredBase]:
+    """Return a poll's bases sorted national first, then by region id."""
+    with db.session() as session:
+        rows = session.execute(
+            select(PollBase).where(PollBase.poll_id == poll_id)
+        ).scalars().all()
+        stored = [
+            (b.region_id, b.unweighted_n, b.weighted_n, b.kind, b.split_from_macro)
+            for b in rows
+        ]
+    return sorted(stored, key=lambda row: -1 if row[0] is None else row[0])
+
+
+def _add_base(
+    db: Database, poll_id: int, unweighted_n: int, region_id: int | None = None
+) -> None:
+    with db.session() as session:
+        session.add(
+            PollBase(
+                poll_id=poll_id,
+                region_id=region_id,
+                unweighted_n=unweighted_n,
+                kind="decided",
+            )
+        )
+
+
+class TestCommitBases:
+    """``commit_import_plan`` writes the plan's bases beside its rows."""
+
+    @_over(ALL_IMPORTERS)
+    def test_new_poll_stores_the_planned_bases(
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        plan = _plan(importer, world, pollster_exists=False).model_copy(
+            update={"bases": _planned_bases(world)}
+        )
+
+        result = _commit(importer, db, plan)
+
+        assert result.inserted_bases == 3
+        assert _stored_bases(db, result.poll_id) == _expected_bases(world)
+
+    @_over(ALL_IMPORTERS)
+    def test_weighted_only_base_is_stored_without_an_unweighted_count(
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        weighted_only = PlannedPollBase(
+            region_id=None, region_name="National", weighted_n=1452, kind="decided"
+        )
+        plan = _plan(importer, world, pollster_exists=False).model_copy(
+            update={"bases": [weighted_only]}
+        )
+
+        result = _commit(importer, db, plan)
+
+        assert _stored_bases(db, result.poll_id) == [
+            (None, None, 1452, "decided", False)
+        ]
+
+    @_over(ALL_IMPORTERS)
+    def test_rowless_matching_poll_has_stale_bases_replaced(
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        seeded_pollster = _seed_pollster(db)
+        seeded_poll = _seed_poll(db, world)
+        _add_base(db, seeded_poll.id, 999, world.region_ids["Wales"])
+        plan = _plan(
+            importer, world, pollster_exists=True,
+            pollster_id=seeded_pollster.id, poll_id=seeded_poll.id,
+        ).model_copy(update={"bases": _planned_bases(world)})
+
+        result = _commit(importer, db, plan)
+
+        assert result.poll_id == seeded_poll.id
+        assert _stored_bases(db, seeded_poll.id) == _expected_bases(world)
+
+    @_over(ALL_IMPORTERS)
+    def test_replace_rows_replaces_only_this_polls_bases(
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        seeded_pollster = _seed_pollster(db)
+        labour = world.party_ids["Labour"]
+        seeded_poll = _seed_poll(db, world, national={labour: 40.0})
+        sibling = _seed_poll(
+            db, world, national={labour: 35.0}, fieldwork_end=date(2026, 3, 4)
+        )
+        assert seeded_poll.id != sibling.id
+        _add_base(db, seeded_poll.id, 999)
+        _add_base(db, sibling.id, 888)
+        plan = _plan(
+            importer, world, pollster_exists=True,
+            pollster_id=seeded_pollster.id, poll_id=seeded_poll.id,
+        ).model_copy(update={"bases": _planned_bases(world)})
+
+        result = _commit(importer, db, plan, replace_rows=True)
+
+        assert result.inserted_bases == 3
+        assert _stored_bases(db, seeded_poll.id) == _expected_bases(world)
+        assert _stored_bases(db, sibling.id) == [(None, 888, None, "decided", False)]
+
+    @_over(ALL_IMPORTERS)
+    def test_skipped_existing_rows_leave_the_bases_alone(
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        seeded_pollster = _seed_pollster(db)
+        seeded_poll = _seed_poll(db, world, national={world.party_ids["Labour"]: 40.0})
+        _add_base(db, seeded_poll.id, 999)
+        plan = _plan(
+            importer, world, pollster_exists=True,
+            pollster_id=seeded_pollster.id, poll_id=seeded_poll.id,
+        ).model_copy(update={"bases": _planned_bases(world)})
+
+        result = _commit(importer, db, plan)
+
+        assert result.skipped_existing_rows is True
+        assert result.inserted_bases == 0
+        assert _stored_bases(db, seeded_poll.id) == [
+            (None, 999, None, "decided", False)
+        ]
 
 
 # ── _find_existing_poll ───────────────────────────────────────────────────────

@@ -5,6 +5,7 @@
 import * as d3 from '../site/vendor/d3.v7.esm.js';
 import { normalizeRegionKey, formatInt, formatPct, formatSigned, seatLookupKey, getRegionLabel, clampNumber, DEFAULT_PARTY_COLOUR } from './utils.js';
 import { fetchJson } from './files.js';
+import { decodeSeatUncertainty } from "./uncertainty.js";
 
 // Colour for a "split" seat — a multi-member seat whose members are from different parties.
 // A distinct purple from the Independent party colour so the two don't blur.
@@ -362,6 +363,7 @@ export class Seat {
     // Optional candidate names by party key; absent for projections / older data,
     // where the UI falls back to the party label.
     this.candidates = { ...(input?.candidates || {}) };
+    this.u = decodeSeatUncertainty(input?.u, (party) => manifest.resolvePartyRef(party));
     // Individual candidate rows `[{party, votes, name}]` in payload order, set only when one
     // party has several rows (an export override splitting a merged same-party result); null
     // for every other seat. The popup lists these instead of the per-party rows.
@@ -407,6 +409,7 @@ export class Seat {
       winner: rawSeat?.w,
       votes: Seat.#decodeCompactVotes(rawSeat?.p),
       candidates: Seat.#decodeCandidates(rawSeat?.p),
+      u: rawSeat?.u,
       candidateRows: Seat.#decodeCandidateRows(rawSeat?.p),
       ev: rawSeat?.ev,
       members: rawSeat?.members,
@@ -1060,6 +1063,11 @@ export class ElectionSummary {
    * render as their human display names. A missing winner falls back to the `'others'`
    * label rather than throwing or producing an empty string.
    *
+   * With "Show with modelled uncertainty" ticked, a saved model run with uncertainty shows the
+   * simulated odds in place of this line (uncertainty.js `simulatedSubtitle`, chosen in dom.js),
+   * since the uniform-swing count can contradict them; its vote-totals table then shows the
+   * simulated whole seats too.
+   *
    * While seats are still uncalled (`data.uncalled > 0`) the line gains a trailing
    * `· N uncalled` and no longer claims a hung parliament when the uncalled seats could still
    * hand the leader a majority: it reads `Majority undecided - largest party <Party> with <N>
@@ -1192,6 +1200,8 @@ export class ElectionData {
     /** Display label of the election this data represents (e.g. "2024 General Election").
      * Null for the comparison ElectionData instance, which never renders a subtitle. */
     this.electionName = electionName;
+    this.uncertaintyId = resultsData?.uncertaintyId ?? null;
+    this.uncertainty = null;
 
     /** Pristine normalised seat records as parsed from the results JSON. */
     this.baseSeats = ElectionData.normalizeSeats(resultsData);
@@ -1264,6 +1274,8 @@ export class ElectionData {
   static fromSeats(seats, electionName = null) {
     const instance = Object.create(ElectionData.prototype);
     instance.electionName = electionName;
+    instance.uncertaintyId = null;
+    instance.uncertainty = null;
     instance.baseSeats = seats;
     instance.currentSeats = seats;
     instance.seatsByKey = ElectionData.buildSeatIndex(seats);
@@ -1340,7 +1352,7 @@ class AppState {
 
     /** Parsed poll tracker data: a dense daily timeline plus per-party seats/votePct series.
      * Populated by assigning to state.pollTrackerData when poll tracker mode activates; empty until then. */
-    this.pollTrackerData = { timeline: [], seriesByParty: new Map() };
+    this.pollTrackerData = { timeline: [], seriesByParty: new Map(), hung: [] };
 
     /** Map from normalised region key to display label for the current election.
      * Built from manifest.regionsByMapId on each election load; used by getRegionLabel. */
@@ -1354,6 +1366,11 @@ class AppState {
      * current election declares a `referendum` block, else null. Drives the default
      * two-party (e.g. Leave/Remain) map; see `setupChoroplethConfig`. */
     this.referendumConfig = null;
+
+    /** Whether the reader ticked "Show with modelled uncertainty". Unticked on every page load
+     * and kept in memory only, so it holds across region and filter changes and through views
+     * that hide the checkbox; read through uncertainty.js `shownUncertainty`. */
+    this.showModelledUncertainty = false;
 
     /** Vote totals panel state.
      * - columns.votes: whether the raw vote-count column is visible. Hidden for predict / model /

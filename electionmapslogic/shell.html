@@ -124,6 +124,9 @@
         </svg>
       </div>
 
+      <!-- Notes below the map: the latest poll used and, with the modelled uncertainty shown,
+           its reading note. Filled by dom.js renderMapFooter. -->
+      <p id="mapsMapFooter" class="maps-map-footer" hidden></p>
       <p id="mapsSourceNote" class="maps-source-note" hidden></p>
 
       <article id="mapsSeatPopup" class="maps-seat-popup" hidden aria-live="polite">
@@ -148,19 +151,22 @@
         <nav id="mapsSenateForecastTabNav" class="maps-predict-tabs" hidden aria-label="Senate forecast view"></nav>
         <nav class="maps-vote-tabs" id="mapsVoteTotalsTabNav" hidden aria-label="Vote totals view"></nav>
         <p id="mapsSenateForecastComparison" class="maps-control-note maps-senate-forecast-comparison" hidden></p>
-        <table id="mapsVoteTotalsTable" class="maps-table" aria-label="Vote totals placeholder" aria-describedby="mapsSenateForecastComparison">
-          <thead>
-            <tr>
-              <th data-sort-key="party" role="button" tabindex="0" title="Sort by party">Party</th>
-              <th data-sort-key="seats" role="button" tabindex="0" title="Sort by seats">Seats</th>
-              <th class="comparison-col">±</th>
-              <th class="vote-total-col" data-sort-key="votes" role="button" tabindex="0" title="Sort by votes">Votes</th>
-              <th class="vote-pct-col" data-sort-key="votePct" role="button" tabindex="0" title="Sort by vote percentage">Vote %</th>
-              <th class="comparison-col vote-pct-comparison-col">±</th>
-            </tr>
-          </thead>
-          <tbody id="mapsVoteTotalsBody"></tbody>
-        </table>
+        <div class="maps-vote-table-scroll">
+          <table id="mapsVoteTotalsTable" class="maps-table" aria-label="Vote totals" aria-describedby="mapsSenateForecastComparison">
+            <thead>
+              <tr>
+                <th data-sort-key="party" role="button" tabindex="0" title="Sort by party">Party</th>
+                <th data-sort-key="seats" role="button" tabindex="0" title="Sort by seats">Seats</th>
+                <th class="comparison-col">±</th>
+                <th class="vote-total-col" data-sort-key="votes" role="button" tabindex="0" title="Sort by votes">Votes</th>
+                <th class="vote-pct-col" data-sort-key="votePct" role="button" tabindex="0" title="Sort by vote percentage">Vote %</th>
+                <th class="comparison-col vote-pct-comparison-col">±</th>
+              </tr>
+            </thead>
+            <tbody id="mapsVoteTotalsBody"></tbody>
+          </table>
+        </div>
+        <p id="mapsMapColourNote" class="maps-control-note maps-map-colour-note" hidden></p>
         <p id="mapsVoteTotalsUncalled" class="maps-control-note maps-vote-totals-uncalled" hidden></p>
       </article>
 

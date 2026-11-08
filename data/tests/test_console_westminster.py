@@ -190,7 +190,9 @@ class TestChoicesForModelForm:
         day_options = [0, 1, 3, 7, 14, 21, 30, 45, 60, 90, 120, 180, 365]
         assert choices["as_of_days_back"] == day_options
         assert choices["since_days_back"] == day_options
-        assert choices["half_life_days"] == [7.0, 14.0, 21.0, 30.0, 45.0, 60.0, 90.0]
+        assert choices["half_life_days"] == [
+            7.0, 14.0, 15.0, 21.0, 30.0, 45.0, 60.0, 90.0
+        ]
         assert choices["dry_run_options"] == [
             {"value": "true", "label": "Yes (preview only)"},
             {"value": "false", "label": "No (write election + votes to DB)"},
@@ -266,6 +268,16 @@ class TestModelRunFormRoute:
         assert f'value="{westminster_world.map_name}"' in map_options
         election_options = _select_block(body, "baseline_election_name")
         assert f'value="{westminster_world.baseline_election_name}"' in election_options
+
+    def test_preselects_the_poll_weighting_defaults(
+        self, app: Flask, db: Database
+    ) -> None:
+        # The daily run and run_uns_model.py's backfill defaults use the same
+        # weighting: a 60-day window and a 15-day half-life.
+        body = app.test_client().get("/models/run").get_data(as_text=True)
+
+        assert '<option value="60" selected>' in _select_block(body, "since_days_back")
+        assert '<option value="15.0" selected>' in _select_block(body, "half_life_days")
 
     def test_without_elections_renders_empty_dropdowns(
         self, app: Flask, db: Database

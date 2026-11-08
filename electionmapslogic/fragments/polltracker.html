@@ -9,8 +9,23 @@
     </div>
 
     <div class="maps-polltracker-controls">
-      <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricSeats" type="checkbox" checked /> Seats</label>
-      <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricVotes" type="checkbox" checked /> Vote %</label>
+      <div id="mapsPollTrackerViewControls" class="maps-polltracker-switch" role="radiogroup" aria-label="Poll tracker view" hidden>
+        <label class="maps-polltracker-toggle"><input type="radio" name="mapsPollTrackerView" data-polltracker-view="totals" checked> Seats &amp; votes</label>
+        <label class="maps-polltracker-toggle"><input type="radio" name="mapsPollTrackerView" data-polltracker-view="chances"> Chances</label>
+      </div>
+      <!-- Unticked, these sit on one row with the date range; with Uncertainty ticked they take
+           their own row below the view switch and date range (see maps.css). -->
+      <div class="maps-polltracker-secondary">
+        <div id="mapsPollTrackerMetrics" class="maps-polltracker-switch">
+          <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricSeats" type="checkbox" checked> Seats</label>
+          <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricVotes" type="checkbox" checked> Vote %</label>
+        </div>
+        <label id="mapsPollTrackerUncertaintyToggle" class="maps-polltracker-toggle" hidden><input id="mapsPollTrackerShowUncertainty" type="checkbox"> Uncertainty</label>
+        <div id="mapsPollTrackerChanceControls" class="maps-polltracker-switch" role="radiogroup" aria-label="Chance measure" hidden>
+          <label class="maps-polltracker-toggle"><input type="radio" name="mapsPollTrackerChance" data-polltracker-chance="pMaj" checked> Majority</label>
+          <label class="maps-polltracker-toggle"><input type="radio" name="mapsPollTrackerChance" data-polltracker-chance="pLargest"> Largest party</label>
+        </div>
+      </div>
       <div class="maps-polltracker-range-group" aria-label="Poll tracker date range">
         <button type="button" class="maps-apply-btn maps-polltracker-range-btn is-active" data-polltracker-range="all">All</button>
         <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="30">Last 30</button>
@@ -18,8 +33,12 @@
       </div>
     </div>
 
+    <p id="mapsPollTrackerUncertaintyNote" class="maps-control-note maps-polltracker-status" hidden></p>
+
     <div id="mapsPollTrackerPartyControls" class="maps-polltracker-party-controls" aria-label="Poll tracker party toggles"></div>
 
     <div id="mapsPollTrackerChartWrap" class="maps-polltracker-chart-wrap" aria-label="Poll tracker chart container"></div>
   </article>
+  <!-- The latest poll used, below the chart as it is below the map. Filled by dom.js. -->
+  <p id="mapsPollTrackerFooter" class="maps-map-footer" hidden></p>
 </section>

@@ -1,16 +1,56 @@
-"""Chronological model trends reconstructed from authoritative recorded votes."""
+"""Chronological model trends reconstructed from authoritative recorded votes.
+
+Each entry is one run's national seats ``s`` and vote share ``v`` per party.
+A run with a stored Monte Carlo summary also carries, per party, its vote band
+``vl``/``vh`` (the summary's vote interval, 90%; 1 dp), ``sl``/``sh``
+(integer seat bounds), ``sm`` (the mean seats over the simulations, from the
+stored national histogram; 1 dp), and P(majority) ``pm`` /
+P(largest) ``pl`` (fractions, 3 dp; left out when zero), plus an entry-level
+``hung``. A run without one gets none of these keys, so its entry is exactly
+as before. In an entry with ``hung``, a party lacking ``pm``/``pl`` has
+probability 0, and a party lacking ``vl``/``vh`` was not in the summary.
+
+Consecutive runs with the same seats and shares collapse to the first, as
+before; uncertainty does not keep a duplicate (the simulation seed changes
+daily, so its odds always differ slightly). Westminster keeps a duplicate
+for the latest run that can be kept (the last polled run once any is polled;
+in an all-unpolled history, the last leading run), so the tracker ends on the
+run the site's headline and table show. A trailing unpolled run is not shown:
+the unpolled-run rule below leaves it out, though the export's
+``latest_model_run`` may still publish it. Westminster also keeps a duplicate
+where summary availability changes, or where a run's known config/kernel
+identity differs from the last known identity among the runs kept so far
+(including the first known one after unknown ones). The poll tracker
+(electionmapslogic/features/polltracker.js) reads only the kept runs and breaks
+its lines where availability changes or a known identity differs from the last
+known one; a run with no identity (stored before identities existed) continues
+the segment before it, so unknown to unknown and known to/from unknown are
+continuous unless availability also changes. With no summaries anywhere the
+rule is exactly the old one.
+
+A run whose stored error budget shows no national polls for any party is
+left out: with nothing polled it projects the baseline with no error, which
+would plot as a spike. The previous entry carries across the gap. The
+exception is the unpolled runs before the scope's first polled run (the
+election result, before any poll exists): each is kept as a run without a
+summary, central values only, so identical ones collapse to the first and the
+first uncertain run after them is an availability change. A run with no stored
+block, or one whose budget is not Westminster's, counts as polled here.
+"""
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import shlex
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator, Mapping
 from contextlib import closing, contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 from electoral_votes import (
     ElectoralVoteError,
@@ -22,7 +62,17 @@ from model_support.io import (
     publish_json,
     validate_output_target,
 )
-from model_support.persistence import OutputScope, committed_dates
+from model_support.persistence import (
+    OutputScope,
+    UncertaintyStoreError,
+    committed_dates,
+    iter_national_blocks,
+)
+from model_support.public_uncertainty import (
+    PublicUncertaintyError,
+    TrendUncertainty,
+    trend_uncertainty,
+)
 from polls.importers.us.us_geography import parent_seat_name
 
 
@@ -31,6 +81,8 @@ class TrendEntry(TypedDict):
     election_name: str
     as_of_date: str
     parties: dict[str, dict[str, int | float]]
+    hung: NotRequired[float]
+    segment_id: NotRequired[str | None]
 
 
 @dataclass(frozen=True, slots=True)
@@ -231,10 +283,20 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             ):
                 if eid in metrics:
                     metrics[eid][str(pid)]["e"] += ev_by_election[eid][unit_name]
+        uncertainty, unpolled, segments = _trend_uncertainty(conn, scope, elections)
         dates: set[str] = set()
-        for eid, (name, as_of) in sorted(
-            elections.items(), key=lambda item: (item[1][1], item[0])
-        ):
+        previous: tuple[dict[str, dict[str, int | float]], bool] | None = None
+        # The last known identity among the runs kept so far. The tracker sees
+        # only kept runs, so this must not advance on a collapsed one.
+        last_segment: str | None = None
+        # Unpolled runs before this are the leading baseline, kept central-only.
+        seen_polled = False
+        ordered = sorted(elections.items(), key=lambda item: (item[1][1], item[0]))
+        # The last run that can be kept: unpolled runs after the first polled
+        # one are left out, so once any run is polled it is the last polled run.
+        polled = [eid for eid, _ in ordered if eid not in unpolled]
+        latest = polled[-1] if polled else (ordered[-1][0] if ordered else None)
+        for eid, (name, as_of) in ordered:
             if as_of.isoformat() in dates:
                 raise ValueError(
                     f"Multiple scoped model results for {as_of}; rerun this model date"
@@ -244,15 +306,135 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             total = sum(party["v"] for party in parties.values())
             for party in parties.values():
                 party["v"] = round(party["v"] / total * 100.0, 1) if total > 0 else 0.0
+            summary: TrendUncertainty | None
+            if eid not in unpolled:
+                seen_polled = True
+                summary = uncertainty.get(eid)
+                segment = segments.get(eid)
+            elif seen_polled:
+                continue
+            else:
+                summary, segment = None, None
+            has_summary = summary is not None
+            # Kept even with equal central values: an availability change (a
+            # tracker break), or a known identity new to the kept runs. The
+            # first known identity after unknown ones draws no break, but is kept
+            # so that a later change away from it is visible to the tracker.
+            # The latest run that can be kept (the last polled run once any is
+            # polled; else the last leading unpolled run) is kept too, so the
+            # tracker's last point is the run the headline and table show. A
+            # trailing unpolled run is left out above and never shown.
+            must_keep = previous is not None and (
+                previous[1] != has_summary
+                or (has_summary and segment is not None and segment != last_segment)
+                or eid == latest
+            )
+            if (
+                previous is not None
+                and previous[0] == parties
+                and (summary is None or previous[1])
+                and not (scope.election_type == "model_uns" and must_keep)
+            ):
+                continue
+            previous = (parties, has_summary)
+            if has_summary and segment is not None:
+                last_segment = segment
             entry: TrendEntry = {
                 "election_id": eid,
                 "election_name": name,
                 "as_of_date": as_of.isoformat(),
-                "parties": dict(sorted(parties.items(), key=lambda item: int(item[0]))),
+                "parties": {
+                    party_id: (
+                        {**fields, **summary.parties.get(party_id, {})}
+                        if summary is not None
+                        else fields
+                    )
+                    for party_id, fields in sorted(
+                        parties.items(), key=lambda item: int(item[0])
+                    )
+                },
             }
-            if not entries or entries[-1]["parties"] != parties:
-                entries.append(entry)
+            if summary is not None:
+                entry["hung"] = summary.hung
+                if scope.election_type == "model_uns":
+                    entry["segment_id"] = segment
+            entries.append(entry)
     return entries
+
+
+def _trend_uncertainty(
+    conn: sqlite3.Connection, scope: OutputScope, election_ids: Collection[int]
+) -> tuple[dict[int, TrendUncertainty], set[int], dict[int, str | None]]:
+    """Read each scoped run's trend additions from its stored national block.
+
+    Args:
+        conn: The reconstruction's connection, inside its transaction.
+        scope: The model scope.
+        election_ids: The scope's dated runs.
+
+    Returns:
+        Election id -> its additions, for the runs with a summary (an
+        unpolled run's included, though the caller drops it or publishes it
+        without them); and the runs whose budget shows no national polls
+        (:func:`_unpolled`); and
+        config/kernel segment identities (unknown for older stored summaries).
+
+    Raises:
+        ValueError: A stored block is unreadable or lacks a published field
+            (callers report trend failures as ``ValueError``).
+    """
+    result: dict[int, TrendUncertainty] = {}
+    unpolled: set[int] = set()
+    segments: dict[int, str | None] = {}
+    try:
+        for election_id, national in iter_national_blocks(conn, scope):
+            if election_id not in election_ids:
+                continue
+            if _unpolled(national):
+                unpolled.add(election_id)
+            try:
+                result[election_id] = trend_uncertainty(national)
+                config = national.get("config_hash")
+                kernel = national.get("kernel_version")
+                segments[election_id] = (
+                    _segment_id(config, kernel)
+                    if (isinstance(config, str) and config.strip()
+                        and isinstance(kernel, str) and kernel.strip())
+                    else None
+                )
+            except PublicUncertaintyError as err:
+                raise ValueError(
+                    f"Stored uncertainty for election {election_id}: {err}"
+                ) from err
+    except UncertaintyStoreError as err:
+        raise ValueError(f"Stored uncertainty is unreadable: {err}") from err
+    return result, unpolled, segments
+
+
+def _segment_id(config_hash: str, kernel_version: str) -> str:
+    """A run's config/kernel identity: SHA-256 of ``[config, kernel]`` as canonical JSON."""
+    encoded = json.dumps(
+        [config_hash, kernel_version], sort_keys=True, separators=(",", ":")
+    )
+    return hashlib.sha256(encoded.encode()).hexdigest()
+
+
+def _unpolled(national: Mapping[str, object]) -> bool:
+    """Whether a stored block's error budget shows no national polls at all.
+
+    Only the Westminster budget records ``poll_count`` per party. Any other or
+    malformed budget is private and unvalidated, so it counts as polled and
+    its run is kept.
+    """
+    budget = national.get("budget")
+    parties = budget.get("parties") if isinstance(budget, Mapping) else None
+    if not isinstance(parties, Mapping) or not parties:
+        return False
+    counts = [
+        party.get("poll_count") if isinstance(party, Mapping) else None
+        for party in parties.values()
+    ]
+    return all(type(count) is int and count == 0 for count in counts)
 
 
 _DEFERRED: ContextVar[frozenset[tuple[Path, OutputScope, Path]]] = ContextVar(

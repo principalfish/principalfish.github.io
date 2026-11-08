@@ -29,6 +29,10 @@ Quick smoke checks (no test runner):
 
     cd data && ./election_data/bin/python -c "from console import create_app; create_app()"   # console app builds
     cd data && ./election_data/bin/python scripts/export_elections.py --dry-run                # export plan, writes nothing
+    cd data && ./election_data/bin/python scripts/export_elections.py --output-base /tmp/x     # real export into /tmp/x/<page>/data, repo untouched
+
+`--output-root` applies only to `--current-simulation`; use `--output-base` for any
+scratch export of the full site.
 
 ## Running the front end
 

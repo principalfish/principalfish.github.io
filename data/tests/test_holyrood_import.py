@@ -135,6 +135,13 @@ class TestParseDateRange:
     def test_hyphen_only_returns_none(self) -> None:
         assert parse_date_range("—") is None
 
+    def test_inverted_same_month_range_returns_none(self) -> None:
+        # A source typo; storing it would invert the fieldwork window.
+        assert parse_date_range("5–3 Feb 2026") is None
+
+    def test_same_start_and_end_day_is_kept(self) -> None:
+        assert parse_date_range("3–3 Feb 2026") == (date(2026, 2, 3), date(2026, 2, 3))
+
 
 # ── identify_party_columns ────────────────────────────────────────────────────
 
@@ -205,6 +212,15 @@ class TestParseConstituencyPolls:
         # Only the real poll row should be returned, not the election baseline
         assert len(polls) == 1
         assert polls[0].pollster_name == "Savanta"
+
+    def test_inverted_date_row_is_skipped_and_the_rest_parse(self) -> None:
+        inverted = _TABLE_ROW_BASIC.replace("1–3 Feb 2026", "5–3 Feb 2026").replace(
+            "Savanta", "Typo Polling"
+        )
+        polls = parse_constituency_polls(
+            _make_html(_TABLE_HEADER + inverted + _TABLE_ROW_BASIC)
+        )
+        assert [p.pollster_name for p in polls] == ["Savanta"]
 
     def test_multiple_rows(self) -> None:
         row2 = """

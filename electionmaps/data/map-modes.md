@@ -29,7 +29,7 @@ page resolves under `/electionmaps/data/`, and on the US page under
 |-|-|
 | `files.elections.mapsById` | Map ID (a JSON object key) → TopoJSON path, e.g. `"2": "maps/map-2.topo.json"`. Each map identifies a boundary set. |
 | `files.elections.electionsById` | Election ID → results path, e.g. `"current-prediction": "results/prediction-simulation.json"`. |
-| `files.meta` | Parliament key → prediction metadata path. The engine reads `latest_poll_snippet` for model-election and poll-tracker subtitles. |
+| `files.meta` | Parliament key → prediction metadata path. The engine reads `latest_poll_snippet` for the "Latest poll used" note below the map (model elections) and below the poll-tracker chart. |
 | `parties` | Array of party records: numeric `id`, canonical string `key`, display `name`, and hex `colour`. Numeric IDs in result files resolve through this list. |
 | `partyKeyAliases` | Alias → canonical party key. String party references are lowercased and stripped of non-alphanumerics for alias lookup; for example, `"reformuk": "reform"`. |
 | `mapModes[mapId].regions` | Array of region records with numeric `id` and display `name`, normally generated from the database. Used to resolve region IDs and label filters. |
@@ -149,6 +149,7 @@ Configuration retained under `predict` does not itself enable that feature.
 | `nextElectionLabel` | Election name displayed in the countdown. |
 | `polltrackerDataPath` | Poll-tracker data path relative to the page's data directory. Currently configured for Westminster. |
 | `polltrackerDefaultParties` | Array of numeric party IDs checked initially in the poll tracker. |
+| `uncertaintyDataPath` | Optional path, relative to the page's data directory, of the current model run's uncertainty summary (`pf-uncertainty-v1`, below). Currently configured for Westminster as `results/prediction-uncertainty.json`. The current model run is the latest-dated one (by the date in its name, e.g. `UNS 2026-10-12`, then by database id; runs whose name has no date are never chosen), so re-running an older date does not replace it. The export writes that file only when the current run has full regional detail, and removes a stale one otherwise, so a missing file means "no uncertainty data": display falls back to the point projection. |
 | `seatTrendsAvailable` | Optional flag enabling a seat-popup trends chart; currently configured for US presidential maps. |
 | `seatTrendsDataPath` | Trends JSON path used by that chart, relative to the page's data directory. |
 | `predict` | Nested prediction-model and input-grid configuration, described below. |
@@ -160,6 +161,39 @@ in the poll tracker, and hides when its date passes. A bare ISO date such as
 formatted in UTC: midnight at a positive offset, such as `+01:00`, displays the
 previous day, so use a bare date when that is unsuitable. The text is
 `12d 3h 4m 5s · <label> · 3 November 2026`.
+
+### Uncertainty summary: `pf-uncertainty-v1`
+
+The file at `uncertaintyDataPath` describes the run exported as the model
+election (for Westminster, `current-prediction`): the latest-dated model run. Vote shares are percentage
+points to 1 dp; probabilities are fractions from 0 to 1 to 3 dp (the site shows whole percentages, with "<1%" and ">99%" at the extremes); seats are
+integers, except the mean seats `mean` (2 dp). Each block's whole seats `m` are its
+parties' `mean` rounded by largest remainder (floor each mean, then one more
+seat to each of the largest fractional parts until the block's seat total is
+reached; equal fractions go to the larger mean, then by party name), so they
+add up to the block's seat total: 650 nationally, the region's seat count in a
+region. With "Show with modelled uncertainty" ticked (it is unticked on each page load, and
+offered only on a view with this file), the site's Seats column and headline show `m`;
+unticked, the page shows the uniform-swing projection. Parties and regions are keyed by numeric ID strings, as in `parties`
+and `mapModes[mapId].regions`.
+
+| Field | Description |
+|-|-|
+| `schema` | `"pf-uncertainty-v1"`. |
+| `as_of_date`, `election_name` | The model run, e.g. `"2026-10-12"`, `"UNS 2026-10-12"`. |
+| `simulations`, `interval` | Simulation count and interval level (`0.9`: ranges run from the 5th to the 95th percentile). |
+| `basis` | One-line reading guide to show with the figures, e.g. "Nowcast: if an election were held today. 90% ranges and probabilities from 10,000 simulations, conditional on current polls and the model's error assumptions." |
+| `national.parties[id]` | `v: [lo, hi]` vote-share range; `s: [lo, median, hi]` seats; `mean` mean seats over the simulations; `m` whole seats (above); `pm` P(majority); `pl` P(largest party, ties split); `hist: {start, counts}` seat histogram, `counts[i]` simulations with `start + i` seats (counts sum to `simulations`). |
+| `national.hung` | P(no party reaches a majority). |
+| `regions[id].parties[id]` | `v`, `s`, `mean` and `m` as nationally, plus `pm` (more than half the region's seats) and `pl` when the run stored them. Parties whose range stays below 0.5 points and that never win a seat there are omitted (their mean there is 0, so `m` still adds up). |
+| `regions[id].hung` | P(no party holds more than half the region's seats), when stored. |
+
+The model election's result file (`pf-results-v4`) carries the matching
+per-seat ranges: a seat may have `u: [[partyId, lo, hi, win], ...]`, one row
+per `p` party in `p` order, with the share range in points and the win
+probability as a fraction. A `p` party with no row never won the seat in any
+simulation and its range stays below 0.5 points, so none was stored; a seat
+without `u` has no stored ranges at all.
 
 ### Nested `predict` options
 

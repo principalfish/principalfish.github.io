@@ -1397,3 +1397,102 @@ class TestMain:
         assert "deleted existing rows: 1" in out
         assert "inserted poll rows:" in out
         assert len(db.get_rows_for_poll(seeded.id)) == 8 * (1 + len(world.region_ids))
+
+
+# ── Column bases ─────────────────────────────────────────────────────────────
+
+
+class TestParseBases:
+    """parse_poll reads the VI table's Unweighted/Weighted Total rows."""
+
+    def test_fixture_bases_per_source_column(self) -> None:
+        parsed = parse_poll(_grouped_source_workbook(), source_url=_GROUPED_SOURCE_URL)
+
+        assert {
+            base.regions: (base.unweighted_n, base.weighted_n) for base in parsed.bases
+        } == {
+            (): (1026, 1041),
+            ("London",): (138, 140),
+            ("East of England", "South East England", "South West England"): (
+                333,
+                323,
+            ),
+            ("East Midlands", "West Midlands"): (158, 167),
+            ("North East England", "North West England", "Yorkshire and The Humber"): (
+                255,
+                239,
+            ),
+            ("Scotland",): (67, 84),
+            ("Wales",): (62, 52),
+            ("Northern Ireland",): (13, 35),
+        }
+        assert {base.kind for base in parsed.bases} == {"decided"}
+
+    def test_directly_published_region_drops_its_broad_column_base(self) -> None:
+        workbook = _grouped_source_workbook()
+        sheet = workbook["Tables"]
+        sheet.insert_cols(19)
+        sheet.cell(5, 19).value = "North East"
+        sheet.cell(6, 19).value = 41
+        sheet.cell(7, 19).value = 44
+
+        parsed = parse_poll(workbook, source_url=_GROUPED_SOURCE_URL)
+
+        by_regions = {base.regions: base.unweighted_n for base in parsed.bases}
+        assert by_regions[("North East England",)] == 41
+        assert not any("North West England" in regions for regions in by_regions)
+        assert by_regions[("East Midlands", "West Midlands")] == 158
+
+    def test_likely_voter_base_line_is_labelled_as_such(self) -> None:
+        workbook = _grouped_source_workbook()
+        workbook["Tables"].cell(2, 1).value = (
+            "Base: Respondents likely to vote, factored by likelihood to vote"
+        )
+
+        parsed = parse_poll(workbook, source_url=_GROUPED_SOURCE_URL)
+
+        assert parsed.bases
+        assert {base.kind for base in parsed.bases} == {"likely_voters"}
+
+    @pytest.mark.parametrize(
+        ("cell", "value"),
+        [((2, 1), "Base: All respondents"), ((6, 1), "Unweighted respondents")],
+        ids=["unrecognised-base-line", "no-unweighted-total-row"],
+    )
+    def test_no_usable_base_gives_no_bases(
+        self, cell: tuple[int, int], value: str
+    ) -> None:
+        workbook = _grouped_source_workbook()
+        workbook["Tables"].cell(*cell).value = value
+
+        parsed = parse_poll(workbook, source_url=_GROUPED_SOURCE_URL)
+
+        assert parsed.bases == []
+
+    def test_broad_columns_are_apportioned_by_population_in_the_plan(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        world = westminster_world
+        _patch_urlopen(monkeypatch, workbook_bytes(_grouped_source_workbook()))
+
+        plan = build_import_plan(
+            db, xlsx_url=_GROUPED_SOURCE_URL, map_name=world.map_name
+        )
+
+        planned = {
+            base.region_id: (base.unweighted_n, base.weighted_n, base.split_from_macro)
+            for base in plan.bases
+        }
+        ids = world.region_ids
+        # South 333 (weighted 323) over East 6.3m, South East 9.6m, South West
+        # 5.6m: quotas 97.58/148.69/86.73, largest remainders to SW then SE.
+        assert planned[ids["East of England"]] == (97, 95, True)
+        assert planned[ids["South East England"]] == (149, 144, True)
+        assert planned[ids["South West England"]] == (87, 84, True)
+        assert planned[ids["London"]] == (138, 140, False)
+        assert planned[None] == (1026, 1041, False)
+        # National plus all twelve regions, Northern Ireland included.
+        assert len(planned) == 13

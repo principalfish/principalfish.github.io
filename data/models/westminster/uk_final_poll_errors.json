@@ -1,0 +1,2398 @@
+{
+  "schema": "pf-final-poll-errors-v1",
+  "credit": {
+    "text": "Final-poll data: Mark Pack, PollBase — https://www.markpack.org.uk/opinion-polls/",
+    "name": "Mark Pack, PollBase",
+    "url": "https://www.markpack.org.uk/opinion-polls/",
+    "edition": "PollBase-Q3-2026.xlsx",
+    "sha256": "c8e4863d92ccf5cddc8783846d4fbb10bf18396964bdb7b1c06628ec74586f10"
+  },
+  "rule": {
+    "window_days": 3,
+    "text": "For each election, each pollster's last poll (latest fieldwork end, then latest publication, then later row) whose fieldwork ended in the 3 days before polling day or on it, started before polling day, and was published on or before polling day (a blank Published cell does not count); a party's average is the equal-weight mean over the pollsters reporting it. Results are PollBase's Result rows (GB vote shares). Shares as published, UK-basis polls included."
+  },
+  "skipped_rows": [
+    {
+      "sheet": "05-10",
+      "row": 624,
+      "pollster": "YouGov",
+      "fieldwork": "16",
+      "reason": "fieldwork text '16' (April) contradicts its start date, 17 April 2010; 19 days before polling day, outside the final-poll window either way"
+    },
+    {
+      "sheet": "19-24",
+      "row": 1894,
+      "pollster": "YouGov",
+      "fieldwork": "11-18",
+      "reason": "YouGov/Sky MRP, fieldwork 11-18 June 2024, printed as published on the 16th, before its fieldwork ended; outside the final-poll window either way"
+    }
+  ],
+  "elections": [
+    {
+      "year": 1992,
+      "polling_day": "1992-04-09",
+      "window": [
+        "1992-04-06",
+        "1992-04-09"
+      ],
+      "source": {
+        "name": "Mark Pack, PollBase",
+        "url": "https://www.markpack.org.uk/opinion-polls/",
+        "edition": "PollBase-Q3-2026.xlsx",
+        "result": "sheet '87-92' row 601 (Result)"
+      },
+      "parties": {
+        "con": {
+          "label": "Conservative",
+          "average": 38.3,
+          "result": 42.8,
+          "pollsters": 5
+        },
+        "lab": {
+          "label": "Labour",
+          "average": 39.4,
+          "result": 35.2,
+          "pollsters": 5
+        },
+        "ld": {
+          "label": "Liberal Democrats",
+          "average": 19.0,
+          "result": 18.3,
+          "pollsters": 5
+        }
+      },
+      "final_polls": [
+        {
+          "pollster": "Gallup",
+          "publisher": "DT",
+          "fieldwork": "7-8",
+          "fieldwork_start": "1992-04-07",
+          "fieldwork_end": "1992-04-08",
+          "published": "1992-04-09",
+          "geography": null,
+          "sheet": "87-92",
+          "row": 593,
+          "shares": {
+            "con": 38.5,
+            "lab": 38.0,
+            "ld": 20.0
+          }
+        },
+        {
+          "pollster": "Harris",
+          "publisher": "ITN",
+          "fieldwork": "4-7",
+          "fieldwork_start": "1992-04-04",
+          "fieldwork_end": "1992-04-07",
+          "published": "1992-04-08",
+          "geography": null,
+          "sheet": "87-92",
+          "row": 589,
+          "shares": {
+            "con": 38.0,
+            "lab": 40.0,
+            "ld": 18.0
+          }
+        },
+        {
+          "pollster": "ICM",
+          "publisher": "GU",
+          "fieldwork": "8",
+          "fieldwork_start": "1992-04-08",
+          "fieldwork_end": "1992-04-08",
+          "published": "1992-04-09",
+          "geography": null,
+          "sheet": "87-92",
+          "row": 595,
+          "shares": {
+            "con": 38.0,
+            "lab": 38.0,
+            "ld": 20.0
+          }
+        },
+        {
+          "pollster": "MORI",
+          "publisher": "TT",
+          "fieldwork": "7-8",
+          "fieldwork_start": "1992-04-07",
+          "fieldwork_end": "1992-04-08",
+          "published": "1992-04-09",
+          "geography": null,
+          "sheet": "87-92",
+          "row": 594,
+          "shares": {
+            "con": 38.0,
+            "lab": 39.0,
+            "ld": 20.0
+          }
+        },
+        {
+          "pollster": "NOP",
+          "publisher": "Ind",
+          "fieldwork": "7-8",
+          "fieldwork_start": "1992-04-07",
+          "fieldwork_end": "1992-04-08",
+          "published": "1992-04-09",
+          "geography": null,
+          "sheet": "87-92",
+          "row": 592,
+          "shares": {
+            "con": 39.0,
+            "lab": 42.0,
+            "ld": 17.0
+          }
+        }
+      ],
+      "excluded_polls": [
+        {
+          "pollster": "Harris",
+          "publisher": "DE",
+          "fieldwork": "4-6",
+          "fieldwork_start": "1992-04-04",
+          "fieldwork_end": "1992-04-06",
+          "published": "1992-04-07",
+          "geography": null,
+          "sheet": "87-92",
+          "row": 588,
+          "shares": {
+            "con": 37.0,
+            "lab": 38.0,
+            "ld": 21.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "MORI",
+          "publisher": "Yorks TV",
+          "fieldwork": "6-7",
+          "fieldwork_start": "1992-04-06",
+          "fieldwork_end": "1992-04-07",
+          "published": "1992-04-08",
+          "geography": null,
+          "sheet": "87-92",
+          "row": 590,
+          "shares": {
+            "con": 37.0,
+            "lab": 40.0,
+            "ld": 20.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "NOP",
+          "publisher": "ITC",
+          "fieldwork": "c.6-9",
+          "fieldwork_start": "1992-04-06",
+          "fieldwork_end": "1992-04-09",
+          "published": null,
+          "geography": null,
+          "sheet": "87-92",
+          "row": 591,
+          "shares": {
+            "con": 42.0,
+            "lab": 33.0,
+            "ld": 22.0
+          },
+          "reason": "no publication date"
+        }
+      ]
+    },
+    {
+      "year": 1997,
+      "polling_day": "1997-05-01",
+      "window": [
+        "1997-04-28",
+        "1997-05-01"
+      ],
+      "source": {
+        "name": "Mark Pack, PollBase",
+        "url": "https://www.markpack.org.uk/opinion-polls/",
+        "edition": "PollBase-Q3-2026.xlsx",
+        "result": "sheet '92-97' row 412 (Result)"
+      },
+      "parties": {
+        "con": {
+          "label": "Conservative",
+          "average": 30.8,
+          "result": 31.0,
+          "pollsters": 5
+        },
+        "lab": {
+          "label": "Labour",
+          "average": 46.6,
+          "result": 44.0,
+          "pollsters": 5
+        },
+        "ld": {
+          "label": "Liberal Democrats",
+          "average": 16.4,
+          "result": 17.0,
+          "pollsters": 5
+        }
+      },
+      "final_polls": [
+        {
+          "pollster": "Gallup",
+          "publisher": "DT",
+          "fieldwork": "29-30",
+          "fieldwork_start": "1997-04-29",
+          "fieldwork_end": "1997-04-30",
+          "published": "1997-05-01",
+          "geography": null,
+          "sheet": "92-97",
+          "row": 404,
+          "shares": {
+            "con": 33.0,
+            "lab": 46.0,
+            "ld": 16.0
+          }
+        },
+        {
+          "pollster": "Harris",
+          "publisher": "Ind",
+          "fieldwork": "28-29",
+          "fieldwork_start": "1997-04-28",
+          "fieldwork_end": "1997-04-29",
+          "published": "1997-05-01",
+          "geography": null,
+          "sheet": "92-97",
+          "row": 400,
+          "shares": {
+            "con": 31.0,
+            "lab": 48.0,
+            "ld": 15.0
+          }
+        },
+        {
+          "pollster": "ICM",
+          "publisher": "Gu",
+          "fieldwork": "29-30",
+          "fieldwork_start": "1997-04-29",
+          "fieldwork_end": "1997-04-30",
+          "published": "1997-05-01",
+          "geography": null,
+          "sheet": "92-97",
+          "row": 403,
+          "shares": {
+            "con": 33.0,
+            "lab": 43.0,
+            "ld": 18.0
+          }
+        },
+        {
+          "pollster": "MORI",
+          "publisher": "ES",
+          "fieldwork": "30",
+          "fieldwork_start": "1997-04-30",
+          "fieldwork_end": "1997-04-30",
+          "published": "1997-05-01",
+          "geography": null,
+          "sheet": "92-97",
+          "row": 405,
+          "shares": {
+            "con": 29.0,
+            "lab": 46.0,
+            "ld": 19.0
+          }
+        },
+        {
+          "pollster": "NOP",
+          "publisher": "Reut",
+          "fieldwork": "29",
+          "fieldwork_start": "1997-04-29",
+          "fieldwork_end": "1997-04-29",
+          "published": "1997-05-01",
+          "geography": null,
+          "sheet": "92-97",
+          "row": 402,
+          "shares": {
+            "con": 28.0,
+            "lab": 50.0,
+            "ld": 14.0
+          }
+        }
+      ],
+      "excluded_polls": [
+        {
+          "pollster": "Gallup",
+          "publisher": "C4",
+          "fieldwork": "24-28",
+          "fieldwork_start": "1997-04-24",
+          "fieldwork_end": "1997-04-28",
+          "published": "1997-04-29",
+          "geography": null,
+          "sheet": "92-97",
+          "row": 394,
+          "shares": {
+            "con": 31.0,
+            "lab": 49.0,
+            "ld": 14.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "Gallup",
+          "publisher": "DT",
+          "fieldwork": "26-28",
+          "fieldwork_start": "1997-04-26",
+          "fieldwork_end": "1997-04-28",
+          "published": "1997-04-29",
+          "geography": null,
+          "sheet": "92-97",
+          "row": 398,
+          "shares": {
+            "con": 29.0,
+            "lab": 51.0,
+            "ld": 13.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "Gallup",
+          "publisher": "DT",
+          "fieldwork": "28-29",
+          "fieldwork_start": "1997-04-28",
+          "fieldwork_end": "1997-04-29",
+          "published": "1997-04-30",
+          "geography": null,
+          "sheet": "92-97",
+          "row": 399,
+          "shares": {
+            "con": 31.0,
+            "lab": 51.0,
+            "ld": 13.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "MORI",
+          "publisher": "TT",
+          "fieldwork": "29",
+          "fieldwork_start": "1997-04-29",
+          "fieldwork_end": "1997-04-29",
+          "published": "1997-05-01",
+          "geography": null,
+          "sheet": "92-97",
+          "row": 401,
+          "shares": {
+            "con": 28.0,
+            "lab": 48.0,
+            "ld": 16.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        }
+      ]
+    },
+    {
+      "year": 2001,
+      "polling_day": "2001-06-07",
+      "window": [
+        "2001-06-04",
+        "2001-06-07"
+      ],
+      "source": {
+        "name": "Mark Pack, PollBase",
+        "url": "https://www.markpack.org.uk/opinion-polls/",
+        "edition": "PollBase-Q3-2026.xlsx",
+        "result": "sheet '97-01' row 287 (Result)"
+      },
+      "parties": {
+        "con": {
+          "label": "Conservative",
+          "average": 31.3333,
+          "result": 32.7,
+          "pollsters": 3
+        },
+        "lab": {
+          "label": "Labour",
+          "average": 45.3333,
+          "result": 42.0,
+          "pollsters": 3
+        },
+        "ld": {
+          "label": "Liberal Democrats",
+          "average": 18.3333,
+          "result": 18.8,
+          "pollsters": 3
+        }
+      },
+      "final_polls": [
+        {
+          "pollster": "Gallup",
+          "publisher": "DT",
+          "fieldwork": "6",
+          "fieldwork_start": "2001-06-06",
+          "fieldwork_end": "2001-06-06",
+          "published": "2001-06-07",
+          "geography": null,
+          "sheet": "97-01",
+          "row": 282,
+          "shares": {
+            "con": 32.0,
+            "lab": 48.0,
+            "ld": 18.0
+          }
+        },
+        {
+          "pollster": "ICM",
+          "publisher": "Gu",
+          "fieldwork": "2-4",
+          "fieldwork_start": "2001-06-02",
+          "fieldwork_end": "2001-06-04",
+          "published": "2001-06-06",
+          "geography": null,
+          "sheet": "97-01",
+          "row": 278,
+          "shares": {
+            "con": 32.0,
+            "lab": 43.0,
+            "ld": 19.0
+          }
+        },
+        {
+          "pollster": "MORI",
+          "publisher": "TT",
+          "fieldwork": "5-6",
+          "fieldwork_start": "2001-06-05",
+          "fieldwork_end": "2001-06-06",
+          "published": "2001-06-07",
+          "geography": null,
+          "sheet": "97-01",
+          "row": 281,
+          "shares": {
+            "con": 30.0,
+            "lab": 45.0,
+            "ld": 18.0
+          }
+        }
+      ],
+      "excluded_polls": [
+        {
+          "pollster": "YouGov",
+          "publisher": null,
+          "fieldwork": null,
+          "fieldwork_start": "2001-06-04",
+          "fieldwork_end": "2001-06-04",
+          "published": null,
+          "geography": null,
+          "sheet": "97-01",
+          "row": 279,
+          "shares": {
+            "con": 33.0,
+            "lab": 43.0,
+            "ld": 17.0
+          },
+          "reason": "no publication date"
+        }
+      ]
+    },
+    {
+      "year": 2005,
+      "polling_day": "2005-05-05",
+      "window": [
+        "2005-05-02",
+        "2005-05-05"
+      ],
+      "source": {
+        "name": "Mark Pack, PollBase",
+        "url": "https://www.markpack.org.uk/opinion-polls/",
+        "edition": "PollBase-Q3-2026.xlsx",
+        "result": "sheet '01-05' row 315 (Result)"
+      },
+      "parties": {
+        "con": {
+          "label": "Conservative",
+          "average": 32.5,
+          "result": 33.2,
+          "pollsters": 6
+        },
+        "lab": {
+          "label": "Labour",
+          "average": 37.6667,
+          "result": 36.2,
+          "pollsters": 6
+        },
+        "ld": {
+          "label": "Liberal Democrats",
+          "average": 22.5,
+          "result": 22.6,
+          "pollsters": 6
+        }
+      },
+      "final_polls": [
+        {
+          "pollster": "Harris",
+          "publisher": null,
+          "fieldwork": "1-4",
+          "fieldwork_start": "2005-05-01",
+          "fieldwork_end": "2005-05-04",
+          "published": "2005-05-04",
+          "geography": null,
+          "sheet": "01-05",
+          "row": 307,
+          "shares": {
+            "con": 33.0,
+            "lab": 39.0,
+            "ld": 22.0
+          }
+        },
+        {
+          "pollster": "ICM",
+          "publisher": "Gu",
+          "fieldwork": "1-3",
+          "fieldwork_start": "2005-05-01",
+          "fieldwork_end": "2005-05-03",
+          "published": "2005-05-05",
+          "geography": null,
+          "sheet": "01-05",
+          "row": 305,
+          "shares": {
+            "con": 32.0,
+            "lab": 38.0,
+            "ld": 22.0
+          }
+        },
+        {
+          "pollster": "MORI",
+          "publisher": "ES",
+          "fieldwork": "3-4",
+          "fieldwork_start": "2005-05-03",
+          "fieldwork_end": "2005-05-04",
+          "published": "2005-05-05",
+          "geography": null,
+          "sheet": "01-05",
+          "row": 311,
+          "shares": {
+            "con": 33.0,
+            "lab": 38.0,
+            "ld": 23.0
+          }
+        },
+        {
+          "pollster": "NOP",
+          "publisher": "Ind",
+          "fieldwork": "1-3",
+          "fieldwork_start": "2005-05-01",
+          "fieldwork_end": "2005-05-03",
+          "published": "2005-05-05",
+          "geography": null,
+          "sheet": "01-05",
+          "row": 306,
+          "shares": {
+            "con": 33.0,
+            "lab": 36.0,
+            "ld": 23.0
+          }
+        },
+        {
+          "pollster": "Populus",
+          "publisher": "TT",
+          "fieldwork": "2-3",
+          "fieldwork_start": "2005-05-02",
+          "fieldwork_end": "2005-05-03",
+          "published": "2005-05-05",
+          "geography": null,
+          "sheet": "01-05",
+          "row": 309,
+          "shares": {
+            "con": 32.0,
+            "lab": 38.0,
+            "ld": 21.0
+          }
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": "DT",
+          "fieldwork": "3-4",
+          "fieldwork_start": "2005-05-03",
+          "fieldwork_end": "2005-05-04",
+          "published": "2005-05-05",
+          "geography": null,
+          "sheet": "01-05",
+          "row": 310,
+          "shares": {
+            "con": 32.0,
+            "lab": 37.0,
+            "ld": 24.0
+          }
+        }
+      ],
+      "excluded_polls": [
+        {
+          "pollster": "Populus",
+          "publisher": "TT/ITV",
+          "fieldwork": "29-2",
+          "fieldwork_start": "2005-04-29",
+          "fieldwork_end": "2005-05-02",
+          "published": "2005-05-03",
+          "geography": null,
+          "sheet": "01-05",
+          "row": 303,
+          "shares": {
+            "con": 27.0,
+            "lab": 41.0,
+            "ld": 23.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "Harris",
+          "publisher": null,
+          "fieldwork": "1-2",
+          "fieldwork_start": "2005-05-01",
+          "fieldwork_end": "2005-05-02",
+          "published": "2005-05-04",
+          "geography": null,
+          "sheet": "01-05",
+          "row": 304,
+          "shares": {
+            "con": 34.0,
+            "lab": 38.0,
+            "ld": 22.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": "Sky",
+          "fieldwork": "2-3",
+          "fieldwork_start": "2005-05-02",
+          "fieldwork_end": "2005-05-03",
+          "published": "2005-05-04",
+          "geography": null,
+          "sheet": "01-05",
+          "row": 308,
+          "shares": {
+            "con": 32.0,
+            "lab": 36.0,
+            "ld": 25.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        }
+      ]
+    },
+    {
+      "year": 2010,
+      "polling_day": "2010-05-06",
+      "window": [
+        "2010-05-03",
+        "2010-05-06"
+      ],
+      "source": {
+        "name": "Mark Pack, PollBase",
+        "url": "https://www.markpack.org.uk/opinion-polls/",
+        "edition": "PollBase-Q3-2026.xlsx",
+        "result": "sheet '05-10' row 691 (Result)"
+      },
+      "parties": {
+        "con": {
+          "label": "Conservative",
+          "average": 35.5556,
+          "result": 36.9,
+          "pollsters": 9
+        },
+        "lab": {
+          "label": "Labour",
+          "average": 27.5556,
+          "result": 29.7,
+          "pollsters": 9
+        },
+        "ld": {
+          "label": "Liberal Democrats",
+          "average": 27.4444,
+          "result": 23.6,
+          "pollsters": 9
+        }
+      },
+      "final_polls": [
+        {
+          "pollster": "Angus RS",
+          "publisher": "PB",
+          "fieldwork": "4-5",
+          "fieldwork_start": "2010-05-04",
+          "fieldwork_end": "2010-05-05",
+          "published": "2010-05-05",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 683,
+          "shares": {
+            "con": 36.0,
+            "lab": 24.0,
+            "ld": 29.0
+          }
+        },
+        {
+          "pollster": "ComRes",
+          "publisher": "ITV/Ind",
+          "fieldwork": "4-5",
+          "fieldwork_start": "2010-05-04",
+          "fieldwork_end": "2010-05-05",
+          "published": "2010-05-06",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 688,
+          "shares": {
+            "con": 37.0,
+            "lab": 28.0,
+            "ld": 28.0
+          }
+        },
+        {
+          "pollster": "Harris",
+          "publisher": "DM",
+          "fieldwork": "4-5",
+          "fieldwork_start": "2010-05-04",
+          "fieldwork_end": "2010-05-05",
+          "published": "2010-05-06",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 685,
+          "shares": {
+            "con": 35.0,
+            "lab": 29.0,
+            "ld": 27.0
+          }
+        },
+        {
+          "pollster": "ICM",
+          "publisher": "Gu",
+          "fieldwork": "3-4",
+          "fieldwork_start": "2010-05-03",
+          "fieldwork_end": "2010-05-04",
+          "published": "2010-05-06",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 682,
+          "shares": {
+            "con": 36.0,
+            "lab": 28.0,
+            "ld": 26.0
+          }
+        },
+        {
+          "pollster": "MORI",
+          "publisher": "ES",
+          "fieldwork": "5",
+          "fieldwork_start": "2010-05-05",
+          "fieldwork_end": "2010-05-05",
+          "published": "2010-05-06",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 689,
+          "shares": {
+            "con": 36.0,
+            "lab": 29.0,
+            "ld": 27.0
+          }
+        },
+        {
+          "pollster": "Opinium",
+          "publisher": "DE",
+          "fieldwork": "4-5",
+          "fieldwork_start": "2010-05-04",
+          "fieldwork_end": "2010-05-05",
+          "published": "2010-05-06",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 687,
+          "shares": {
+            "con": 35.0,
+            "lab": 27.0,
+            "ld": 26.0
+          }
+        },
+        {
+          "pollster": "Populus",
+          "publisher": "TT",
+          "fieldwork": "4-5",
+          "fieldwork_start": "2010-05-04",
+          "fieldwork_end": "2010-05-05",
+          "published": "2010-05-06",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 684,
+          "shares": {
+            "con": 37.0,
+            "lab": 28.0,
+            "ld": 27.0
+          }
+        },
+        {
+          "pollster": "TNS-BMRB",
+          "publisher": null,
+          "fieldwork": "29-4",
+          "fieldwork_start": "2010-04-29",
+          "fieldwork_end": "2010-05-04",
+          "published": "2010-05-05",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 669,
+          "shares": {
+            "con": 33.0,
+            "lab": 27.0,
+            "ld": 29.0
+          }
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": "Sun",
+          "fieldwork": "4-5",
+          "fieldwork_start": "2010-05-04",
+          "fieldwork_end": "2010-05-05",
+          "published": "2010-05-06",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 686,
+          "shares": {
+            "con": 35.0,
+            "lab": 28.0,
+            "ld": 28.0
+          }
+        }
+      ],
+      "excluded_polls": [
+        {
+          "pollster": "Harris",
+          "publisher": "Metro",
+          "fieldwork": "28-4",
+          "fieldwork_start": "2010-04-28",
+          "fieldwork_end": "2010-05-04",
+          "published": "2010-05-05",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 664,
+          "shares": {
+            "con": 36.0,
+            "lab": 26.0,
+            "ld": 28.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "Opinium",
+          "publisher": "DE",
+          "fieldwork": "30-3",
+          "fieldwork_start": "2010-04-30",
+          "fieldwork_end": "2010-05-03",
+          "published": "2010-05-04",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 676,
+          "shares": {
+            "con": 33.0,
+            "lab": 28.0,
+            "ld": 27.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": "Sun",
+          "fieldwork": "2-3",
+          "fieldwork_start": "2010-05-02",
+          "fieldwork_end": "2010-05-03",
+          "published": "2010-05-04",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 679,
+          "shares": {
+            "con": 35.0,
+            "lab": 28.0,
+            "ld": 28.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "ComRes",
+          "publisher": "ITV/Ind",
+          "fieldwork": "2-3",
+          "fieldwork_start": "2010-05-02",
+          "fieldwork_end": "2010-05-03",
+          "published": "2010-05-05",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 680,
+          "shares": {
+            "con": 37.0,
+            "lab": 29.0,
+            "ld": 26.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": "Sun",
+          "fieldwork": "3-4",
+          "fieldwork_start": "2010-05-03",
+          "fieldwork_end": "2010-05-04",
+          "published": "2010-05-05",
+          "geography": null,
+          "sheet": "05-10",
+          "row": 681,
+          "shares": {
+            "con": 35.0,
+            "lab": 30.0,
+            "ld": 24.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        }
+      ]
+    },
+    {
+      "year": 2015,
+      "polling_day": "2015-05-07",
+      "window": [
+        "2015-05-04",
+        "2015-05-07"
+      ],
+      "source": {
+        "name": "Mark Pack, PollBase",
+        "url": "https://www.markpack.org.uk/opinion-polls/",
+        "edition": "PollBase-Q3-2026.xlsx",
+        "result": "sheet '10-15' row 2098 (Result)"
+      },
+      "parties": {
+        "con": {
+          "label": "Conservative",
+          "average": 33.5833,
+          "result": 37.7,
+          "pollsters": 12
+        },
+        "lab": {
+          "label": "Labour",
+          "average": 33.0,
+          "result": 31.2,
+          "pollsters": 12
+        },
+        "ld": {
+          "label": "Liberal Democrats",
+          "average": 8.9167,
+          "result": 8.1,
+          "pollsters": 12
+        },
+        "green": {
+          "label": "Green",
+          "average": 5.1667,
+          "result": 3.8,
+          "pollsters": 12
+        },
+        "ukip": {
+          "label": "UKIP",
+          "average": 12.8333,
+          "result": 12.9,
+          "pollsters": 12
+        }
+      },
+      "final_polls": [
+        {
+          "pollster": "BMG",
+          "publisher": "May2015",
+          "fieldwork": "3-5",
+          "fieldwork_start": "2015-05-03",
+          "fieldwork_end": "2015-05-05",
+          "published": "2015-05-05",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2082,
+          "shares": {
+            "con": 34.0,
+            "lab": 34.0,
+            "ld": 10.0,
+            "green": 4.0,
+            "ukip": 12.0
+          }
+        },
+        {
+          "pollster": "ComRes",
+          "publisher": "DM/ITV",
+          "fieldwork": "6",
+          "fieldwork_start": "2015-05-06",
+          "fieldwork_end": "2015-05-06",
+          "published": "2015-05-07",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2093,
+          "shares": {
+            "con": 35.0,
+            "lab": 34.0,
+            "ld": 9.0,
+            "green": 4.0,
+            "ukip": 12.0
+          }
+        },
+        {
+          "pollster": "ICM",
+          "publisher": "Gu",
+          "fieldwork": "3-6",
+          "fieldwork_start": "2015-05-03",
+          "fieldwork_end": "2015-05-06",
+          "published": "2015-05-07",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2085,
+          "shares": {
+            "con": 34.0,
+            "lab": 35.0,
+            "ld": 9.0,
+            "green": 4.0,
+            "ukip": 11.0
+          }
+        },
+        {
+          "pollster": "Lord Ashcroft",
+          "publisher": null,
+          "fieldwork": "5-6",
+          "fieldwork_start": "2015-05-05",
+          "fieldwork_end": "2015-05-06",
+          "published": "2015-05-07",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2090,
+          "shares": {
+            "con": 33.0,
+            "lab": 33.0,
+            "ld": 10.0,
+            "green": 6.0,
+            "ukip": 11.0
+          }
+        },
+        {
+          "pollster": "MORI",
+          "publisher": "ES",
+          "fieldwork": "5-6",
+          "fieldwork_start": "2015-05-05",
+          "fieldwork_end": "2015-05-06",
+          "published": "2015-05-07",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2091,
+          "shares": {
+            "con": 36.0,
+            "lab": 35.0,
+            "ld": 8.0,
+            "green": 5.0,
+            "ukip": 11.0
+          }
+        },
+        {
+          "pollster": "Opinium",
+          "publisher": null,
+          "fieldwork": "4-5",
+          "fieldwork_start": "2015-05-04",
+          "fieldwork_end": "2015-05-05",
+          "published": "2015-05-06",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2087,
+          "shares": {
+            "con": 35.0,
+            "lab": 34.0,
+            "ld": 8.0,
+            "green": 6.0,
+            "ukip": 12.0
+          }
+        },
+        {
+          "pollster": "Panelbase",
+          "publisher": null,
+          "fieldwork": "1-6",
+          "fieldwork_start": "2015-05-01",
+          "fieldwork_end": "2015-05-06",
+          "published": "2015-05-06",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2079,
+          "shares": {
+            "con": 31.0,
+            "lab": 33.0,
+            "ld": 8.0,
+            "green": 5.0,
+            "ukip": 16.0
+          }
+        },
+        {
+          "pollster": "Populus",
+          "publisher": null,
+          "fieldwork": "5-7",
+          "fieldwork_start": "2015-05-05",
+          "fieldwork_end": "2015-05-07",
+          "published": "2015-05-07",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2092,
+          "shares": {
+            "con": 33.0,
+            "lab": 33.0,
+            "ld": 10.0,
+            "green": 5.0,
+            "ukip": 14.0
+          }
+        },
+        {
+          "pollster": "Survation",
+          "publisher": "Mirror",
+          "fieldwork": "4-6",
+          "fieldwork_start": "2015-05-04",
+          "fieldwork_end": "2015-05-06",
+          "published": "2015-05-06",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2088,
+          "shares": {
+            "con": 31.0,
+            "lab": 31.0,
+            "ld": 10.0,
+            "green": 5.0,
+            "ukip": 16.0
+          }
+        },
+        {
+          "pollster": "SurveyMonkey",
+          "publisher": "Wash Po",
+          "fieldwork": "30-6",
+          "fieldwork_start": "2015-04-30",
+          "fieldwork_end": "2015-05-06",
+          "published": "2015-05-06",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2074,
+          "shares": {
+            "con": 34.0,
+            "lab": 28.0,
+            "ld": 7.0,
+            "green": 8.0,
+            "ukip": 13.0
+          }
+        },
+        {
+          "pollster": "TNS BMRB",
+          "publisher": null,
+          "fieldwork": "30-4",
+          "fieldwork_start": "2015-04-30",
+          "fieldwork_end": "2015-05-04",
+          "published": "2015-05-06",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2073,
+          "shares": {
+            "con": 33.0,
+            "lab": 32.0,
+            "ld": 8.0,
+            "green": 6.0,
+            "ukip": 14.0
+          }
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": null,
+          "fieldwork": "4-6",
+          "fieldwork_start": "2015-05-04",
+          "fieldwork_end": "2015-05-06",
+          "published": "2015-05-07",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2089,
+          "shares": {
+            "con": 34.0,
+            "lab": 34.0,
+            "ld": 10.0,
+            "green": 4.0,
+            "ukip": 12.0
+          }
+        }
+      ],
+      "excluded_polls": [
+        {
+          "pollster": "YouGov",
+          "publisher": null,
+          "fieldwork": "3-4",
+          "fieldwork_start": "2015-05-03",
+          "fieldwork_end": "2015-05-04",
+          "published": null,
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2081,
+          "shares": {
+            "con": 33.0,
+            "lab": 33.0,
+            "ld": 10.0,
+            "green": 5.0,
+            "ukip": 12.0
+          },
+          "reason": "no publication date"
+        },
+        {
+          "pollster": "ComRes",
+          "publisher": "DM/ITV",
+          "fieldwork": "3-5",
+          "fieldwork_start": "2015-05-03",
+          "fieldwork_end": "2015-05-05",
+          "published": "2015-05-06",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2083,
+          "shares": {
+            "con": 35.0,
+            "lab": 32.0,
+            "ld": 9.0,
+            "green": 4.0,
+            "ukip": 14.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "ICM",
+          "publisher": "Gu",
+          "fieldwork": "3-6",
+          "fieldwork_start": "2015-05-03",
+          "fieldwork_end": "2015-05-06",
+          "published": "2015-05-06",
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2084,
+          "shares": {
+            "con": 35.0,
+            "lab": 35.0,
+            "ld": 9.0,
+            "green": 3.0,
+            "ukip": 11.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": null,
+          "fieldwork": "4-5",
+          "fieldwork_start": "2015-05-04",
+          "fieldwork_end": "2015-05-05",
+          "published": null,
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2086,
+          "shares": {
+            "con": 34.0,
+            "lab": 34.0,
+            "ld": 9.0,
+            "green": 5.0,
+            "ukip": 12.0
+          },
+          "reason": "no publication date"
+        },
+        {
+          "pollster": "Survation",
+          "publisher": null,
+          "fieldwork": "6",
+          "fieldwork_start": "2015-05-06",
+          "fieldwork_end": "2015-05-06",
+          "published": null,
+          "geography": null,
+          "sheet": "10-15",
+          "row": 2094,
+          "shares": {
+            "con": 37.0,
+            "lab": 31.0,
+            "ld": 10.0,
+            "green": 5.0,
+            "ukip": 11.0
+          },
+          "reason": "no publication date"
+        }
+      ]
+    },
+    {
+      "year": 2017,
+      "polling_day": "2017-06-08",
+      "window": [
+        "2017-06-05",
+        "2017-06-08"
+      ],
+      "source": {
+        "name": "Mark Pack, PollBase",
+        "url": "https://www.markpack.org.uk/opinion-polls/",
+        "edition": "PollBase-Q3-2026.xlsx",
+        "result": "sheet '15-17' row 332 (Result)"
+      },
+      "parties": {
+        "con": {
+          "label": "Conservative",
+          "average": 43.0909,
+          "result": 43.4,
+          "pollsters": 11
+        },
+        "lab": {
+          "label": "Labour",
+          "average": 36.4545,
+          "result": 41.0,
+          "pollsters": 11
+        },
+        "ld": {
+          "label": "Liberal Democrats",
+          "average": 7.7273,
+          "result": 7.6,
+          "pollsters": 11
+        },
+        "green": {
+          "label": "Green",
+          "average": 2.0,
+          "result": 1.7,
+          "pollsters": 11
+        },
+        "ukip": {
+          "label": "UKIP",
+          "average": 4.3636,
+          "result": 1.9,
+          "pollsters": 11
+        }
+      },
+      "final_polls": [
+        {
+          "pollster": "BMG",
+          "publisher": "Herald",
+          "fieldwork": "6-7",
+          "fieldwork_start": "2017-06-06",
+          "fieldwork_end": "2017-06-07",
+          "published": "2017-06-08",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 327,
+          "shares": {
+            "con": 46.0,
+            "lab": 33.0,
+            "ld": 8.0,
+            "green": 3.0,
+            "ukip": 5.0
+          }
+        },
+        {
+          "pollster": "ComRes",
+          "publisher": "Ind",
+          "fieldwork": "5-7",
+          "fieldwork_start": "2017-06-05",
+          "fieldwork_end": "2017-06-07",
+          "published": "2017-06-07",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 324,
+          "shares": {
+            "con": 44.0,
+            "lab": 34.0,
+            "ld": 9.0,
+            "green": 2.0,
+            "ukip": 5.0
+          }
+        },
+        {
+          "pollster": "ICM",
+          "publisher": "Gu",
+          "fieldwork": "6-7",
+          "fieldwork_start": "2017-06-06",
+          "fieldwork_end": "2017-06-07",
+          "published": "2017-06-07",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 326,
+          "shares": {
+            "con": 46.0,
+            "lab": 34.0,
+            "ld": 7.0,
+            "green": 2.0,
+            "ukip": 5.0
+          }
+        },
+        {
+          "pollster": "Ipsos MORI",
+          "publisher": "ES",
+          "fieldwork": "6-7",
+          "fieldwork_start": "2017-06-06",
+          "fieldwork_end": "2017-06-07",
+          "published": "2017-06-08",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 329,
+          "shares": {
+            "con": 44.0,
+            "lab": 36.0,
+            "ld": 7.0,
+            "green": 2.0,
+            "ukip": 4.0
+          }
+        },
+        {
+          "pollster": "Kantar TNS",
+          "publisher": null,
+          "fieldwork": "1-7",
+          "fieldwork_start": "2017-06-01",
+          "fieldwork_end": "2017-06-07",
+          "published": "2017-06-07",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 315,
+          "shares": {
+            "con": 43.0,
+            "lab": 38.0,
+            "ld": 7.0,
+            "green": 2.0,
+            "ukip": 4.0
+          }
+        },
+        {
+          "pollster": "Opinium",
+          "publisher": null,
+          "fieldwork": "4-6",
+          "fieldwork_start": "2017-06-04",
+          "fieldwork_end": "2017-06-06",
+          "published": "2017-06-06",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 321,
+          "shares": {
+            "con": 43.0,
+            "lab": 36.0,
+            "ld": 8.0,
+            "green": 2.0,
+            "ukip": 5.0
+          }
+        },
+        {
+          "pollster": "Panelbase",
+          "publisher": null,
+          "fieldwork": "2-7",
+          "fieldwork_start": "2017-06-02",
+          "fieldwork_end": "2017-06-07",
+          "published": "2017-06-07",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 319,
+          "shares": {
+            "con": 44.0,
+            "lab": 36.0,
+            "ld": 7.0,
+            "green": 2.0,
+            "ukip": 5.0
+          }
+        },
+        {
+          "pollster": "Qriously",
+          "publisher": null,
+          "fieldwork": "4-7",
+          "fieldwork_start": "2017-06-04",
+          "fieldwork_end": "2017-06-07",
+          "published": "2017-06-07",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 323,
+          "shares": {
+            "con": 39.0,
+            "lab": 41.0,
+            "ld": 8.0,
+            "green": 1.0,
+            "ukip": 4.0
+          }
+        },
+        {
+          "pollster": "Survation",
+          "publisher": null,
+          "fieldwork": "6-7",
+          "fieldwork_start": "2017-06-06",
+          "fieldwork_end": "2017-06-07",
+          "published": "2017-06-07",
+          "geography": "GB",
+          "sheet": "15-17",
+          "row": 328,
+          "shares": {
+            "con": 41.0,
+            "lab": 40.0,
+            "ld": 8.0,
+            "green": 2.0,
+            "ukip": 2.0
+          }
+        },
+        {
+          "pollster": "SurveyMonkey",
+          "publisher": "Sun",
+          "fieldwork": "4-6",
+          "fieldwork_start": "2017-06-04",
+          "fieldwork_end": "2017-06-06",
+          "published": "2017-06-07",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 322,
+          "shares": {
+            "con": 42.0,
+            "lab": 38.0,
+            "ld": 6.0,
+            "green": 2.0,
+            "ukip": 4.0
+          }
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": "TT",
+          "fieldwork": "5-7",
+          "fieldwork_start": "2017-06-05",
+          "fieldwork_end": "2017-06-07",
+          "published": "2017-06-07",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 325,
+          "shares": {
+            "con": 42.0,
+            "lab": 35.0,
+            "ld": 10.0,
+            "green": 2.0,
+            "ukip": 5.0
+          }
+        }
+      ],
+      "excluded_polls": [
+        {
+          "pollster": "SurveyMonkey",
+          "publisher": "Sun",
+          "fieldwork": "30-5",
+          "fieldwork_start": "2017-05-30",
+          "fieldwork_end": "2017-06-05",
+          "published": null,
+          "geography": null,
+          "sheet": "15-17",
+          "row": 306,
+          "shares": {
+            "con": 43.0,
+            "lab": 38.0,
+            "ld": 6.0,
+            "green": 2.0,
+            "ukip": 4.0
+          },
+          "reason": "no publication date"
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": null,
+          "fieldwork": "30-5",
+          "fieldwork_start": "2017-05-30",
+          "fieldwork_end": "2017-06-05",
+          "published": "2017-06-06",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 307,
+          "shares": {
+            "con": 42.0,
+            "lab": 38.0,
+            "ld": 9.0,
+            "green": 2.0,
+            "ukip": 3.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": null,
+          "fieldwork": "31-6",
+          "fieldwork_start": "2017-05-31",
+          "fieldwork_end": "2017-06-06",
+          "published": "2017-06-07",
+          "geography": null,
+          "sheet": "15-17",
+          "row": 312,
+          "shares": {
+            "con": 42.0,
+            "lab": 38.0,
+            "ld": 9.0,
+            "green": 2.0,
+            "ukip": 3.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        }
+      ]
+    },
+    {
+      "year": 2019,
+      "polling_day": "2019-12-12",
+      "window": [
+        "2019-12-09",
+        "2019-12-12"
+      ],
+      "source": {
+        "name": "Mark Pack, PollBase",
+        "url": "https://www.markpack.org.uk/opinion-polls/",
+        "edition": "PollBase-Q3-2026.xlsx",
+        "result": "sheet '17-19' row 575 (Result)"
+      },
+      "parties": {
+        "con": {
+          "label": "Conservative",
+          "average": 43.125,
+          "result": 44.7,
+          "pollsters": 12
+        },
+        "lab": {
+          "label": "Labour",
+          "average": 33.8083,
+          "result": 32.9,
+          "pollsters": 12
+        },
+        "ld": {
+          "label": "Liberal Democrats",
+          "average": 11.9417,
+          "result": 11.8,
+          "pollsters": 12
+        },
+        "green": {
+          "label": "Green",
+          "average": 3.0167,
+          "result": 2.8,
+          "pollsters": 12
+        },
+        "brexit": {
+          "label": "Brexit Party",
+          "average": 2.925,
+          "result": 2.1,
+          "pollsters": 12
+        }
+      },
+      "final_polls": [
+        {
+          "pollster": "BMG",
+          "publisher": "Ind",
+          "fieldwork": "6-11",
+          "fieldwork_start": "2019-12-06",
+          "fieldwork_end": "2019-12-11",
+          "published": "2019-12-12",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 562,
+          "shares": {
+            "con": 41.0,
+            "lab": 32.0,
+            "ld": 14.0,
+            "green": 4.0,
+            "brexit": 3.0
+          }
+        },
+        {
+          "pollster": "ComRes",
+          "publisher": "DT",
+          "fieldwork": "9-10",
+          "fieldwork_start": "2019-12-09",
+          "fieldwork_end": "2019-12-10",
+          "published": "2019-12-12",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 565,
+          "shares": {
+            "con": 41.0,
+            "lab": 36.0,
+            "ld": 12.0,
+            "green": 2.0,
+            "brexit": 3.0
+          }
+        },
+        {
+          "pollster": "Deltapoll",
+          "publisher": null,
+          "fieldwork": "9-11",
+          "fieldwork_start": "2019-12-09",
+          "fieldwork_end": "2019-12-11",
+          "published": "2019-12-11",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 567,
+          "shares": {
+            "con": 45.0,
+            "lab": 35.0,
+            "ld": 10.0,
+            "green": 3.0,
+            "brexit": 3.0
+          }
+        },
+        {
+          "pollster": "Focaldata",
+          "publisher": null,
+          "fieldwork": "27-10",
+          "fieldwork_start": "2019-11-27",
+          "fieldwork_end": "2019-12-10",
+          "published": "2019-12-10",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 538,
+          "shares": {
+            "con": 42.0,
+            "lab": 34.0,
+            "ld": 14.0,
+            "green": 4.0,
+            "brexit": 4.0
+          }
+        },
+        {
+          "pollster": "ICM",
+          "publisher": "Reut",
+          "fieldwork": "6-9",
+          "fieldwork_start": "2019-12-06",
+          "fieldwork_end": "2019-12-09",
+          "published": "2019-12-09",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 560,
+          "shares": {
+            "con": 42.0,
+            "lab": 36.0,
+            "ld": 12.0,
+            "green": 2.0,
+            "brexit": 3.0
+          }
+        },
+        {
+          "pollster": "Ipsos MORI",
+          "publisher": "ES",
+          "fieldwork": "9-11",
+          "fieldwork_start": "2019-12-09",
+          "fieldwork_end": "2019-12-11",
+          "published": "2019-12-12",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 568,
+          "shares": {
+            "con": 44.0,
+            "lab": 33.0,
+            "ld": 12.0,
+            "green": 3.0,
+            "brexit": 2.0
+          }
+        },
+        {
+          "pollster": "Kantar TNS",
+          "publisher": null,
+          "fieldwork": "9-11",
+          "fieldwork_start": "2019-12-09",
+          "fieldwork_end": "2019-12-11",
+          "published": "2019-12-11",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 566,
+          "shares": {
+            "con": 44.0,
+            "lab": 32.0,
+            "ld": 13.0,
+            "green": 3.0,
+            "brexit": 3.0
+          }
+        },
+        {
+          "pollster": "NCP",
+          "publisher": "Bloom",
+          "fieldwork": "8-10",
+          "fieldwork_start": "2019-12-08",
+          "fieldwork_end": "2019-12-10",
+          "published": "2019-12-11",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 564,
+          "shares": {
+            "con": 43.0,
+            "lab": 33.0,
+            "ld": 12.0,
+            "green": 3.0,
+            "brexit": 3.0
+          }
+        },
+        {
+          "pollster": "Opinium",
+          "publisher": null,
+          "fieldwork": "10-11",
+          "fieldwork_start": "2019-12-10",
+          "fieldwork_end": "2019-12-11",
+          "published": "2019-12-11",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 570,
+          "shares": {
+            "con": 45.0,
+            "lab": 33.0,
+            "ld": 12.0,
+            "green": 2.0,
+            "brexit": 2.0
+          }
+        },
+        {
+          "pollster": "Panelbase",
+          "publisher": null,
+          "fieldwork": "10-11",
+          "fieldwork_start": "2019-12-10",
+          "fieldwork_end": "2019-12-11",
+          "published": "2019-12-11",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 572,
+          "shares": {
+            "con": 43.0,
+            "lab": 34.0,
+            "ld": 11.0,
+            "green": 4.0,
+            "brexit": 3.0
+          }
+        },
+        {
+          "pollster": "Survation",
+          "publisher": null,
+          "fieldwork": "10-11",
+          "fieldwork_start": "2019-12-10",
+          "fieldwork_end": "2019-12-11",
+          "published": "2019-12-11",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 573,
+          "shares": {
+            "con": 44.5,
+            "lab": 33.7,
+            "ld": 9.3,
+            "green": 3.2,
+            "brexit": 3.1
+          }
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": "TT",
+          "fieldwork": "4-10",
+          "fieldwork_start": "2019-12-04",
+          "fieldwork_end": "2019-12-10",
+          "published": "2019-12-11",
+          "geography": null,
+          "sheet": "17-19",
+          "row": 554,
+          "shares": {
+            "con": 43.0,
+            "lab": 34.0,
+            "ld": 12.0,
+            "green": 3.0,
+            "brexit": 3.0
+          }
+        }
+      ],
+      "excluded_polls": []
+    },
+    {
+      "year": 2024,
+      "polling_day": "2024-07-04",
+      "window": [
+        "2024-07-01",
+        "2024-07-04"
+      ],
+      "source": {
+        "name": "Mark Pack, PollBase",
+        "url": "https://www.markpack.org.uk/opinion-polls/",
+        "edition": "PollBase-Q3-2026.xlsx",
+        "result": "sheet '19-24' row 1995 (Result)"
+      },
+      "parties": {
+        "con": {
+          "label": "Conservative",
+          "average": 21.3158,
+          "result": 24.4,
+          "pollsters": 19
+        },
+        "lab": {
+          "label": "Labour",
+          "average": 38.7895,
+          "result": 34.7,
+          "pollsters": 19
+        },
+        "ld": {
+          "label": "Liberal Democrats",
+          "average": 11.2632,
+          "result": 12.6,
+          "pollsters": 19
+        },
+        "green": {
+          "label": "Green",
+          "average": 6.7368,
+          "result": 6.9,
+          "pollsters": 19
+        },
+        "reform": {
+          "label": "Reform UK",
+          "average": 16.2105,
+          "result": 14.7,
+          "pollsters": 19
+        }
+      },
+      "final_polls": [
+        {
+          "pollster": "BMG",
+          "publisher": "The i",
+          "fieldwork": "30-2",
+          "fieldwork_start": "2024-06-30",
+          "fieldwork_end": "2024-07-02",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1981,
+          "shares": {
+            "con": 22.0,
+            "lab": 39.0,
+            "ld": 11.0,
+            "green": 7.0,
+            "reform": 16.0
+          }
+        },
+        {
+          "pollster": "Deltapoll",
+          "publisher": null,
+          "fieldwork": "29-3",
+          "fieldwork_start": "2024-06-29",
+          "fieldwork_end": "2024-07-03",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1980,
+          "shares": {
+            "con": 22.0,
+            "lab": 39.0,
+            "ld": 10.0,
+            "green": 7.0,
+            "reform": 17.0
+          }
+        },
+        {
+          "pollster": "Focaldata",
+          "publisher": null,
+          "fieldwork": "10-1/7",
+          "fieldwork_start": "2024-06-10",
+          "fieldwork_end": "2024-07-01",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1890,
+          "shares": {
+            "con": 23.0,
+            "lab": 40.0,
+            "ld": 12.0,
+            "green": 5.0,
+            "reform": 16.0
+          }
+        },
+        {
+          "pollster": "Ipsos",
+          "publisher": "ES",
+          "fieldwork": "1-3",
+          "fieldwork_start": "2024-07-01",
+          "fieldwork_end": "2024-07-03",
+          "published": "2024-07-04",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1987,
+          "shares": {
+            "con": 19.0,
+            "lab": 37.0,
+            "ld": 11.0,
+            "green": 9.0,
+            "reform": 15.0
+          }
+        },
+        {
+          "pollster": "JL Partners",
+          "publisher": "TRIP",
+          "fieldwork": "2-3",
+          "fieldwork_start": "2024-07-02",
+          "fieldwork_end": "2024-07-03",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1990,
+          "shares": {
+            "con": 23.0,
+            "lab": 38.0,
+            "ld": 13.0,
+            "green": 5.0,
+            "reform": 17.0
+          }
+        },
+        {
+          "pollster": "Lord Ashcroft",
+          "publisher": "DM",
+          "fieldwork": "27-1",
+          "fieldwork_start": "2024-06-27",
+          "fieldwork_end": "2024-07-01",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1967,
+          "shares": {
+            "con": 19.0,
+            "lab": 38.0,
+            "ld": 11.0,
+            "green": 8.0,
+            "reform": 18.0
+          }
+        },
+        {
+          "pollster": "More in Common",
+          "publisher": "News Agents",
+          "fieldwork": "24-1",
+          "fieldwork_start": "2024-06-24",
+          "fieldwork_end": "2024-07-01",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1953,
+          "shares": {
+            "con": 23.0,
+            "lab": 39.0,
+            "ld": 14.0,
+            "green": 6.0,
+            "reform": 13.0
+          }
+        },
+        {
+          "pollster": "NCP",
+          "publisher": null,
+          "fieldwork": "3",
+          "fieldwork_start": "2024-07-03",
+          "fieldwork_end": "2024-07-03",
+          "published": "2024-07-04",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1992,
+          "shares": {
+            "con": 23.0,
+            "lab": 41.0,
+            "ld": 11.0,
+            "green": 7.0,
+            "reform": 13.0
+          }
+        },
+        {
+          "pollster": "Norstat",
+          "publisher": null,
+          "fieldwork": "1-3",
+          "fieldwork_start": "2024-07-01",
+          "fieldwork_end": "2024-07-03",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1985,
+          "shares": {
+            "con": 24.0,
+            "lab": 37.0,
+            "ld": 11.0,
+            "green": 6.0,
+            "reform": 16.0
+          }
+        },
+        {
+          "pollster": "Opinium",
+          "publisher": null,
+          "fieldwork": "1-3",
+          "fieldwork_start": "2024-07-01",
+          "fieldwork_end": "2024-07-03",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1984,
+          "shares": {
+            "con": 21.0,
+            "lab": 41.0,
+            "ld": 11.0,
+            "green": 7.0,
+            "reform": 17.0
+          }
+        },
+        {
+          "pollster": "PeoplePolling",
+          "publisher": "GB News",
+          "fieldwork": "2",
+          "fieldwork_start": "2024-07-02",
+          "fieldwork_end": "2024-07-02",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1988,
+          "shares": {
+            "con": 16.0,
+            "lab": 36.0,
+            "ld": 10.0,
+            "green": 9.0,
+            "reform": 20.0
+          }
+        },
+        {
+          "pollster": "R+W",
+          "publisher": null,
+          "fieldwork": "28-2",
+          "fieldwork_start": "2024-06-28",
+          "fieldwork_end": "2024-07-02",
+          "published": "2024-07-02",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1976,
+          "shares": {
+            "con": 22.0,
+            "lab": 41.0,
+            "ld": 10.0,
+            "green": 6.0,
+            "reform": 16.0
+          }
+        },
+        {
+          "pollster": "Savanta ComRes",
+          "publisher": "DT",
+          "fieldwork": "2-3",
+          "fieldwork_start": "2024-07-02",
+          "fieldwork_end": "2024-07-03",
+          "published": "2024-07-04",
+          "geography": "UK",
+          "sheet": "19-24",
+          "row": 1991,
+          "shares": {
+            "con": 20.0,
+            "lab": 39.0,
+            "ld": 10.0,
+            "green": 5.0,
+            "reform": 17.0
+          }
+        },
+        {
+          "pollster": "Survation",
+          "publisher": null,
+          "fieldwork": "1-3",
+          "fieldwork_start": "2024-07-01",
+          "fieldwork_end": "2024-07-03",
+          "published": "2024-07-04",
+          "geography": "UK",
+          "sheet": "19-24",
+          "row": 1986,
+          "shares": {
+            "con": 20.0,
+            "lab": 38.0,
+            "ld": 12.0,
+            "green": 7.0,
+            "reform": 17.0
+          }
+        },
+        {
+          "pollster": "Techne",
+          "publisher": null,
+          "fieldwork": "28-2",
+          "fieldwork_start": "2024-06-28",
+          "fieldwork_end": "2024-07-02",
+          "published": "2024-07-03",
+          "geography": "UK",
+          "sheet": "19-24",
+          "row": 1977,
+          "shares": {
+            "con": 21.0,
+            "lab": 40.0,
+            "ld": 11.0,
+            "green": 6.0,
+            "reform": 16.0
+          }
+        },
+        {
+          "pollster": "Verian",
+          "publisher": null,
+          "fieldwork": "28-1",
+          "fieldwork_start": "2024-06-28",
+          "fieldwork_end": "2024-07-01",
+          "published": "2024-07-02",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1975,
+          "shares": {
+            "con": 21.0,
+            "lab": 36.0,
+            "ld": 13.0,
+            "green": 7.0,
+            "reform": 16.0
+          }
+        },
+        {
+          "pollster": "WeThink",
+          "publisher": null,
+          "fieldwork": "2-3",
+          "fieldwork_start": "2024-07-02",
+          "fieldwork_end": "2024-07-03",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1989,
+          "shares": {
+            "con": 23.0,
+            "lab": 41.0,
+            "ld": 11.0,
+            "green": 7.0,
+            "reform": 15.0
+          }
+        },
+        {
+          "pollster": "Whitestone",
+          "publisher": "DE/Mirror",
+          "fieldwork": "1-2",
+          "fieldwork_start": "2024-07-01",
+          "fieldwork_end": "2024-07-02",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1982,
+          "shares": {
+            "con": 21.0,
+            "lab": 38.0,
+            "ld": 10.0,
+            "green": 7.0,
+            "reform": 18.0
+          }
+        },
+        {
+          "pollster": "YouGov",
+          "publisher": null,
+          "fieldwork": "19-2",
+          "fieldwork_start": "2024-06-19",
+          "fieldwork_end": "2024-07-02",
+          "published": "2024-07-03",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1932,
+          "shares": {
+            "con": 22.0,
+            "lab": 39.0,
+            "ld": 12.0,
+            "green": 7.0,
+            "reform": 15.0
+          }
+        }
+      ],
+      "excluded_polls": [
+        {
+          "pollster": "Survation",
+          "publisher": null,
+          "fieldwork": "15-1",
+          "fieldwork_start": "2024-06-15",
+          "fieldwork_end": "2024-07-01",
+          "published": "2024-07-02",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1918,
+          "shares": {
+            "con": 23.0,
+            "lab": 42.0,
+            "ld": 12.0,
+            "green": 5.0,
+            "reform": 12.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "Survation",
+          "publisher": null,
+          "fieldwork": "15-3",
+          "fieldwork_start": "2024-06-15",
+          "fieldwork_end": "2024-07-03",
+          "published": "2024-07-04",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1919,
+          "shares": {
+            "con": 22.0,
+            "lab": 41.0,
+            "ld": 11.0,
+            "green": 5.0,
+            "reform": 14.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "JL Partners",
+          "publisher": null,
+          "fieldwork": "21-2",
+          "fieldwork_start": "2024-06-21",
+          "fieldwork_end": "2024-07-02",
+          "published": "2024-07-04",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1946,
+          "shares": {
+            "con": 23.0,
+            "lab": 38.0,
+            "ld": 12.0,
+            "green": 6.0,
+            "reform": 16.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "Survation",
+          "publisher": "GMB",
+          "fieldwork": "26-2",
+          "fieldwork_start": "2024-06-26",
+          "fieldwork_end": "2024-07-02",
+          "published": "2024-07-03",
+          "geography": "UK",
+          "sheet": "19-24",
+          "row": 1964,
+          "shares": {
+            "con": 18.0,
+            "lab": 38.0,
+            "ld": 11.0,
+            "green": 7.0,
+            "reform": 17.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "Focaldata",
+          "publisher": null,
+          "fieldwork": "27-3",
+          "fieldwork_start": "2024-06-27",
+          "fieldwork_end": "2024-07-03",
+          "published": "2025-04-14",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1969,
+          "shares": {
+            "con": 23.9,
+            "lab": 40.1,
+            "ld": 9.4,
+            "green": 5.8,
+            "reform": 15.5
+          },
+          "reason": "published after polling day (2025-04-14)"
+        },
+        {
+          "pollster": "JL Partners",
+          "publisher": "TRIP",
+          "fieldwork": "28-1",
+          "fieldwork_start": "2024-06-28",
+          "fieldwork_end": "2024-07-01",
+          "published": "2024-07-01",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1973,
+          "shares": {
+            "con": 24.0,
+            "lab": 39.0,
+            "ld": 10.0,
+            "green": 5.0,
+            "reform": 16.0
+          },
+          "reason": "superseded by a later poll from the same pollster"
+        },
+        {
+          "pollster": "Find Out Now",
+          "publisher": null,
+          "fieldwork": "3",
+          "fieldwork_start": "2024-07-03",
+          "fieldwork_end": "2024-07-03",
+          "published": "2024-11-15",
+          "geography": null,
+          "sheet": "19-24",
+          "row": 1993,
+          "shares": {
+            "con": 20.0,
+            "lab": 35.0,
+            "ld": 11.0,
+            "green": 8.0,
+            "reform": 18.0
+          },
+          "reason": "published after polling day (2024-11-15)"
+        }
+      ]
+    }
+  ]
+}

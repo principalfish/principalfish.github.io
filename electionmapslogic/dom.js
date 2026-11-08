@@ -7,6 +7,14 @@ import {
 import { manifest, state, page, seatComparisonHidden, Seat } from './state.js';
 import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR, buildStateTrendSeries } from './utils.js';
 import { fetchJson } from './files.js';
+import {
+  seatsWithRange, seatUncertaintyText, shownUncertainty, simulatedSubtitle, uncertaintyForTotals,
+  uncertaintyRange,
+} from "./uncertainty.js";
+import {
+  renderModelledUncertaintyToggle, renderUncertaintyBasis, renderUncertaintyBeta, renderUncertaintyHeader,
+  wireModelledUncertaintyToggle,
+} from "./uncertainty-view.js";
 
 // ─── Page title ───────────────────────────────────────────────────────────────
 
@@ -48,24 +56,38 @@ export function renderPageTitle() {
 
 // Page H1 — set to "UK Election Maps · <Parliament>" by renderTitle.
 const mapsTitle = document.querySelector('.maps-title');
-// Subtitle line below the H1 — election name (or "Poll tracker..." in tracker view),
-// optionally suffixed with the poll snippet for prediction elections.
+// Subtitle line below the H1 — election name (or "Poll tracker..." in tracker view). With
+// "Show with modelled uncertainty" ticked, a saved run with uncertainty leads with
+// `simulatedSubtitle` (uncertainty.js) and its seats line instead.
 const subtitle = document.getElementById('mapsSubtitle');
+// "Show with modelled uncertainty" checkbox directly below the subtitle, in the page's own
+// header (absent on pages that never have a stored simulation, e.g. the US page).
+const modelledUncertaintyControl = document.getElementById('mapsModelledUncertainty');
+const modelledUncertaintyInput = document.getElementById('mapsModelledUncertaintyInput');
+// Small notes below the map (and below the poll tracker chart, which replaces the map in
+// that view): the latest poll used and, when the simulation is shown, its reading note.
+const mapFooter = document.getElementById('mapsMapFooter');
+const pollTrackerFooter = document.getElementById('mapsPollTrackerFooter');
 // Countdown badge in the header — visible only on a parliament's prediction / predict view
 // when that parliament has an upcoming election date; ticks every second until it passes.
 const electionCountdown = document.getElementById('mapsElectionCountdown');
 
 /**
- * Updates the title area: the page h1, subtitle, and election countdown.
+ * Updates the title area (the page h1, subtitle, modelled-uncertainty checkbox and election
+ * countdown) and the notes below the map.
  * Called early in init (text omitted — subtitle falls back to election name) and again
  * after results load with the full summary string. Pass error=true on load failure.
- * @param {string} [text=''] - Full subtitle string (e.g. "2024 Election · Labour majority: 174").
+ * @param {string} [text=''] - Full subtitle string (e.g. "2024 Election · Labour majority: 174")
+ *   (replaced by the simulated line when the modelled uncertainty is shown).
  * @param {boolean} [error=false] - When true, subtitle shows a load-failure message.
  * @returns {void}
  */
 export function renderHeader(text = '', error = false) {
   renderTitle();
   renderSubtitleText(text, error);
+  renderModelledUncertaintyToggle(modelledUncertaintyControl, modelledUncertaintyInput, state);
+  if (error && modelledUncertaintyControl) modelledUncertaintyControl.hidden = true;
+  renderMapFooter(error);
   renderCountdown();
   renderSourceNote();
 }
@@ -90,9 +112,10 @@ export function renderSourceNote() {
 }
 
 /**
- * Renders the subtitle element. Derives snippet behaviour from current state:
- * poll tracker view uses a fixed label with snippet; election view uses the provided
- * text (falling back to the election name before results load) with snippet for model elections.
+ * Renders the subtitle element: the poll tracker view uses a fixed label; the election view
+ * uses the provided text (falling back to the election name before results load), or, with
+ * "Show with modelled uncertainty" ticked on a saved run with uncertainty, `simulatedSubtitle`
+ * (election name, most likely outcome, largest party) and the simulated seats line.
  * @param {string} [text=''] - Subtitle string; omit on early init to fall back to election name.
  * @param {boolean} [error=false] - When true, displays a load-failure message instead.
  * @returns {void}
@@ -101,17 +124,17 @@ function renderSubtitleText(text = '', error = false) {
   if (!subtitle) return;
 
   let baseText;
-  let includeSnippet;
-
+  const uncertainty = error ? null : shownUncertainty(state);
   if (error) {
     baseText = 'Failed to load election data';
-    includeSnippet = false;
   } else if (state.view === 'polltracker') {
     baseText = 'Poll tracker · model output trends';
-    includeSnippet = true;
   } else {
-    baseText = text || state.currentElection?.name || '';
-    includeSnippet = Boolean(state.currentElection?.model);
+    // The shown simulation leads with its odds; otherwise the uniform-swing line built with the
+    // election summary.
+    const electionName = state.electionData?.electionName || state.currentElection?.name || '';
+    baseText = simulatedSubtitle(electionName, uncertainty, (party) => manifest.labelParty(party))
+      || text || state.currentElection?.name || '';
   }
 
   subtitle.textContent = '';
@@ -121,14 +144,38 @@ function renderSubtitleText(text = '', error = false) {
   mainSpan.textContent = String(baseText || '').trim();
   subtitle.appendChild(mainSpan);
 
-  const latestPollSnippet = includeSnippet ? state.predictionSnippet : '';
-  subtitle.classList.toggle('maps-subtitle-has-latest', Boolean(latestPollSnippet));
-  if (!latestPollSnippet) return;
+  renderUncertaintyHeader(subtitle, uncertainty, (party) => manifest.labelParty(party));
+}
 
-  const latestSpan = document.createElement('span');
-  latestSpan.className = 'maps-subtitle-latest';
-  latestSpan.textContent = latestPollSnippet;
-  subtitle.appendChild(latestSpan);
+/**
+ * Renders the small notes below the map: "Latest poll used: …" for model elections and the
+ * poll tracker (under its chart there, since the chart replaces the map), then the shown
+ * simulation's reading note (Nowcast: …), which qualifies every simulated figure on the page,
+ * and its beta warning.
+ * Each footer is hidden when it has nothing to say.
+ * @param {boolean} [error=false] - When true (load failure), both footers are cleared.
+ * @returns {void}
+ */
+function renderMapFooter(error = false) {
+  const tracker = state.view === 'polltracker';
+  const includeSnippet = !error && (tracker || Boolean(state.currentElection?.model));
+  const latestPollSnippet = includeSnippet ? state.predictionSnippet : '';
+  for (const footer of [mapFooter, pollTrackerFooter]) {
+    if (!footer) continue;
+    footer.textContent = '';
+    if (latestPollSnippet) {
+      const latestSpan = document.createElement('span');
+      latestSpan.className = 'maps-map-footer-latest';
+      latestSpan.textContent = latestPollSnippet;
+      footer.appendChild(latestSpan);
+    }
+    if (footer === mapFooter) {
+      const shown = error ? null : shownUncertainty(state);
+      renderUncertaintyBasis(footer, shown);
+      renderUncertaintyBeta(footer, shown);
+    }
+    footer.hidden = !footer.childElementCount;
+  }
 }
 
 /**
@@ -589,6 +636,7 @@ const voteTotalsTable = document.getElementById('mapsVoteTotalsTable');
 // Line under the totals table counting seats not yet called; hidden when there are none.
 const voteTotalsUncalled = document.getElementById('mapsVoteTotalsUncalled');
 const voteTotalsToggle = document.getElementById('mapsVoteTotalsToggle');
+const mapColourNote = document.getElementById("mapsMapColourNote");
 const voteTotalsCollapse = document.getElementById('mapsVoteTotalsCollapse');
 
 /**
@@ -599,9 +647,10 @@ const voteTotalsCollapse = document.getElementById('mapsVoteTotalsCollapse');
 /**
  * Returns a sorted copy of party rows according to state.voteTotals.sort (party name alpha, or numeric column with label tiebreak).
  * @param {Array<object>} rows - Party summary rows with a `party` key and numeric fields matching sort key names.
+ * @param {boolean} [seatTiesByName=false] - Break equal seat counts by name alone (simulated whole seats).
  * @returns {Array<object>} New sorted array of party rows.
  */
-function sortPartyRows(rows) {
+function sortPartyRows(rows, seatTiesByName = false) {
   const multiplier = state.voteTotals.sort.direction === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
     if (state.voteTotals.sort.key === 'party') {
@@ -611,6 +660,9 @@ function sortPartyRows(rows) {
     const av = Number(a[state.voteTotals.sort.key] || 0);
     const bv = Number(b[state.voteTotals.sort.key] || 0);
     if (av !== bv) return multiplier * (av - bv);
+    if (seatTiesByName && state.voteTotals.sort.key === 'seats') {
+      return manifest.labelParty(a.party).localeCompare(manifest.labelParty(b.party));
+    }
     const voteDiff = Number(b.votePct || 0) - Number(a.votePct || 0);
     if (voteDiff !== 0) return voteDiff;
     return manifest.labelParty(a.party).localeCompare(manifest.labelParty(b.party));
@@ -636,7 +688,7 @@ function sortPartyRows(rows) {
  *   summary, otherwise `summary` itself.
  * @returns {void}
  */
-function renderVoteTotals(
+export function renderVoteTotals(
   summary = state.filteredSeatsSummary,
   comparisonSummary = state.filteredSeatsComparisonSummary,
   deltaBasis = summary === state.filteredSeatsSummary ? state.filteredSeatsDeltaSummary : null
@@ -651,6 +703,21 @@ function renderVoteTotals(
   if (seatsHeader) seatsHeader.textContent = state.mapConfig?.tally === 'electoralVotes' ? 'EV' : 'Seats';
   voteTotalsTable.classList.toggle('hide-vote-total-col', !state.voteTotalsColumnVisible('votes'));
   voteTotalsTable.classList.toggle('hide-vote-pct-col', !state.voteTotalsColumnVisible('votePct'));
+  // With "Show with modelled uncertainty" ticked, whole-country and single-region views of a
+  // saved run show their stored simulations: Seats is then the exported whole seats (the
+  // simulated means rounded by largest remainder, so they add up to the view's seat total) with
+  // their 90% range, and Vote % gains its range. Every other view (unticked, filtered slices,
+  // predict, scenarios, real elections) keeps the plain uniform-swing count.
+  const uncertainty = uncertaintyForTotals(state);
+  // The simulated seats can disagree with the map, which colours the uniform-swing winners.
+  if (mapColourNote) {
+    mapColourNote.hidden = !uncertainty;
+    mapColourNote.textContent = uncertainty ? "Map colours show each seat's uniform-swing winner." : "";
+  }
+  const descriptions = ["mapsSenateForecastComparison"];
+  if (shownUncertainty(state)?.basis) descriptions.push("mapsUncertaintyBasis");
+  if (uncertainty) descriptions.push("mapsMapColourNote");
+  voteTotalsTable.setAttribute("aria-describedby", descriptions.join(" "));
 
   const hiddenParties = new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []);
   const showComparison = Boolean(comparisonSummary);
@@ -671,12 +738,21 @@ function renderVoteTotals(
   const rows = summary.parties.map((partyRow) => {
     const votePct = summary.totalVotes > 0 ? (partyRow.votes / summary.totalVotes) * 100 : 0;
     const comparison = comparisonByParty.get(partyRow.party) || { seats: 0, votePct: 0 };
+    // The uniform-swing count is replaced, not kept beside the whole seats; a party with no
+    // stored row in this view (no simulated seats) gets a dash, not that count.
+    const band = uncertainty ? uncertainty.parties[partyRow.party] ?? null : undefined;
+    const seats = band === undefined ? partyRow.seats : band?.m ?? null;
     const basisRow = basisByParty.get(partyRow.party) || { seats: 0, votes: 0 };
     const basisVotePct = basis.totalVotes > 0 ? (basisRow.votes / basis.totalVotes) * 100 : 0;
     return {
       ...partyRow,
+      band,
+      seats,
       votePct,
-      seatsDelta: Number(basisRow.seats || 0) - comparison.seats,
+      // The simulated seats stand in for the uniform-swing count; otherwise the delta basis applies.
+      seatsDelta: seats === null
+        ? null
+        : Number((band === undefined ? basisRow.seats : seats) || 0) - comparison.seats,
       votePctDelta: basisVotePct - comparison.votePct,
     };
   });
@@ -688,7 +764,7 @@ function renderVoteTotals(
     voteTotalsUncalled.hidden = uncalled <= 0;
   }
 
-  const sortedRows = sortPartyRows(rows).filter((r) => !hiddenParties.has(r.party));
+  const sortedRows = sortPartyRows(rows, Boolean(uncertainty)).filter((r) => !hiddenParties.has(r.party));
   const visibleRows = state.voteTotals.expanded ? sortedRows : sortedRows.slice(0, 7);
 
   if (voteTotalsToggle) {
@@ -701,16 +777,43 @@ function renderVoteTotals(
 
   visibleRows.forEach((partyRow) => {
     const tr = document.createElement('tr');
+    const { band } = partyRow;
+    const showSeatsDelta = showComparison && partyRow.seatsDelta !== null;
     tr.innerHTML = `
       <td><span class="maps-party-cell"><span class="maps-party-swatch" style="background:${manifest.colourParty(partyRow.party)}"></span>${escapeHtml(manifest.labelParty(partyRow.party))}</span></td>
-      <td>${formatInt(partyRow.seats)}</td>
-      <td class="comparison-col ${showComparison ? deltaClass(partyRow.seatsDelta) : ''}">${showComparison ? formatSigned(partyRow.seatsDelta, 0) : ''}</td>
+      <td>${seatsCellText(partyRow.seats, band)}</td>
+      <td class="comparison-col ${showSeatsDelta ? deltaClass(partyRow.seatsDelta) : ''}">${showSeatsDelta ? formatSigned(partyRow.seatsDelta, 0) : ''}</td>
       <td class="vote-total-col">${formatInt(partyRow.votes)}</td>
-      <td class="vote-pct-col">${formatPct(partyRow.votePct)}</td>
+      <td class="vote-pct-col">${votePctCellText(partyRow.votePct, band)}</td>
       <td class="comparison-col vote-pct-comparison-col ${showComparison ? deltaClass(partyRow.votePctDelta) : ''}">${showComparison ? formatSigned(partyRow.votePctDelta, 2) : ''}</td>
     `;
     voteTotalsBody.appendChild(tr);
   });
+}
+
+/**
+ * The Seats cell: the plain count when no simulation is shown (`band` undefined), else the
+ * exported whole seats with their "(lo–hi)" range, or a dash for a party with no stored row.
+ * @param {number} seats - The party's seat count in this view.
+ * @param {{m: number, s: number[], v: number[]}|null|undefined} band - The stored bands and whole
+ *   seats; `undefined` when the view shows no stored simulations, `null` when the party has no
+ *   stored row.
+ * @returns {string}
+ */
+function seatsCellText(seats, band) {
+  if (band === undefined) return formatInt(seats);
+  if (!band) return '—';
+  return seatsWithRange(band.m, band.s);
+}
+
+/**
+ * The Vote % cell: the central share, with the simulated "(lo–hi%)" when the party has a band.
+ * @param {number} votePct - The party's central vote share.
+ * @param {{m: number, s: number[], v: number[]}|null|undefined} band - The stored bands, if any.
+ * @returns {string}
+ */
+function votePctCellText(votePct, band) {
+  return band ? `${formatPct(votePct)} (${uncertaintyRange(band.v, '%')})` : formatPct(votePct);
 }
 
 /**
@@ -754,8 +857,8 @@ function wireVoteTotalsToggle() {
 
 /**
  * Wires the vote-totals card collapse button. Mirrors the predict-window collapse pattern:
- * toggles `maps-vote-totals--collapsed` on the card (CSS hides the tabs, table, and Show all
- * button) and flips the glyph between ▲ (expanded) and ▼ (collapsed). The button itself is
+ * toggles `maps-vote-totals--collapsed` on the card (CSS hides the tabs, table, map-colour note
+ * and Show all button) and flips the glyph between ▲ (expanded) and ▼ (collapsed). The button itself is
  * hidden on mobile via a media query in mobile-sidebar.css.
  * @returns {void}
  */
@@ -1601,7 +1704,11 @@ export function renderSeatPopup(seatName) {
   // the party had no comparison data point, which suppresses the delta span entirely.
   renderPopupRows(rows, (row) => {
     const deltaHtml = row.delta == null ? '' : `<span class="${deltaClass(row.delta)}">${formatSigned(row.delta, 2)}</span>`;
-    return `<span>${formatPct(row.pct)}%</span>${deltaHtml}`;
+    // The seat's simulated range and win chance only when the modelled uncertainty is shown.
+    const band = shownUncertainty(state) ? seat.u[row.party] : null;
+    const bandHtml = band
+      ? `<span class="maps-popup-uncertainty">${escapeHtml(seatUncertaintyText(band))}</span>` : "";
+    return `<span>${formatPct(row.pct)}%</span>${deltaHtml}${bandHtml}`;
   });
 
   // A same-day special election held alongside this state's regular race (US Senate) gets its
@@ -2334,6 +2441,12 @@ export function wireInit() {
   wireMapViewControls();
   wireSeatSearch();
   wireVoteTotalsToggle();
+  wireModelledUncertaintyToggle(modelledUncertaintyInput, state, () => {
+    renderHeader(state.electionData?.summary?.text ?? '');
+    renderVoteTotals();
+    refreshOpenSeatPopup();
+    syncRightPanelHeight();
+  });
   wireVoteTotalsCollapse();
   wireVoteTotalsSorting();
   wireWindowResize();

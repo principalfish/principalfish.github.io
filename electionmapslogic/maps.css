@@ -215,12 +215,23 @@ a {
 }
 
 .maps-subtitle-main,
-.maps-subtitle-latest {
+.maps-subtitle-uncertainty {
   max-width: 100%;
 }
 
-.maps-subtitle-has-latest .maps-subtitle-latest::before {
-  content: none;
+/* "Show with modelled uncertainty", directly below the subtitle. */
+.maps-modelled-uncertainty:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0;
+  color: #173253;
+  font: 600 0.9rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+
+.maps-modelled-uncertainty input {
+  margin: 0;
 }
 
 .maps-election-countdown {
@@ -1001,6 +1012,17 @@ a {
   color: #0f172a;
 }
 
+.maps-popup-values:has(.maps-popup-uncertainty) {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.maps-popup-uncertainty {
+  flex-basis: 100%;
+  text-align: end;
+  font-weight: 600;
+}
+
 .seat {
   stroke: rgba(255, 255, 255, 0.45);
   stroke-width: 2;
@@ -1061,6 +1083,7 @@ a {
 .maps-vote-totals--collapsed .maps-predict-tabs,
 .maps-vote-totals--collapsed .maps-senate-forecast-comparison,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-table,
+#mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-map-colour-note,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-vote-totals-uncalled,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed #mapsVoteTotalsToggle {
   display: none;
@@ -1097,6 +1120,10 @@ a {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.82rem;
+}
+
+.maps-vote-table-scroll {
+  overflow-x: auto;
 }
 
 .maps-table th,
@@ -1209,8 +1236,23 @@ a {
   gap: 0.5rem;
 }
 
+/* The note under the controls takes a row while Uncertainty is ticked. */
+.is-uncertainty-shown .maps-polltracker-card {
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+}
+
 .maps-polltracker-status {
   margin: 0;
+}
+
+/* Notes below the map or the poll tracker chart: smaller and quieter than the header, one line
+   each (the latest poll used, then the nowcast reading note when it is shown). */
+.maps-map-footer:not([hidden]) {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0.4rem 0 0;
+  color: #475569;
+  font: 400 0.78rem/1.3 "Source Sans 3", "Segoe UI", sans-serif;
 }
 
 .maps-polltracker-controls {
@@ -1220,11 +1262,52 @@ a {
   gap: 0.45rem;
 }
 
+.maps-polltracker-switch:not([hidden]) {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.maps-polltracker-band {
+  fill-opacity: 0.2;
+  pointer-events: none;
+}
+
+.maps-polltracker-band-shade {
+  fill-opacity: 0.07;
+  stroke: none;
+  pointer-events: none;
+}
+
+.maps-polltracker-band-point {
+  stroke-width: 6;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .maps-polltracker-range-group {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
   margin-left: auto;
+}
+
+/* Unticked, the controls are flex items of the one controls row. With Uncertainty ticked, the
+   mode-specific controls (Seats / Vote % / Uncertainty, or Majority / Largest party) take a full
+   row of their own under the view switch and date range. */
+.maps-polltracker-view:not(.is-uncertainty-shown) .maps-polltracker-secondary,
+.maps-polltracker-view:not(.is-uncertainty-shown) #mapsPollTrackerMetrics {
+  display: contents;
+}
+
+.is-uncertainty-shown .maps-polltracker-secondary {
+  display: flex;
+  order: 1;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .maps-polltracker-range-btn {
@@ -1569,10 +1652,6 @@ a {
     display: grid;
     gap: 0.18rem;
     line-height: 1.28;
-  }
-
-  .maps-subtitle-has-latest .maps-subtitle-latest::before {
-    content: none;
   }
 }
 

@@ -9,7 +9,7 @@
   "gh_issue": 82,
   "build_model": null,
   "created": "2026-11-08 15:09",
-  "updated": "2026-11-08 16:13",
+  "updated": "2026-11-08 16:16",
   "done": null,
   "local": [
     {
@@ -28,5 +28,6 @@
       "name": "claude/restructure-data-folder-e05123",
       "added": "2026-11-08 16:13"
     }
-  ]
+  ],
+  "pr": 84
 }

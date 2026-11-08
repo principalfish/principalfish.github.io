@@ -14,9 +14,11 @@ const series = {
 describe("poll tracker uncertainty display", () => {
   it("finds optional capabilities while retaining valid zero probabilities", () => {
     expect(pollTrackerCapabilities({ seriesByParty: new Map([["1", series]]), hung: [0, null] }))
-      .toEqual({ bands: true, seatBands: false, voteBands: true, chances: true });
+      .toEqual({ bands: true, seatBands: false, voteBands: true, seatMeans: false, chances: true });
     expect(pollTrackerCapabilities({ seriesByParty: new Map([["1", { seats: [2], votePct: [3] }]]), hung: [] }))
-      .toEqual({ bands: false, seatBands: false, voteBands: false, chances: false });
+      .toEqual({ bands: false, seatBands: false, voteBands: false, seatMeans: false, chances: false });
+    expect(pollTrackerCapabilities({ seriesByParty: new Map([["1", { ...series, seatMean: [null, 297.4] }]]), hung: [] })
+      .seatMeans).toBe(true);
   });
 
   it("finds the first entry with any hung, majority or largest-party chance", () => {
@@ -54,7 +56,7 @@ describe("poll tracker uncertainty display", () => {
       .toEqual(["88%", "Unavailable", ">99%"]);
   });
 
-  it("labels a simulated run's seats as the mean, at 1 dp, and the election result as plain seats", () => {
+  it("labels a drawn simulated mean as the mean, at 1 dp, and the election result as plain seats", () => {
     const tracked = {
       ...series, seats: [411, 297.4, 305], seatMean: [null, 297.4, 305],
       seatLo: [null, 238, 240], seatHi: [null, 389, 390],
@@ -181,6 +183,16 @@ describe("poll tracker uncertainty display", () => {
     const hidden = pollTrackerUncertaintyNote(capabilities, { seats: true, votes: true, bands: false });
     expect(hidden).toContain("Uncertainty hidden");
     expect(hidden).not.toContain("Shaded bands");
+    // With stored means, the note says the box switches the seat line as well as the bands.
+    const withMeans = { ...capabilities, seatMeans: true };
+    expect(pollTrackerUncertaintyNote(withMeans, { seats: true, votes: false, bands: false })).toBe(
+      "Seat lines show the uniform-swing count. Tick Uncertainty for the simulated mean seats and 90% ranges.",
+    );
+    expect(pollTrackerUncertaintyNote(withMeans, { seats: true, votes: false, bands: true }))
+      .toMatch(/^Seat lines show the simulated mean seats\. Shaded bands show 90% seat ranges/);
+    // Without seat lines drawn there is no seat-line sentence.
+    expect(pollTrackerUncertaintyNote(withMeans, { seats: false, votes: true, bands: false })).toContain("Uncertainty hidden");
+    expect(pollTrackerUncertaintyNote(withMeans, { seats: false, votes: true, bands: true })).not.toContain("Seat lines");
     // Chances never draw bands, so hiding uncertainty doesn't change their note.
     expect(pollTrackerUncertaintyNote(capabilities, { chances: true, bands: false })).toContain("Chances");
   });

@@ -39,7 +39,8 @@ function seatMean(party) {
  *   [{ election_id, election_name, as_of_date: "YYYY-MM-DD",
  *      parties: { "<partyId>": { s: <seats>, v: <votePct>, vl?, vh?, sl?, sh?, sm?, pm?, pl? } },
  *      hung? }]
- *   A run with a simulated mean `sm` plots it as its seats, else its central (uniform-swing) `s`.
+ *   `seats` is always the central (uniform-swing) `s`; a run's simulated mean `sm` is kept beside
+ *   it as `seatMean`, which the view draws instead when the tracker's Uncertainty box is ticked.
  *
  * Pipeline:
  *   1. Flatten — explode each entry into one row per party: { partyKey, asOfDate, seats, votePct }.
@@ -97,7 +98,7 @@ export function parsePollTrackerData(data) {
       rows.push({
         partyKey: String(partyId),
         asOfDate,
-        seats: optional.seatMean ?? seats,
+        seats,
         votePct,
         ...optional,
       });
@@ -184,8 +185,8 @@ export function parsePollTrackerData(data) {
     };
     let lastOptional = optionalFields(null, false);
     let lastSeats = null;
-    // Whether lastSeats is a simulated mean: it travels with lastSeats, not with the optional
-    // fields, so a run lacking this party carries its last mean forward still labelled a mean.
+    // The simulated mean beside lastSeats: it travels with lastSeats, not with the optional
+    // fields, so a run lacking this party carries its last mean forward with its last seats.
     let lastSeatMean = null;
     let lastVotePct = null;
     timeline.forEach((entry) => {

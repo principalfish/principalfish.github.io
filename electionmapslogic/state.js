@@ -849,9 +849,10 @@ export class ElectionSummary {
    * render as their human display names. A missing winner falls back to the `'others'`
    * label rather than throwing or producing an empty string.
    *
-   * A saved model run with uncertainty shows the simulated odds in place of this line
-   * (uncertainty.js `simulatedSubtitle`, chosen in dom.js), since the uniform-swing count can
-   * contradict them; its vote-totals table shows the simulated whole seats too.
+   * With "Show with modelled uncertainty" ticked, a saved model run with uncertainty shows the
+   * simulated odds in place of this line (uncertainty.js `simulatedSubtitle`, chosen in dom.js),
+   * since the uniform-swing count can contradict them; its vote-totals table then shows the
+   * simulated whole seats too.
    *
    * @param {{parties: Array<{party: string, seats: number}>, totalSeats: number}} data - Structured summary aggregate.
    * @param {string} electionName - Display label prefix for the subtitle.
@@ -1106,6 +1107,11 @@ class AppState {
      * two-party (e.g. Leave/Remain) map; see `setupChoroplethConfig`. */
     this.referendumConfig = null;
 
+    /** Whether the reader ticked "Show with modelled uncertainty". Unticked on every page load
+     * and kept in memory only, so it holds across region and filter changes and through views
+     * that hide the checkbox; read through uncertainty.js `shownUncertainty`. */
+    this.showModelledUncertainty = false;
+
     /** Vote totals panel state.
      * - columns.votes: whether the raw vote-count column is visible. Hidden for predict / model /
      *   referendum elections (no meaningful raw counts) and on the Holyrood 'all' tab (where
@@ -1123,7 +1129,6 @@ class AppState {
       columns: { votes: true, votePct: true },
       mode: 'all',
       expanded: false,
-      showUncertainty: false,
       sort: { key: 'seats', direction: 'desc' },
     };
 

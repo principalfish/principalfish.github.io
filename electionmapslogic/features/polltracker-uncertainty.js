@@ -28,19 +28,31 @@ export function pollTrackerCapabilities(data) {
   const voteBands = hasBands("voteLo", "voteHi");
   return {
     bands: seatBands || voteBands, seatBands, voteBands,
+    seatMeans: series.some((row) => row.seatMean?.some(Number.isFinite)),
     chances: firstChanceIndex(data) >= 0,
   };
 }
 
+/**
+ * The note under the tracker controls. It says what the Uncertainty box switches: unticked, the
+ * seat lines are the uniform-swing count with no bands; ticked, they are the simulated mean seats
+ * with 90% bands. The seat-line sentence appears only while seats are drawn and the data has means.
+ */
 export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes, bands = true }) {
   const basis = "if an election were held today, conditional on current polls and the model's error assumptions.";
   if (chances) return `Chances ${basis} Hung means no party wins a majority.`;
-  if (!bands) return "Uncertainty hidden. Tick Uncertainty to show 90% ranges.";
+  const seatLines = Boolean(seats && capabilities.seatMeans);
+  if (!bands) {
+    return seatLines
+      ? "Seat lines show the uniform-swing count. Tick Uncertainty for the simulated mean seats and 90% ranges."
+      : "Uncertainty hidden. Tick Uncertainty to show 90% ranges.";
+  }
+  const lead = seatLines ? "Seat lines show the simulated mean seats. " : "";
   const metrics = [];
   if (seats && capabilities.seatBands) metrics.push("seat");
   if (votes && capabilities.voteBands) metrics.push("vote-share");
-  return metrics.length ? `Shaded bands show 90% ${metrics.join(" and ")} ranges (trailing average over up to ${BAND_SMOOTHING_POINTS} model updates) ${basis}`
-    : `Uncertainty describes an election held today, conditional on current polls and the model's error assumptions.`;
+  return metrics.length ? `${lead}Shaded bands show 90% ${metrics.join(" and ")} ranges (trailing average over up to ${BAND_SMOOTHING_POINTS} model updates) ${basis}`
+    : `${lead}Uncertainty describes an election held today, conditional on current polls and the model's error assumptions.`;
 }
 
 /**
@@ -65,8 +77,9 @@ export function chanceSeries(series, metric, hung) {
 /**
  * Only finite values are formatted; missing optional observations never become zero.
  * With `ranges: false` (uncertainty hidden) the 90% seat and vote ranges are left out.
- * A simulated run's seats are its mean over the simulations, labelled so and kept to the trend
- * file's 1 dp; a central-only run (the election result) shows its whole seats.
+ * With a simulated mean (uncertainty shown), a run's seats are that mean, labelled so and kept to
+ * the trend file's 1 dp; otherwise (uncertainty hidden, or a central-only run such as the
+ * election result) they are its whole uniform-swing seats.
  */
 export function pollTrackerTooltipValues(series, index, { ranges = true } = {}) {
   const percent = (value) => Number.isFinite(value) ? `${formatPct(value)}%` : "Unavailable";

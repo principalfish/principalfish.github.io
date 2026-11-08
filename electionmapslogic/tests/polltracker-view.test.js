@@ -7,6 +7,9 @@ const fetchJson = vi.hoisted(() => vi.fn());
 vi.mock("../files.js", () => ({ fetchJson }));
 // The view's d3 import is written relative to the built bundle, not this source tree.
 vi.mock("../site/vendor/d3.v7.esm.js", () => import("../../site/vendor/d3.v7.esm.js"));
+// dom.js (imported for the header test) loads topojson, whose vendored build points at a missing
+// source map; no map is drawn here.
+vi.mock("../../site/vendor/topojson-client.v3.esm.js", () => ({ feature: vi.fn(), mesh: vi.fn(), merge: vi.fn() }));
 
 // jsdom 24 is a devDependency (AGENTS.md pins 24: later majors fail to load on Node 21).
 // PF_TEST_JSDOM overrides it; the suites skip if the chosen jsdom fails to load.
@@ -76,17 +79,48 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
     vi.unstubAllGlobals();
   });
 
-  it("defaults to seats and bands, selects both parties, and draws the real chart", async () => {
+  /** Tick or untick the tracker's Uncertainty box as a reader would. */
+  const tickUncertainty = (checked = true) => {
+    const input = document.getElementById("mapsPollTrackerShowUncertainty");
+    input.checked = checked;
+    input.dispatchEvent(new window.Event("change"));
+  };
+
+  it("defaults to seats without uncertainty, selects both parties, and draws the real chart", async () => {
     await view.activatePollTrackerMode();
     expect(document.getElementById("mapsPollTrackerMetricSeats").checked).toBe(true);
     expect(document.getElementById("mapsPollTrackerMetricVotes").checked).toBe(false);
-    expect(document.getElementById("mapsPollTrackerShowUncertainty").checked).toBe(true);
+    expect(document.getElementById("mapsPollTrackerShowUncertainty").checked).toBe(false);
     expect(document.getElementById("mapsPollTrackerUncertaintyToggle").hidden).toBe(false);
     expect([...document.querySelectorAll(".maps-polltracker-party-toggle input")].map((node) => [node.value, node.checked]))
       .toEqual([["20", true], ["21", true]]);
     expect(document.querySelectorAll("#mapsPollTrackerChartWrap svg")).toHaveLength(1);
+    expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(0);
+    tickUncertainty();
     expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(2);
     expect(document.querySelectorAll(".maps-polltracker-band-shade")).toHaveLength(32);
+  });
+
+  it("puts the latest poll below the chart, outside the tracker card and the subtitle", async () => {
+    const footer = document.getElementById("mapsPollTrackerFooter");
+    expect(footer.parentElement.id).toBe("mapsPollTrackerView");
+    expect(footer.previousElementSibling.classList.contains("maps-polltracker-card")).toBe(true);
+    // dom.js observes panel sizes at module load; jsdom has no layout to observe.
+    const Observer = class { observe() {} unobserve() {} disconnect() {} };
+    vi.stubGlobal("ResizeObserver", Observer);
+    vi.stubGlobal("IntersectionObserver", Observer);
+    // The page's own header, as in electionmaps/index.html.
+    const header = document.createElement("header");
+    header.innerHTML = '<h1 class="maps-title"></h1><p id="mapsSubtitle"></p><p id="mapsElectionCountdown" hidden></p>';
+    document.body.prepend(header);
+    const subtitle = document.getElementById("mapsSubtitle");
+    state.predictionSnippet = "Latest poll used: Opinium (2026-10-28 to 2026-10-30)";
+    const { renderHeader } = await import("../dom.js");
+    renderHeader();
+    expect(subtitle.textContent).toBe("Poll tracker · model output trends");
+    expect(footer.hidden).toBe(false);
+    expect([...footer.children].map((node) => [node.className, node.textContent]))
+      .toEqual([["maps-map-footer-latest", state.predictionSnippet]]);
   });
 
   it("switches to majority / hung chances with the largest-party measure available", async () => {
@@ -110,6 +144,7 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
 
   it("applies All / 30 / 90 windows by dates and retains independent metric controls", async () => {
     await view.activatePollTrackerMode();
+    tickUncertainty();
     expect(document.querySelector(".maps-polltracker-band--seats").__data__).toHaveLength(40);
     document.querySelector('[data-polltracker-range="30"]').click();
     const band = document.querySelector(".maps-polltracker-band--seats");
@@ -268,19 +303,33 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
       expect(labourPath().getAttribute("d")).toMatch(/^M0,/);
     });
 
-    it("draws each simulated run's mean seats, keeping the election-day result and the bands", async () => {
+    it("draws the uniform-swing seats unticked, and each run's mean with the bands ticked", async () => {
       const [electionDay, ...runs] = historyWithElectionDay();
       fetchJson.mockResolvedValue([electionDay, ...runs.map((run) => ({
         ...run, parties: { ...run.parties, 20: { ...run.parties[20], sm: 317.4 } },
       }))]);
       await view.activatePollTrackerMode();
       MODES["Seats only"]();
-      const seats = labourPath().__data__;
+      const note = () => document.getElementById("mapsPollTrackerUncertaintyNote").textContent;
+      // Unticked (the default): the uniform-swing `s` line, no bands.
+      let seats = labourPath().__data__;
+      expect(seats[0]).toBe(411);
+      expect(seats.at(-1)).toBe(320);
+      expect(seats).not.toContain(317.4);
+      expect(document.querySelectorAll(".maps-polltracker-band--seats")).toHaveLength(0);
+      expect(note()).toBe("Seat lines show the uniform-swing count. Tick Uncertainty for the simulated mean seats and 90% ranges.");
+      // Ticked: the mean `sm` line, the election-day result kept, and the bands.
+      tickUncertainty();
+      seats = labourPath().__data__;
       expect(seats[0]).toBe(411);
       expect(seats.at(-1)).toBe(317.4);
       expect(seats).not.toContain(320);
       const band = document.querySelector(".maps-polltracker-band--seats").__data__;
       expect(band.at(-1)).toEqual([280, 360]);
+      expect(note()).toMatch(/^Seat lines show the simulated mean seats\. Shaded bands show 90% seat ranges/);
+      // Unticking returns to the uniform-swing line.
+      tickUncertainty(false);
+      expect(labourPath().__data__.at(-1)).toBe(320);
     });
   });
 
@@ -293,6 +342,7 @@ describe.skipIf(!JSDOM)("actual poll tracker view", () => {
       } },
     })));
     await view.activatePollTrackerMode();
+    tickUncertainty();
     const band = document.querySelector(".maps-polltracker-band--seats");
     expect(band.getAttribute("d").match(/M/g)).toHaveLength(2);
     expect(band.__data__).toEqual([

@@ -21,10 +21,12 @@ try {
   ({ JSDOM } = createRequire(import.meta.url)(process.env.PF_TEST_JSDOM || "jsdom"));
 } catch { /* Without jsdom the browser suites below are skipped. */ }
 
-// The page's own header (electionmaps/index.html) holds the title, subtitle and countdown the
-// engine renders into; the shell holds the rest.
+// The page's own header (electionmaps/index.html) holds the title, subtitle, modelled-uncertainty
+// checkbox and countdown the engine renders into; the shell holds the rest.
 const header = `<header class="maps-header"><h1 class="maps-title"></h1>
-  <p id="mapsSubtitle" class="maps-subtitle"></p><p id="mapsElectionCountdown" hidden></p></header>`;
+  <p id="mapsSubtitle" class="maps-subtitle"></p>
+  <label id="mapsModelledUncertainty" hidden><input id="mapsModelledUncertaintyInput" type="checkbox" />
+  Show with modelled uncertainty</label><p id="mapsElectionCountdown" hidden></p></header>`;
 const shell = header + readFileSync(new URL("../shell.html", import.meta.url), "utf8");
 
 const HEADLINE = "Labour 280 seats (199–359) · majority 19%";
@@ -166,28 +168,109 @@ describe.skipIf(!JSDOM)("actual election load", () => {
   const headline = () => document.querySelector("#mapsSubtitle .maps-subtitle-uncertainty");
   const mainLine = () => document.querySelector("#mapsSubtitle .maps-subtitle-main");
   const basisNote = () => document.getElementById("mapsUncertaintyBasis");
-  const subtitleLines = () => [...document.getElementById("mapsSubtitle").children]
+  const lines = (id) => [...document.getElementById(id).children]
     .map((node) => [node.className, node.textContent]);
+  const subtitleLines = () => lines("mapsSubtitle");
+  const footerLines = () => lines("mapsMapFooter");
+  const footer = () => document.getElementById("mapsMapFooter");
+  const checkbox = () => document.getElementById("mapsModelledUncertaintyInput");
+  const checkboxShown = () => !document.getElementById("mapsModelledUncertainty").hidden;
+  const seatsColumn = () => [...document.querySelectorAll("#mapsVoteTotalsBody tr")].map((tr) => tr.cells[1].textContent);
+  const mapNote = () => document.getElementById("mapsMapColourNote");
+  const describedBy = () => document.getElementById("mapsVoteTotalsTable").getAttribute("aria-describedby");
   const popupBands = () => [...document.querySelectorAll("#mapsSeatPopupList .maps-popup-uncertainty")];
+  const popupRows = () => [...document.querySelectorAll("#mapsSeatPopupList .maps-popup-row")];
   const openSeatPopup = () => document.querySelector("#mapsSeatList .maps-seat-row").click();
+  /** Tick or untick "Show with modelled uncertainty" as a reader would. */
+  const tick = (checked = true) => {
+    checkbox().checked = checked;
+    checkbox().dispatchEvent(new dom.window.Event("change"));
+  };
+  /** The default, unticked view: master's uniform-swing page. */
+  const expectUniformSwingView = () => {
+    expect(mainLine().textContent).toBe(UNIFORM_SWING);
+    expect(headline()).toBeNull();
+    expect(seatsColumn()).toEqual(["1", "0"]);
+    expect(mapNote().hidden).toBe(true);
+    expect(basisNote()).toBeNull();
+  };
+  /** The ticked view: the simulation-led subtitle, mean seats with ranges and the map note. */
+  const expectSimulatedView = () => {
+    expect(mainLine().textContent).toBe(SIMULATED);
+    expect(headline().textContent).toBe(HEADLINE);
+    expect(seatsColumn()).toEqual(["280 (199–359)", "118 (114–130)"]);
+    expect(mapNote().hidden).toBe(false);
+    expect(mapNote().textContent).toBe("Map colours show each seat's uniform-swing winner.");
+  };
 
-  describe("Monte Carlo headline", () => {
-    it("renders after a model election loads and records the route", async () => {
+  describe("Show with modelled uncertainty", () => {
+    it("opens unticked on the uniform-swing view and records the route", async () => {
       await boot();
       await startApp();
       expect(state.electionData.uncertainty.national.hung).toBe(0.81);
-      expect(headline().textContent).toBe(HEADLINE);
-      expect(mainLine().textContent).toBe(SIMULATED);
-      // The totals table shows the exported whole seats, not the median or the one-seat
-      // uniform-swing count; the only note is the map-colour one.
-      expect([...document.querySelectorAll("#mapsVoteTotalsBody tr")].map((tr) => tr.cells[1].textContent))
-        .toEqual(["280", "118"]);
-      expect(document.getElementById("mapsSeatMedianNote")).toBeNull();
-      expect(document.getElementById("mapsMapColourNote").hidden).toBe(false);
-      expect(document.getElementById("mapsMapColourNote").textContent)
-        .toBe("Map colours show each seat's uniform-swing winner.");
+      expect(checkboxShown()).toBe(true);
+      expect(checkbox().checked).toBe(false);
+      expectUniformSwingView();
+      expect(document.getElementById("mapsUncertaintyToggle")).toBeNull();
       expect(document.querySelectorAll("#mapContent .maps-region-path")).toHaveLength(1);
       expect(dom.window.location.search).toBe("?view=election&election=current-prediction");
+    });
+
+    it("ticking shows the simulated subtitle, mean seats with ranges and the note; unticking restores", async () => {
+      await boot();
+      await startApp();
+      tick();
+      expect(state.showModelledUncertainty).toBe(true);
+      expectSimulatedView();
+      // The table shows the exported whole seats, not the median or the uniform-swing count.
+      expect(document.getElementById("mapsSeatMedianNote")).toBeNull();
+      tick(false);
+      expect(state.showModelledUncertainty).toBe(false);
+      expectUniformSwingView();
+    });
+
+    it("resizes the right panel to the map area when the footer's height changes", async () => {
+      await boot();
+      await startApp();
+      const stage = document.querySelector(".maps-stage");
+      const panel = document.querySelector(".maps-panel-right");
+      // The stage grows with the footer, so a sync before the footer re-renders reads the old height.
+      stage.getBoundingClientRect = () => ({ height: 600 + footer().childElementCount * 35 });
+      tick();
+      expect(panel.style.height).toBe("635px");
+      expect(panel.style.maxHeight).toBe("635px");
+      tick(false);
+      expect(panel.style.height).toBe("600px");
+      expect(panel.style.maxHeight).toBe("600px");
+    });
+
+    it("keeps the choice across a region change and back", async () => {
+      await boot();
+      await startApp();
+      tick();
+      const region = document.getElementById("mapsFilterRegion");
+      region.value = [...region.options].find((option) => option.value !== "all").value;
+      region.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+      expect(state.mapFilters.region).not.toBe("all");
+      expect(checkbox().checked).toBe(true);
+      expect(mainLine().textContent).toBe(SIMULATED);
+      region.value = "all";
+      region.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+      expectSimulatedView();
+    });
+
+    it("starts unticked on a fresh load and stores nothing in the browser", async () => {
+      await boot();
+      await startApp();
+      tick();
+      expect(dom.window.localStorage).toHaveLength(0);
+      expect(dom.window.sessionStorage).toHaveLength(0);
+      dom.window.close();
+      vi.resetModules();
+      await boot();
+      await startApp();
+      expect(checkbox().checked).toBe(false);
+      expectUniformSwingView();
     });
 
     it("ignores results that arrive after the election changes", async () => {
@@ -210,6 +293,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       const held = pending();
       serve({ "data/results/uncertainty.json": () => held.promise });
       await boot();
+      state.showModelledUncertainty = true;
       const loading = startApp();
       await vi.waitFor(() => expect(fetchJson).toHaveBeenCalledWith("data/results/uncertainty.json"));
       const loaded = state.electionData;
@@ -223,46 +307,56 @@ describe.skipIf(!JSDOM)("actual election load", () => {
     });
   });
 
-  describe("reading note", () => {
-    it("follows the latest poll, reads in full and describes the totals table", async () => {
+  describe("footer below the map", () => {
+    it("shows the latest poll in both modes and the nowcast note only when ticked", async () => {
       serve({ "data/results/meta.json": { latest_poll_snippet: LATEST } });
       await boot();
       await startApp();
+      // The subtitle no longer carries the latest poll or the reading note.
+      expect(subtitleLines()).toEqual([["maps-subtitle-main", UNIFORM_SWING]]);
+      expect(footer().hidden).toBe(false);
+      expect(footerLines()).toEqual([["maps-map-footer-latest", LATEST]]);
+      expect(describedBy()).not.toContain("mapsUncertaintyBasis");
+      tick();
       expect(subtitleLines()).toEqual([
         ["maps-subtitle-main", SIMULATED],
         ["maps-subtitle-uncertainty", HEADLINE],
-        ["maps-subtitle-latest", LATEST],
-        ["maps-subtitle-basis", BASIS],
       ]);
-      const described = document.getElementById("mapsVoteTotalsTable").getAttribute("aria-describedby");
-      expect(described.split(" ")).toContain("mapsUncertaintyBasis");
+      expect(footerLines()).toEqual([
+        ["maps-map-footer-latest", LATEST],
+        ["maps-map-footer-basis", BASIS],
+      ]);
+      expect(describedBy().split(" ")).toContain("mapsUncertaintyBasis");
       expect(basisNote().textContent).toBe(BASIS);
+      tick(false);
+      expect(footerLines()).toEqual([["maps-map-footer-latest", LATEST]]);
+      expect(basisNote()).toBeNull();
     });
 
-    it("still comes last without a latest-poll line", async () => {
+    it("holds only the nowcast note when ticked without a latest-poll line, else hides", async () => {
       await boot();
       await startApp();
-      expect(subtitleLines()).toEqual([
-        ["maps-subtitle-main", SIMULATED],
-        ["maps-subtitle-uncertainty", HEADLINE],
-        ["maps-subtitle-basis", BASIS],
-      ]);
+      expect(footer().hidden).toBe(true);
+      tick();
+      expect(footer().hidden).toBe(false);
+      expect(footerLines()).toEqual([["maps-map-footer-basis", BASIS]]);
+      tick(false);
+      expect(footer().hidden).toBe(true);
+      expect(footerLines()).toEqual([]);
     });
 
-    it("is absent, with the subtitle unchanged, without uncertainty", async () => {
+    it("keeps the latest poll, with no checkbox or note, without uncertainty", async () => {
       serve({
         "data/results/meta.json": { latest_poll_snippet: LATEST },
         "data/results/uncertainty.json": () => Promise.reject(new Error("missing")),
       });
       await boot();
       await startApp();
-      expect(subtitleLines()).toEqual([
-        ["maps-subtitle-main", UNIFORM_SWING],
-        ["maps-subtitle-latest", LATEST],
-      ]);
+      expect(subtitleLines()).toEqual([["maps-subtitle-main", UNIFORM_SWING]]);
+      expect(footerLines()).toEqual([["maps-map-footer-latest", LATEST]]);
+      expect(checkboxShown()).toBe(false);
       expect(basisNote()).toBeNull();
-      expect(document.getElementById("mapsVoteTotalsTable").getAttribute("aria-describedby"))
-        .not.toContain("mapsUncertaintyBasis");
+      expect(describedBy()).not.toContain("mapsUncertaintyBasis");
     });
   });
 
@@ -270,32 +364,40 @@ describe.skipIf(!JSDOM)("actual election load", () => {
     it("keeps the uniform-swing line for a saved model without uncertainty", async () => {
       serve({ "data/results/uncertainty.json": () => Promise.reject(new Error("missing")) });
       await boot();
+      state.showModelledUncertainty = true;
       await startApp();
       expect(state.electionData.uncertainty).toBeNull();
       expect(mainLine().textContent).toBe(UNIFORM_SWING);
       expect(headline()).toBeNull();
     });
 
-    it("keeps the uniform-swing line for a historical election", async () => {
+    it("keeps the uniform-swing view, with no checkbox, for a historical election even if ticked", async () => {
+      serve({ "data/results/meta.json": { latest_poll_snippet: LATEST } });
       await boot("?parliament=westminster&election=2024-general");
+      state.showModelledUncertainty = true;
       await startApp();
       expect(mainLine().textContent).toBe("2024 General Election · Labour majority: 1");
-      expect([...document.querySelectorAll("#mapsVoteTotalsBody tr")].map((tr) => tr.cells[1].textContent))
-        .toEqual(["1", "0"]);
-      expect(document.getElementById("mapsMapColourNote").hidden).toBe(true);
+      expect(seatsColumn()).toEqual(["1", "0"]);
+      expect(mapNote().hidden).toBe(true);
       expect(headline()).toBeNull();
       expect(basisNote()).toBeNull();
+      expect(checkboxShown()).toBe(false);
+      // A historical election shows no latest poll, as before.
+      expect(footer().hidden).toBe(true);
     });
 
-    it("returns to the uniform-swing line in predict view", async () => {
+    it("returns to the uniform-swing line, and hides the checkbox, in predict view", async () => {
       await boot();
       await startApp();
+      tick();
       expect(mainLine().textContent).toBe(SIMULATED);
       state.view = "predict";
       const { renderHeader } = await import("../dom.js");
       renderHeader(state.electionData.summary.text);
       expect(mainLine().textContent).toBe(UNIFORM_SWING);
       expect(headline()).toBeNull();
+      expect(checkboxShown()).toBe(false);
+      expect(basisNote()).toBeNull();
     });
 
     it("keeps the summary line on a US-style model election with no uncertainty path", async () => {
@@ -328,6 +430,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       expect(mainLine().textContent).toBe("2026 Prediction · Democratic majority: 1");
       expect(headline()).toBeNull();
       expect(basisNote()).toBeNull();
+      expect(checkboxShown()).toBe(false);
     });
 
     it("inserts party names as text, not markup", async () => {
@@ -336,6 +439,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       serve({ "data/map-modes.json": modes });
       await boot();
       await startApp();
+      tick();
       expect(mainLine().textContent).toBe(
         "Current prediction · Hung parliament likely (81%) · <b>Labour</b> & co largest party (94%)",
       );
@@ -346,13 +450,20 @@ describe.skipIf(!JSDOM)("actual election load", () => {
   });
 
   describe("seat popup band", () => {
-    it("shows each party's band and win chance on a saved model", async () => {
+    it("shows vote % and change only while unticked, and each band and win chance when ticked", async () => {
       await boot();
       await startApp();
       openSeatPopup();
       expect(document.getElementById("mapsSeatPopup").hidden).toBe(false);
+      expect(popupRows()).toHaveLength(2);
+      expect(popupBands()).toHaveLength(0);
+      // Ticking refreshes the open popup in place.
+      tick();
       expect(popupBands().map((node) => node.textContent))
         .toEqual(["(48.5–61.25%) · win 87%", "(30–41%) · win <1%"]);
+      tick(false);
+      expect(popupRows()).toHaveLength(2);
+      expect(popupBands()).toHaveLength(0);
     });
 
     it("escapes the band text as text, not markup", async () => {
@@ -362,6 +473,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       }));
       await boot();
       await startApp();
+      tick();
       openSeatPopup();
       const [band] = popupBands();
       expect(band.textContent).toBe("win <1% & <b>bold</b>");
@@ -372,6 +484,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
     it("leaves the band out in predict view", async () => {
       await boot();
       await startApp();
+      tick();
       openSeatPopup();
       expect(popupBands()).toHaveLength(2);
       // A predict projection refreshes the open popup in place.
@@ -384,10 +497,11 @@ describe.skipIf(!JSDOM)("actual election load", () => {
 
     it("leaves the band out when the election is not a model", async () => {
       await boot("?parliament=westminster&election=2024-general");
+      state.showModelledUncertainty = true;
       await startApp();
       expect(state.currentElection.model).toBeUndefined();
       openSeatPopup();
-      expect(document.querySelectorAll("#mapsSeatPopupList .maps-popup-row")).toHaveLength(2);
+      expect(popupRows()).toHaveLength(2);
       expect(popupBands()).toHaveLength(0);
     });
 
@@ -395,8 +509,9 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       serve({ "data/results/prediction.json": results([]) });
       await boot();
       await startApp();
+      tick();
       openSeatPopup();
-      expect(document.querySelectorAll("#mapsSeatPopupList .maps-popup-row")).toHaveLength(2);
+      expect(popupRows()).toHaveLength(2);
       expect(popupBands()).toHaveLength(0);
     });
   });

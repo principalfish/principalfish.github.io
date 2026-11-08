@@ -23,7 +23,7 @@
         <div id="mapsPollTrackerMetrics" class="maps-polltracker-switch">
           <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricSeats" type="checkbox" checked> Seats</label>
           <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricVotes" type="checkbox"> Vote %</label>
-          <label id="mapsPollTrackerUncertaintyToggle" class="maps-polltracker-toggle" hidden><input id="mapsPollTrackerShowUncertainty" type="checkbox" checked> Uncertainty</label>
+          <label id="mapsPollTrackerUncertaintyToggle" class="maps-polltracker-toggle" hidden><input id="mapsPollTrackerShowUncertainty" type="checkbox"> Uncertainty</label>
         </div>
         <div id="mapsPollTrackerChanceControls" class="maps-polltracker-switch" role="radiogroup" aria-label="Chance measure" hidden>
           <label class="maps-polltracker-toggle"><input type="radio" name="mapsPollTrackerChance" data-polltracker-chance="pMaj" checked> Majority</label>
@@ -38,4 +38,6 @@
 
     <div id="mapsPollTrackerChartWrap" class="maps-polltracker-chart-wrap" aria-label="Poll tracker chart container"></div>
   </article>
+  <!-- The latest poll used, below the chart as it is below the map. Filled by dom.js. -->
+  <p id="mapsPollTrackerFooter" class="maps-map-footer" hidden></p>
 </section>

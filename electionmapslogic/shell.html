@@ -124,6 +124,10 @@
         </svg>
       </div>
 
+      <!-- Notes below the map: the latest poll used and, with the modelled uncertainty shown,
+           its reading note. Filled by dom.js renderMapFooter. -->
+      <p id="mapsMapFooter" class="maps-map-footer" hidden></p>
+
       <article id="mapsSeatPopup" class="maps-seat-popup" hidden aria-live="polite">
         <header class="maps-seat-popup-head">
           <h3 id="mapsSeatPopupTitle" class="maps-seat-popup-title">Seat</h3>
@@ -140,7 +144,6 @@
           <h2 class="maps-panel-title">Vote Totals</h2>
           <div class="maps-card-head-actions">
             <button type="button" id="mapsVoteTotalsToggle" class="maps-inline-btn" hidden>Show all</button>
-            <button type="button" id="mapsUncertaintyToggle" class="maps-inline-btn maps-uncertainty-toggle" aria-pressed="false" aria-controls="mapsVoteTotalsTable" hidden>Show uncertainty</button>
             <button type="button" id="mapsVoteTotalsCollapse" class="maps-inline-btn maps-vote-totals-collapse" data-vote-totals-action="collapse" aria-label="Collapse vote totals">▲</button>
           </div>
         </div>

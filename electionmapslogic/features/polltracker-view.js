@@ -38,7 +38,9 @@ const pollTrackerPartyControls = document.getElementById('mapsPollTrackerPartyCo
 const pollTrackerMetricSeatsInput = document.getElementById('mapsPollTrackerMetricSeats');
 // Metric checkbox — when checked, the chart paints dashed lines for vote % on the right axis.
 const pollTrackerMetricVotesInput = document.getElementById('mapsPollTrackerMetricVotes');
-// Checkbox — when checked, the chart shades 90% bands and the tooltip lists 90% ranges.
+// Checkbox — when checked, the seat lines draw the simulated mean, the chart shades 90% bands
+// and the tooltip lists 90% ranges; unchecked (the default), the seat lines are the
+// uniform-swing count.
 const pollTrackerShowUncertaintyInput = document.getElementById('mapsPollTrackerShowUncertainty');
 let chartMode = "totals";
 let chanceMetric = "pMaj";
@@ -147,8 +149,9 @@ function renderPollTrackerUncertaintyControls() {
 }
 
 /**
- * Whether the user wants uncertainty shown (bands and tooltip ranges). Defaults to shown
- * when the toggle is missing, so a page without it keeps the original behaviour.
+ * Whether the user wants uncertainty shown (mean seat lines, bands and tooltip ranges).
+ * Defaults to shown when the toggle is missing, so a page without it keeps the original
+ * behaviour.
  * @returns {boolean}
  */
 function pollTrackerUncertaintyShown() {
@@ -204,7 +207,7 @@ function renderPollTrackerChart() {
 
   // Compute scales, per-party windowed series, and line generators.
   const { x, useTimeScale } = pollTrackerXScale(visibleTimeline, innerWidth);
-  const ordinarySeries = pollTrackerSelectedSeries(selectedParties, windowStart);
+  const ordinarySeries = pollTrackerSelectedSeries(selectedParties, windowStart, pollTrackerUncertaintyShown());
   const selectedSeries = chances
     ? chanceSeries(ordinarySeries, chanceMetric, state.pollTrackerData.hung.slice(windowStart)) : ordinarySeries;
   const { ySeats, yVotePct } = chances
@@ -339,8 +342,13 @@ function pollTrackerXScale(visibleTimeline, innerWidth) {
 /**
  * Reshapes the per-party series down to just the visible window. Skips parties with no data.
  * The seats/votePct arrays are sliced to align positionally with visibleTimeline.
+ *
+ * With uncertainty shown, `seats` is each day's simulated mean where its run has one (a
+ * central-only day, such as the election-day result, keeps its seats); otherwise it is the
+ * uniform-swing count and `seatMean` is dropped, so the tooltip labels the count as plain seats.
  * @param {string[]} selectedParties - party keys checked in the toggle list
  * @param {number} windowStart - index in the full timeline where the visible window begins
+ * @param {boolean} [showMean=true] - Whether the seat lines draw the simulated mean
  * @returns {Array<{
  *   partyKey: string,
  *   partyName: string,
@@ -350,19 +358,20 @@ function pollTrackerXScale(visibleTimeline, innerWidth) {
  *   latestSeats: number
  * }>}
  */
-function pollTrackerSelectedSeries(selectedParties, windowStart) {
+function pollTrackerSelectedSeries(selectedParties, windowStart, showMean = true) {
   return selectedParties
     .map((partyKey) => state.pollTrackerData.seriesByParty.get(partyKey))
     .filter(Boolean)
     .map((series) => ({
       ...series,
-      seats: series.seats.slice(windowStart),
+      seats: series.seats.slice(windowStart)
+        .map((seats, index) => (showMean ? series.seatMean?.[windowStart + index] : null) ?? seats),
       votePct: series.votePct.slice(windowStart),
       voteLo: (series.voteLo || []).slice(windowStart),
       voteHi: (series.voteHi || []).slice(windowStart),
       seatLo: (series.seatLo || []).slice(windowStart),
       seatHi: (series.seatHi || []).slice(windowStart),
-      seatMean: (series.seatMean || []).slice(windowStart),
+      seatMean: showMean ? (series.seatMean || []).slice(windowStart) : [],
       pMaj: (series.pMaj || []).slice(windowStart),
       pLargest: (series.pLargest || []).slice(windowStart),
     }));

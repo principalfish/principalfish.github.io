@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { ElectionData, manifest, Seat, state } from "../state.js";
 import {
   activeUncertainty, decodeUncertainty, formatProbability, probabilityPercent, seatsWithRange,
-  seatUncertaintyText, simulatedSubtitle, uncertaintyForTotals, uncertaintyHeadline,
+  seatUncertaintyText, shownUncertainty, simulatedSubtitle, uncertaintyForTotals, uncertaintyHeadline,
   uncertaintyOutcomeLine, uncertaintyRange,
 } from "../uncertainty.js";
 
@@ -33,6 +33,8 @@ beforeEach(() => {
   });
   state.currentElection = { model: true, mapId: 1 };
   state.view = "election";
+  // These tests read the ticked view; the unticked gate has its own test below.
+  state.showModelledUncertainty = true;
   state.voteTotals.mode = "all";
   state.mapFilters = {
     party: "all", secondParty: "all", region: "all", gainsOnly: false,
@@ -147,6 +149,21 @@ describe("uncertainty totals and headline", () => {
     expect(uncertaintyHeadline(summary, label)).toBe(
       "Labour 280 seats (199–359) · majority <1%",
     );
+  });
+
+  it("shows the stored simulation only while Show with modelled uncertainty is ticked", () => {
+    state.showModelledUncertainty = false;
+    // The checkbox is still offered (the view has a stored simulation)...
+    expect(activeUncertainty(state)).toBe(state.electionData.uncertainty);
+    // ...but nothing simulated is shown, and the totals are the uniform-swing view.
+    expect(shownUncertainty(state)).toBeNull();
+    expect(uncertaintyForTotals(state)).toBeNull();
+    state.showModelledUncertainty = true;
+    expect(shownUncertainty(state)).toBe(state.electionData.uncertainty);
+    expect(uncertaintyForTotals(state)).toBe(state.electionData.uncertainty.national);
+    // Ticked, a view with no stored simulation still shows none.
+    state.view = "predict";
+    expect(shownUncertainty(state)).toBeNull();
   });
 
   it("suppresses stored uncertainty for real elections and user predictions", () => {

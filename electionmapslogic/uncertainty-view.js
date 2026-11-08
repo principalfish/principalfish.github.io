@@ -1,6 +1,4 @@
-import {
-  activeUncertainty, uncertaintyForTotals, uncertaintyHeadline,
-} from "./uncertainty.js";
+import { activeUncertainty, uncertaintyHeadline } from "./uncertainty.js";
 
 /** Append the simulated seats and odds line, in the headline area. */
 export function renderUncertaintyHeader(container, summary, labelParty) {
@@ -14,33 +12,31 @@ export function renderUncertaintyHeader(container, summary, labelParty) {
 
 /**
  * Append the exported reading note in full, nowcast sentence included: it is the one place the
- * header says the odds are "if an election were held today". The totals table names it in
- * aria-describedby by its id.
+ * page says the odds are "if an election were held today". It sits in the footer below the map;
+ * the totals table names it in aria-describedby by its id.
  */
 export function renderUncertaintyBasis(container, summary) {
   if (typeof summary?.basis !== "string" || !summary.basis) return;
   const basis = document.createElement("span");
   basis.id = "mapsUncertaintyBasis";
-  basis.className = "maps-subtitle-basis";
+  basis.className = "maps-map-footer-basis";
   basis.textContent = summary.basis;
   container.appendChild(basis);
 }
 
-export function renderUncertaintyToggle(button, state) {
-  const available = !!uncertaintyForTotals(state);
-  const visible = available && state.voteTotals.showUncertainty;
-  if (button) {
-    button.hidden = !available;
-    button.setAttribute("aria-pressed", String(visible));
-    button.textContent = visible ? "Hide uncertainty" : "Show uncertainty";
-  }
-  return visible;
+/**
+ * Show the "Show with modelled uncertainty" checkbox only when the view has a stored simulation
+ * (a saved run's summary), ticked from the reader's choice.
+ */
+export function renderModelledUncertaintyToggle(control, input, state) {
+  if (control) control.hidden = !activeUncertainty(state);
+  if (input) input.checked = Boolean(state.showModelledUncertainty);
 }
 
-export function wireUncertaintyToggle(button, state, onChange) {
-  button?.addEventListener("click", () => {
-    if (!activeUncertainty(state) || !uncertaintyForTotals(state)) return;
-    state.voteTotals.showUncertainty = !state.voteTotals.showUncertainty;
+/** Record the reader's choice for the rest of the page's life, then redraw what it switches. */
+export function wireModelledUncertaintyToggle(input, state, onChange) {
+  input?.addEventListener("change", () => {
+    state.showModelledUncertainty = input.checked;
     onChange();
   });
 }

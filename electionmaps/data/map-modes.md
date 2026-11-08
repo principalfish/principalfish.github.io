@@ -29,7 +29,7 @@ page resolves under `/electionmaps/data/`, and on the US page under
 |-|-|
 | `files.elections.mapsById` | Map ID (a JSON object key) → TopoJSON path, e.g. `"2": "maps/map-2.topo.json"`. Each map identifies a boundary set. |
 | `files.elections.electionsById` | Election ID → results path, e.g. `"current-prediction": "results/prediction-simulation.json"`. |
-| `files.meta` | Parliament key → prediction metadata path. The engine reads `latest_poll_snippet` for model-election and poll-tracker subtitles. |
+| `files.meta` | Parliament key → prediction metadata path. The engine reads `latest_poll_snippet` for the "Latest poll used" note below the map (model elections) and below the poll-tracker chart. |
 | `parties` | Array of party records: numeric `id`, canonical string `key`, display `name`, and hex `colour`. Numeric IDs in result files resolve through this list. |
 | `partyKeyAliases` | Alias → canonical party key. String party references are lowercased and stripped of non-alphanumerics for alias lookup; for example, `"reformuk": "reform"`. |
 | `mapModes[mapId].regions` | Array of region records with numeric `id` and display `name`, normally generated from the database. Used to resolve region IDs and label filters. |
@@ -165,7 +165,9 @@ parties' `mean` rounded by largest remainder (floor each mean, then one more
 seat to each of the largest fractional parts until the block's seat total is
 reached; equal fractions go to the larger mean, then by party name), so they
 add up to the block's seat total: 650 nationally, the region's seat count in a
-region. The site's Seats column and headline show `m`. Parties and regions are keyed by numeric ID strings, as in `parties`
+region. With "Show with modelled uncertainty" ticked (it is unticked on each page load, and
+offered only on a view with this file), the site's Seats column and headline show `m`;
+unticked, the page shows the uniform-swing projection. Parties and regions are keyed by numeric ID strings, as in `parties`
 and `mapModes[mapId].regions`.
 
 | Field | Description |

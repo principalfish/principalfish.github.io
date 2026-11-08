@@ -101,6 +101,8 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     state.view = "election";
     state.currentParliament = "westminster";
     state.currentElection = { model: true, mapId: 2 };
+    // Most tests read the ticked view; the unticked (default) table has its own tests.
+    state.showModelledUncertainty = true;
     state.electionData = new module.ElectionData({ seats: [], uncertaintyId: "saved-run" });
     state.electionData.uncertainty = decodeUncertainty(
       payload(), "saved-run", (party) => module.manifest.resolvePartyRef(party), module.manifest.regionsById,
@@ -129,29 +131,10 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     expect(mapNote().textContent).toBe("");
     expect(document.body.textContent).not.toMatch(/needn't add up|simulated medians/);
   };
-  const toggle = () => document.getElementById("mapsUncertaintyToggle");
   const describedBy = () => document.getElementById("mapsVoteTotalsTable").getAttribute("aria-describedby");
   const PLAIN_HEADER = ["Party", "Seats", "±", "Votes", "Vote %", "±"];
 
-  it("shows each party's whole seats under Seats, with ± from them and a dash without them", () => {
-    renderVoteTotals(summary, comparison);
-    expect(header()).toEqual(PLAIN_HEADER);
-    expect(table()).toEqual([
-      ["Labour", "280", "-131", "600", "60.00", "+10.00"],
-      ["Reform UK", "118", "+113", "380", "38.00", "+18.00"],
-      ["Green", "—", "", "20", "2.00", "-8.00"],
-    ]);
-    // No uniform-swing count or median anywhere: not in a cell and not in a hover title.
-    const html = document.getElementById("mapsVoteTotalsTable").outerHTML;
-    expect(html).not.toMatch(/>300<|>109<|>282<|>120<|title="[^"]*(300|109|[Uu]niform)/);
-    expect(toggle().hidden).toBe(false);
-    expect(toggle().textContent).toBe("Show uncertainty");
-  });
-
-  it("adds only the range text when uncertainty is shown", () => {
-    renderVoteTotals(summary, comparison);
-    const hidden = table();
-    state.voteTotals.showUncertainty = true;
+  it("ticked: shows each party's whole seats and ranges, with ± from them and a dash without them", () => {
     renderVoteTotals(summary, comparison);
     expect(header()).toEqual(PLAIN_HEADER);
     expect(table()).toEqual([
@@ -159,12 +142,49 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
       ["Reform UK", "118 (114–130)", "+113", "380", "38.00 (19.2–27.1%)", "+18.00"],
       ["Green", "—", "", "20", "2.00", "-8.00"],
     ]);
-    // Same rows, same columns; only the Seats and Vote % texts gain their ranges.
-    table().forEach((row, r) => row.forEach((text, c) => {
-      expect(text.startsWith(hidden[r][c])).toBe(true);
-      if (c !== 1 && c !== 4) expect(text).toBe(hidden[r][c]);
-    }));
-    expect(toggle().textContent).toBe("Hide uncertainty");
+    // No uniform-swing count or median anywhere: not in a cell and not in a hover title.
+    const html = document.getElementById("mapsVoteTotalsTable").outerHTML;
+    expect(html).not.toMatch(/>300<|>109<|>282<|>120<|title="[^"]*(300|109|[Uu]niform)/);
+    expect(document.getElementById("mapsUncertaintyToggle")).toBeNull();
+  });
+
+  it("unticked (the default): the uniform-swing table, with ± against 2024 and no ranges or note", () => {
+    state.showModelledUncertainty = false;
+    renderVoteTotals(summary, comparison);
+    expect(header()).toEqual(PLAIN_HEADER);
+    expect(table()).toEqual([
+      ["Labour", "300", "-111", "600", "60.00", "+10.00"],
+      ["Reform UK", "109", "+104", "380", "38.00", "+18.00"],
+      ["Green", "3", "-1", "20", "2.00", "-8.00"],
+    ]);
+    noNote();
+    expect(describedBy()).toBe("mapsSenateForecastComparison");
+    // Ticking and unticking again switch the same table in place.
+    state.showModelledUncertainty = true;
+    renderVoteTotals(summary, comparison);
+    expect(table()[0]).toEqual(["Labour", "280 (199–359)", "-131", "600", "60.00 (21.7–29.3%)", "+10.00"]);
+    shownNote();
+    state.showModelledUncertainty = false;
+    renderVoteTotals(summary, comparison);
+    expect(table()[0]).toEqual(["Labour", "300", "-111", "600", "60.00", "+10.00"]);
+    noNote();
+  });
+
+  it("unticked: the region view is that region's uniform-swing count", () => {
+    state.showModelledUncertainty = false;
+    state.mapFilters.region = "london";
+    const london = { totalVotes: 100, totalSeats: 75, parties: [
+      { party: "labour", seats: 60, votes: 70 }, { party: "reform", seats: 1, votes: 30 },
+    ] };
+    const london2024 = { totalVotes: 100, parties: [
+      { party: "labour", seats: 59, votes: 60 }, { party: "reform", seats: 0, votes: 10 },
+    ] };
+    renderVoteTotals(london, london2024);
+    expect(table()).toEqual([
+      ["Labour", "60", "+1", "70", "70.00", "+10.00"],
+      ["Reform UK", "1", "+1", "30", "30.00", "+20.00"],
+    ]);
+    noNote();
   });
 
   it("notes only the map colours under the table, since the whole seats add up", () => {
@@ -202,7 +222,6 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
 
   it("uses one region's whole seats, with ± against that region's 2024 seats", () => {
     state.mapFilters.region = "london";
-    state.voteTotals.showUncertainty = true;
     const london = { totalVotes: 100, totalSeats: 75, parties: [
       { party: "labour", seats: 60, votes: 70 }, { party: "reform", seats: 1, votes: 30 },
     ] };
@@ -221,12 +240,10 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     ["party", "labour"], ["majorityMin", 1], ["gainsOnly", true], ["upcoming", "2026"],
   ])("keeps the uniform-swing count under plain Seats in the %s-filtered view", (filter, value) => {
     state.mapFilters[filter] = value;
-    state.voteTotals.showUncertainty = true;
     renderVoteTotals(summary, comparison);
     expect(header()).toEqual(PLAIN_HEADER);
     expect(table().map((row) => row.slice(1, 3))).toEqual([["300", "-111"], ["109", "+104"], ["3", "-1"]]);
     expect(table().flat().join(" ")).not.toMatch(/[–—]/);
-    expect(toggle().hidden).toBe(true);
     noNote();
     expect(describedBy()).toBe("mapsSenateForecastComparison mapsUncertaintyBasis");
   });
@@ -236,28 +253,24 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
       expect(header()).toEqual(PLAIN_HEADER);
       expect(document.getElementById("mapsVoteTotalsBody").innerHTML).toBe(PLAIN_BODY);
       noNote();
-      expect(toggle().hidden).toBe(true);
       expect(describedBy()).toBe("mapsSenateForecastComparison");
     }
     const empty = { totalVotes: 0, parties: [] };
 
     it("on a real election", () => {
       state.currentElection.model = false;
-      state.voteTotals.showUncertainty = true;
       renderVoteTotals(summary, empty);
       expectPlain();
     });
 
     it("in predict view", () => {
       state.view = "predict";
-      state.voteTotals.showUncertainty = true;
       renderVoteTotals(summary, empty);
       expectPlain();
     });
 
     it("on a user scenario", () => {
       state.setElectionDataFromSeats([]);
-      state.voteTotals.showUncertainty = true;
       renderVoteTotals(summary, empty);
       expectPlain();
     });

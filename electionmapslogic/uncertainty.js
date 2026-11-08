@@ -58,18 +58,30 @@ export function decodeUncertainty(payload, identity, resolveParty, regionsById) 
   return { ...payload, national, regions };
 }
 
-/** Only the saved model result can use its uncertainty, never a user-created scenario. */
+/**
+ * The stored simulation the current view could show: only the saved model result has one, never
+ * a user-created scenario. Its presence is what offers "Show with modelled uncertainty".
+ */
 export function activeUncertainty(state) {
   return state.view === "election" && state.currentElection?.model
     ? state.electionData?.uncertainty ?? null : null;
 }
 
 /**
+ * The stored simulation when the reader has ticked "Show with modelled uncertainty", else null:
+ * the one gate for every simulated figure on the map page (subtitle, table, popups, notes).
+ * Unticked, the page is the uniform-swing view.
+ */
+export function shownUncertainty(state) {
+  return state.showModelledUncertainty ? activeUncertainty(state) : null;
+}
+
+/**
  * Whole-country and exactly-one-region totals have stored whole seats and ranges; arbitrary
- * slices, and a region stored with no party rows, do not.
+ * slices, and a region stored with no party rows, do not. Null unless the simulation is shown.
  */
 export function uncertaintyForTotals(state) {
-  const summary = activeUncertainty(state);
+  const summary = shownUncertainty(state);
   const filters = state.mapFilters;
   if (!summary || state.voteTotals.mode !== "all" || filters.party !== "all"
       || filters.secondParty !== "all" || filters.majorityMin !== 0

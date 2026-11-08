@@ -12,7 +12,7 @@ Add honest uncertainty to the Westminster nowcast. Poll sample sizes and bases f
 
 ## Plan
 
-_2026-11-08 · 16 of 17 pieces done · now: full branch self-review running, then merge master and PR text_
+_2026-11-08 · 16 of 17 pieces done · now: waiting on a decision (self-review findings), then merge master and PR text_
 
 - [x] **Threads 1–4** · 40 checkpoints, commits in each thread plan
   The calibrated Monte Carlo engine, poll bases and effective n, console diagnostics, map and tracker uncertainty, and the frozen validation replay.

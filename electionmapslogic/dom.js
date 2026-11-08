@@ -12,7 +12,7 @@ import {
   uncertaintyRange,
 } from "./uncertainty.js";
 import {
-  renderModelledUncertaintyToggle, renderUncertaintyBasis, renderUncertaintyHeader,
+  renderModelledUncertaintyToggle, renderUncertaintyBasis, renderUncertaintyBeta, renderUncertaintyHeader,
   wireModelledUncertaintyToggle,
 } from "./uncertainty-view.js";
 
@@ -130,7 +130,8 @@ function renderSubtitleText(text = '', error = false) {
 /**
  * Renders the small notes below the map: "Latest poll used: …" for model elections and the
  * poll tracker (under its chart there, since the chart replaces the map), then the shown
- * simulation's reading note (Nowcast: …), which qualifies every simulated figure on the page.
+ * simulation's reading note (Nowcast: …), which qualifies every simulated figure on the page,
+ * and its beta warning.
  * Each footer is hidden when it has nothing to say.
  * @param {boolean} [error=false] - When true (load failure), both footers are cleared.
  * @returns {void}
@@ -148,7 +149,11 @@ function renderMapFooter(error = false) {
       latestSpan.textContent = latestPollSnippet;
       footer.appendChild(latestSpan);
     }
-    if (footer === mapFooter) renderUncertaintyBasis(footer, error ? null : shownUncertainty(state));
+    if (footer === mapFooter) {
+      const shown = error ? null : shownUncertainty(state);
+      renderUncertaintyBasis(footer, shown);
+      renderUncertaintyBeta(footer, shown);
+    }
     footer.hidden = !footer.childElementCount;
   }
 }

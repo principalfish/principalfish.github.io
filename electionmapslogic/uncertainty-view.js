@@ -24,6 +24,15 @@ export function renderUncertaintyBasis(container, summary) {
   container.appendChild(basis);
 }
 
+/** Append the beta warning after the reading note, whenever a simulation is shown. */
+export function renderUncertaintyBeta(container, summary) {
+  if (!summary) return;
+  const beta = document.createElement("span");
+  beta.className = "maps-map-footer-beta";
+  beta.textContent = "Beta: this model is new and may change significantly.";
+  container.appendChild(beta);
+}
+
 /**
  * Show the "Show with modelled uncertainty" checkbox only when the view has a stored simulation
  * (a saved run's summary), ticked from the reader's choice.

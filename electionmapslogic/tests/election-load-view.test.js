@@ -32,6 +32,7 @@ const shell = header + readFileSync(new URL("../shell.html", import.meta.url), "
 const HEADLINE = "Labour 280 seats (199–359) · majority 19%";
 const BASIS = "Nowcast: if an election were held today. 90% ranges and probabilities from 10,000 "
   + "simulations, conditional on current polls and the model's error assumptions.";
+const BETA = "Beta: this model is new and may change significantly.";
 const LATEST = "Latest poll used: Opinium (2026-10-28 to 2026-10-30)";
 const SIMULATED = "Current prediction · Hung parliament likely (81%) · Labour largest party (94%)";
 // The one-seat uniform-swing projection the main line shows without uncertainty.
@@ -237,8 +238,8 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       // The stage grows with the footer, so a sync before the footer re-renders reads the old height.
       stage.getBoundingClientRect = () => ({ height: 600 + footer().childElementCount * 35 });
       tick();
-      expect(panel.style.height).toBe("635px");
-      expect(panel.style.maxHeight).toBe("635px");
+      expect(panel.style.height).toBe("670px");
+      expect(panel.style.maxHeight).toBe("670px");
       tick(false);
       expect(panel.style.height).toBe("600px");
       expect(panel.style.maxHeight).toBe("600px");
@@ -325,6 +326,7 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       expect(footerLines()).toEqual([
         ["maps-map-footer-latest", LATEST],
         ["maps-map-footer-basis", BASIS],
+        ["maps-map-footer-beta", BETA],
       ]);
       expect(describedBy().split(" ")).toContain("mapsUncertaintyBasis");
       expect(basisNote().textContent).toBe(BASIS);
@@ -339,7 +341,10 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       expect(footer().hidden).toBe(true);
       tick();
       expect(footer().hidden).toBe(false);
-      expect(footerLines()).toEqual([["maps-map-footer-basis", BASIS]]);
+      expect(footerLines()).toEqual([
+        ["maps-map-footer-basis", BASIS],
+        ["maps-map-footer-beta", BETA],
+      ]);
       tick(false);
       expect(footer().hidden).toBe(true);
       expect(footerLines()).toEqual([]);

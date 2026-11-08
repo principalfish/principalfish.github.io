@@ -23,12 +23,14 @@
     {
       "kind": "worktree",
       "name": "/home/philiph/workspace/principalfish.github.io/.claude/worktrees/poll-errors-simulation-de9775",
-      "added": "2026-11-08 11:52"
+      "added": "2026-11-08 11:52",
+      "removed": "2026-11-08 15:06"
     },
     {
       "kind": "branch",
       "name": "poll-errors-simulation",
-      "added": "2026-11-08 11:52"
+      "added": "2026-11-08 11:52",
+      "removed": "2026-11-08 15:06"
     }
   ]
 }

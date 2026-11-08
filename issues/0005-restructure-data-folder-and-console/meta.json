@@ -9,6 +9,14 @@
   "gh_issue": 82,
   "build_model": null,
   "created": "2026-11-08 15:09",
-  "updated": "2026-11-08 15:51",
-  "done": null
+  "updated": "2026-11-08 16:06",
+  "done": null,
+  "local": [
+    {
+      "kind": "session",
+      "name": "local_7fd00d5d-402a-4490-8fa8-e59f02ab44b2",
+      "added": "2026-11-08 16:06",
+      "note": "builder: restructure-data-folder-and-console"
+    }
+  ]
 }

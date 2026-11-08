@@ -22,6 +22,8 @@ Full sweep reports, read-only at master `35e5326c`: `findings/us-importers.md`, 
 - Export page tick boxes: the five sections, then what to write (results, current forecast, metadata), with dry run ticked by default. This needs a section filter added to the export script (user, 2026-11-08)
 - Background runs with live progress are in scope, as the console issue's final pieces (user, 2026-11-08)
 - Shared root modules move to `data/core/` as the folder issue's last piece, with a test pinning `.env` to the repo root; `models.py` becomes `schema.py` (user, 2026-11-08)
+- `data/` becomes an editable install (`editable_mode=compat`, confirmed in isolation), replacing the `sys.path` adjustments; scripts keep running by path (user, 2026-11-08)
+- `backfill_poll_bases`, `repair_poll_records`, `repair_regional_poll_rows`, `reset_us_poll_matchups` and `scrape_holyrood_2026` also go to `archive/`, with their tests retired (user, 2026-11-08)
 
 ## Open
 

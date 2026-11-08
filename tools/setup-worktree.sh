@@ -26,6 +26,11 @@ if [[ "$wanted" != "$(cat "$venv/.requirements-installed" 2>/dev/null)" ]]; then
 	printf '%s' "$wanted" >"$venv/.requirements-installed"
 fi
 
+# Once data/ is an editable install, this venv must point at this worktree's data/.
+if [[ -f data/pyproject.toml ]]; then
+	"$venv/bin/python" -m pip install --quiet --disable-pip-version-check --no-deps -e data --config-settings editable_mode=compat
+fi
+
 if [[ ! -f node_modules/.package-lock.json || package-lock.json -nt node_modules/.package-lock.json ]]; then
 	echo "Installing npm packages..."
 	npm ci --no-audit --no-fund --loglevel=error

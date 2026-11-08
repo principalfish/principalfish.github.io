@@ -1,25 +1,21 @@
 # Resume point — read this first
 
 ## Where we are
-Planning discussion for 0005, state `investigating`. Three read-only sweeps are saved under `findings/`. The issue split, axis, `model_support/` timing and console scope are settled. The second round of questions went unanswered, because the user replied with a separate instruction instead.
+Planning discussion for 0005, state `investigating`. Three read-only sweeps are saved under `findings/`. `decisions.md`'s Open list is empty. The full ledger is with the user for confirmation; only an explicit go-ahead ends the discussion.
 State checks: `git rev-parse --short origin/master` should be `35e5326c`. If it has moved, re-check the findings' line numbers. No build branch yet. The console issue hasn't been created.
 
-## How it got here — decisions already answered, in order
-1. 2026-11-08 — Scope → the whole of `data/` (UK and US) plus a console rethink.
-2. 2026-11-08 — One issue or two → two, planned together in this chat.
-3. 2026-11-08 — Axis → role first, jurisdiction second.
-4. 2026-11-08 — `model_support/` → moves now.
-5. 2026-11-08 — Console scope → family nav, consolidated templates, consistent URLs, confirms and small fixes, run log, new Holyrood/US diagnostics. Background jobs were not offered and are out unless the user adds them.
-6. 2026-11-08 — 0003 and 0004 → not a constraint ("lets not worry about issues 0003 and 0004").
+## How it got here
+Every answered decision is in `decisions.md` Settled, dated.
 
 ## The pending decision (exact)
-Unanswered, with recommendations in `decisions.md` Open: what hurts in the console; which issue goes first (folders); the hashed report (regenerate once); finished one-off scripts (keep, grouped); `core/` (yes, last).
+Is the ledger complete and correct? "That's everything" or "go ahead" moves to drafting.
 
 ## What the next session does
-1. Take the user's reply on the defaults above. Don't treat any of them as agreed until they say so.
-2. Empty the Open list, present the full ledger, and get an explicit go-ahead.
-3. Draft `issue.md` and create the console issue.
+1. On go-ahead: draft 0005's `issue.md`, iterate to explicit approval, write it, `gh issue create`, then `plan.md` with current and proposed structure, every caller (from `findings/`), and the scratch rebuild as the behaviour proof.
+2. Create the console issue with `planner.py new --mode build`, and propose a theme title for this chat since it will own two issues.
+3. Plan the console issue the same way.
 
 ## Don't
-- Don't build in this chat. Don't write to the live database or run importers, exports or models.
+- Don't build in this chat. Don't write to the live database or run importers, exports or models against it.
+- Don't test scripts by setting `DATABASE_PATH`: `.env` overrides it. Use a code export with its own `.env`.
 - Don't edit `.planner/` while a `planner.py save` is running.

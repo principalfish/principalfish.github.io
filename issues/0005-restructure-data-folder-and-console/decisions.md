@@ -18,22 +18,24 @@ Full sweep reports, read-only at master `35e5326c`: `findings/us-importers.md`, 
 - One global "export elections" with tick boxes for its options (user, 2026-11-08)
 - Section-specific tools stay where they belong, e.g. by-election import for the UK (user, 2026-11-08)
 - Rebuild, backup and restore move to an admin page (user, 2026-11-08)
+- "Import poll" appears only where an importer exists: Westminster keeps it, the other four show auto import only (user, 2026-11-08)
+- Export page tick boxes: the five sections, then what to write (results, current forecast, metadata), with dry run ticked by default. This needs a section filter added to the export script (user, 2026-11-08)
+- Background runs with live progress are in scope, as the console issue's final pieces (user, 2026-11-08)
+- Shared root modules move to `data/core/` as the folder issue's last piece, with a test pinning `.env` to the repo root; `models.py` becomes `schema.py` (user, 2026-11-08)
 
 ## Open
-- "Import poll" for Holyrood, House, Senate and President: no single-poll importer exists for them today (Westminster has 11 pollster importers). Recommendation: show it only where an importer exists.
-- What the export tick boxes are. Recommendation: sections, then what to write (results, current forecast, metadata), with dry run on by default. Today's flags are mutually exclusive and there is no section filter.
-- Background runs with live progress: the user named running and waiting as a pain, but only a run log has been agreed. Recommendation: include, as the console issue's final pieces.
-- Is `core/` worth 271 rewritten imports? Recommendation: yes, as the last piece, with a test pinning `.env` to the repo root.
 
 ## Assumed
 - Local `master` and `origin/master` are both `35e5326c` (user pulled during this chat; confirmed)
 - "delete polls, delete polls" in the user's console answer means deleting polls and deleting model runs; both exist today
 - `UNOPPOSED_NOMINAL_VOTES` moves into `scripts/us_results/convert.py` before `convert_538_house.py` is archived, because the console needs it at startup
 - Tests that only exercise archived scripts are retired with them; test files that also cover live importers are split, not dropped
-- Background rebuild test on a scratch copy is running; its result decides whether rebuild needs fixing before it moves to the admin page
 
 ## Checks run 2026-11-08 (no live database touched)
 - Restore works: `backup.restore_latest` unpacked the newest archive to a scratch path, passed the integrity check, kept the old file as `.prerestore`, and all 15 tables match live row counts
+- Full rebuild works: on that scratch copy, from a code export of `35e5326c`, 43 of 43 steps succeeded in about a minute. All 15 table counts are unchanged, per-election vote counts and totals are identical for all 1,757 elections, and the exported `electionmaps/data` and `uselectionmaps/data` are byte-identical to the repo. Live database hash and mtime unchanged, repo clean
+- The check above is repeatable, so it becomes the folder issue's end-to-end proof of behaviour preservation. Method: a code export with its own `.env` pointing at a scratch restore (`.env` is loaded with override when present, so a `.env` beside the code is what reliably decides the database path)
+- Not exercised: the console's own Rebuild and Restore buttons. Those routes have tests with the work mocked
 
 ## Brief corrections, verified against master
 - `convert_538_house.py` is still needed: `scripts/us_results/convert.py:75` imports its constant at module level, and the console imports that at startup. `convert_538_senate.py` is test-only.

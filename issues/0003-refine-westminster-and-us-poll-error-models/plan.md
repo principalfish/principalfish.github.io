@@ -151,3 +151,4 @@ Phil left these for this issue ("Recommended set"). Line numbers are at `poll-er
 - Hard-coded figures in the validation report's limitations text.
 - Remaining test gaps: guards in the repair, calibration and validation scripts, the Monte Carlo engine and `run_uns_model.py`'s CLI; the tracker's tooltip wiring.
 - `data/model_support/persistence.py:432` has the same JSON-handler gap the 0001 overflow fixes closed elsewhere: a 5000-digit integer escapes as a raw `ValueError` (by reading only, not reproduced).
+- From the re-check of 0001's fix commit `1f89732b` (Phil: "Leave for #78"): `data/model_support/uncertainty.py:238` needs a realistic ceiling on `simulations` (a huge value ends in a raw numpy `ValueError`, and 2**53 still raises `MemoryError`); `electionmapslogic/maps.css:1299` selects on `#mapsPollTrackerMetrics` and should use a class specific to the metrics block; `data/scripts/repair_regional_poll_rows.py:248`'s default `head` has no test.

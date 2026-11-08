@@ -1,0 +1,210 @@
+{
+  "resultsMeta": {"resultsUpdatedAt": "2022-12-01T00:52:48.245Z"},
+  "races": [
+    {
+      "nyt_id": "AK-G-H-1-2022-11-08",
+      "election_date": "2022-11-08",
+      "office_id": "H",
+      "seat_number": "1",
+      "type": "General",
+      "uncontested": false,
+      "certified": true,
+      "rcv_nyt_ids": ["AK-V-H-1-2022-11-08"],
+      "candidate_metadata": {
+        "peltola-m": {"nyt_id": "peltola-m", "first_name": "Mia", "last_name": "Peltola", "party": {"nyt_id": "DEM"}},
+        "palin-s": {"nyt_id": "palin-s", "first_name": "Sue", "last_name": "Palin", "party": {"nyt_id": "GOP"}},
+        "begich-n": {"nyt_id": "begich-n", "first_name": "Ned", "last_name": "Begich", "party": {"nyt_id": "GOP"}},
+        "bye-c": {"nyt_id": "bye-c", "first_name": "Cy", "last_name": "Bye", "party": {"nyt_id": "LIB"}},
+        "total_writeins": {"nyt_id": "total_writeins", "first_name": null, "last_name": "Total Write-ins", "party": {"nyt_id": "OTH"}}
+      },
+      "outcome": {"won": ["peltola-m"], "called_by": ["ap"], "advanced_to_runoff": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "AK", "eevp": 100, "candidates": [
+          {"nyt_id": "peltola-m", "votes": {"total": 137000, "votes_round1": 128000}},
+          {"nyt_id": "palin-s", "votes": {"total": 112000, "votes_round1": 67000}},
+          {"nyt_id": "begich-n", "votes": {"total": 0, "votes_round1": 61000}},
+          {"nyt_id": "bye-c", "votes": {"total": 0, "votes_round1": 4500}},
+          {"nyt_id": "total_writeins", "votes": {"total": 0, "votes_round1": 1100}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "ME-G-H-1-2022-11-08",
+      "election_date": "2022-11-08",
+      "office_id": "H",
+      "seat_number": "1",
+      "type": "General",
+      "uncontested": false,
+      "rcv_nyt_ids": ["ME-V-H-1-2022-11-08"],
+      "candidate_metadata": {
+        "pine-c": {"nyt_id": "pine-c", "first_name": "Cora", "last_name": "Pine", "party": {"nyt_id": "DEM"}},
+        "thorn-e": {"nyt_id": "thorn-e", "first_name": "Eli", "last_name": "Thorn", "party": {"nyt_id": "GOP"}}
+      },
+      "outcome": {"won": ["pine-c"], "called_by": ["ap"], "advanced_to_runoff": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "ME", "eevp": 100, "candidates": [
+          {"nyt_id": "pine-c", "votes": {"total": 219000}},
+          {"nyt_id": "thorn-e", "votes": {"total": 129000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "LA-P-H-4-2022-11-08",
+      "election_date": "2022-11-08",
+      "office_id": "H",
+      "seat_number": "4",
+      "type": "Open Primary",
+      "uncontested": true,
+      "rcv_nyt_ids": null,
+      "candidate_metadata": {
+        "johns-m": {"nyt_id": "johns-m", "first_name": "Mo", "last_name": "Johns", "party": {"nyt_id": "GOP"}}
+      },
+      "outcome": {"won": ["johns-m"], "called_by": ["ap"], "advanced_to_runoff": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "LA", "eevp": null, "candidates": [
+          {"nyt_id": "johns-m", "votes": {"total": 0}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "CA-G-H-13-2022-11-08",
+      "election_date": "2022-11-08",
+      "office_id": "H",
+      "seat_number": "13",
+      "type": "General",
+      "uncontested": false,
+      "rcv_nyt_ids": null,
+      "candidate_metadata": {
+        "duarte-j": {"nyt_id": "duarte-j", "first_name": "Jon", "last_name": "Duarte", "party": {"nyt_id": "GOP"}},
+        "gray-a": {"nyt_id": "gray-a", "first_name": "Ada", "last_name": "Gray", "party": {"nyt_id": "DEM"}}
+      },
+      "outcome": {"won": [], "called_by": [], "advanced_to_runoff": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "CA", "eevp": 90, "candidates": [
+          {"nyt_id": "duarte-j", "votes": {"total": 67000}},
+          {"nyt_id": "gray-a", "votes": {"total": 66500}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "CA-G-H-34-2022-11-08",
+      "election_date": "2022-11-08",
+      "office_id": "H",
+      "seat_number": "34",
+      "type": "General",
+      "uncontested": false,
+      "rcv_nyt_ids": null,
+      "candidate_metadata": {
+        "gomez-d": {"nyt_id": "gomez-d", "first_name": "Dee", "last_name": "Gomez", "party": {"nyt_id": "DEM"}},
+        "kim-j": {"nyt_id": "kim-j", "first_name": "Jay", "last_name": "Kim", "party": {"nyt_id": "DEM"}}
+      },
+      "outcome": {"won": ["kim-j"], "called_by": ["ap"], "advanced_to_runoff": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "CA", "eevp": 100, "candidates": [
+          {"nyt_id": "gomez-d", "votes": {"total": 60000}},
+          {"nyt_id": "kim-j", "votes": {"total": 70000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "PR-G-H-1-2022-11-08",
+      "election_date": "2022-11-08",
+      "office_id": "H",
+      "seat_number": "1",
+      "type": "General",
+      "uncontested": false,
+      "rcv_nyt_ids": null,
+      "candidate_metadata": {
+        "rios-v": {"nyt_id": "rios-v", "first_name": "Val", "last_name": "Rios", "party": {"nyt_id": "NPP"}}
+      },
+      "outcome": {"won": ["rios-v"], "called_by": ["ap"], "advanced_to_runoff": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "PR", "eevp": 100, "candidates": [
+          {"nyt_id": "rios-v", "votes": {"total": 500000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "GA-G-S-2022-12-06",
+      "election_date": "2022-12-06",
+      "office_id": "S",
+      "seat_number": null,
+      "type": "General Election Runoff",
+      "uncontested": false,
+      "rcv_nyt_ids": null,
+      "candidate_metadata": {
+        "warren-r": {"nyt_id": "warren-r", "first_name": "Ray", "last_name": "Warren", "party": {"nyt_id": "DEM"}},
+        "walsh-h": {"nyt_id": "walsh-h", "first_name": "Hal", "last_name": "Walsh", "party": {"nyt_id": "GOP"}}
+      },
+      "outcome": {"won": ["warren-r"], "called_by": ["ap"], "advanced_to_runoff": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "GA", "eevp": 99, "candidates": [
+          {"nyt_id": "warren-r", "votes": {"total": 1800000}},
+          {"nyt_id": "walsh-h", "votes": {"total": 1700000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "OK-G-S-2022-11-08",
+      "election_date": "2022-11-08",
+      "office_id": "S",
+      "seat_number": null,
+      "type": "General",
+      "uncontested": false,
+      "rcv_nyt_ids": null,
+      "candidate_metadata": {
+        "lane-a": {"nyt_id": "lane-a", "first_name": "Al", "last_name": "Lane", "party": {"nyt_id": "GOP"}},
+        "bow-b": {"nyt_id": "bow-b", "first_name": "Bo", "last_name": "Bow", "party": {"nyt_id": "DEM"}}
+      },
+      "outcome": {"won": ["lane-a"], "called_by": ["ap"], "advanced_to_runoff": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "OK", "eevp": 100, "candidates": [
+          {"nyt_id": "lane-a", "votes": {"total": 730000}},
+          {"nyt_id": "bow-b", "votes": {"total": 380000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "OK-S-S-2-2022-11-08",
+      "election_date": "2022-11-08",
+      "office_id": "S",
+      "seat_number": "2",
+      "type": "Special General",
+      "uncontested": false,
+      "rcv_nyt_ids": null,
+      "candidate_metadata": {
+        "mull-c": {"nyt_id": "mull-c", "first_name": "Cal", "last_name": "Mull", "party": {"nyt_id": "GOP"}},
+        "horne-d": {"nyt_id": "horne-d", "first_name": "Di", "last_name": "Horne", "party": {"nyt_id": "DEM"}}
+      },
+      "outcome": {"won": ["mull-c"], "called_by": ["ap"], "advanced_to_runoff": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "OK", "eevp": 100, "candidates": [
+          {"nyt_id": "mull-c", "votes": {"total": 710000}},
+          {"nyt_id": "horne-d", "votes": {"total": 405000}}
+        ]}
+      ]
+    },
+    {
+      "nyt_id": "LA-P-S-2022-11-08",
+      "election_date": "2022-11-08",
+      "office_id": "S",
+      "seat_number": null,
+      "type": "Open Primary",
+      "uncontested": false,
+      "rcv_nyt_ids": null,
+      "candidate_metadata": {
+        "kenn-j": {"nyt_id": "kenn-j", "first_name": "Jo", "last_name": "Kenn", "party": {"nyt_id": "GOP"}},
+        "cham-g": {"nyt_id": "cham-g", "first_name": "Gus", "last_name": "Cham", "party": {"nyt_id": "DEM"}},
+        "mix-l": {"nyt_id": "mix-l", "first_name": "Liv", "last_name": "Mix", "party": {"nyt_id": "DEM"}}
+      },
+      "outcome": {"won": ["kenn-j"], "called_by": ["ap"], "advanced_to_runoff": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "LA", "eevp": 100, "candidates": [
+          {"nyt_id": "kenn-j", "votes": {"total": 850000}},
+          {"nyt_id": "cham-g", "votes": {"total": 247000}},
+          {"nyt_id": "mix-l", "votes": {"total": 183000}}
+        ]}
+      ]
+    }
+  ]
+}

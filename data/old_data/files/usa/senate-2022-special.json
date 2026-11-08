@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "source": "The New York Times / AP",
+    "source_urls": [
+      "https://static01.nyt.com/elections-assets/2022/data/2022-11-08/results-senate.json",
+      "https://static01.nyt.com/elections-assets/2022/data/2022-12-06/results-georgia-us-senate-runoff.json"
+    ],
+    "retrieved_at": "2026-11-07T20:05:31.816842+00:00",
+    "source_updated_at": "2023-01-10T19:29:15.588Z",
+    "sources": [
+      {
+        "kind": "general",
+        "url": "https://static01.nyt.com/elections-assets/2022/data/2022-11-08/results-senate.json",
+        "retrieved_at": "2026-11-07T20:05:31.816842+00:00",
+        "source_updated_at": "2023-01-10T19:29:15.588Z"
+      },
+      {
+        "kind": "runoff",
+        "url": "https://static01.nyt.com/elections-assets/2022/data/2022-12-06/results-georgia-us-senate-runoff.json",
+        "retrieved_at": "2026-11-07T20:05:32.022580+00:00",
+        "source_updated_at": "2022-12-19T20:55:12.840Z"
+      }
+    ],
+    "year": 2022,
+    "chamber": "senate",
+    "special": true,
+    "map_id": 23,
+    "map_name": "US Senate 2024",
+    "special_file": null,
+    "election_date": "2022-11-08",
+    "source_note": "Results: The New York Times / AP."
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": true,
+      "votesSource": "nyt",
+      "special": true,
+      "senateClass": 2
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 710643,
+        "name": "Markwayne Mullin"
+      },
+      "democrat": {
+        "total": 405389,
+        "name": "Kendra Horn"
+      },
+      "libertarian": {
+        "total": 17386,
+        "name": "Robert Murphy"
+      },
+      "independent": {
+        "total": 17063,
+        "name": "Ray Woods"
+      }
+    }
+  }
+}

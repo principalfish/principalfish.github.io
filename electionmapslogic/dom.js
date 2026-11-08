@@ -67,6 +67,26 @@ export function renderHeader(text = '', error = false) {
   renderTitle();
   renderSubtitleText(text, error);
   renderCountdown();
+  renderSourceNote();
+}
+
+// Source credit line under the map; visible only for an election that supplies a `sourceNote`.
+const sourceNoteEl = document.getElementById('mapsSourceNote');
+
+/**
+ * Shows the active election's `sourceNote` credit (e.g. "Results: The New York Times / AP.
+ * Provisional until certified.") in the line under the map, and hides the line when the
+ * election has none or the page is not on the election view (the poll tracker and predict
+ * views show no results credit). The note comes from external data, so it is set as text,
+ * never as markup.
+ * @returns {void}
+ */
+export function renderSourceNote() {
+  if (!sourceNoteEl) return;
+  const note = state.view === 'election' ? state.currentElection?.sourceNote : '';
+  const text = typeof note === 'string' ? note.trim() : '';
+  sourceNoteEl.textContent = text;
+  sourceNoteEl.hidden = !text;
 }
 
 /**
@@ -163,10 +183,14 @@ function renderParliamentTabs() {
  * Rebuilds the election list nav with one link per election, plus a Predict link (when the
  * feature is enabled for the current parliament) and a Poll tracker link (likewise). Both
  * extras are inserted after the predict-anchor election so they sit alongside the most
- * recent / live result for that parliament.
+ * recent / live result for that parliament. One exception: when the election listed directly
+ * after the anchor is the predict feature's chamber election (`predict.chamberElectionId`, e.g.
+ * the Senate's "Current Senate" snapshot), the extras follow that entry instead, so the chamber
+ * snapshot stays next to the result it belongs to. Hidden elections are skipped when looking
+ * at what follows the anchor.
  * @returns {void}
  */
-function renderElectionLinks() {
+export function renderElectionLinks() {
   if (!electionList) return;
   const activeId = state.view === 'election' ? state.currentElection.id : null;
 
@@ -195,16 +219,20 @@ function renderElectionLinks() {
   // Elections marked hidden for this parliament are omitted from the nav (kept in the manifest
   // and still reachable by an explicit ?election= id) — e.g. Holyrood's retired forecast.
   const hidden = new Set(manifest.hiddenElectionIds(state.currentParliament));
+  const visible = state.parliamentElections.filter((election) => !hidden.has(election.id));
+  const chamberId = manifest.parliamentFeatures[state.currentParliament]?.predict?.chamberElectionId;
+  const anchorIndex = visible.findIndex((election) => election.id === anchorId);
+  const followingId = anchorIndex >= 0 ? visible[anchorIndex + 1]?.id : undefined;
+  const extrasAfterId = chamberId && followingId === chamberId ? chamberId : anchorId;
   let extrasInserted = false;
-  state.parliamentElections.forEach((election) => {
-    if (hidden.has(election.id)) return;
+  visible.forEach((election) => {
     const link = document.createElement('a');
     link.href = state.viewUrl('election', election.id);
     link.className = `maps-election-item${election.id === activeId ? ' active' : ''}`;
     link.textContent = election.name;
     electionList.appendChild(link);
 
-    if (!extrasInserted && election.id === anchorId) {
+    if (!extrasInserted && election.id === extrasAfterId) {
       if (hasPredict) appendPredictLink();
       if (hasPollTracker) appendPollTrackerLink();
       extrasInserted = true;
@@ -558,6 +586,8 @@ function wireMapViewControls() {
 const voteTotalsTabNav = document.getElementById('mapsVoteTotalsTabNav');
 const voteTotalsBody = document.getElementById('mapsVoteTotalsBody');
 const voteTotalsTable = document.getElementById('mapsVoteTotalsTable');
+// Line under the totals table counting seats not yet called; hidden when there are none.
+const voteTotalsUncalled = document.getElementById('mapsVoteTotalsUncalled');
 const voteTotalsToggle = document.getElementById('mapsVoteTotalsToggle');
 const voteTotalsCollapse = document.getElementById('mapsVoteTotalsCollapse');
 
@@ -600,11 +630,16 @@ function sortPartyRows(rows) {
  *
  * @param {{parties: Array<object>, totalVotes: number}} [summary] - Summary to render; defaults to state.filteredSeatsSummary.
  * @param {{parties: Array<object>, totalVotes: number}|null} [comparisonSummary] - Comparison for delta columns; defaults to state.filteredSeatsComparisonSummary.
+ * @param {{parties: Array<object>, totalVotes: number}|null} [deltaBasis] - Current-side totals the deltas
+ *   are measured from, when they differ from `summary` (the US Senate compares matching states only, while
+ *   still displaying every seat). Defaults to state.filteredSeatsDeltaSummary when rendering the default
+ *   summary, otherwise `summary` itself.
  * @returns {void}
  */
 function renderVoteTotals(
   summary = state.filteredSeatsSummary,
-  comparisonSummary = state.filteredSeatsComparisonSummary
+  comparisonSummary = state.filteredSeatsComparisonSummary,
+  deltaBasis = summary === state.filteredSeatsSummary ? state.filteredSeatsDeltaSummary : null
 ) {
   voteTotalsTabNav.querySelectorAll('[data-vote-tab]').forEach((b) => {
     b.classList.toggle('active', b.dataset.voteTab === state.voteTotals.mode);
@@ -631,16 +666,27 @@ function renderVoteTotals(
     });
   }
 
+  const basis = deltaBasis ?? summary;
+  const basisByParty = new Map(basis.parties.map((basisRow) => [basisRow.party, basisRow]));
   const rows = summary.parties.map((partyRow) => {
     const votePct = summary.totalVotes > 0 ? (partyRow.votes / summary.totalVotes) * 100 : 0;
     const comparison = comparisonByParty.get(partyRow.party) || { seats: 0, votePct: 0 };
+    const basisRow = basisByParty.get(partyRow.party) || { seats: 0, votes: 0 };
+    const basisVotePct = basis.totalVotes > 0 ? (basisRow.votes / basis.totalVotes) * 100 : 0;
     return {
       ...partyRow,
       votePct,
-      seatsDelta: Number(partyRow.seats || 0) - comparison.seats,
-      votePctDelta: votePct - comparison.votePct,
+      seatsDelta: Number(basisRow.seats || 0) - comparison.seats,
+      votePctDelta: basisVotePct - comparison.votePct,
     };
   });
+
+  if (voteTotalsUncalled) {
+    const uncalled = Number(summary.uncalled || 0);
+    const unit = state.mapConfig?.tally === 'electoralVotes' ? 'EV' : (uncalled === 1 ? 'seat' : 'seats');
+    voteTotalsUncalled.textContent = uncalled > 0 ? `${formatInt(uncalled)} ${unit} uncalled` : '';
+    voteTotalsUncalled.hidden = uncalled <= 0;
+  }
 
   const sortedRows = sortPartyRows(rows).filter((r) => !hiddenParties.has(r.party));
   const visibleRows = state.voteTotals.expanded ? sortedRows : sortedRows.slice(0, 7);
@@ -1190,20 +1236,23 @@ function loadStateTrends(path) {
 /**
  * Creates a .maps-popup-row element with the party colour bar, label, and injected values HTML.
  * CSS custom properties --maps-popup-bar-width and --maps-popup-bar-colour drive the bar.
- * @param {string} party - Party key for colour lookup.
+ * @param {string|null} party - Party key for colour lookup.
  * @param {number} barWidth - Bar width percentage (0–75), scaled relative to the leading row.
  * @param {string} valuesHtml - Inner HTML for the .maps-popup-values div.
  * @param {string} [label] - Row label; defaults to the party name when omitted (e.g. a
  *   candidate name is passed for constituency popups, party labels for region summaries).
+ * @param {string} [colour] - Explicit swatch/bar colour that overrides the party's (a neutral
+ *   row with no party, such as an uncalled member).
  * @returns {HTMLDivElement}
  */
-function buildPopupRow(party, barWidth, valuesHtml, label) {
+function buildPopupRow(party, barWidth, valuesHtml, label, colour) {
   const item = document.createElement('div');
   item.className = 'maps-popup-row';
+  const rowColour = colour || manifest.colourParty(party);
   item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
-  item.style.setProperty('--maps-popup-bar-colour', manifest.colourParty(party));
+  item.style.setProperty('--maps-popup-bar-colour', rowColour);
   item.innerHTML = `
-    <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(party)}"></span><span class="maps-popup-name">${escapeHtml(label ?? manifest.labelParty(party))}</span></div>
+    <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${rowColour}"></span><span class="maps-popup-name">${escapeHtml(label ?? manifest.labelParty(party))}</span></div>
     <div class="maps-popup-values">${valuesHtml}</div>
   `;
   return item;
@@ -1228,7 +1277,7 @@ function renderPopupRows(rows, getValuesHtml, barCap = 75) {
     // getValuesHtml supplies the right-side content (vote share, delta, seat count, etc.)
     // which differs between the region popup and the constituency popup. row.label, when
     // present, overrides the party label (e.g. a candidate name in the seat popup).
-    seatPopupList.appendChild(buildPopupRow(row.party, barWidth, getValuesHtml(row), row.label));
+    seatPopupList.appendChild(buildPopupRow(row.party, barWidth, getValuesHtml(row), row.label, row.colour));
   });
 }
 
@@ -1363,13 +1412,96 @@ export function refreshOpenSeatPopup() {
 }
 
 /**
+ * What a seat popup measures its vote-share deltas and gain indicator against. A seat carrying
+ * a `previous` result (an off-cycle Senate seat) uses that, never the comparison election's seat
+ * for the same state, which would be a different class. Any other seat uses the comparison seat.
+ * @param {Seat} seat
+ * @param {Seat|null} comparisonSeat - The comparison election's seat for the same key, or null.
+ * @returns {{winner: (string|null), deltaFor: function(string, number): (number|null)}}
+ *   `deltaFor(party, pct)` is the party's share change in points, or null with no basis.
+ */
+function popupDeltaBasis(seat, comparisonSeat) {
+  const basis = seat.previous ?? comparisonSeat;
+  const votes = basis?.votes || {};
+  const total = seat.previous
+    ? Object.values(votes).reduce((sum, v) => sum + Number(v || 0), 0)
+    : Number(comparisonSeat?.turnout ?? 0);
+  return {
+    winner: basis?.winner ?? null,
+    deltaFor: (party, pct) => (total > 0 ? pct - (Number(votes[party] || 0) / total) * 100 : null),
+  };
+}
+
+/**
+ * Builds the extra seat-popup block for a state's same-day special Senate election: a title
+ * naming the Senate class, a status line (UNCALLED tag with the counted share, the winner or
+ * current leader, and the same-party / decisive-round notes) and the special's vote-share
+ * rows. Candidate names and party labels come from external data, so every text node is set
+ * through textContent or the escaping row builder.
+ * @param {Seat} special - The special-election seat (see ElectionData.specials).
+ * @returns {HTMLElement}
+ */
+function buildSpecialPopupBlock(special) {
+  const block = document.createElement('section');
+  block.className = 'maps-popup-special';
+
+  const title = document.createElement('h4');
+  title.className = 'maps-popup-special-title';
+  title.textContent = special.senateClass ? `Special election (Class ${special.senateClass})` : 'Special election';
+  block.appendChild(title);
+
+  const notes = special.statusNotes();
+  const meta = document.createElement('div');
+  meta.className = 'maps-seat-popup-meta';
+  const addMeta = (text, className = '') => {
+    if (!text) return;
+    const item = document.createElement('span');
+    item.className = `maps-popup-meta-item ${className}`.trim();
+    item.textContent = text;
+    meta.appendChild(item);
+  };
+  addMeta(notes.uncalledTag, 'maps-uncalled-tag');
+  if (special.winner) {
+    const label = manifest.labelParty(special.winner);
+    addMeta(special.called ? `Winner: ${label}` : `Leading: ${label}`);
+  }
+  addMeta(notes.samePartyNote, 'maps-popup-status-note');
+  addMeta(notes.roundNote, 'maps-popup-status-note');
+  // A special's deltas and FROM tag are measured against its own previous result (`pv`). The
+  // payload does not carry that election's year, so the popup shows them without a "vs year" label.
+  const gainFrom = special.gainFromParty(special.previous?.winner ?? null);
+  if (gainFrom) {
+    const item = document.createElement('span');
+    item.className = 'maps-popup-meta-item';
+    item.append(`FROM ${manifest.labelParty(gainFrom)} `);
+    const icon = document.createElement('span');
+    icon.className = 'maps-seat-icon';
+    icon.style.background = manifest.colourParty(gainFrom);
+    item.appendChild(icon);
+    meta.appendChild(item);
+  }
+  if (meta.childElementCount) block.appendChild(meta);
+
+  const rows = special.voteShareRows();
+  const maxPct = rows.reduce((max, row) => Math.max(max, row.pct), 0);
+  const previousDeltas = popupDeltaBasis(special, null);
+  rows.forEach((row) => {
+    const barWidth = maxPct > 0 ? Math.max(0, Math.min(75, (row.pct / maxPct) * 75)) : 0;
+    const delta = previousDeltas.deltaFor(row.party, row.pct);
+    const deltaHtml = delta == null ? '' : `<span class="${deltaClass(delta)}">${formatSigned(delta, 2)}</span>`;
+    block.appendChild(buildPopupRow(row.party, barWidth, `<span>${formatPct(row.pct)}%</span>${deltaHtml}`, row.label));
+  });
+  return block;
+}
+
+/**
  * Renders the seat detail popup for seatName, showing majority, by-election marker, gain
  * indicator, and a ranked vote share bar chart with comparison deltas. Hides the popup if the
  * seat is not found.
  * @param {string} seatName - Display name of the seat to show.
  * @returns {void}
  */
-function renderSeatPopup(seatName) {
+export function renderSeatPopup(seatName) {
   // Resolve the seat object; hide the popup and bail if not found.
   const seatKey = seatLookupKey(seatName);
   const seat = state.electionData.seatsByKey.get(seatKey);
@@ -1386,15 +1518,29 @@ function renderSeatPopup(seatName) {
     seatPopupTitle.textContent = seat.seat;
     seatPopupMeta.innerHTML =
       `<span class="maps-popup-meta-item">${escapeHtml(getRegionLabel(seat.region, state.currentRegionLabelsByKey))}</span>`;
-    const rows = seat.members.map((member) => ({
-      party: member.party,
-      pct: 100,
-      label: member.name,
-      years: Seat.memberTermYears(member),
-    }));
+    const rows = seat.members.map((member) => {
+      // An uncalled member has no party or name yet: a neutral row saying so, with the count.
+      if (Seat.isUncalledMember(member)) {
+        const hasCount = member.pc !== null && member.pc !== undefined && Number.isFinite(Number(member.pc));
+        return {
+          party: null,
+          colour: neutralSeatFill(),
+          pct: 100,
+          label: 'Uncalled',
+          note: hasCount ? `${Number(member.pc)}% counted` : '',
+          years: Seat.memberTermYears(member),
+        };
+      }
+      return { party: member.party, pct: 100, label: member.name, years: Seat.memberTermYears(member) };
+    });
     // The bar is just a colour accent here, so cap it short to clear the wide "last/up" value.
     // An unresolved cycle year gives null years, so the row shows just the name.
-    renderPopupRows(rows, (row) => (row.years ? `<span>last ${row.years.last} · up ${row.years.up}</span>` : ''), 70);
+    renderPopupRows(rows, (row) => {
+      const parts = [];
+      if (row.note) parts.push(row.note);
+      if (row.years) parts.push(`last ${row.years.last} · up ${row.years.up}`);
+      return parts.length ? `<span>${escapeHtml(parts.join(' · '))}</span>` : '';
+    }, 70);
     seatPopup.hidden = false;
     return;
   }
@@ -1402,9 +1548,13 @@ function renderSeatPopup(seatName) {
   // Resolve gain indicator and majority stats via Seat instance methods so the
   // logic stays in one place and this function has no arithmetic of its own.
   const comparisonSeat = state.comparisonElectionData?.seatsByKey.get(seatKey) || null;
-  const gainFrom = seat.gainFromParty(comparisonSeat?.winner || null);
+  // Deltas and the gain indicator read the seat's own previous result when it has one. The
+  // payload carries no year for it, so no "vs year" label is shown.
+  const deltaBasis = popupDeltaBasis(seat, comparisonSeat);
+  const gainFrom = seat.gainFromParty(deltaBasis.winner);
   const isByElection = Seat.isByElectionSeat(seat, state.currentElection.byElectionSeats);
   const majority = seat.majorityStats();
+  const statusNotes = seat.statusNotes();
 
   // Model and referendum elections have no meaningful turnout or raw majority to display.
   const showCounts = !state.currentElection.model && !state.isReferendumType;
@@ -1413,27 +1563,36 @@ function renderSeatPopup(seatName) {
   seatPopupTitle.textContent = seat.ev ? `${seat.seat} - ${formatInt(seat.ev)} EV` : seat.seat;
   seatPopupMeta.innerHTML = `
     ${isByElection ? '<span class="maps-popup-meta-item maps-by-election-tag">BY-ELECTION</span>' : ''}
+    ${statusNotes.uncalledTag ? `<span class="maps-popup-meta-item maps-uncalled-tag">${escapeHtml(statusNotes.uncalledTag)}</span>` : ''}
     ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${escapeHtml(manifest.labelParty(gainFrom))} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
     <span class="maps-popup-meta-item">${escapeHtml(getRegionLabel(seat.region, state.currentRegionLabelsByKey))}</span>
     <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showCounts ? ` = ${formatInt(majority.raw)}` : ''}</span>
     ${showCounts ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(seat.turnout)}</span>` : ''}
+    ${statusNotes.samePartyNote ? `<span class="maps-popup-meta-item maps-popup-status-note">${escapeHtml(statusNotes.samePartyNote)}</span>` : ''}
+    ${statusNotes.roundNote ? `<span class="maps-popup-meta-item maps-popup-status-note">${escapeHtml(statusNotes.roundNote)}</span>` : ''}
   `;
 
-  // Build vote-share rows with comparison deltas. prevPct is null before the
-  // comparison election's first data point, which suppresses the delta span.
+  // Build vote-share rows with comparison deltas. deltaBasis.deltaFor returns null when
+  // there is nothing to compare with, which suppresses the delta span.
   const currentTurnout = seat.turnout;
-  const comparisonTurnout = comparisonSeat?.turnout ?? 0;
-  const comparisonVotes = comparisonSeat?.votes || {};
 
-  const rows = Object.entries(seat.votes || {})
+  // A seat whose data repeats a party (an export override listing the individual candidates)
+  // shows one row per candidate with no delta: the comparison is per party, not per candidate.
+  const partyRows = () => Object.entries(seat.votes || {})
     .map(([party, votes]) => {
       const voteTotal = Number(votes || 0);
       const pct = currentTurnout > 0 ? (voteTotal / currentTurnout) * 100 : 0;
-      const prevPct = comparisonTurnout > 0 ? ((Number(comparisonVotes[party] || 0) / comparisonTurnout) * 100) : null;
-      const delta = prevPct == null ? null : pct - prevPct;
+      const delta = deltaBasis.deltaFor(party, pct);
       // Label by candidate name where available (name mode); party label otherwise.
       return { party, pct, delta, label: seat.candidates?.[party] };
-    })
+    });
+  const candidateRows = () => seat.candidateRows.map((row) => ({
+    party: row.party,
+    pct: currentTurnout > 0 ? (row.votes / currentTurnout) * 100 : 0,
+    delta: null,
+    label: row.name || undefined,
+  }));
+  const rows = (seat.candidateRows ? candidateRows() : partyRows())
     .sort((a, b) => b.pct - a.pct)
     .slice(0, 8);
 
@@ -1444,6 +1603,11 @@ function renderSeatPopup(seatName) {
     const deltaHtml = row.delta == null ? '' : `<span class="${deltaClass(row.delta)}">${formatSigned(row.delta, 2)}</span>`;
     return `<span>${formatPct(row.pct)}%</span>${deltaHtml}`;
   });
+
+  // A same-day special election held alongside this state's regular race (US Senate) gets its
+  // own block below the regular result.
+  const special = state.electionData.specials?.get(seatKey);
+  if (special) seatPopupList.appendChild(buildSpecialPopupBlock(special));
 
   seatPopup.hidden = false;
 
@@ -1474,6 +1638,19 @@ function wireSeatPopup() {
 }
 
 // ─── Seat list ───────────────────────────────────────────────────────────────
+
+// Light grey for a seat with nothing to colour by when the map configures no `neutralFill`.
+const FALLBACK_NEUTRAL_FILL = '#d1d5db';
+
+/**
+ * The neutral no-result colour: the map's configured `neutralFill`, else a light grey.
+ * Used for seats with nothing to colour by, such as an uncalled seat with no leading party;
+ * deliberately not the 'others' party colour, which would read as an Others win.
+ * @returns {string}
+ */
+function neutralSeatFill() {
+  return state.mapConfig?.neutralFill || FALLBACK_NEUTRAL_FILL;
+}
 
 // Seat list panel elements — populated by renderSeatList.
 const seatList = document.getElementById('mapsSeatList');
@@ -1523,9 +1700,16 @@ function renderSeatList() {
     const seatName = seat.seat || 'Unknown seat';
     const seatKey = seatLookupKey(seatName);
     const winnerKey = seat.winner || 'others';
+    const fillKind = seat.fillKind();
     const comparisonWinnerKey = comparisonSeatsByKey?.get(seatKey)?.winner ?? null;
-    // Only show a gain indicator when the winner changed from the comparison election.
-    const gainedFrom = comparisonWinnerKey && comparisonWinnerKey !== winnerKey ? comparisonWinnerKey : null;
+    // Only show a gain indicator when the winner changed from the comparison election; an
+    // uncalled seat has no settled winner, so it shows none.
+    const gainedFrom = seat.called && comparisonWinnerKey && comparisonWinnerKey !== winnerKey ? comparisonWinnerKey : null;
+    // Swatch: the winner's colour; uncalled seats lead-coloured but faded, or neutral grey when
+    // no party leads (never an "Others" swatch).
+    const swatchColour = fillKind === 'neutral' ? neutralSeatFill() : manifest.colourParty(winnerKey);
+    const swatchLabel = fillKind === 'neutral' ? 'No leader' : manifest.labelParty(winnerKey);
+    const swatchClass = fillKind === 'called' ? '' : ' maps-seat-icon--provisional';
     const item = document.createElement('button');
     item.type = 'button';
     item.className = 'maps-seat-row';
@@ -1533,11 +1717,12 @@ function renderSeatList() {
     item.setAttribute('aria-label', `Zoom to ${seatName}`);
     item.innerHTML = `
       <span class="maps-seat-main">
-        <span class="maps-seat-icon maps-seat-owner-icon" style="background:${manifest.colourParty(winnerKey)}" title="${escapeHtml(manifest.labelParty(winnerKey))}"></span>
+        <span class="maps-seat-icon maps-seat-owner-icon${swatchClass}" style="background:${swatchColour}" title="${escapeHtml(swatchLabel)}"></span>
         <span class="maps-seat-name">${escapeHtml(seatName)}</span>
       </span>
       <span class="maps-seat-meta">
         ${Seat.isByElectionSeat(seat, byElectionSeats) ? '<span class="maps-seat-gain-label maps-by-election-tag">BY-ELECTION</span>' : ''}
+        ${seat.called ? '' : '<span class="maps-seat-gain-label maps-uncalled-tag">UNCALLED</span>'}
         ${gainedFrom ? `<span class="maps-seat-gain"><span class="maps-seat-gain-label">GAIN FROM</span><span class="maps-seat-icon" style="background:${manifest.colourParty(gainedFrom)}" title="${escapeHtml(manifest.labelParty(gainedFrom))}"></span></span>` : '<span class="maps-seat-gain-placeholder"></span>'}
       </span>
     `;
@@ -1912,6 +2097,28 @@ function renderTopoMap(preserveZoom = false) {
   const content = d3.select(mapContent);
   content.selectAll('*').remove();
 
+  // Hatch patterns for uncalled (provisional) seats, one per leading-party colour, created on
+  // demand by provisionalFill and rebuilt with the rest of the map on every render.
+  const patternDefs = content.append('defs');
+  const provisionalPatternIds = new Map();
+  const provisionalFill = (colour) => {
+    let id = provisionalPatternIds.get(colour);
+    if (!id) {
+      id = `maps-uncalled-${provisionalPatternIds.size}`;
+      provisionalPatternIds.set(colour, id);
+      const pattern = patternDefs.append('pattern')
+        .attr('id', id)
+        .attr('width', 6)
+        .attr('height', 6)
+        .attr('patternUnits', 'userSpaceOnUse')
+        .attr('patternTransform', 'rotate(45)');
+      // Pale base with a solid stripe: reads as the party's colour, visibly not final.
+      pattern.append('rect').attr('width', 6).attr('height', 6).attr('fill', colour).attr('fill-opacity', 0.4);
+      pattern.append('rect').attr('width', 3).attr('height', 6).attr('fill', colour);
+    }
+    return `url(#${id})`;
+  };
+
   // ── Lookup tables ─────────────────────────────────────────────────────────
   // featureBySeat: normalised seat key → GeoJSON feature, for zoom-to-seat.
   // Fill colour uses state.electionData.seatsByKey directly — no extra map needed.
@@ -1988,7 +2195,8 @@ function renderTopoMap(preserveZoom = false) {
       const seat = state.electionData.seatsByKey.get(seatKey);
       // Feature has no matching seat in the election data — e.g. an area not contested this
       // cycle. Use the map's neutralFill when configured (so "not contested" reads as
-      // neutral, not an Others win), otherwise the Others colour.
+      // neutral, not an Others win), otherwise the Others colour. (An uncalled seat with no
+      // leader falls back to light grey instead; see neutralSeatFill.)
       if (!seat) return state.mapConfig?.neutralFill || manifest.colourParty('others');
 
       // Active filter excludes this seat — render as greyed-out slate rather than hiding,
@@ -1999,6 +2207,12 @@ function renderTopoMap(preserveZoom = false) {
       if (choroplethConfig.enabled && choroplethConfig.valueBySeatKey?.has(seatKey)) {
         return choroplethConfig.toColour(choroplethConfig.valueBySeatKey.get(seatKey));
       }
+
+      // Uncalled seats: the leader's colour hatched as provisional, or neutral when no party
+      // leads. Never the 'others' colour, which would read as an Others win.
+      const fillKind = seat.fillKind();
+      if (fillKind === 'neutral') return neutralSeatFill();
+      if (fillKind === 'provisional') return provisionalFill(manifest.colourParty(seat.winner));
 
       // Default: colour by winning party.
       return manifest.colourParty(seat.winner || 'others');

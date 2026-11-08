@@ -1,13 +1,13 @@
 {
-  "defaultElection": "current-us-senate",
+  "defaultElection": "2026-us-senate",
   "elections": [
     {
-      "id": "current-us-house",
-      "name": "2026 Prediction",
-      "type": "us_house_model",
-      "mapId": 21,
+      "id": "2026-us-house",
+      "name": "2026 Election",
+      "type": "us_house",
+      "mapId": 24,
       "parliament": "us_house",
-      "model": true,
+      "sourceNote": "Results: The New York Times / AP. Provisional until certified.",
       "comparisonElectionId": "2024-us-house"
     },
     {
@@ -16,6 +16,7 @@
       "type": "us_house",
       "mapId": 21,
       "parliament": "us_house",
+      "sourceNote": "Results: The New York Times / AP.",
       "comparisonElectionId": "2022-us-house"
     },
     {
@@ -23,7 +24,18 @@
       "name": "2022 Election",
       "type": "us_house",
       "mapId": 21,
-      "parliament": "us_house"
+      "parliament": "us_house",
+      "sourceNote": "Results: The New York Times / AP.",
+      "comparisonElectionId": "2020-us-house"
+    },
+    {
+      "id": "2020-us-house",
+      "name": "2020 Election",
+      "type": "us_house",
+      "mapId": 25,
+      "parliament": "us_house",
+      "sourceNote": "Results: The New York Times / AP. North Carolina districts shown on 2018 boundaries.",
+      "comparisonElectionId": "2018-us-house"
     },
     {
       "id": "current-us-president",
@@ -51,12 +63,12 @@
       "comparisonElectionId": "2016-us-president"
     },
     {
-      "id": "current-us-senate",
-      "name": "2026 Prediction",
-      "type": "us_senate_model",
+      "id": "2026-us-senate",
+      "name": "2026 Election",
+      "type": "us_senate",
       "mapId": 23,
       "parliament": "us_senate",
-      "model": true,
+      "sourceNote": "Results: The New York Times / AP. Provisional until certified.",
       "comparisonElectionId": "2020-us-senate"
     },
     {
@@ -67,13 +79,6 @@
       "parliament": "us_senate",
       "multiMember": true,
       "upcomingElections": true
-    },
-    {
-      "id": "2024-us-senate",
-      "name": "2024 Election",
-      "type": "us_senate",
-      "mapId": 23,
-      "parliament": "us_senate"
     },
     {
       "id": "2016-us-president",
@@ -124,18 +129,21 @@
       "comparisonElectionId": "1992-us-president"
     },
     {
+      "id": "2024-us-senate",
+      "name": "2024 Election",
+      "type": "us_senate",
+      "mapId": 23,
+      "parliament": "us_senate",
+      "sourceNote": "Results: The New York Times / AP. California's partial-term special election is not included.",
+      "comparisonElectionId": "2018-us-senate"
+    },
+    {
       "id": "2022-us-senate",
       "name": "2022 Election",
       "type": "us_senate",
       "mapId": 23,
-      "parliament": "us_senate"
-    },
-    {
-      "id": "2020-us-senate",
-      "name": "2020 Election",
-      "type": "us_senate",
-      "mapId": 23,
-      "parliament": "us_senate"
+      "parliament": "us_senate",
+      "sourceNote": "Results: The New York Times / AP. California's partial-term special election is not included."
     },
     {
       "id": "1992-us-president",
@@ -199,6 +207,30 @@
       "type": "us_presidential",
       "mapId": 22,
       "parliament": "us_presidential"
+    },
+    {
+      "id": "2020-us-senate",
+      "name": "2020 Election",
+      "type": "us_senate",
+      "mapId": 23,
+      "parliament": "us_senate",
+      "sourceNote": "Results: The New York Times / AP."
+    },
+    {
+      "id": "2018-us-house",
+      "name": "2018 Election",
+      "type": "us_house",
+      "mapId": 25,
+      "parliament": "us_house",
+      "sourceNote": "Results: The New York Times / AP."
+    },
+    {
+      "id": "2018-us-senate",
+      "name": "2018 Election",
+      "type": "us_senate",
+      "mapId": 23,
+      "parliament": "us_senate",
+      "sourceNote": "Results: The New York Times / AP."
     }
   ],
   "misc": {
@@ -223,10 +255,10 @@
       "features": [
         "predict"
       ],
-      "predictAnchorElectionId": "current-us-house",
-      "predictBaselineElectionId": "2024-us-house",
-      "nextElectionYear": 2026,
-      "nextElectionDate": "2026-11-03T00:00:00-05:00",
+      "predictAnchorElectionId": "2026-us-house",
+      "predictBaselineElectionId": "2026-us-house",
+      "nextElectionYear": 2028,
+      "nextElectionDate": "2028-11-07T00:00:00-05:00",
       "nextElectionLabel": "US House election",
       "predict": {
         "model": "fptp",
@@ -290,10 +322,10 @@
       "features": [
         "predict"
       ],
-      "predictAnchorElectionId": "current-us-senate",
-      "predictBaselineElectionId": "2020-us-senate",
-      "nextElectionYear": 2026,
-      "nextElectionDate": "2026-11-03T00:00:00-05:00",
+      "predictAnchorElectionId": "2026-us-senate",
+      "predictBaselineElectionId": "2022-us-senate",
+      "nextElectionYear": 2028,
+      "nextElectionDate": "2028-11-07T00:00:00-05:00",
       "nextElectionLabel": "US Senate election",
       "predict": {
         "model": "senate",
@@ -321,7 +353,7 @@
         "tabs": [
           {
             "key": "seatsup",
-            "label": "Seats up (2026)"
+            "label": "Seats up (2028)"
           },
           {
             "key": "chamber",
@@ -425,18 +457,17 @@
       "neutralFill": "#e5e7eb",
       "hideMajority": true,
       "postcodeSupported": false,
-      "senateSpecialElections": [
+      "senateSpecialElections": [],
+      "senateBaselineOverrides": [
         {
           "seat": "Florida",
           "class": 3,
-          "year": 2026,
-          "baselineElectionId": "2022-us-senate"
+          "baselineElectionId": "2026-us-senate"
         },
         {
           "seat": "Ohio",
           "class": 3,
-          "year": 2026,
-          "baselineElectionId": "2022-us-senate"
+          "baselineElectionId": "2026-us-senate"
         }
       ],
       "regions": [
@@ -479,30 +510,121 @@
       ],
       "senateClassNextElection": {
         "1": 2030,
-        "2": 2026,
+        "2": 2032,
         "3": 2028
       }
+    },
+    "24": {
+      "name": "us-house-2026",
+      "projection": "albersUsa",
+      "postcodeSupported": false,
+      "regions": [
+        {
+          "id": 252,
+          "name": "East North Central"
+        },
+        {
+          "id": 246,
+          "name": "East South Central"
+        },
+        {
+          "id": 253,
+          "name": "Mid-Atlantic"
+        },
+        {
+          "id": 248,
+          "name": "Mountain"
+        },
+        {
+          "id": 249,
+          "name": "New England"
+        },
+        {
+          "id": 245,
+          "name": "Pacific"
+        },
+        {
+          "id": 250,
+          "name": "South Atlantic"
+        },
+        {
+          "id": 251,
+          "name": "West North Central"
+        },
+        {
+          "id": 247,
+          "name": "West South Central"
+        }
+      ]
+    },
+    "25": {
+      "name": "us-house-2018",
+      "projection": "albersUsa",
+      "postcodeSupported": false,
+      "regions": [
+        {
+          "id": 243,
+          "name": "East North Central"
+        },
+        {
+          "id": 237,
+          "name": "East South Central"
+        },
+        {
+          "id": 244,
+          "name": "Mid-Atlantic"
+        },
+        {
+          "id": 239,
+          "name": "Mountain"
+        },
+        {
+          "id": 240,
+          "name": "New England"
+        },
+        {
+          "id": 236,
+          "name": "Pacific"
+        },
+        {
+          "id": 241,
+          "name": "South Atlantic"
+        },
+        {
+          "id": 242,
+          "name": "West North Central"
+        },
+        {
+          "id": 238,
+          "name": "West South Central"
+        }
+      ]
     }
   },
   "partyKeyAliases": {},
   "files": {
     "elections": {
       "mapsById": {
-        "21": "maps/map-21.topo.json",
         "22": "maps/map-22.topo.json",
-        "23": "maps/map-23.topo.json"
+        "24": "maps/map-24.topo.json",
+        "23": "maps/map-23.topo.json",
+        "21": "maps/map-21.topo.json",
+        "25": "maps/map-25.topo.json"
       },
       "electionsById": {
-        "current-us-house": "results/us-house-forecast.json",
         "current-us-president": "results/us-president-forecast.json",
-        "current-us-senate": "results/us-senate-forecast.json",
+        "2026-us-house": "results/us-house-2026.json",
+        "2026-us-senate": "results/us-senate-2026.json",
         "2024-us-house": "results/us-house-2024.json",
         "2024-us-president": "results/us-president-2024.json",
         "2024-us-senate": "results/us-senate-2024.json",
         "2022-us-house": "results/us-house-2022.json",
         "2022-us-senate": "results/us-senate-2022.json",
+        "2020-us-house": "results/us-house-2020.json",
         "2020-us-president": "results/us-president-2020.json",
         "2020-us-senate": "results/us-senate-2020.json",
+        "2018-us-house": "results/us-house-2018.json",
+        "2018-us-senate": "results/us-senate-2018.json",
         "2016-us-president": "results/us-president-2016.json",
         "2012-us-president": "results/us-president-2012.json",
         "2008-us-president": "results/us-president-2008.json",

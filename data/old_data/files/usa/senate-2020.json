@@ -1,45 +1,131 @@
 {
+  "meta": {
+    "source": "The New York Times / AP",
+    "source_urls": [
+      "https://static01.nyt.com/elections-assets/2020/data/api/2020-11-03/national-map-page/national/senate.json",
+      "https://static01.nyt.com/elections-assets/2020/data/api/2021-01-05/state-page/georgia.json"
+    ],
+    "retrieved_at": "2026-11-07T20:05:29.546276+00:00",
+    "source_updated_at": "2023-02-17T20:16:28.962Z",
+    "sources": [
+      {
+        "kind": "general",
+        "url": "https://static01.nyt.com/elections-assets/2020/data/api/2020-11-03/national-map-page/national/senate.json",
+        "retrieved_at": "2026-11-07T20:05:29.546276+00:00",
+        "source_updated_at": "2023-02-17T20:16:28.962Z"
+      },
+      {
+        "kind": "runoff",
+        "url": "https://static01.nyt.com/elections-assets/2020/data/api/2021-01-05/state-page/georgia.json",
+        "retrieved_at": "2026-11-07T20:05:29.827705+00:00",
+        "source_updated_at": "2023-02-17T21:10:15.328Z"
+      }
+    ],
+    "year": 2020,
+    "chamber": "senate",
+    "special": false,
+    "map_id": 23,
+    "map_name": "US Senate 2024",
+    "special_file": "senate-2020-special.json",
+    "election_date": "2020-11-03",
+    "source_note": "Results: The New York Times / AP."
+  },
   "Alabama": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "democrat": {
-        "total": 920478,
-        "name": "Gordon Douglas Jones"
-      },
       "republican": {
         "total": 1392076,
         "name": "Tommy Tuberville"
       },
+      "democrat": {
+        "total": 920478,
+        "name": "Doug Jones"
+      },
       "others": {
         "total": 3891,
-        "name": "Other"
+        "name": "Write-ins"
       }
     }
   },
   "Alaska": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 17407,
-        "name": "John Wayne Howe"
+      "republican": {
+        "total": 191112,
+        "name": "Dan Sullivan"
       },
       "democrat": {
         "total": 146068,
         "name": "Al Gross"
       },
+      "others": {
+        "total": 17407,
+        "name": "John Wayne Howe"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "democrat",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": true,
+      "senateClass": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1716467,
+        "name": "Mark Kelly"
+      },
       "republican": {
-        "total": 191112,
-        "name": "Dan Sullivan"
+        "total": 1637661,
+        "name": "Martha McSally"
+      },
+      "others": {
+        "total": 1189,
+        "name": "Write-ins"
       }
     }
   },
   "Arkansas": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 98.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "republican": {
@@ -48,110 +134,155 @@
       },
       "libertarian": {
         "total": 399390,
-        "name": "Ricky Dale Harrington Jr."
+        "name": "Ricky Harrington"
       }
     }
   },
   "Colorado": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 18851,
-        "name": "Daniel Doyle"
-      },
-      "libertarian": {
-        "total": 56262,
-        "name": "Raymon Anthony Doane"
+      "democrat": {
+        "total": 1731114,
+        "name": "John Hickenlooper"
       },
       "republican": {
         "total": 1429492,
         "name": "Cory Gardner"
       },
-      "usgreen": {
-        "total": 71,
-        "name": "Bruce Edward Lohmiller"
+      "libertarian": {
+        "total": 56262,
+        "name": "Raymon Doane"
       },
-      "democrat": {
-        "total": 1731114,
-        "name": "John Wright Hickenlooper"
+      "others": {
+        "total": 18922,
+        "name": "Daniel Doyle"
       }
     }
   },
   "Delaware": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 98.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 7833,
-        "name": "Mark W. Turley"
+      "democrat": {
+        "total": 291804,
+        "name": "Christopher Coons"
       },
       "republican": {
         "total": 186054,
-        "name": "Lauren E. Witzke"
+        "name": "Lauren Witzke"
+      },
+      "independent": {
+        "total": 7833,
+        "name": "Mark Turley"
       },
       "libertarian": {
         "total": 5244,
-        "name": "Nadine M. Frost"
-      },
-      "democrat": {
-        "total": 291804,
-        "name": "Christopher A. Coons"
+        "name": "Nadine Frost"
       }
     }
   },
   "Georgia": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": "runoff",
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "democrat": {
-        "total": 2269923,
+        "total": 2269738,
         "name": "Jon Ossoff"
       },
       "republican": {
-        "total": 2214979,
-        "name": "David A. Perdue"
+        "total": 2214506,
+        "name": "David Perdue"
       }
     }
   },
   "Idaho": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "republican": {
         "total": 538446,
-        "name": "James E. Risch"
+        "name": "Jim Risch"
       },
       "democrat": {
         "total": 285864,
-        "name": "Paulette E. Jordan"
-      },
-      "others": {
-        "total": 10188,
-        "name": "Ray J. Writz"
+        "name": "Paulette Jordan"
       },
       "independent": {
         "total": 25329,
-        "name": "Natalie M. Fleming"
+        "name": "Natalie Fleming"
+      },
+      "others": {
+        "total": 10188,
+        "name": "Ray Writz"
       }
     }
   },
   "Illinois": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 237717,
-        "name": "WIllie Wilson"
+      "democrat": {
+        "total": 3278930,
+        "name": "Richard J. Durbin"
       },
       "republican": {
         "total": 2319870,
-        "name": "Mark C. Curran"
+        "name": "Mark Curran"
+      },
+      "others": {
+        "total": 237717,
+        "name": "Willie Wilson"
       },
       "libertarian": {
         "total": 75673,
@@ -159,26 +290,31 @@
       },
       "usgreen": {
         "total": 56711,
-        "name": "David F. Black"
-      },
-      "democrat": {
-        "total": 3278930,
-        "name": "Richard J. Durbin"
+        "name": "David Black"
       }
     }
   },
   "Iowa": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 29513,
-        "name": "Other"
-      },
       "republican": {
         "total": 864997,
-        "name": "Joni K. Ernst"
+        "name": "Joni Ernst"
+      },
+      "democrat": {
+        "total": 754859,
+        "name": "Theresa Greenfield"
       },
       "libertarian": {
         "total": 36961,
@@ -187,188 +323,273 @@
       "independent": {
         "total": 13800,
         "name": "Suzanne Herzog"
-      },
-      "democrat": {
-        "total": 754859,
-        "name": "Theresa Greenfield"
       }
     }
   },
   "Kansas": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "republican": {
         "total": 727962,
         "name": "Roger Marshall"
       },
+      "democrat": {
+        "total": 571530,
+        "name": "Barbara Bollier"
+      },
       "libertarian": {
         "total": 68263,
         "name": "Jason Buckley"
-      },
-      "democrat": {
-        "total": 571530,
-        "name": "Barbara Goolsbee Bollier"
       }
     }
   },
   "Kentucky": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 99,
-        "name": "Paul John Frangedakis"
-      },
       "republican": {
         "total": 1233315,
         "name": "Mitch McConnell"
+      },
+      "democrat": {
+        "total": 816257,
+        "name": "Amy McGrath"
       },
       "libertarian": {
         "total": 85386,
         "name": "Brad Barron"
       },
-      "democrat": {
-        "total": 816257,
-        "name": "Amy McGrath"
+      "others": {
+        "total": 99,
+        "name": "Write-ins"
       }
     }
   },
   "Louisiana": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 96.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 54131,
-        "name": "Beryl A. Billiot"
-      },
       "republican": {
         "total": 1267291,
         "name": "Bill Cassidy"
       },
-      "libertarian": {
-        "total": 11321,
-        "name": "Aaron C. Sigler"
-      },
-      "independent": {
-        "total": 7811,
-        "name": "M.V. \"Vinny\" Mendoza"
-      },
       "democrat": {
         "total": 730989,
         "name": "Adrian Perkins"
+      },
+      "independent": {
+        "total": 54262,
+        "name": "Beryl Billiot"
+      },
+      "libertarian": {
+        "total": 11321,
+        "name": "Aaron Sigler"
+      },
+      "others": {
+        "total": 7680,
+        "name": "Melinda Price"
       }
     }
   },
   "Maine": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
+      "republican": {
+        "total": 417645,
+        "name": "Susan Collins"
+      },
+      "democrat": {
+        "total": 347223,
+        "name": "Sara Gideon"
+      },
       "independent": {
         "total": 54087,
         "name": "Lisa Savage"
       },
-      "democrat": {
-        "total": 347223,
-        "name": "Sara I. Gideon"
-      },
       "others": {
-        "total": 9350,
-        "name": "Other"
-      },
-      "republican": {
-        "total": 417645,
-        "name": "Susan M. Collins"
+        "total": 228,
+        "name": "Write-ins"
       }
     }
   },
   "Massachusetts": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 98.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 122431,
-        "name": "Other"
-      },
-      "republican": {
-        "total": 1177765,
-        "name": "Kevin J. O'Connor"
-      },
       "democrat": {
         "total": 2357809,
         "name": "Edward J. Markey"
+      },
+      "republican": {
+        "total": 1177765,
+        "name": "Kevin O'Connor"
+      },
+      "others": {
+        "total": 28562,
+        "name": "Write-ins"
       }
     }
   },
   "Michigan": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 63702,
-        "name": "Valerie Willis"
+      "democrat": {
+        "total": 2734568,
+        "name": "Gary Peters"
       },
       "republican": {
         "total": 2642233,
         "name": "John James"
       },
+      "others": {
+        "total": 63690,
+        "name": "Valerie Willis"
+      },
       "usgreen": {
         "total": 39217,
         "name": "Marcia Squier"
-      },
-      "democrat": {
-        "total": 2734568,
-        "name": "Gary C. Peters"
       }
     }
   },
   "Minnesota": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 98.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 249589,
-        "name": "Kevin O'Connor"
+      "democrat": {
+        "total": 1566522,
+        "name": "Tina Smith"
       },
       "republican": {
         "total": 1398145,
         "name": "Jason Lewis"
       },
-      "democrat": {
-        "total": 1566522,
-        "name": "Tina Smith"
+      "independent": {
+        "total": 190154,
+        "name": "Kevin O'Connor"
+      },
+      "others": {
+        "total": 57174,
+        "name": "Oliver Steinberg"
       }
     }
   },
   "Mississippi": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "republican": {
         "total": 709511,
         "name": "Cindy Hyde-Smith"
       },
+      "democrat": {
+        "total": 578691,
+        "name": "Mike Espy"
+      },
       "libertarian": {
         "total": 23152,
         "name": "Jimmy Edwards"
       },
-      "democrat": {
-        "total": 578691,
-        "name": "Mike Espy"
+      "others": {
+        "total": 683,
+        "name": "Write-ins"
       }
     }
   },
   "Montana": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "republican": {
@@ -383,123 +604,185 @@
   },
   "Nebraska": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 64199,
-        "name": "Preston Love Jr."
-      },
       "republican": {
         "total": 583507,
         "name": "Ben Sasse"
       },
+      "democrat": {
+        "total": 227191,
+        "name": "Chris Janicek"
+      },
+      "others": {
+        "total": 64199,
+        "name": "Write-ins"
+      },
       "libertarian": {
         "total": 55115,
         "name": "Gene Siadek"
-      },
-      "democrat": {
-        "total": 227191,
-        "name": "Chris E. Janicek"
       }
     }
   },
   "New Hampshire": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "democrat": {
         "total": 450778,
         "name": "Jeanne Shaheen"
       },
-      "libertarian": {
-        "total": 18421,
-        "name": "Justin F. O'Donnell"
-      },
       "republican": {
         "total": 326229,
-        "name": "Bryant Messner"
+        "name": "Corky Messner"
+      },
+      "libertarian": {
+        "total": 18421,
+        "name": "Justin O'Donnell"
       },
       "others": {
         "total": 486,
-        "name": "Other"
+        "name": "Write-ins"
       }
     }
   },
   "New Jersey": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
+      "democrat": {
+        "total": 2541239,
+        "name": "Cory Booker"
+      },
       "republican": {
-        "total": 1817052,
+        "total": 1817091,
         "name": "Rikin Mehta"
       },
       "usgreen": {
         "total": 38288,
-        "name": "Madelyn R. Hoffman"
+        "name": "Madelyn Hoffman"
       },
-      "others": {
+      "independent": {
         "total": 43922,
         "name": "Veronica Fernandez"
       },
-      "democrat": {
-        "total": 2541178,
-        "name": "Cory A. Booker"
+      "others": {
+        "total": 3244,
+        "name": "Write-ins"
       }
     }
   },
   "New Mexico": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
+      "democrat": {
+        "total": 474483,
+        "name": "Ben Ray Luján"
+      },
       "republican": {
         "total": 418483,
-        "name": "Mark V. Ronchetti"
+        "name": "Mark Ronchetti"
       },
       "libertarian": {
         "total": 24271,
         "name": "Bob Walsh"
-      },
-      "democrat": {
-        "total": 474483,
-        "name": "Ben Ray Luján"
       }
     }
   },
   "North Carolina": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "republican": {
         "total": 2665598,
-        "name": "Thomas Roland Tillis"
-      },
-      "libertarian": {
-        "total": 171571,
-        "name": "Shannon W. Bray"
+        "name": "Thom Tillis"
       },
       "democrat": {
         "total": 2569965,
         "name": "Cal Cunningham"
       },
+      "libertarian": {
+        "total": 171571,
+        "name": "Shannon Bray"
+      },
       "others": {
         "total": 67818,
-        "name": "Kevin Eugene Hayes"
+        "name": "Kevin Hayes"
       }
     }
   },
   "Oklahoma": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "republican": {
         "total": 979140,
-        "name": "James M. Inhofe"
+        "name": "Jim Inhofe"
+      },
+      "democrat": {
+        "total": 509763,
+        "name": "Abby Broyles"
       },
       "libertarian": {
         "total": 34435,
@@ -507,22 +790,27 @@
       },
       "independent": {
         "total": 33023,
-        "name": "Joan E. Farr"
-      },
-      "democrat": {
-        "total": 509763,
-        "name": "Abby Broyles"
+        "name": "Joan Farr"
       }
     }
   },
   "Oregon": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 98.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 44641,
-        "name": "Ibrahim Ali Taher"
+      "democrat": {
+        "total": 1321047,
+        "name": "Jeff Merkley"
       },
       "republican": {
         "total": 912814,
@@ -532,169 +820,225 @@
         "total": 42747,
         "name": "Gary Dye"
       },
-      "democrat": {
-        "total": 1321047,
-        "name": "Jeff Merkley"
+      "others": {
+        "total": 44641,
+        "name": "Ibrahim Taher"
       }
     }
   },
   "Rhode Island": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 95.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 833,
-        "name": "Other"
-      },
       "democrat": {
         "total": 328574,
         "name": "Jack Reed"
       },
       "republican": {
         "total": 164855,
-        "name": "Allen R. Waters"
+        "name": "Allen Waters"
       }
     }
   },
   "South Carolina": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "republican": {
         "total": 1369137,
         "name": "Lindsey Graham"
       },
-      "others": {
-        "total": 35139,
-        "name": "Bill Bledsoe"
-      },
       "democrat": {
         "total": 1110828,
         "name": "Jaime Harrison"
+      },
+      "others": {
+        "total": 32845,
+        "name": "Bill Bledsoe"
       }
     }
   },
   "South Dakota": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "republican": {
         "total": 276232,
-        "name": "M. Michael Rounds"
+        "name": "Mike Rounds"
       },
       "democrat": {
         "total": 143987,
-        "name": "Daniel P. Ahlers"
+        "name": "Dan Ahlers"
       }
     }
   },
   "Tennessee": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "others": {
-        "total": 64,
-        "name": "John Gentry"
-      },
-      "independent": {
-        "total": 78080,
-        "name": "Elizabeth McLeod"
+      "republican": {
+        "total": 1840926,
+        "name": "Bill Hagerty"
       },
       "democrat": {
         "total": 1040691,
         "name": "Marquita Bradshaw"
       },
-      "republican": {
-        "total": 1840926,
-        "name": "Bill Hagerty"
+      "independent": {
+        "total": 78080,
+        "name": "Elizabeth McLeod"
       }
     }
   },
   "Texas": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "republican": {
         "total": 5962983,
         "name": "John Cornyn"
       },
+      "democrat": {
+        "total": 4888764,
+        "name": "M.J. Hegar"
+      },
       "libertarian": {
         "total": 209722,
-        "name": "Kerry Douglas McKennon"
+        "name": "Kerry McKennon"
       },
       "usgreen": {
         "total": 81893,
-        "name": "David B. Collins"
-      },
-      "democrat": {
-        "total": 4888764,
-        "name": "Mary Jennings Hegar"
+        "name": "David Collins"
       },
       "others": {
         "total": 678,
-        "name": "Ricardo Turullols-Bonilla"
+        "name": "Write-ins"
       }
     }
   },
   "Virginia": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "democrat",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
-      "republican": {
-        "total": 1934199,
-        "name": "Daniel M. Gade"
-      },
-      "others": {
-        "total": 4388,
-        "name": "Other"
-      },
       "democrat": {
         "total": 2466500,
-        "name": "Mark R. Warner"
+        "name": "Mark Warner"
+      },
+      "republican": {
+        "total": 1934199,
+        "name": "Daniel Gade"
       }
     }
   },
   "West Virginia": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 99.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
       "republican": {
         "total": 547454,
         "name": "Shelley Moore Capito"
       },
-      "libertarian": {
-        "total": 21155,
-        "name": "David Moran"
-      },
       "democrat": {
         "total": 210309,
         "name": "Paula Jean Swearengin"
+      },
+      "libertarian": {
+        "total": 21155,
+        "name": "David Moran"
       }
     }
   },
   "Wyoming": {
     "seatInfo": {
-      "current": "republican"
+      "current": "republican",
+      "called": true,
+      "pct": 98.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": null,
+      "votesSource": "nyt",
+      "special": false,
+      "senateClass": 2
     },
     "partyInfo": {
+      "republican": {
+        "total": 198100,
+        "name": "Cynthia Lummis"
+      },
       "democrat": {
         "total": 72766,
         "name": "Merav Ben-David"
-      },
-      "republican": {
-        "total": 198100,
-        "name": "Cynthia M. Lummis"
-      },
-      "others": {
-        "total": 7637,
-        "name": "Other"
       }
     }
   }

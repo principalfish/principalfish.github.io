@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "source": "The New York Times / AP",
+    "source_urls": [
+      "https://static01.nyt.com/elections-assets/pages/data/2024-11-05/results-senate.json"
+    ],
+    "retrieved_at": "2026-11-07T20:05:33.883373+00:00",
+    "source_updated_at": "2025-03-04T15:17:15.212Z",
+    "sources": [
+      {
+        "kind": "general",
+        "url": "https://static01.nyt.com/elections-assets/pages/data/2024-11-05/results-senate.json",
+        "retrieved_at": "2026-11-07T20:05:33.883373+00:00",
+        "source_updated_at": "2025-03-04T15:17:15.212Z"
+      }
+    ],
+    "year": 2024,
+    "chamber": "senate",
+    "special": true,
+    "map_id": 23,
+    "map_name": "US Senate 2024",
+    "special_file": null,
+    "election_date": "2024-11-05",
+    "source_note": "Results: The New York Times / AP."
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "called": true,
+      "pct": 100.0,
+      "sameParty": false,
+      "round": null,
+      "uncontested": false,
+      "certified": true,
+      "votesSource": "nyt",
+      "special": true,
+      "senateClass": 2
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 585103,
+        "name": "Pete Ricketts"
+      },
+      "democrat": {
+        "total": 349902,
+        "name": "Preston Love"
+      }
+    }
+  }
+}

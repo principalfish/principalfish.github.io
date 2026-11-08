@@ -15,7 +15,7 @@
 
 import { state, manifest, Seat } from '../state.js';
 import { normalizeRegionKey, roundShare, base64urlEncode, base64urlDecode, seatLookupKey } from '../utils.js';
-import { buildSenateChamber } from './senate-chamber.js';
+import { buildSenateChamber, regularSenateClass } from './senate-chamber.js';
 
 /**
  * Computes baseline regional vote share percentages from a seat array. For each party in
@@ -106,10 +106,45 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
 }
 
 /**
+ * Copies a baseline seat into the projection unswung. Used wherever a projection starts from,
+ * or falls back to, the baseline as published (no swing to apply, or a seat that cannot be
+ * swung). See {@link projectedStatus} for how a still-uncalled baseline seat is treated.
+ * @param {Seat} baseSeat
+ * @param {object} [overrides] - Fields to replace on the copy.
+ * @returns {Seat}
+ */
+export function cloneBaselineSeat(baseSeat, overrides = {}) {
+  return new Seat({ ...baseSeat, ...projectedStatus(baseSeat), ...overrides, candidates: {}, candidateRows: null });
+}
+
+/**
+ * Status fields for a seat projected from `baseSeat`. A projection is a forecast, not a count,
+ * so a baseline seat still uncalled (results still coming in) is projected from the votes
+ * counted so far as if they were final: the projected seat is marked called and carries no
+ * percent-counted. A baseline seat with no votes has nothing to project from and stays
+ * uncalled with no winner (the neutral, unprojected state), and a called seat is untouched.
+ * The anchor view shows the published result through a normal election load and never passes
+ * through here, so it keeps its `called: false` flags.
+ * @param {Seat} baseSeat
+ * @returns {{called?: boolean, pctCounted?: null, winner?: (string|null)}} Fields to spread
+ *   over the seat's clone; empty when the seat needs no change.
+ */
+function projectedStatus(baseSeat) {
+  if (baseSeat.called !== false || baseSeat.turnout <= 0) return {};
+  // An uncalled seat carries its leader as `winner`; a tie for the lead leaves it null, so
+  // fall back to the largest vote row rather than letting a called seat default to 'others'.
+  const leader = baseSeat.winner
+    || Object.entries(baseSeat.votes || {}).sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))[0]?.[0];
+  return { called: true, pctCounted: null, winner: leader };
+}
+
+/**
  * Projects a single seat by applying regional swings to baseline vote shares. Modelled
  * party shares are adjusted by their swing; any remaining share is redistributed pro rata
  * to non-modelled parties (or assigned to 'others' if none exist). Returns a new Seat with
- * updated votes, preserved turnout, and recomputed winner.
+ * updated votes, preserved turnout, and recomputed winner. A baseline seat still uncalled is
+ * projected from its votes so far and comes out called; one with no votes comes back unswung,
+ * uncalled and with no winner (see {@link projectedStatus}).
  * @param {Seat} baseSeat
  * @param {Map<string, Map<string, number>>} swingsByRegionByParty - regionKey → partyKey → swing pp.
  * @param {string[]} modelledPartyKeys - Parties whose share is adjusted by swing (rest absorb residue).
@@ -119,10 +154,10 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
  */
 export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelledPartyKeys, aggregateConfig = null) {
   const totalVotes = baseSeat.turnout;
-  if (totalVotes <= 0) return new Seat({ ...baseSeat, candidates: {} });
+  if (totalVotes <= 0) return cloneBaselineSeat(baseSeat);
 
   const regionKey = normalizeRegionKey(baseSeat.region);
-  if (!regionKey) return new Seat({ ...baseSeat, candidates: {} });
+  if (!regionKey) return cloneBaselineSeat(baseSeat);
   const baseVotes = baseSeat.votes || {};
 
   // Resolve the swing for a party: prefer the seat's own region, fall back to the
@@ -177,7 +212,7 @@ export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelle
   const winner = Object.entries(projected)
     .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))[0]?.[0] || baseSeat.winner || 'others';
 
-  return new Seat({ ...baseSeat, votes: projected, turnout: totalVotes, winner, candidates: {} });
+  return cloneBaselineSeat(baseSeat, { votes: projected, turnout: totalVotes, winner });
 }
 
 /**
@@ -639,7 +674,7 @@ class PredictModel {
     // Deep-copy on the zero-swing path: baseSeats are state.comparisonElectionData's Seats, so
     // returning a shallow slice would let state.electionData and state.comparisonElectionData
     // share Seat instances. Cloning keeps the projected and comparison elections independent.
-    if (swings.size === 0) return this.baseSeats.map((seat) => new Seat({ ...seat, candidates: {} }));
+    if (swings.size === 0) return this.baseSeats.map((seat) => cloneBaselineSeat(seat));
     return this.baseSeats.map((seat) => projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig));
   }
 
@@ -1013,7 +1048,7 @@ export class AMSPredict extends PredictModel {
     // valid but different allocation when the source data wasn't itself a clean D'Hondt
     // recomputation (e.g. the "2021 Election (2026 boundaries)" file preserves the historical
     // 2021 list winners rather than re-allocating under the new region structure).
-    if (constSwings.size === 0 && listSwings.size === 0) return this.baseSeats.map((seat) => new Seat({ ...seat, candidates: {} }));
+    if (constSwings.size === 0 && listSwings.size === 0) return this.baseSeats.map((seat) => cloneBaselineSeat(seat));
     // List votes only move when the user edits the list ballot. Editing only the constituency
     // ballot still changes the list allocation — but indirectly, via the updated constituency
     // wins that seed each region's D'Hondt divisors (constWinsByRegion below) — not by applying
@@ -1084,16 +1119,20 @@ export class AMSPredict extends PredictModel {
 }
 
 /**
- * Senate predict: FPTP uniform swing over the ~33 seats up in 2026 (the 2020 Class-2
- * baseline), with a toggle between two output views that share one swing input:
+ * Senate predict: FPTP uniform swing over the ~34 seats of the class up next (Class 3 in
+ * 2028, swung from its 2022 baseline), with a toggle between two output views that share one swing input:
  *   - 'seatsup' → the projected contested seats, rendered as a normal seats-up map.
  *   - 'chamber' → those projected winners merged into the full 100-member Senate — the
- *     carried-over Class-1 (last elected 2024) and Class-3 (2022) senators taken from the
- *     chamber snapshot — rendered as a multi-member composition like the Current Senate page.
+ *     carried-over senators of the other two classes, taken from the chamber snapshot —
+ *     rendered as a multi-member composition like the Current Senate page.
  *
- * States holding a special election this cycle (Ohio and Florida in 2026) contest a seat off the
- * regular class, listed in the mapMode's `senateSpecialElections`; the controller loads their
- * separate baseline and adds them via `setSpecialSeats`, so both views cover the full field.
+ * Two mapMode lists move seats off the field's baseline. States holding a special election
+ * this cycle contest a seat off the regular class, listed in `senateSpecialElections`; the
+ * controller loads their separate baseline and adds them via `setSpecialSeats`, so both views
+ * cover the full field. Seats of the regular class whose last contest was a special since the
+ * class last voted (Florida and Ohio, filled at 2026 specials, in 2028) are listed in
+ * `senateBaselineOverrides`; the controller loads those baselines and swaps them in via
+ * `setBaselineOverrides`.
  *
  * The chamber snapshot (senate-current.json: all 100 members with their permanent class) is
  * fetched by the controller and handed in via `setChamberSeats` before the first projection,
@@ -1113,9 +1152,12 @@ export class SenatePredict extends FPTPPredict {
     /** @type {Seat[]} Full 100-member chamber snapshot; empty until the controller loads it. */
     this.chamberSeats = [];
     /** @type {Map<string, number>} seat lookup key → the class contested at a special election
-     * there this cycle. Populated by `setSpecialSeats`; seats absent from it contest Class 2. */
+     * there this cycle. Populated by `setSpecialSeats`; seats absent from it contest the regular class. */
     this.specialClassBySeat = new Map();
-    // Snapshot the projection baseline (the 2020 Class-2 seats, currently in comparisonElectionData)
+    /** @type {number|null} The class the regular election contests, resolved from the map's class
+     * cycle; null when the map carries none (the chamber view then replaces only specials). */
+    this.regularClass = regularSenateClass(nextElectionYear);
+    // Snapshot the projection baseline (the class's baseline seats, currently in comparisonElectionData)
     // so projecting stays independent of comparisonElectionData — which the controller repoints at
     // the current chamber for the full-Senate view's delta column. Ballot swing baselines were
     // already computed off the same seats in super(), so this only decouples the *projection* source.
@@ -1164,6 +1206,29 @@ export class SenatePredict extends FPTPPredict {
     this.ballots.forEach((ballot) => { ballot.baseline = this.baselineFor(this.projectionBase); });
   }
 
+  /**
+   * Swaps in the baseline rows of seats whose last contest was a different election from the
+   * regular class's: a seat filled at an off-cycle special since the class last voted swings
+   * from that special's result, not from the class baseline. Each seat replaces the same-named
+   * seat in `projectionBase`; a seat with no counterpart there is ignored (it is not in the
+   * contested field), so a failed or partial load leaves the regular baseline in place. The
+   * ballot baseline is recomputed over the amended base so the input grid's regional starting
+   * shares follow.
+   * @param {Seat[]} seats - Baseline seats from the overriding elections.
+   */
+  setBaselineOverrides(seats) {
+    const replacementByKey = new Map();
+    (Array.isArray(seats) ? seats : []).forEach((seat) => {
+      const seatKey = seatLookupKey(seat?.seat || '');
+      if (seatKey && !replacementByKey.has(seatKey)) replacementByKey.set(seatKey, seat);
+    });
+    if (!this.projectionBase.some((seat) => replacementByKey.has(seatLookupKey(seat.seat)))) return;
+    this.projectionBase = this.projectionBase.map(
+      (seat) => replacementByKey.get(seatLookupKey(seat.seat)) ?? seat,
+    );
+    this.ballots.forEach((ballot) => { ballot.baseline = this.baselineFor(this.projectionBase); });
+  }
+
   /** True when the active view is the full-chamber composition (rendered multi-member). */
   isMultiMemberView() { return this.activeTab === 'chamber'; }
 
@@ -1181,8 +1246,8 @@ export class SenatePredict extends FPTPPredict {
   /**
    * The seats the display comparison (the vote-totals ± / gains column) should run against for the
    * active view: the current chamber snapshot for the full-Senate composition — so ± reads as the
-   * net change vs today's Senate — else the 2020 projection baseline for the seats-up view (gains
-   * vs 2020). The controller assigns the result to `state.comparisonElectionData` each projection.
+   * net change vs today's Senate — else the projection baseline for the seats-up view (gains
+   * vs that baseline). The controller assigns the result to `state.comparisonElectionData` each projection.
    * @returns {Seat[]}
    */
   comparisonSeatsForView() {
@@ -1190,8 +1255,8 @@ export class SenatePredict extends FPTPPredict {
   }
 
   /**
-   * Projects the contested (2026 Class-2) seats with uniform swing — the baseline is exactly the
-   * 33 Class-2 states, snapshotted in `projectionBase` so the projection is independent of the
+   * Projects the contested seats (the cycle's class, plus any specials) with uniform swing — the
+   * baseline is exactly those states, snapshotted in `projectionBase` so the projection is independent of the
    * repointed comparison — then either returns them (seats-up view) or folds their winners into
    * the full 100-member chamber snapshot (chamber view). Both run off the same swing input.
    * @returns {Seat[]}
@@ -1200,10 +1265,10 @@ export class SenatePredict extends FPTPPredict {
     const swings = this.buildSwings(this.currentInputMap(), this.currentBaselineMap());
     const base = this.projectionBase.length ? this.projectionBase : this.baseSeats;
     const projectedContested = swings.size === 0
-      ? base.map((seat) => new Seat({ ...seat, candidates: {} }))
+      ? base.map((seat) => cloneBaselineSeat(seat))
       : base.map((seat) => projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig));
     if (this.activeTab !== 'chamber') return projectedContested;
-    return buildSenateChamber(this.chamberSeats, projectedContested, this.specialClassBySeat);
+    return buildSenateChamber(this.chamberSeats, projectedContested, this.specialClassBySeat, this.regularClass);
   }
 }
 

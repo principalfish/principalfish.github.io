@@ -1,0 +1,25 @@
+{
+  "resultsMeta": {"resultsUpdatedAt": "2022-12-20T12:00:00.000Z"},
+  "races": [
+    {
+      "nyt_id": "GA-G-S-2022-12-06",
+      "election_date": "2022-12-06",
+      "office_id": "S",
+      "seat_number": null,
+      "type": "General Election Runoff",
+      "uncontested": false,
+      "rcv_nyt_ids": null,
+      "candidate_metadata": {
+        "warren-r": {"nyt_id": "warren-r", "first_name": "Ray", "last_name": "Warren", "party": {"nyt_id": "DEM"}},
+        "walsh-h": {"nyt_id": "walsh-h", "first_name": "Hal", "last_name": "Walsh", "party": {"nyt_id": "GOP"}}
+      },
+      "outcome": {"won": ["warren-r"], "called_by": ["ap"], "advanced_to_runoff": []},
+      "reporting_units": [
+        {"level": "state", "state_postal": "GA", "eevp": 100, "candidates": [
+          {"nyt_id": "warren-r", "votes": {"total": 1820000}},
+          {"nyt_id": "walsh-h", "votes": {"total": 1720000}}
+        ]}
+      ]
+    }
+  ]
+}

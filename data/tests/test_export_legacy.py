@@ -37,16 +37,12 @@ def _ids(entries: list[dict[str, Any]]) -> list[str]:
 
 class TestRepositionSupplementalEntries:
     def test_insert_before_anchor(self) -> None:
-        # current-senate is configured to lead its class (insertBeforeId=2024-us-senate); a prior
-        # reorder can push it to the end, so it must be pulled back in front of the anchor.
-        anchor = _supplemental("current-senate")["insertBeforeId"]
-        entries = [{"id": anchor}, {"id": "2022-us-senate"}, {"id": "current-senate"}]
-        reposition_supplemental_entries(
-            entries,
-            SUPPLEMENTAL_LEGACY_ELECTIONS,
-            parliaments={"us_senate"},
-        )
-        assert _ids(entries) == ["current-senate", anchor, "2022-us-senate"]
+        # A prior reorder can push a supplemental with insertBeforeId to the end, so it must
+        # be pulled back in front of the anchor.
+        descriptors = [{"id": "snapshot", "parliament": "us_senate", "insertBeforeId": "2024-us-senate"}]
+        entries = [{"id": "2024-us-senate"}, {"id": "2022-us-senate"}, {"id": "snapshot"}]
+        reposition_supplemental_entries(entries, descriptors, parliaments={"us_senate"})
+        assert _ids(entries) == ["snapshot", "2024-us-senate", "2022-us-senate"]
 
     def test_insert_after_anchor(self) -> None:
         # 2019-general-changed-boundaries is configured to sit just after 2024-general.
@@ -91,20 +87,12 @@ class TestRepositionSupplementalEntries:
         assert _ids(entries) == ["2024-general", "2019-general"]
 
     def test_is_idempotent(self) -> None:
-        anchor = _supplemental("current-senate")["insertBeforeId"]
-        entries = [{"id": anchor}, {"id": "current-senate"}]
-        reposition_supplemental_entries(
-            entries,
-            SUPPLEMENTAL_LEGACY_ELECTIONS,
-            parliaments={"us_senate"},
-        )
+        descriptors = [{"id": "snapshot", "parliament": "us_senate", "insertBeforeId": "2024-us-senate"}]
+        entries = [{"id": "2024-us-senate"}, {"id": "snapshot"}]
+        reposition_supplemental_entries(entries, descriptors, parliaments={"us_senate"})
         once = _ids(entries)
-        reposition_supplemental_entries(
-            entries,
-            SUPPLEMENTAL_LEGACY_ELECTIONS,
-            parliaments={"us_senate"},
-        )
-        assert _ids(entries) == once == ["current-senate", anchor]
+        reposition_supplemental_entries(entries, descriptors, parliaments={"us_senate"})
+        assert _ids(entries) == once == ["snapshot", "2024-us-senate"]
 
 
 class TestApplySupplementalPrebuilt:

@@ -1,0 +1,25 @@
+{
+  "generated": "2018-12-01T10:00:00.000Z",
+  "dates": ["2018-11-27"],
+  "races": [
+    {
+      "race_id": "ms-27192-2018-11-27",
+      "race_slug": "ms-senate-general-election-runoff-2018-11-27",
+      "race_type": "senate",
+      "election_type": "special-general-election-runoff",
+      "election_date": "2018-11-27",
+      "runoff": true,
+      "office": "U.S. Senate",
+      "seat": "",
+      "state_id": "MS",
+      "uncontested": false,
+      "result": "winner",
+      "precincts_reporting": 1797,
+      "precincts_total": 1797,
+      "candidates": [
+        {"candidate_id": "hyde-smith-28529", "first_name": "Cindy", "last_name": "Hyde-Smith", "party_id": "republican", "runoff": false, "winner": true, "votes": 479278},
+        {"candidate_id": "espy-66875", "first_name": "Mike", "last_name": "Espy", "party_id": "democrat", "runoff": false, "winner": false, "votes": 410693}
+      ]
+    }
+  ]
+}

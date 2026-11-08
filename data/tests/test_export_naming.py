@@ -17,6 +17,7 @@ import pytest
 from models import ElectionType
 from export_elections import (
     file_stem_for_election,
+    is_folded_senate_special,
     legacy_party_key_for_vote,
     manifest_id_for_election,
     manifest_name_for_election,
@@ -44,12 +45,19 @@ class _Vote:
 
 
 class _Election:
-    """Minimal stand-in for an Election row (type / name / year)."""
+    """Minimal stand-in for an Election row (type / name / year / parent)."""
 
-    def __init__(self, name: str, type: ElectionType, year: int = 2024) -> None:
+    def __init__(
+        self,
+        name: str,
+        type: ElectionType,
+        year: int = 2024,
+        parent_election_id: int | None = None,
+    ) -> None:
         self.name = name
         self.type = type
         self.year = year
+        self.parent_election_id = parent_election_id
 
 
 class TestLegacyPartyKeyForVote:
@@ -260,6 +268,30 @@ class TestManifestIdForElection:
     def test_fallback_slugifies_year_name(self) -> None:
         election = _Election("Some By-Election", ElectionType.by_election, year=2025)
         assert manifest_id_for_election(election) == "2025-some-by-election"
+
+
+class TestFoldedSenateSpecial:
+    """A same-day Senate special (a child us_senate election) never shares its parent's names."""
+
+    _PARENT = _Election("2020 US Senate Election", ElectionType.us_senate, year=2020)
+    _SPECIAL = _Election(
+        "2020 US Senate Special Election", ElectionType.us_senate, year=2020, parent_election_id=1
+    )
+
+    def test_only_a_us_senate_child_is_folded(self) -> None:
+        assert is_folded_senate_special(self._SPECIAL)
+        assert not is_folded_senate_special(self._PARENT)
+        # A by-election also has a parent, but is folded by a different path.
+        by_election = _Election("Some By-Election", ElectionType.by_election, parent_election_id=1)
+        assert not is_folded_senate_special(by_election)
+
+    def test_special_stem_differs_from_parent(self) -> None:
+        assert file_stem_for_election(self._PARENT) == "us-senate-2020"
+        assert file_stem_for_election(self._SPECIAL) == "us-senate-2020-special"
+
+    def test_special_manifest_id_differs_from_parent(self) -> None:
+        assert manifest_id_for_election(self._PARENT) == "2020-us-senate"
+        assert manifest_id_for_election(self._SPECIAL) == "2020-us-senate-special"
 
 
 class TestManifestNameForElection:

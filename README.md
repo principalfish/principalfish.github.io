@@ -941,8 +941,9 @@ All commands in this section run from `data/`.
 ```
 
 The full export includes supported UK and US elections and, when present in the
-database, the latest Westminster UNS simulation and latest forecast for each US
-contest. It writes each page's manifest and data files.
+database, the latest Westminster UNS simulation and the latest US presidential
+forecast (the House and Senate forecasts only when `EXPORT_US_CHAMBER_FORECASTS` is
+on, see below). It writes each page's manifest and data files.
 
 Election placement is owned by `data/scripts/export/ordering.py`. The previous
 generated manifest remains an ordering input; the shell does not define election
@@ -957,8 +958,27 @@ rules in sequence:
    is retained.
 2. Reapply supplemental anchors. A non-null `insertBeforeId` takes precedence
    over `insertAfterId`; a missing selected anchor appends the entry.
-3. Promote forecasts to their parliament's first occurrence, preserving relative
+3. List each US chamber's results newest first (`us_house` and `us_senate` only; the
+   President list keeps its curated order). Newness is the year the election id starts
+   with, so a future 2028 result lands at the top and an imported older year
+   (`2016-us-house`) lands in its place. The Senate's `current-senate` snapshot is pinned
+   directly after the newest result. The Predict / Poll tracker links are not entries:
+   the left bar places them after the newest result (House) or after Current Senate
+   (Senate, via `predict.chamberElectionId`).
+4. Promote forecasts to their parliament's first occurrence, preserving relative
    forecast and non-forecast order without regrouping interleaved parliaments.
+
+**US House and Senate forecasts are switched off.** The module constant
+`EXPORT_US_CHAMBER_FORECASTS` in `data/scripts/export_elections.py` is `False`, so the
+export drops the `us_house_model` / `us_senate_model` elections before any page is
+written: no `current-us-house` / `current-us-senate` ("2026 Prediction") manifest entries,
+no `us-house-forecast.json` / `us-senate-forecast.json` result files (the export never
+deletes result files, so the two committed ones were removed by hand). The presidential
+forecast is unaffected. Model runs still record to the database and the trends; to
+publish chamber forecasts again, set the constant to `True` and re-export (see "2028 model
+run: before you start" in section 12). Old `?election=current-us-house` /
+`?election=current-us-senate` links no longer match an election; the page then opens that
+parliament's predict-anchor election (the 2026 result) instead of showing an error.
 
 Initial supplemental registration replaces existing IDs in place. Current
 Parliament initially follows `current-prediction` (or leads if absent); restored
@@ -974,12 +994,20 @@ Dry-run:
 ./election_data/bin/python scripts/export_elections.py --dry-run
 ```
 
+The export checks its inputs (pre-built maps, map templates, supplemental files) before
+writing anything: a real run with any missing fails with nothing written, and a dry run
+prints each as "Missing (a real export would fail): …" and carries on.
+
 ### Targeted exports
 
 ```bash
 ./election_data/bin/python scripts/export_elections.py --election-name "2019 General Election" --output-file /tmp/2019.json
 ./election_data/bin/python scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
 ```
+
+`--election-name` on a folded Senate special (a same-day special such as
+"2020 US Senate Special Election") is refused: its results ship inside the parent
+election's payload, so export the parent instead.
 
 ### Metadata-only manifest refresh
 
@@ -1013,7 +1041,84 @@ for supported fields, selection rules, and shell transformations.
 	- top-level: `{"schema":"pf-results-v4","seats":[...]}`
 	- seat keys: `n` (seat name), `r` (region), `w` (winner), `e` (electorate), `m` (majority), `t` (turnout), `p` (party rows)
 	- party row: `[partyKey, total, name]`
+	- optional seat keys, emitted only when they apply (older payloads have none of them):
+		- `ev`: Electoral College votes (presidential seats only)
+		- `c`: `false` for an uncalled seat (absent when called)
+		- `pc`: percent of the expected vote counted, to one decimal place; uncalled seats only, when known
+		- `sp`: `true` when the top candidates share a party (top-two / jungle races, merged into one row)
+		- `rd`: the decisive round, `"rcv-final"` or `"runoff"`, when the first round did not decide the seat
+		- `pv` (US Senate seats and `specials` entries): `{w, p}`, the previous result for the same state and Senate class, so
+		  an off-cycle seat can be compared with its own last race. `w` is the previous winner's party ref (omitted when
+		  that result had none) and `p` its party rows `[[partyRef, votes], ...]`, without candidate names. It is the most
+		  recent earlier `us_senate` election, regular or special, with a seat for that state and class (classes come from
+		  `election_seat_status.senate_class`; a seat or earlier result with no class is skipped). Only seats whose class
+		  differs from the election's regular class (the class most of its seats have) get it: the standalone specials
+		  (Florida and Ohio 2026) and every `specials` entry. Regular seats are compared through the entry's comparison
+		  election instead. Absent when no earlier election holds that state and class.
+	- an uncalled seat's `w` is the party leading on votes; with no positive votes or a tie for the lead, `w` is omitted
+	- optional top-level `specials` (US Senate): same-day special elections held alongside a state's regular race, one
+	  `{n, cl, w, p, c, pc, sp, rd, pv}` per state, sorted by name. `cl` is the seat's Senate class; the other keys follow
+	  the seat rules above, and there is no `r`. The special has no result file or manifest entry of its own.
+- a party may appear in more than one `p` row of a seat. That happens only when a committed seat override splits a
+  merged same-party result into its individual candidates (normally the export merges them into one row per party). The
+  front end sums the rows for party totals, tallies and the ±, and, when it sees a repeated party, lists the individual
+  rows (no per-row deltas) in the seat popup instead of the per-party rows, and the popup's majority (and the majority
+  filters) and the second-place filter use the top two candidates rather than the top two party totals.
+- Seat candidate overrides: `data/scripts/export/seat_overrides.json`, applied on every export by
+  `scripts/export/seat_overrides.py`, replaces one uncalled seat's `p` with the individual candidates and sets `w` to the
+  individual vote leader. It is keyed by election name (exact, e.g. `"2026 US Senate Election"`), then seat name
+  (`"Alaska"`), each `{"w": partyKey, "p": [[partyKey, votes, name], ...]}` with rows in descending vote order (no tie for the top count) and `w` the party of the first row, the individual leader; party keys
+  are resolved to manifest ids at export. It exists for the 2026 Alaska Senate seat, where Sullivan and Heikes (both
+  Republican) merge into one row that outvotes Peltola although Peltola leads individually. Stale guard: the override holds
+  static numbers, so it is applied only while the seat is still uncalled and each party's override rows sum to the seat's
+  current merged party totals; otherwise the export prints a `WARNING` and keeps the merged rows (update or delete the
+  entry; the export never fails over it). A malformed file stops the export with a clear error. Delete the Alaska entry once
+  the ranked-choice final round is imported.
 - Frontend loader supports both compact and legacy result formats.
+
+### Current Senate snapshot
+
+`uselectionmaps/data/results/senate-current.json` (`pf-senate-current-v1`) is a prebuilt
+snapshot of all 100 seats, not an exported election: per state `n`, `r`, `w` (the pair's
+shared party, or `split`) and two `members`, each `{party, name, class}` with the permanent
+Senate class 1/2/3. Two generators write it:
+
+- `old_data/scripts/usa/convert_senate_current.py` builds it from congress-legislators data
+  (the pre-2026 chamber).
+- `scripts/us_results/current_senate.py` derives it from the 2026 results: the 65 holdovers
+  (every senator whose seat the 2026 election did not contest) plus the 2026 winners, being
+  the 33 class 2 regular winners and the Florida and Ohio special winners (class 3), named
+  from the winning party's row. It reads the committed `old_data/files/usa/senate-2026.json`
+  (and the specials file its `meta.special_file` names, a plain file name in the same
+  folder), never the database.
+
+```
+cd data
+./election_data/bin/python scripts/us_results/cli.py current-senate --dry-run   # counts only, writes nothing
+./election_data/bin/python scripts/us_results/cli.py current-senate             # rewrite the snapshot in place
+```
+
+Options: `--snapshot` (input), `--election-file` (default `senate-2026.json`), `--out`
+(default the snapshot). The console's US results page has the same action, **Rebuild Current
+Senate**; importing results never runs it, and the export is a separate step afterwards.
+The build refuses (non-zero exit, nothing written) if the election lacks a class 2 state or the
+Florida/Ohio special, a contested seat has no sitting senator, a snapshot member is malformed,
+a state does not end with two members of different classes, or the chamber is not 100 members;
+a winner without a name gets a placeholder and a warning. It is idempotent: seats are replaced
+by what the election contested, not by who held them, so the input may be the converter's
+snapshot or its own earlier output and the same election always gives identical bytes (sorted
+by state, members by class). Re-run it as the 2026 counts finish.
+
+Uncalled races are unknown members, never the current leader: `{"party": null, "name": null,
+"class": 2, "c": false, "pc": 62.5}` (`c: false` is the results payload's uncalled flag; `pc`
+is the percent counted, left out when unknown or not a number from 0 to 100, with a warning).
+A state is coloured by its called members only. With one called and one uncalled member, `w`
+is the called member's party and the state carries no `c`: the map draws it in that colour,
+solid, until the other race is called. With both uncalled the seat carries `c: false` and no
+`w`, and the map draws it in the neutral no-result colour (not a party, not `split`). The
+chamber tally counts such a member in the total and the "N uncalled" line only, and no party
+filter matches it. The Senate model reads only each member's class from this file, so uncalled
+members do not affect its allowlist.
 
 ### Topo output behavior
 
@@ -1025,8 +1130,9 @@ for supported fields, selection rules, and shell transformations.
 
 ## 11) US polls and forecasts
 
-Everything below runs from `data/` (environment active). The US side has three
-maps — "US House Districts 2024", "US Presidential 2024" and "US Senate 2024" —
+Everything below runs from `data/` (environment active). The US side has these
+maps — "US House Districts 2024", "US House Districts 2026" (the 2026 redraw), "US House Districts
+2012 cycle" (2018-20), "US Presidential 2024" and "US Senate 2024" —
 all regioned by the 9 Census divisions. State and district polls are attached to
 a **seat** on the poll, never by re-pointing seats to state regions (front-end
 Predict depends on the divisions).
@@ -1105,6 +1211,9 @@ chamber, and **Run US Models** on the home page has one for all three (see
 
 ### Model runs
 
+Note: the House and Senate forecasts are currently not exported (`EXPORT_US_CHAMBER_FORECASTS`
+in `scripts/export_elections.py`, see "Full export"); the runs and the poll tracker still work.
+
 **Run US Models** (home page) runs House → President → Senate → export. Its
 **Rebuild all US history** box appends `--rebuild-history` to all three runners
 (each under the long rebuild timeout), after a confirmation: one blocking request
@@ -1142,8 +1251,8 @@ Each runner also takes `--dry-run`, `--as-of-date`, `--half-life-days`, and
 (within the poll window, using the daily run's window rather than
 `--lookback-days`), then does the normal run. Use it after anything that moves
 the whole history: a new tracked matchup, a baseline override, or new Senate
-seats. **Run it once for the Senate**, so its trend series moves from 33 to 35
-seats. It picks its own range and its own as-of date, so combining it with
+seats. **Run it once for the Senate** after the cycle rolls, so its trend series
+rebuilds onto the new field (the 34 Class-3 seats for 2028). It picks its own range and its own as-of date, so combining it with
 `--start-date`/`--end-date` or `--as-of-date`/`--as-of-days-back` is a usage
 error (exit 2): a past as-of would delete every trend point above it and rebuild
 only up to it. If the whole series lies outside the poll window, the points are
@@ -1151,28 +1260,52 @@ replaced by the poll window `[first poll, as-of]`. Points outside the new scope
 are dropped only after all required replacement dates succeed. A partial failure
 retains those points and reports failure, so the console does not export the run.
 
-### Senate specials (Ohio, Florida)
+### Senate specials and per-seat baselines (Ohio, Florida)
 
-Specials are listed in `uselectionmaps/data/map-modes-shell.json`, map mode `"23"`,
-under `senateSpecialElections`:
+Two keys in `uselectionmaps/data/map-modes-shell.json`, map mode `"23"`, move
+individual seats off the field's baseline.
+
+`senateSpecialElections` lists off-cycle races held alongside the regular class:
 
 ```json
 { "seat": "Ohio", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate" }
 ```
 
 Entries whose `year` matches `parliamentFeatures.us_senate.nextElectionYear` join
-the Senate model (35 seats instead of the 33 class-2 seats), using that baseline
-election's votes for that seat only. The export copies the key into
-`map-modes.json` (dropping past years), and the Senate Predict "Full Senate"
-replaces that state's class-3 member. Edit the shell and re-export when the cycle
-changes. A state with both a regular and a special race in one cycle cannot be
+the Senate model (and Predict) as extra seats, using that baseline election's
+votes for that seat only. The export copies the key into `map-modes.json`
+(dropping other years), and the Senate Predict "Full Senate" replaces that
+state's member of the named class. It is empty after the 2026 specials were held.
+A state with both a regular and a special race in one cycle cannot be
 represented; the queue reports it as a page failure.
 
-The saved Senate forecast's **Seats up** view compares each seat with its previous
-election: for 2026, the regular seats use 2020 results and Ohio and Florida use
-their declared 2022 baselines. These combined results drive seat and vote-share
-changes, gains and seat popups. If a required baseline is unavailable, the forecast
-still displays but its comparison is hidden and labelled "Comparison unavailable".
+`senateBaselineOverrides` lists seats of the regular class whose last contest was a
+special since the class voted, so they swing from that result instead:
+
+```json
+{ "seat": "Ohio", "class": 3, "baselineElectionId": "2026-us-senate" }
+```
+
+The `class` (1 to 3, required) is the class of the overridden seat: a state also holds
+seats of other classes, so the override applies only while that class is the one being
+contested (Florida's and Ohio's Class-1 seats in 2030 are not rebased). It has no year
+and is not expired by the export, so remove the record once its class has voted again. For 2028 the Senate swings Class 3
+from `2022-us-senate`, except Florida and Ohio, which swing from
+`2026-us-senate`. The Senate model reads the same key, so the model and Predict
+agree on each seat's baseline.
+
+A saved Senate forecast (the current one, or an archived one from an earlier cycle)
+gets **Seats up** and **Full Senate** tabs. It is recognised as a Senate model
+election, not by the predict anchor, and the seats-up tab is labelled with the cycle
+the forecast projects (the leading year of its name, "2026 Prediction"). **Seats up**
+compares each seat with its previous election: for the 2026 forecast, the regular
+seats use 2020 results and Ohio and Florida use the baselines their
+`senateSpecialElections` entries declare for that year. These combined results drive
+seat and vote-share changes, gains and seat popups. If a required baseline is
+unavailable, the forecast still displays but its comparison is hidden and labelled
+"Comparison unavailable". The export keeps only the specials of the shell's next
+election year, so once Predict rolls to 2028 the archived 2026 forecast has no
+Ohio and Florida baselines in the manifest and shows "Comparison unavailable".
 **Full Senate** compares the projected chamber with current Senate membership;
 returning to **Seats up** restores the per-seat election comparison.
 
@@ -1228,7 +1361,161 @@ that database.
    ./election_data/bin/python models/us/run_us_senate_model.py --since-days-back 60 --rebuild-history
    ./election_data/bin/python scripts/export_elections.py
    ```
-   Then `uselectionmaps/data/results/us-senate-forecast.json` should have 35 seats,
-   including Ohio and Florida.
+   While `EXPORT_US_CHAMBER_FORECASTS` is off (the default) the export does not publish the
+   House or Senate forecast; with it on, `uselectionmaps/data/results/us-senate-forecast.json`
+   should have 34 seats (the 2028 Class 3 field, including Ohio and Florida).
+
+---
+
+## 12) US results from NYT (House and Senate, 2018-2026)
+
+One toolchain, `data/scripts/us_results/`, fetches the New York Times / AP results for
+every US House and Senate general election from 2018 to 2026, converts them to the
+committed election JSON the importers already read, and loads them into the database.
+The House 2022-24 and Senate 2020-24 files replace the FiveThirtyEight data (election ids are
+kept); House 2018 and 2020 and Senate 2018 are new.
+
+- **Source**: NYT's static results JSON on its public CDN only (never the HTML pages,
+  which sit behind a captcha). The URL table, schema adapters (A: 2024-26, A2: 2022,
+  B: 2020, C: 2018) and the runoff files (GA Senate 2021 and 2022, MS Senate 2018, LA-05 2020) are
+  in `scripts/us_results/sources.py` and `adapters.py`. LA-05 2026 has no runoff file yet
+  (its December runoff); until then the seat stays uncalled on its November first round.
+- **Credit**: an election imported from NYT carries a source note ("Results: The New York
+  Times / AP. Provisional until certified." while the newest cycle has uncalled or
+  uncertified races), shown as a line under the map. It is not in seat popups.
+- **Cache**: downloaded files are kept outside git, in `NYT_CACHE_DIR` (default
+  `/home/philiph/dbs/nyt-cache`, see `.env_example`), as `<year>/<chamber>-<kind>-<UTC
+  timestamp>.json` plus a `-latest` pointer. Only the converted election JSON is committed.
+
+### Commands
+
+From `data/`, once per cycle and chamber. `fetch` downloads, `convert` writes
+`old_data/files/usa/{house,senate}-<year>.json` (plus `senate-<year>-special.json` when a
+special shares a state with its regular race), `import` loads the committed files, `all`
+does the three. Every run prints a diff against the committed file and the database
+(winner changes, newly called seats, % counted, the largest vote changes); against the 538
+files for 2020-2024 it doubles as a check of the NYT data.
+
+```bash
+./election_data/bin/python scripts/us_results/cli.py all --year 2026 --chamber house --dry-run   # writes nothing
+./election_data/bin/python scripts/us_results/cli.py all --year 2026 --chamber house --refresh   # update in place, ids kept
+./election_data/bin/python scripts/us_results/cli.py all --year 2026 --chamber senate --offline --refresh
+```
+
+Options: `--refresh` (update existing elections in place), `--dry-run` (no cache, file or
+database writes), `--offline` (`fetch` and `all`: use the newest cached file instead of
+downloading; `convert` always reads the cache), `--cache-dir`, `--out-dir`.
+Importing never exports: run `scripts/export_elections.py` afterwards. `scripts/rebuild_database.py`
+replays the committed `house-*`/`senate-*` files (specials right after their regular year).
+
+The data console has the same flow at `/us/results` (the **Import US Results (NYT)** button on
+the home page): choose year and chamber, preview every number (files and times, a row per
+race, the party mapping, warnings, the diff), confirm to import (existing elections are refreshed in place, as with `--refresh`), then press the separate
+**Export to site** button on the result page.
+**Rebuild Current Senate** (see "Current Senate snapshot" in section 10) is a third, separate
+button.
+
+**Refresh cadence**: manual. While counts finish, re-run the import for the cycle (`all
+... --refresh`); each run replaces that election's votes and statuses in place. Re-export
+when you want the site to update. After the December LA-05 runoff is published, add its URL
+to `sources.py` and re-run House 2026.
+
+### Maps
+
+The Senate uses map **23** for every year. District sets for the House, one map id each: **21** (cb_2024 cd119) for 2022 and 2024, **24** for 2026,
+**25** (cb_2018 cd116) for 2018 and 2020. Map 24 is map 21 with the nine states that were
+redrawn (AL, CA, FL, LA, NC, OH, TN, TX, UT) replaced by the Census 120th-Congress TIGER/Line
+files; Missouri passed a new plan but 2026 ran on the 2024 one, so it is not replaced. Known
+inaccuracy: North Carolina's 2019 court plan (used in 2020) is in no Census file, so NC 2020 is
+drawn on the 2018 boundaries. The per-state source table is
+`old_data/scripts/usa/house_2026_sources.py`; when Census publishes cartographic 120th-Congress
+files, drop `REDRAWN_2026` there and rebuild.
+
+Rebuild a map (needs `ogr2ogr`/GDAL and `mapshaper` on the PATH; downloads about 100 MB of
+Census files into the scratch folder, once):
+
+```bash
+./election_data/bin/python old_data/scripts/usa/build_house_topojson.py --map 24 --fetch /tmp/house-maps \
+  --out ../uselectionmaps/data/maps/map-24.topo.json                 # --map 25 for the 2012-cycle set
+```
+
+To check a map against an election, `old_data/scripts/usa/check_redistricting.py` scores it
+against NYT's county results; give it the old map too and it lists the states whose score
+drops, i.e. the redrawn ones:
+
+```bash
+./election_data/bin/python old_data/scripts/usa/check_redistricting.py \
+  --nyt <nyt-cache>/2026/house-general-<timestamp>.json \
+  --districts ../uselectionmaps/data/maps/map-24.topo.json \
+  --old ../uselectionmaps/data/maps/map-21.topo.json \
+  --counties cb_2024_us_county_500k/cb_2024_us_county_500k.shp   # Census county shapefile
+```
+
+The importer refuses to refresh an election onto a different map, or to reuse a map id
+that belongs to another parliament; confirm ids 24 and 25 are free in the target database
+before the first import.
+
+### Live runbook (existing database)
+
+Run in this order. Each step writes to the live database or the site data, so back up first
+and take them one at a time.
+
+1. **Back up** — `./election_data/bin/python scripts/backup_db.py` (and the console's
+   **Backup now**). Stop the console and any server that holds the database.
+2. **Migrate** — adds `election_seat_status` and `elections.source_note`. Idempotent, one
+   transaction. Until it has run, the console, export and importers on this code fail on any
+   `elections` query.
+   ```bash
+   ./election_data/bin/python scripts/migrate_add_us_result_status.py --dry-run
+   ./election_data/bin/python scripts/migrate_add_us_result_status.py
+   ```
+3. **Import**, dry run first, for 2018, 2020, 2022, 2024 and 2026 and both chambers. Read the
+   diff for House 2022-24 and Senate 2020-24 against the 538 data: no winner should change (known differences: NYT
+   has Alaska's 2022 Senate RCV final round and Osborn as an independent in Nebraska 2024).
+   ```bash
+   for year in 2018 2020 2022 2024 2026; do for chamber in house senate; do
+     ./election_data/bin/python scripts/us_results/cli.py all --year $year --chamber $chamber --refresh --dry-run
+   done; done
+   # then without --dry-run, one cycle at a time
+   ```
+4. **Current Senate** — needs the converted `senate-2026.json` (and its specials file if there
+   is one) from step 3; it reads the files, not the database. `current-senate --dry-run` prints the
+   holdover, winner and uncalled counts; then write it.
+   ```bash
+   ./election_data/bin/python scripts/us_results/cli.py current-senate --dry-run
+   ./election_data/bin/python scripts/us_results/cli.py current-senate
+   ```
+   `EXPECTED_SPECIALS_2026` in `scripts/us_results/current_senate.py` is hard-coded to the
+   Florida and Ohio Class-3 specials of 2026 and the build refuses without them: edit it at
+   the next cycle that has Senate specials.
+5. **Export** — `scripts/export_elections.py --dry-run` to see the plan (the maps 24 and 25
+   must exist), then the real run. This regenerates `map-modes.json` from the shell (mapModes
+   24 and 25, the 2028 predict rollover) and writes the result files, including the new
+   per-seat status fields and `sourceNote`.
+6. **Check** in a browser (`./server.sh`): the uncalled seats are hatched or neutral, the
+   source line shows under the map, and the Predict views open on the 2026 result.
+
+### 2028 model run: before you start
+
+The predict views already roll over to 2028, but the models were not re-run. Before the first
+2028 House or Senate run:
+
+- Bump `US_MODEL_COMPARISON_IDS` in `scripts/export/manifest.py` to `2026-us-house` and
+  `2022-us-senate`. It is keyed by election type, not by cycle, so it still points at 2024 and
+  2020 and the new forecasts would compare against the wrong results. The bump also moves the
+  baselines of the archived 2026 forecasts, so archive them first (last item).
+- The House runner now writes on map 24 (it was map 21), so its trend publish rebuilds
+  `us-house-trends.json` from map 24 only and drops the archived 2026 House trend series. Keep
+  a copy of the file, or archive the series, first.
+- House district polls are stored on map-21 seats, so on map 24 the House model sees no
+  district polls (the national generic ballot is unaffected). Repoint the poll importers to
+  the new map before the 2028 House run.
+- Set `EXPORT_US_CHAMBER_FORECASTS = True` in `scripts/export_elections.py`. It is off, so the
+  House and Senate forecasts are not exported at all until it is switched back on.
+- Every House and Senate forecast is exported as `current-us-house` / `current-us-senate` and
+  labelled "2026 Prediction" (`scripts/export/naming.py`, `manifest_name_for_election`), so a
+  2028 run would collide with the 2026 one; bump the label with the cycle. Archive the 2026 forecast under its own id first; the
+  archived forecast also needs its own Florida/Ohio baselines and chamber (currently it shows
+  "Comparison unavailable" in Seats up, and its Full Senate merges into the current chamber).
 
 ---

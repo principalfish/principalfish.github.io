@@ -3,13 +3,13 @@
   "slug": "restructure-data-folder-and-console",
   "title": "Reorganise data/ by pipeline role",
   "mode": "refactor",
-  "state": "planned",
-  "branch": "restructure-data-folder",
+  "state": "building",
+  "branch": "claude/restructure-data-folder-e05123",
   "base": "master",
   "gh_issue": 82,
   "build_model": null,
   "created": "2026-11-08 15:09",
-  "updated": "2026-11-08 16:06",
+  "updated": "2026-11-08 16:13",
   "done": null,
   "local": [
     {
@@ -17,6 +17,16 @@
       "name": "local_7fd00d5d-402a-4490-8fa8-e59f02ab44b2",
       "added": "2026-11-08 16:06",
       "note": "builder: restructure-data-folder-and-console"
+    },
+    {
+      "kind": "worktree",
+      "name": "/home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123",
+      "added": "2026-11-08 16:13"
+    },
+    {
+      "kind": "branch",
+      "name": "claude/restructure-data-folder-e05123",
+      "added": "2026-11-08 16:13"
     }
   ]
 }

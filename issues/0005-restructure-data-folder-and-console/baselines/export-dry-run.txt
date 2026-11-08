@@ -1,0 +1,57 @@
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/prediction-simulation.json (650 seats)
+Map already in place: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/maps/map-2.topo.json
+Would write uncertainty: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/prediction-uncertainty.json (12 regions)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/holyrood-general-2026.json (129 seats)
+Pre-built map already in place: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/maps/map-12.topo.json
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/uk-general-2024.json (650 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/holyrood-general-2021.json (129 seats)
+Pre-built map already in place: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/maps/map-11.topo.json
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/holyrood-general-2021-changed-boundaries.json (129 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/uk-general-2019.json (650 seats)
+Map already in place: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/maps/map-1.topo.json
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/uk-general-2017.json (650 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/holyrood-general-2016.json (129 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/uk-general-2015.json (650 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/holyrood-general-2011.json (129 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/uk-general-2010.json (650 seats)
+Would write supplemental results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/uk-general-2019-changed-boundaries.json (from 2019election_new.json)
+Would write composite: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/results/current-parliament.json (650 seats, 6 overrides)
+Would write manifest: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/electionmaps/data/map-modes.json (15 elections)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-forecast.json (56 seats)
+Pre-built map already in place: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/maps/map-22.topo.json
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-house-2026.json (435 seats)
+Pre-built map already in place: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/maps/map-24.topo.json
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-senate-2026.json (35 seats)
+Pre-built map already in place: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/maps/map-23.topo.json
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-house-2024.json (435 seats)
+Pre-built map already in place: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/maps/map-21.topo.json
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-2024.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-senate-2024.json (33 seats)
+Folding '2024 US Senate Special Election' into its parent election's results
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-house-2022.json (435 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-senate-2022.json (34 seats)
+Folding '2022 US Senate Special Election' into its parent election's results
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-house-2020.json (435 seats)
+Pre-built map already in place: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/maps/map-25.topo.json
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-2020.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-senate-2020.json (34 seats)
+Folding '2020 US Senate Special Election' into its parent election's results
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-house-2018.json (435 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-senate-2018.json (33 seats)
+Folding '2018 US Senate Special Election' into its parent election's results
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-2016.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-2012.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-2008.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-2004.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-2000.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-1996.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-1992.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-1988.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-1984.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-1980.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-1976.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-1972.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-1968.json (56 seats)
+Would write results: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/us-president-1964.json (56 seats)
+Would register prebuilt supplemental: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/results/senate-current.json
+Would write manifest: /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/uselectionmaps/data/map-modes.json (28 elections)

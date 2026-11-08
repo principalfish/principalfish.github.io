@@ -51,3 +51,5 @@
 - 2026-11-08 15:57 · redesign-data-console-into-five-sections (0006) · GitHub issue #83
 - 2026-11-08 16:00 · redesign-data-console-into-five-sections (0006) · investigating → planned
 - 2026-11-08 16:06 · restructure-data-folder-and-console (0005) · tracking session local_7fd00d5d-402a-4490-8fa8-e59f02ab44b2
+- 2026-11-08 16:13 · restructure-data-folder-and-console (0005) · branch = claude/restructure-data-folder-e05123
+- 2026-11-08 16:13 · restructure-data-folder-and-console (0005) · planned → building

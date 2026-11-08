@@ -1,0 +1,88 @@
+Rebuild pipeline: 43 steps (dry run — nothing executed)
+
+   1. Import parties
+      import_parties.py
+   2. Bootstrap US electoral vote allocations
+      migrate_us_electoral_votes.py --legacy-forecast-target-year 2028
+   3. Import Westminster geometry
+      import_topojson.py --refresh
+   4. Import region populations
+      import_region_populations.py --map-name 'UK Constituencies post 2022' --input /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/westminster/region_populations.csv
+   5. Import Westminster general elections
+      import_general_elections.py --refresh
+   6. Import Holyrood constituency seats
+      import_holyrood_seats.py --refresh
+   7. Import Holyrood elections
+      import_holyrood_elections.py --refresh
+   8. Import 2018 US House Election
+      import_house_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/house-2018.json --year 2018 --name '2018 US House Election' --refresh
+   9. Import 2020 US House Election
+      import_house_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/house-2020.json --year 2020 --name '2020 US House Election' --refresh
+  10. Import 2022 US House Election
+      import_house_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/house-2022.json --year 2022 --name '2022 US House Election' --refresh
+  11. Import 2024 US House Election
+      import_house_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/house-2024.json --year 2024 --name '2024 US House Election' --refresh
+  12. Import 2026 US House Election
+      import_house_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/house-2026.json --year 2026 --name '2026 US House Election' --refresh
+  13. Import 1964 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-1964.json --year 1964 --name '1964 US Presidential Election' --refresh
+  14. Import 1968 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-1968.json --year 1968 --name '1968 US Presidential Election' --refresh
+  15. Import 1972 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-1972.json --year 1972 --name '1972 US Presidential Election' --refresh
+  16. Import 1976 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-1976.json --year 1976 --name '1976 US Presidential Election' --refresh
+  17. Import 1980 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-1980.json --year 1980 --name '1980 US Presidential Election' --refresh
+  18. Import 1984 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-1984.json --year 1984 --name '1984 US Presidential Election' --refresh
+  19. Import 1988 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-1988.json --year 1988 --name '1988 US Presidential Election' --refresh
+  20. Import 1992 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-1992.json --year 1992 --name '1992 US Presidential Election' --refresh
+  21. Import 1996 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-1996.json --year 1996 --name '1996 US Presidential Election' --refresh
+  22. Import 2000 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-2000.json --year 2000 --name '2000 US Presidential Election' --refresh
+  23. Import 2004 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-2004.json --year 2004 --name '2004 US Presidential Election' --refresh
+  24. Import 2008 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-2008.json --year 2008 --name '2008 US Presidential Election' --refresh
+  25. Import 2012 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-2012.json --year 2012 --name '2012 US Presidential Election' --refresh
+  26. Import 2016 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-2016.json --year 2016 --name '2016 US Presidential Election' --refresh
+  27. Import 2020 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-2020.json --year 2020 --name '2020 US Presidential Election' --refresh
+  28. Import 2024 US Presidential Election
+      import_presidential_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/presidential-2024.json --year 2024 --name '2024 US Presidential Election' --refresh
+  29. Import 2018 US Senate Election
+      import_senate_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/senate-2018.json --year 2018 --name '2018 US Senate Election' --refresh
+  30. Import 2018 US Senate Special Election
+      import_senate_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/senate-2018-special.json --year 2018 --name '2018 US Senate Special Election' --parent-name '2018 US Senate Election' --refresh
+  31. Import 2020 US Senate Election
+      import_senate_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/senate-2020.json --year 2020 --name '2020 US Senate Election' --refresh
+  32. Import 2020 US Senate Special Election
+      import_senate_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/senate-2020-special.json --year 2020 --name '2020 US Senate Special Election' --parent-name '2020 US Senate Election' --refresh
+  33. Import 2022 US Senate Election
+      import_senate_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/senate-2022.json --year 2022 --name '2022 US Senate Election' --refresh
+  34. Import 2022 US Senate Special Election
+      import_senate_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/senate-2022-special.json --year 2022 --name '2022 US Senate Special Election' --parent-name '2022 US Senate Election' --refresh
+  35. Import 2024 US Senate Election
+      import_senate_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/senate-2024.json --year 2024 --name '2024 US Senate Election' --refresh
+  36. Import 2024 US Senate Special Election
+      import_senate_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/senate-2024-special.json --year 2024 --name '2024 US Senate Special Election' --parent-name '2024 US Senate Election' --refresh
+  37. Import 2026 US Senate Election
+      import_senate_elections.py --file /home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123/data/old_data/files/usa/senate-2026.json --year 2026 --name '2026 US Senate Election' --refresh
+  38. Import by-election: 2025_Runcorn_and_Helsby_by-election
+      by_election_import.py --url https://en.wikipedia.org/wiki/2025_Runcorn_and_Helsby_by-election --refresh
+  39. Import by-election: 2026_Gorton_and_Denton_by-election
+      by_election_import.py --url https://en.wikipedia.org/wiki/2026_Gorton_and_Denton_by-election --refresh
+  40. Import by-election: 2026_Arbroath_and_Broughty_Ferry_by-election
+      by_election_import.py --url https://en.wikipedia.org/wiki/2026_Arbroath_and_Broughty_Ferry_by-election --refresh
+  41. Import by-election: 2026_Aberdeen_South_by-election
+      by_election_import.py --url https://en.wikipedia.org/wiki/2026_Aberdeen_South_by-election --refresh
+  42. Import by-election: 2026_Makerfield_by-election
+      by_election_import.py --url https://en.wikipedia.org/wiki/2026_Makerfield_by-election --refresh
+  43. Export elections to static data
+      export_elections.py

@@ -7,14 +7,16 @@ Full sweep reports, read-only at master `35e5326c`: `findings/us-importers.md`, 
 - Nothing is built in this chat; done means approved `issue.md` and `plan.md` with current and proposed structure, every caller of what moves, and how behaviour preservation is checked (2026-11-08)
 - Two issues, planned together in this chat, with separate branches and PRs: this one for the folders, a new one for the console (user, 2026-11-08)
 - `data/` is organised role first, jurisdiction second (user, 2026-11-08)
-- `model_support/` and the Westminster calibrate/validate scripts move now, not after 0003 (user, 2026-11-08). The user accepted the extra merge work on 0003 and 0004; the hashed report's handling is still open
+- `model_support/` and the Westminster calibrate/validate scripts move now (user, 2026-11-08). How the hashed validation report on master is handled is still open
+- Issues 0003 and 0004 are not a constraint on this work: no sequencing, path or merge decision here is made for their sake, and their plans aren't edited (user, 2026-11-08)
 - Console scope: navigation by family with a fixed stage order, consolidated templates, consistent URLs (28 routes, redirects on GET pages only), missing confirms and small fixes, a run log, and new Holyrood/US diagnostic views (user, 2026-11-08)
 
 ## Open
-- What specifically hurts in the console today? Sets what the rethink is for and how to judge it.
-- Later: are the five pure `migrate_*` scripts applied on the live DB and safe to delete? (they are still given as the upgrade path in the README)
-- Later: is `core/` worth 271 rewritten imports?
-- Later: where the 538 and Wikipedia one-shot converters and the unreferenced TopoJSON builders live.
+- What specifically hurts in the console today? Sets what the rethink is for and how to judge it. Put to the user 2026-11-08, not answered.
+- Which issue goes first? Recommendation: folders first, so the console's internal layout mirrors the finished folders and only moves once. Put to the user, not answered.
+- Hashed validation report after `model_support/` moves. Recommendation: regenerate once with the user's go-ahead (reads the DB read-only, writes only the report) and check the numbers are identical apart from source hashes and paths. Put to the user, not answered.
+- Finished one-off scripts (five applied `migrate_*`, the 538 and Wikipedia converters, the retired Senate converter). Recommendation: keep them, grouped in `scripts/migrations/` and a `one_shot/` folder beside their importers, with tests kept. Put to the user, not answered. The TopoJSON builders stay either way.
+- Is `core/` worth 271 rewritten imports? Recommendation: yes, as the last piece, with a test pinning `.env` to the repo root.
 
 ## Assumed
 - Local `master` and `origin/master` are both `35e5326c` (user pulled during this chat; confirmed)

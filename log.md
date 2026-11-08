@@ -39,3 +39,4 @@
 - 2026-11-08 14:57 · poll-errors-simulation (0001) · review → ready
 - 2026-11-08 14:57 · poll-errors-simulation (0001) · PR #74 description final
 - 2026-11-08 15:03 · poll-errors-simulation (0001) · Full export run on c1993040 at Phil's request: completed, 44 files rewritten, all byte-identical, database unchanged
+- 2026-11-08 15:05 · poll-errors-simulation (0001) · merged → done

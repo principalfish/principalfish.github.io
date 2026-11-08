@@ -46,3 +46,4 @@
 - 2026-11-08 15:44 · restructure-data-folder-and-console (0005) · title = Reorganise data/ by pipeline role
 - 2026-11-08 15:44 · restructure-data-folder-and-console (0005) · GitHub issue #82
 - 2026-11-08 15:44 · restructure-data-folder-and-console (0005) · branch = restructure-data-folder
+- 2026-11-08 15:51 · restructure-data-folder-and-console (0005) · investigating → planned

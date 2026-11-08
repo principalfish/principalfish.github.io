@@ -10,16 +10,30 @@ Full sweep reports, read-only at master `35e5326c`: `findings/us-importers.md`, 
 - `model_support/` and the Westminster calibrate/validate scripts move now (user, 2026-11-08). How the hashed validation report on master is handled is still open
 - Issues 0003 and 0004 are not a constraint on this work: no sequencing, path or merge decision here is made for their sake, and their plans aren't edited (user, 2026-11-08)
 - Console scope: navigation by family with a fixed stage order, consolidated templates, consistent URLs (28 routes, redirects on GET pages only), missing confirms and small fixes, a run log, and new Holyrood/US diagnostic views (user, 2026-11-08)
+- Folders issue goes first; the console issue follows and mirrors the finished folders (user, 2026-11-08)
+- The hashed Westminster validation report is regenerated after `model_support/` moves, with the user's go-ahead at the time (user, 2026-11-08)
+- Finished one-off scripts go in one `data/archive/` folder, outside the normal checks (user, 2026-11-08). The TopoJSON builders stay live
+- Console pain, all four: finding things, running and waiting, inconsistent pages, looks and readability (user, 2026-11-08)
+- Console has five uniform sections: Westminster, Holyrood, House, Senate, President (user: "maybe", 2026-11-08). Each has auto import polls, import poll, view polls, run models with params, view model runs, and delete
+- One global "export elections" with tick boxes for its options (user, 2026-11-08)
+- Section-specific tools stay where they belong, e.g. by-election import for the UK (user, 2026-11-08)
+- Rebuild, backup and restore move to an admin page (user, 2026-11-08)
 
 ## Open
-- What specifically hurts in the console today? Sets what the rethink is for and how to judge it. Put to the user 2026-11-08, not answered.
-- Which issue goes first? Recommendation: folders first, so the console's internal layout mirrors the finished folders and only moves once. Put to the user, not answered.
-- Hashed validation report after `model_support/` moves. Recommendation: regenerate once with the user's go-ahead (reads the DB read-only, writes only the report) and check the numbers are identical apart from source hashes and paths. Put to the user, not answered.
-- Finished one-off scripts (five applied `migrate_*`, the 538 and Wikipedia converters, the retired Senate converter). Recommendation: keep them, grouped in `scripts/migrations/` and a `one_shot/` folder beside their importers, with tests kept. Put to the user, not answered. The TopoJSON builders stay either way.
+- "Import poll" for Holyrood, House, Senate and President: no single-poll importer exists for them today (Westminster has 11 pollster importers). Recommendation: show it only where an importer exists.
+- What the export tick boxes are. Recommendation: sections, then what to write (results, current forecast, metadata), with dry run on by default. Today's flags are mutually exclusive and there is no section filter.
+- Background runs with live progress: the user named running and waiting as a pain, but only a run log has been agreed. Recommendation: include, as the console issue's final pieces.
 - Is `core/` worth 271 rewritten imports? Recommendation: yes, as the last piece, with a test pinning `.env` to the repo root.
 
 ## Assumed
 - Local `master` and `origin/master` are both `35e5326c` (user pulled during this chat; confirmed)
+- "delete polls, delete polls" in the user's console answer means deleting polls and deleting model runs; both exist today
+- `UNOPPOSED_NOMINAL_VOTES` moves into `scripts/us_results/convert.py` before `convert_538_house.py` is archived, because the console needs it at startup
+- Tests that only exercise archived scripts are retired with them; test files that also cover live importers are split, not dropped
+- Background rebuild test on a scratch copy is running; its result decides whether rebuild needs fixing before it moves to the admin page
+
+## Checks run 2026-11-08 (no live database touched)
+- Restore works: `backup.restore_latest` unpacked the newest archive to a scratch path, passed the integrity check, kept the old file as `.prerestore`, and all 15 tables match live row counts
 
 ## Brief corrections, verified against master
 - `convert_538_house.py` is still needed: `scripts/us_results/convert.py:75` imports its constant at module level, and the console imports that at startup. `convert_538_senate.py` is test-only.

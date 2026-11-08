@@ -37,11 +37,11 @@ edit `.env`.
 
 | Variable | Default | What it sets |
 |-|-|-|
-| `DATABASE_PATH` | `/home/philiph/dbs/elections.db` | The live SQLite database; keep it on local disk |
-| `SIMULATIONS_PATH` | `/home/philiph/dbs/simulations/westminster-latest.npz` | Latest Westminster Monte Carlo draws |
+| `DATABASE_PATH` | `~/dbs/elections.db` | The live SQLite database; keep it on local disk |
+| `SIMULATIONS_PATH` | `~/dbs/simulations/westminster-latest.npz` | Latest Westminster Monte Carlo draws |
 | `ELECTIONS_ARCHIVE_DIR` | `~/dbs/elections` | Local database backups |
 | `ELECTIONS_BACKUP_KEEP` | `30` | How many local backups to keep |
-| `NYT_CACHE_DIR` | `/home/philiph/dbs/nyt-cache` | Downloaded NYT results |
+| `NYT_CACHE_DIR` | `~/dbs/nyt-cache` | Downloaded NYT results |
 
 Set these two for a single command instead:
 

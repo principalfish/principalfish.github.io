@@ -2,7 +2,7 @@
 
 The app uses a single local SQLite database. Point it at a file with the
 `DATABASE_PATH` environment variable (see `.env_example`); the default is
-`/home/philiph/dbs/elections.db`. The ORM and the raw-sqlite model read/write
+`~/dbs/elections.db`. The ORM and the raw-sqlite model read/write
 paths both read `DATABASE_PATH`. Copy `.env_example` to `.env` and adjust the
 paths if needed.
 
@@ -48,7 +48,7 @@ From B2 (no local archives, or an older version): list versions with
 
 ```bash
 set -a; . ~/.config/restic/env; set +a
-restic dump <snapshot> /home/philiph/dbs/elections/elections.db > /tmp/elections.restored.db
+restic dump <snapshot> ~/dbs/elections/elections.db > /tmp/elections.restored.db
 sqlite3 /tmp/elections.restored.db "PRAGMA integrity_check"
 # move ~/dbs/elections.db and any -wal/-shm aside, then copy the restored file in
 ```

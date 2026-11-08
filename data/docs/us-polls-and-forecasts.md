@@ -155,7 +155,7 @@ Run once, in order, on a database from before seat and matchup polls. Stop the
 console first. Until step 2 the console, models and export cannot read polls from
 that database.
 
-1. **Back up** — `sqlite3 "$DATABASE_PATH" ".backup /home/philiph/dbs/elections.pre-us-seat-polls-<date>.db"`,
+1. **Back up** — `sqlite3 "$DATABASE_PATH" ".backup $HOME/dbs/elections.pre-us-seat-polls-<date>.db"`,
    plus the console's **Backup now**.
 2. **Migrate** — adds `polls.matchup`, `polls.seat_id`, `poll_rows.candidate_name`
    and the `tracked_matchups` table. Idempotent, one transaction.

@@ -15,7 +15,7 @@ kept); House 2018 and 2020 and Senate 2018 are new.
   Times / AP. Provisional until certified." while the newest cycle has uncalled or
   uncertified races), shown as a line under the map. It is not in seat popups.
 - **Cache**: downloaded files are kept outside git, in `NYT_CACHE_DIR` (default
-  `/home/philiph/dbs/nyt-cache`, see `.env_example`), as `<year>/<chamber>-<kind>-<UTC
+  `~/dbs/nyt-cache`, see `.env_example`), as `<year>/<chamber>-<kind>-<UTC
   timestamp>.json` plus a `-latest` pointer. Only the converted election JSON is committed.
 
 ## Commands

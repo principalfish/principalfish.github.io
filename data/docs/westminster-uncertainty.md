@@ -63,7 +63,7 @@ config reliability uses the deployed scales, rounded to 2 dp (σ_seat 4.90,
 ## One-off upgrade and evidence scripts
 
 `SIMULATIONS_PATH` (see `.env_example`; default
-`/home/philiph/dbs/simulations/westminster-latest.npz`) is where each
+`~/dbs/simulations/westminster-latest.npz`) is where each
 Westminster model run saves its raw Monte Carlo draws, unless run with
 `--no-raw-sims`. The console's Explore simulations pages read that file. It is
 reproducible and not part of the database backups.

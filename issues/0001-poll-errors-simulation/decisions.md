@@ -41,6 +41,7 @@ Each thread's decisions are recorded in full in its plan's Context and Notes und
 - 6g rounding: show the mean seats as whole numbers by largest remainder, so they add up exactly to 650 (or the region's total). No map-colours label (Phil had no preference) (Phil, 2026-11-07).
 - 6g: store the mean in the simulation summary and rerun 2026-10-30 only; largest-remainder ties go to the larger party; exporting a run with no stored mean fails; the poll tracker's seat line becomes the simulated mean, from stored distributions (Phil, 2026-11-07).
 - 6g loop: UK and region whole seats may differ by one (accepted); the tracker always keeps the latest run; keep the note "Map colours show each seat's uniform-swing winner." (Phil, 2026-11-07).
+- 6h (Phil, 2026-11-08): split the map page. Remove Show uncertainty; open on master's UNS view (subtitle, UNS seats, no ranges); a "Show with modelled uncertainty" checkbox below the subtitle, unticked by default, shows today's view when ticked. Ticked table "Mean seats + ranges"; unticked popups "UNS only"; tracker "Line follows its checkbox" (off = UNS `s`, on = mean `sm` + bands) and "Start unticked"; persistence "Session only"; footer below the map: "Poll always, nowcast if ticked".
 
 ## Open
 - Whether to run the branch self-review (Piece 4) before the master merge. Recommended.

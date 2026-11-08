@@ -18,6 +18,16 @@
       "name": "local_c2004f9a-b155-458f-ada1-ebe8ad8b0b0d",
       "added": "2026-11-08 11:05",
       "note": "builder: poll-errors-simulation"
+    },
+    {
+      "kind": "worktree",
+      "name": "/home/philiph/workspace/principalfish.github.io/.claude/worktrees/poll-errors-simulation-de9775",
+      "added": "2026-11-08 11:52"
+    },
+    {
+      "kind": "branch",
+      "name": "poll-errors-simulation",
+      "added": "2026-11-08 11:52"
     }
   ]
 }

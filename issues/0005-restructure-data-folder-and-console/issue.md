@@ -10,7 +10,7 @@ The console's pages don't change here, only its imports. Its redesign is a separ
 
 ## Plan
 
-_2026-11-08 · 3 of 10 pieces done · now: piece 4 in progress_
+_2026-11-08 · 3 of 10 pieces done · now: waiting on review of piece 4_
 
 - [x] **1/10 Editable install, archive folder, dead files** · `4b0f4475`
   Make `data/` installable so scripts can import normally, and create the archive folder.
@@ -18,7 +18,7 @@ _2026-11-08 · 3 of 10 pieces done · now: piece 4 in progress_
   Rename `models.py` so the `models/` folder can be imported normally.
 - [x] **3/10 `inputs/`** · `9a3a0689`
   Move the source data files out of `old_data/files`.
-- [ ] **4/10 UK and poll importers** · in progress
+- [ ] **4/10 UK and poll importers** · waiting on you
   Bring UK results, seed and poll importers together under `importers/`.
 - [ ] **5/10 US importers** · not started
   Move the US importers, and archive the 538 and Wikipedia converters.

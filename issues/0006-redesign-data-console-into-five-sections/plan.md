@@ -6,7 +6,7 @@
 
 Redesign the local Flask data console around five uniform sections (GitHub #83).
 
-**Prerequisite:** built after 0005 (GitHub #82) has merged, branching from the master that contains it. Paths below use the post-0005 layout: `model_support` is `models/support`, `scripts/export*` is `export/`, `polls/importers` is `importers/polls`, `console/importers_registry.py` is `importers/polls/westminster/registry.py`. Line numbers are at `35e5326c`, before that move: re-grep.
+**Prerequisite:** built after 0005 (GitHub #82) has merged, branching from the master that contains it. Paths below use the post-0005 layout: `model_support` is `models/support`, `scripts/export*` is `export/`, `polls/importers` is `importers/polls`, `console/importers_registry.py` is `importers/polls/westminster/registry.py`. Code line numbers are at `35e5326c`, before that move: re-grep. Docs references are at `bd9d4879`, where the root README became a short overview and the console's docs moved to `data/README.md` and `data/docs/`; the README line numbers in `findings/console.md` predate that.
 
 **Read first, on the planner branch:** `../0005-restructure-data-folder-and-console/findings/console.md` has every route, method, template, test assertion and inconsistency. `decisions.md` has the ledger.
 
@@ -179,10 +179,10 @@ Rejected:
     - Manual review: start a Holyrood dry-run model, watch progress, leave and come back.
 
 11. **Docs**
-    - Files: `README.md:738,1267,1457` and the console sections, `AGENTS.md`.
-    - What: document the five sections, URL shape, export page, run log location and retention.
+    - Files: new `data/docs/console.md`; `data/README.md` (its topic list, "Import polls" and "Run local server" sections); `data/docs/us-polls-and-forecasts.md:32,67,70,74,79,87,177-181`; `data/docs/us-results.md:42`; `data/docs/export.md`; `data/docs/database.md`; `README.md` (Data section); `AGENTS.md` if a console command changed.
+    - What: add a console topic page covering the five sections, URL shape, export page, run log location and retention, following the README's split into topic pages. Update the old URLs and the "Run US Models" instructions, which no longer exist after piece 5.
     - Depends on: 10.
-    - Acceptance: docs name only pages and paths that exist.
+    - Acceptance: docs name only pages and paths that exist; no doc mentions "Run US Models" or an old URL; relative links resolve.
     - Tests: none worth writing; docs only.
     - Model: claude-sonnet-5-5
 
@@ -219,3 +219,4 @@ Rules for tests and walks:
 ## Notes
 
 - Follow-up, not part of this issue: full stage-by-stage diagnostics for Holyrood and US.
+- 2026-11-08: Updated for `bd9d4879`, which split the root README. Piece 11 now targets `data/README.md` and `data/docs/*.md`, and adds a `data/docs/console.md` topic page.

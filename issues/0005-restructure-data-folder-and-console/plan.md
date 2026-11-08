@@ -4,7 +4,7 @@
 
 ## Context
 
-Reorganise `data/` by pipeline role, then jurisdiction, with no change in behaviour (GitHub #82). The console redesign is a separate issue that follows this one. Line numbers throughout are at master `35e5326c`.
+Reorganise `data/` by pipeline role, then jurisdiction, with no change in behaviour (GitHub #82). The console redesign is a separate issue that follows this one. Code line numbers are at master `35e5326c`; `bd9d4879` since then changed only docs, so they still hold. Docs references are at `bd9d4879`: the root README is now a short overview, and the data detail lives in `data/README.md` and `data/docs/*.md`.
 
 **Read these on the planner branch, in this issue's folder:**
 - `callers.md`: generated list of every Python import and text reference for each file that moves, grouped by piece. Re-grep when building, since lines drift.
@@ -27,6 +27,7 @@ Reorganise `data/` by pipeline role, then jurisdiction, with no change in behavi
 
 ```
 data/
+  README.md docs/                 runbook and topic pages
   models.py db.py config.py electoral_votes.py backup.py server.py init-test-db.sql
   model_support/                  shared model library, plus Westminster-only modules
   models/{westminster,holyrood,us}/  runners; shadowed by models.py, so not importable
@@ -45,7 +46,7 @@ data/
 
 ```
 data/
-  pyproject.toml server.py run_tests.sh mypy.ini requirements.txt
+  README.md docs/ pyproject.toml server.py run_tests.sh mypy.ini requirements.txt
   core/      schema.py db.py config.py electoral_votes.py backup.py us_geography.py migration_helpers.py
   inputs/    westminster/ holyrood/ us/
   importers/
@@ -88,8 +89,8 @@ Alternatives rejected:
 Every piece also meets the standard proof in **Verification**.
 
 1. **Editable install, archive folder, dead files**
-   - Files: `data/pyproject.toml` (new), `.github/workflows/*` (add the install step), `data/archive/README.md` (new), `data/mypy.ini`, `data/run_tests.sh` if needed; `git mv` of `init-test-db.sql`, `old_data/import_all.sh`, `old_data/scripts/migrate_rename_model_uns.py`; `git rm` of the two tracked `election_data/` files.
-   - What: add a `pyproject.toml` with `packages = []` and `py-modules = []`, installed with `pip install --no-deps -e . --config-settings editable_mode=compat`. That puts `data/` on the path, and later new top-level folders need no reinstall (confirmed in isolation on 2026-11-08). Add `archive/` to mypy's exclude. Remove mypy's ghost `geoalchemy2` and `psycopg2` sections. Capture the baselines listed in Verification.
+   - Files: `data/pyproject.toml` (new), `.github/workflows/*` (add the install step), `data/README.md` ("Python environment" section), `data/archive/README.md` (new), `data/mypy.ini`, `data/run_tests.sh` if needed; `git mv` of `init-test-db.sql`, `old_data/import_all.sh`, `old_data/scripts/migrate_rename_model_uns.py`; `git rm` of the two tracked `election_data/` files.
+   - What: add a `pyproject.toml` with `packages = []` and `py-modules = []`, installed with `pip install --no-deps -e . --config-settings editable_mode=compat`. That puts `data/` on the path, and later new top-level folders need no reinstall (confirmed in isolation on 2026-11-08). Add `archive/` to mypy's exclude. Remove mypy's ghost `geoalchemy2` and `psycopg2` sections. Capture the baselines listed in Verification. Add the install command to `data/README.md`'s setup steps, with the one-time step for an existing venv (`cd data && ./election_data/bin/pip install --no-deps -e . --config-settings editable_mode=compat`), so the setup docs are right from the first commit.
    - Functions: none.
    - Depends on: none.
    - Acceptance: from outside `data/`, the venv's Python can `import db`. CI config installs the package. Baselines saved.
@@ -170,12 +171,12 @@ Every piece also meets the standard proof in **Verification**.
    - Tests: a new test pinning `core.config`'s `.env` path to the repo root; a new test that `test_us_results_fetch.py:206`'s root derivation still holds.
 
 10. **Final path-hack sweep, config and docs**
-    - Files: remaining tests with `sys.path` lines, `data/mypy.ini`, `README.md` (101 lines from `:465`, plus the layout table at `:24-35`), `AGENTS.md:31,32,51`, `.env_example:16,24`, `electionmaps/data/map-modes.md:7,85`, usage docstrings, the comment at `polltracker.js:158`.
-    - What: remove every remaining `sys.path` adjustment (prod and tests) and mypy's bare-module sections. Update docs and add the one-time post-merge step (`cd data && ./election_data/bin/pip install --no-deps -e . --config-settings editable_mode=compat`) to the README.
+    - Files: remaining tests with `sys.path` lines, `data/mypy.ini`, `README.md` (basic commands and Data section), `data/README.md` (the Layout table, rewritten to the new tree), `data/docs/{database,us-results,us-polls-and-forecasts,westminster-uncertainty,export,models}.md`, `electionmapslogic/README.md`, `uselectionmaps/README.md`, `AGENTS.md:33,34,53`, `.env_example:16,24`, `electionmaps/data/map-modes.md:7,85`, usage docstrings, the comment at `polltracker.js:158`. `callers.md` lists each mention.
+    - What: remove every remaining `sys.path` adjustment (prod and tests) and mypy's bare-module sections. Update paths and commands across the docs. Where a doc gives an archived script as a step to run (`data/docs/us-polls-and-forecasts.md:163-164,174-175`, `data/docs/westminster-uncertainty.md:75-79`, `data/docs/us-results.md:100-101`, `uselectionmaps/README.md:20`), say it is archived and may no longer run, and don't present it as a current step. Fresh setups rely on the rebuild.
     - Depends on: 9.
-    - Acceptance: `git grep -n "sys.path\.\(insert\|append\)" data -- ':!data/archive'` finds nothing; docs name only paths that exist.
+    - Acceptance: `git grep -n "sys.path\.\(insert\|append\)" data -- ':!data/archive'` finds nothing; docs name only paths that exist; relative links in `README.md`, `data/README.md` and `data/docs/*.md` resolve.
     - Tests: a new test failing if a `sys.path` adjustment returns outside `archive/`.
-    - Manual review: run the README's main commands from the builder's worktree (console start, `export_elections.py --dry-run`, `rebuild_database.py --dry-run`, a runner dry-run).
+    - Manual review: run the main commands in `README.md` and `data/README.md` from the builder's worktree (console start, `export_elections.py --dry-run`, `rebuild_database.py --dry-run`, a runner dry-run).
 
 ## Checkpoints
 
@@ -204,8 +205,9 @@ Every piece also meets the standard proof in **Verification**.
 
 **What the rebuild proof doesn't cover:** poll importers and model runs. Those are covered by the tests, runner dry-runs and the import checks in each piece. `--dry-run` is the only way to run a real importer or model here: never redirect a script with `DATABASE_PATH`, since a `.env` overrides it.
 
-**After merging:** Phil's main venv needs the one-time editable install in piece 10's README note; until then, scripts fail loudly with `ModuleNotFoundError`.
+**After merging:** Phil's main venv needs the one-time editable install given in `data/README.md` (added in piece 1); until then, scripts fail loudly with `ModuleNotFoundError`.
 
 ## Notes
 
 - Coverage target for each piece is its moved lines plus any new tests; the moves themselves are exercised by the existing suite.
+- 2026-11-08: Updated for `bd9d4879`, which split the root README into `data/README.md`, `data/docs/*.md` and per-area READMEs. Piece 1 now documents the install, piece 10's docs list follows the new files, and `callers.md` was regenerated at that commit. `findings/*.md` keep their older README line numbers as history.

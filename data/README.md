@@ -16,6 +16,7 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 | `models.py`, `db.py`, `config.py` | SQLAlchemy schema, DB access, configuration |
 | `console/` | Local web console for the data (`create_app`) |
 | `server.py` | Local data preview server (`:5055`) |
+| `archive/` | Finished one-offs and retired setup files (not maintained, not type-checked; see its README) |
 | `old_data/` | Base-data importers (TopoJSON maps, parties, general elections) |
 | `polls/` | Wikipedia-driven poll importers |
 | `models/` | Election models — `westminster/`, `holyrood/` (UNS retrospective), `us/` (House, President, Senate forecasts) |
@@ -37,12 +38,21 @@ From `data/`, where the data subsystem's commands below also run:
 python3 -m venv election_data
 source election_data/bin/activate
 pip install -r requirements.txt
+pip install --no-deps -e . --config-settings editable_mode=compat
 ```
 
-If `election_data` already exists, just activate it:
+The last line is an editable install of `data/` itself (see `pyproject.toml`). It
+puts `data/` on the import path from any working directory; nothing is built or
+copied. New top-level folders under `data/` need no reinstall. Scripts are being
+moved over to rely on it instead of their own `sys.path` adjustments, so install
+it even where a script still works without.
+
+If `election_data` already exists, activate it. A venv created before the editable
+install was added needs the install once:
 
 ```bash
 source election_data/bin/activate
+pip install --no-deps -e . --config-settings editable_mode=compat
 ```
 
 ## Import polls (Wikipedia-driven)

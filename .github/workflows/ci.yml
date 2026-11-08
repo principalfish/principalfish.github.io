@@ -24,6 +24,8 @@ jobs:
         run: |
           python -m venv .venv
           ./.venv/bin/pip install -r requirements.txt
+          # Puts data/ on the import path (see data/pyproject.toml).
+          ./.venv/bin/pip install --no-deps -e . --config-settings editable_mode=compat
 
       - name: mypy + pytest
         working-directory: data

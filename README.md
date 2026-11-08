@@ -11,6 +11,7 @@ Needs Node.js with npm (22+ for the Referdle benchmark), Python 3.10+ and the
 ```bash
 npm ci
 cd data && python3 -m venv election_data && ./election_data/bin/pip install -r requirements.txt
+./election_data/bin/pip install --no-deps -e . --config-settings editable_mode=compat
 ```
 
 Run from the repo root:

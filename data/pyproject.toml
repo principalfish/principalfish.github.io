@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "election-data"
+version = "0"
+description = "Election data pipeline and console (installed editable only, to put data/ on the import path)"
+requires-python = ">=3.10"
+
+# Nothing is built or distributed. The editable install exists so that
+# `data/` is on sys.path for every interpreter in the venv, wherever a script is
+# run from. `compat` mode writes a plain .pth entry for this directory, so new
+# top-level folders need no reinstall.
+[tool.setuptools]
+packages = []
+py-modules = []

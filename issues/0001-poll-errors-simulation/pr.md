@@ -28,7 +28,7 @@ Historical elections, predict view and user scenarios are unchanged. The US page
 Westminster only. The US uncertainty work moved to its own issue and branch (`us-poll-errors-uncertainty`). The offline conversion-error experiment and the model refinements the review called for (correlated conversion error, heavier seat tails, parameter uncertainty) moved to #78. The seat ranges are known to be on the narrow side; that work is where they get revisited.
 
 **Before and after merging**
-- Master (including the US results import, #80) is merged into this branch, and the conflicts are resolved. The test suites pass on the merged tree, but no real export has been run since the merge, so the full `export_elections.py` hasn't been re-confirmed. It failed on this branch before the merge because the US map was missing.
+- Master (including the US results import, #80) is merged into this branch, and the conflicts are resolved. The test suites pass on the merged tree, and a full `export_elections.py` completes and reproduces the committed data files exactly.
 - Don't run Westminster poll imports or model runs from a checkout of master until this merges. Master's console still has the old weighting and stores no uncertainty, so its runs would break the history.
 
 **Review**

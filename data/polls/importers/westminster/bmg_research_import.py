@@ -21,7 +21,6 @@ from sqlalchemy import select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
-from models import Poll, PollBaseKind, PollRow
 from polls.importers.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -32,6 +31,7 @@ from polls.importers.bases import (
     replace_poll_bases,
 )
 from polls.importers.types import PollImportResult
+from schema import Poll, PollBaseKind, PollRow
 
 DEFAULT_XLSX_URL = "https://bmgresearch.com/wp-content/uploads/2026/02/january-2026-omnibus-tables-for-the-i.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
@@ -961,7 +961,7 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
             used for the lookup.
 
     Returns:
-        The matching :class:`~models.Poll` row, or ``None`` if no match exists.
+        The matching :class:`~schema.Poll` row, or ``None`` if no match exists.
     """
     with db.session() as session:
         return session.execute(
@@ -1124,7 +1124,7 @@ def commit_import_plan(
     Args:
         db: Active :class:`~db.Database` connection.
         plan: The :class:`ImportPlan` produced by :func:`build_import_plan`.
-        replace_rows: If ``True``, delete any existing :class:`~models.PollRow`
+        replace_rows: If ``True``, delete any existing :class:`~schema.PollRow`
             records for the poll before inserting new ones.  Defaults to
             ``False``, in which case existing rows are left untouched and the
             result will have ``skipped_existing_rows=True``.

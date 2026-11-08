@@ -34,7 +34,7 @@ from model_support.public_uncertainty import (
     public_document,
     seat_bands,
 )
-from models import Election, ElectionType, Party, Seat
+from schema import Election, ElectionType, Party, Seat
 import export_elections
 from export_elections import (
     DEM_PARTY_ID,
@@ -57,7 +57,7 @@ from tests.export_golden import (
 from tests.test_westminster_uncertainty_integration import DAY, _cfg, _poll
 from tests.uk_fixtures import WestminsterWorld
 from tests.us_ev_fixtures import seed_canonical_allocations
-import run_uns_model as runner
+from models.westminster import run_uns_model as runner
 
 
 class _Election:

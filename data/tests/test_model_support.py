@@ -11,20 +11,16 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-DATA_DIR = Path(__file__).resolve().parents[1]
-for directory in ("westminster", "holyrood", "us"):
-    sys.path.insert(0, str(DATA_DIR / "models" / directory))
-
-import _common
-import run_holyrood_uns_model as holyrood
-import run_uns_model as westminster
-import run_us_house_model
-import run_us_presidential_model
-import run_us_senate_model
 from console.forms import HolyroodModelRunForm, ModelRunForm
 from db import Database
 from model_support.cli import parse_manual_shares
 from model_support.polling import select_poll_endpoint
+from models.holyrood import run_holyrood_uns_model as holyrood
+from models.us import _common
+from models.us import run_us_house_model
+from models.us import run_us_presidential_model
+from models.us import run_us_senate_model
+from models.westminster import run_uns_model as westminster
 
 from tests.uk_fixtures import (
     WestminsterWorld,

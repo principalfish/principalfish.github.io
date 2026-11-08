@@ -18,7 +18,7 @@ from sqlalchemy import delete, func, select
 
 from db import Database
 from electoral_votes import allocation_year, get_electoral_votes
-from models import Election, ElectionType, Map, Party, Region, Seat, Vote
+from schema import Election, ElectionType, Map, Party, Region, Seat, Vote
 
 from console.services.trends import load_trend_entries, trend_entry_as_of_date
 

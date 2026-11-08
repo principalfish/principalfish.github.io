@@ -29,7 +29,6 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from db import Database
-from models import Poll, PollBase, Pollster
 from polls.importers.bases import PlannedPollBase
 from polls.importers.types import PollImportResult
 from polls.importers.westminster import (
@@ -45,6 +44,7 @@ from polls.importers.westminster import (
     techne_import,
     yougov_import,
 )
+from schema import Poll, PollBase, Pollster
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 
 # ── The importers and their commit variants ───────────────────────────────────

@@ -22,7 +22,7 @@ from console.blueprints import by_elections
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services.preview import PREVIEW_CACHE, store_preview
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 from scripts import by_election_import
 from tests.console_fixtures import (
     RecordingRunner,

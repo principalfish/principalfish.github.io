@@ -16,10 +16,7 @@ import numpy as np
 import pytest
 from sqlalchemy import select
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westminster"))
-
-import run_uns_model as runner
-
+from config import DatabaseConfig
 from db import Database
 from model_support.io import OutputPublicationError
 from model_support.monte_carlo import (
@@ -28,10 +25,13 @@ from model_support.monte_carlo import (
     SimulationRun,
     draw_errors,
     load_draws,
+    run_simulations,
+    save_draws,
 )
 from model_support.persistence import UncertaintyStoreError, load_uncertainty
 from model_support.uncertainty import UncertaintyConfig, UncertaintyError
-from models import PollBase, PollRow, Region
+from models.westminster import run_uns_model as runner
+from schema import PollBase, PollRow, Region
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 
 DAY = date(2026, 6, 10)
@@ -494,7 +494,7 @@ def test_multiple_dates_store_every_summary_but_write_raw_once(
     _poll(db, world, fieldwork_end=first)
     _poll(db, world, pollster_identifier="later", fieldwork_end=DAY)
     saved: list[date] = []
-    real_save = runner.save_draws
+    real_save = save_draws
 
     def record(path: Path, draws: Any, meta: Any) -> None:
         saved.append(meta.as_of_date)
@@ -569,7 +569,7 @@ def test_true_zero_national_and_regional_averages_keep_zero_sampling_variance(
     assert (None, labour) not in aggregation.sampling()
     assert (region, labour) not in aggregation.sampling()
     runner.run_simulation(db, _cfg(world))
-    draws, _ = load_draws(Path(runner.DatabaseConfig.from_env().simulations_path))
+    draws, _ = load_draws(Path(DatabaseConfig.from_env().simulations_path))
     assert draws.replay is not None
     inputs = draws.replay.inputs
     party_index = inputs.party_ids.index(labour)
@@ -669,7 +669,7 @@ def test_northern_ireland_keeps_baseline_and_only_seat_noise(
         assert ignored.id not in {poll.poll_id for poll in aggregation.contributors}
 
     captured: list[tuple[SimulationInputs, SimulationRun]] = []
-    real_run = runner.run_simulations
+    real_run = run_simulations
 
     def capture(
         inputs: SimulationInputs,

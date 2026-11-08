@@ -25,7 +25,6 @@ from sqlalchemy import select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
-from models import Poll, PollRow, Pollster
 from polls.importers.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -37,6 +36,7 @@ from polls.importers.bases import (
 )
 from polls.importers.sanity import regional_basis_problem
 from polls.importers.types import PollImportResult
+from schema import Poll, PollRow, Pollster
 
 DEFAULT_SOURCE_URL = "https://lordashcroftpolls.com/2026/01/kemis-been-tough-and-jenricks-a-bit-of-a-bounder-say-tory-voters-but-plenty-agree-with-him-that-britain-is-broken/"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

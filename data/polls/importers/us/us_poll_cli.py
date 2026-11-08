@@ -18,7 +18,7 @@ from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
 
-# ``data/`` root — home of db.py / models.py.
+# ``data/`` root — home of db.py / schema.py.
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from db import Database

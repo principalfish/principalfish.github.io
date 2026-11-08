@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from db import Database
 from electoral_votes import get_electoral_votes
-from models import ElectionType
+from schema import ElectionType
 from us_import import ensure_us_map, import_us_election
 
 # Fixed map id for US Presidential (convention: 21 house, 22 president, 23 senate).

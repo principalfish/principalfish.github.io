@@ -19,7 +19,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 
 from db import Database
-from models import Election, ElectionType, Map
+from schema import Election, ElectionType, Map
 
 from console.db import get_db
 from console.forms import ModelRunForm

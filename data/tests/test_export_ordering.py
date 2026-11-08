@@ -18,7 +18,7 @@ from sqlalchemy.orm import joinedload
 import export_elections
 from db import Database
 from export_elections import _export_page
-from models import Election, ElectionType, Map
+from schema import Election, ElectionType, Map
 from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
 from tests.us_ev_fixtures import seed_canonical_allocations, set_model_target
 from scripts.export.ordering import (

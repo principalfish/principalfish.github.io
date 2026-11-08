@@ -42,14 +42,11 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from _common import UsModelSpec, main_for_spec
 from model_support.trends import default_trend_path
+from models.us._common import UsModelSpec, main_for_spec
 
-# Importable because ``_common`` (above) puts ``data/`` on the path, as it does for
-# its own ``scripts.export.naming`` import. The export's parser is the one rule
-# for which shell specials count, so the model reuses it rather than a copy.
+# The export's parser is the one rule for which shell specials count, so the model
+# reuses it rather than a copy.
 from scripts.export.manifest import (
     senate_baseline_overrides,
     senate_class_up_in,
@@ -267,8 +264,7 @@ SPEC = UsModelSpec(
 
 def main() -> int:
     """CLI entry point — see module docstring; returns a process exit code."""
-    # int(): _common is imported by bare module name, so it is untyped here.
-    return int(main_for_spec(SPEC))
+    return main_for_spec(SPEC)
 
 
 if __name__ == "__main__":

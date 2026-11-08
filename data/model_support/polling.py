@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from db import Database
 from model_support.cli import validate_date_window
-from models import Poll, PollRow, Pollster
+from schema import Poll, PollRow, Pollster
 
 
 def effective_pollster_weight(weight: float | None) -> float:

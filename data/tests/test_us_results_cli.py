@@ -527,7 +527,7 @@ def test_house_all_ignores_a_senate_special(
 ) -> None:
     _seed_us_parties(db)
     senate_map = db.add_map("US Senate 2024", parliament="us_senate")
-    from models import ElectionType
+    from schema import ElectionType
 
     db.add_election(
         senate_map.id, 2026, "2026 US Senate Special Election", ElectionType.us_senate,

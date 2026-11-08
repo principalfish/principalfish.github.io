@@ -20,7 +20,6 @@ from sqlalchemy import select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
-from models import Poll, PollRow, Pollster
 from polls.importers.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -31,6 +30,7 @@ from polls.importers.bases import (
     replace_poll_bases,
 )
 from polls.importers.types import PollImportResult
+from schema import Poll, PollRow, Pollster
 
 DEFAULT_XLSX_URL = "https://3959436.fs1.hubspotusercontent-na1.net/hubfs/3959436/Marketing%20content/Focaldata_January%20VI%20tables%2c%2016-19%20Jan%202026.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
@@ -823,7 +823,7 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
             match against.
 
     Returns:
-        The matching :class:`~models.Poll` ORM instance, or ``None`` if no
+        The matching :class:`~schema.Poll` ORM instance, or ``None`` if no
         matching record exists.
     """
     with db.session() as session:
@@ -1005,9 +1005,9 @@ def commit_import_plan(
     rows from the plan are inserted.
 
     Side effects:
-        - May insert a :class:`~models.Pollster` row.
-        - May insert a :class:`~models.Poll` row (or update its ``source_url``).
-        - May delete and re-insert :class:`~models.PollRow` rows.
+        - May insert a :class:`~schema.Pollster` row.
+        - May insert a :class:`~schema.Poll` row (or update its ``source_url``).
+        - May delete and re-insert :class:`~schema.PollRow` rows.
 
     Args:
         db: Active :class:`~db.Database` connection.

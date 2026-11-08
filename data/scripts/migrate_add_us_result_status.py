@@ -1,6 +1,6 @@
 """Add US result status: per-seat call status and a per-election source note.
 
-Brings a database created before these ``models.py`` changes up to date:
+Brings a database created before these ``schema.py`` changes up to date:
 
 - the ``election_seat_status`` table (FKs ``elections.id`` and ``seats.id``)
   and its ``ux_election_seat_status_election_seat`` unique index on

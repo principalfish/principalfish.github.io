@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 
-from models import Election, ElectionType, Map, Party, Vote
+from schema import Election, ElectionType, Map, Party, Vote
 
 
 PARTY_NAME_TO_KEY = {

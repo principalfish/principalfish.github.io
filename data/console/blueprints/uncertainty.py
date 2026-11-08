@@ -49,7 +49,7 @@ from model_support.uncertainty import (
     UncertaintyConfigError,
     load_uncertainty_config,
 )
-from models import Map
+from schema import Map
 
 bp = Blueprint("uncertainty", __name__)
 

@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 from us_import import (
     check_election_map,
     ensure_us_map,

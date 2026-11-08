@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from models import ElectionType, USElectoralVoteAllocation, USElectoralVoteEra
+from schema import ElectionType, USElectoralVoteAllocation, USElectoralVoteEra
 
 
 class ElectoralVoteError(ValueError):

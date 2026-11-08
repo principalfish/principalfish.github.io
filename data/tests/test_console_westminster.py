@@ -22,7 +22,7 @@ import pytest
 from flask import Flask
 
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 
 from console.blueprints.westminster import (
     _choices_for_model_form,

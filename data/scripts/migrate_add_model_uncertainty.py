@@ -1,6 +1,6 @@
 """Add the model_uncertainty table: each model run's Monte Carlo summary.
 
-Brings a database created before ``models.ModelUncertainty`` up to date with
+Brings a database created before ``schema.ModelUncertainty`` up to date with
 the ``model_uncertainty`` table (primary key and FK ``elections.id`` with ``ON
 DELETE CASCADE``; a ``schema`` tag and three JSON text blocks, of which only
 the national one is required).

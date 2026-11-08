@@ -47,11 +47,10 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_DIR = SCRIPT_DIR.parent
-for _path in (DATA_DIR, DATA_DIR / "models" / "westminster"):
-    if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
+if str(DATA_DIR) not in sys.path:
+    sys.path.insert(0, str(DATA_DIR))
 
-from run_uns_model import PARTY_ID_ALIASES as PARTY_ID_ALIASES
+from models.westminster.run_uns_model import PARTY_ID_ALIASES as PARTY_ID_ALIASES
 
 from config import DatabaseConfig
 from model_support.calibration import (

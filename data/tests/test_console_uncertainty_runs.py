@@ -32,12 +32,11 @@ from model_support.monte_carlo import (
 )
 from model_support.persistence import OutputVote, replace_output, westminster_uns_scope
 from model_support.simulation_replay import replay_simulation
+from models.westminster import run_uns_model as runner
 from tests.console_fixtures import app  # noqa: F401  (pytest fixture)
 from tests.export_golden import run_export
 from tests.test_westminster_uncertainty_integration import DAY, _cfg, _poll
 from tests.uk_fixtures import WestminsterWorld
-
-import run_uns_model as runner  # isort: skip
 
 
 @pytest.fixture()

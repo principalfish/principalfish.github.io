@@ -19,7 +19,6 @@ from sqlalchemy import select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
-from models import Poll, PollRow, Pollster
 from polls.importers.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -31,6 +30,7 @@ from polls.importers.bases import (
     weighted_value,
 )
 from polls.importers.types import PollImportResult
+from schema import Poll, PollRow, Pollster
 
 DEFAULT_XLSX_URL = "https://www.opinium.com/wp-content/uploads/2026/02/Observer-VI-2026-02-04-Web-Data-Tables-1152.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
@@ -580,7 +580,7 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
             to match against.
 
     Returns:
-        The matching :class:`~models.Poll` row, or ``None`` if no match exists.
+        The matching :class:`~schema.Poll` row, or ``None`` if no match exists.
     """
     with db.session() as session:
         return session.execute(
@@ -749,7 +749,7 @@ def commit_import_plan(
     Creates the pollster record if it does not yet exist; otherwise updates its
     ``regions_mapping`` if it has changed.  Creates the poll record if absent;
     otherwise updates ``source_url`` if it has changed.  Inserts
-    :class:`~models.PollRow` records for all rows in the plan unless rows
+    :class:`~schema.PollRow` records for all rows in the plan unless rows
     already exist and ``replace_rows`` is ``False``.
 
     Args:

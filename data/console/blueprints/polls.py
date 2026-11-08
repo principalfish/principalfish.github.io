@@ -42,7 +42,7 @@ from model_support.uncertainty import (
     load_uncertainty_config,
     poll_moe,
 )
-from models import Map, Party, Poll, PollBase, PollRow, Pollster, Region, Seat
+from schema import Map, Party, Poll, PollBase, PollRow, Pollster, Region, Seat
 
 from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
 from console.db import get_db

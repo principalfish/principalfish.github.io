@@ -44,11 +44,11 @@ from urllib.error import HTTPError
 
 from bs4 import BeautifulSoup, Tag
 
-# ``data/`` root — home of db.py / models.py.
+# ``data/`` root — home of db.py / schema.py.
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from db import Database, StoredPollReadings
-from models import Poll, PollRow, Pollster, Seat
+from schema import Poll, PollRow, Pollster, Seat
 from polls.importers.types import PollImportResult, ScrapedPollRow
 from polls.importers.us.us_geography import (
     AT_LARGE_STATES,

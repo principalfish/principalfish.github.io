@@ -15,7 +15,7 @@ from model_support.persistence import (
     load_uncertainty,
     westminster_uns_scope,
 )
-from models import Election, ElectionType, Map, Party, Region, Seat, Vote
+from schema import Election, ElectionType, Map, Party, Region, Seat, Vote
 
 WESTMINSTER_MAP = "UK Constituencies post 2022"
 

@@ -12,7 +12,7 @@ import pytest
 from sqlalchemy import select
 
 from db import Database
-from models import ElectionType, Vote
+from schema import ElectionType, Vote
 from tests.us_ev_fixtures import seed_canonical_allocations
 
 USA_DIR = Path(__file__).resolve().parents[1] / "old_data" / "scripts" / "usa"

@@ -1,6 +1,6 @@
 """Add US poll scoping: poll matchups and seats, candidate names, tracked matchups.
 
-Brings a database created before these ``models.py`` changes up to date:
+Brings a database created before these ``schema.py`` changes up to date:
 
 - ``polls.matchup`` and ``polls.seat_id`` (FK ``seats.id``), plus the
   ``ix_polls_map_seat`` index on ``(map_id, seat_id)``;

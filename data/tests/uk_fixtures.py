@@ -32,7 +32,7 @@ from openpyxl import Workbook
 from sqlalchemy import update
 
 from db import Database
-from models import ElectionType, Poll, Pollster
+from schema import ElectionType, Poll, Pollster
 
 # ── Westminster ───────────────────────────────────────────────────────────────
 

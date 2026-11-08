@@ -9,7 +9,7 @@ import math
 import re
 from typing import Any, Sequence
 
-from models import Election, ElectionType, Party, Region
+from schema import Election, ElectionType, Party, Region
 from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
 from scripts.export.naming import party_key_for_party
 

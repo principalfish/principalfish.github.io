@@ -37,7 +37,7 @@ from export_elections import (
     set_others_party_id,
 )
 from model_support.public_uncertainty import SeatBand
-from models import Election, ElectionType, Seat, Vote
+from schema import Election, ElectionType, Seat, Vote
 
 
 class _Party:

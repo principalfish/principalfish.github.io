@@ -26,7 +26,7 @@ from sqlalchemy.orm import joinedload
 import export_elections
 from db import Database, SeatStatus
 from export_elections import DEM_PARTY_ID, REP_PARTY_ID, export_pages, missing_export_inputs
-from models import Election, ElectionType, Party
+from schema import Election, ElectionType, Party
 from scripts.export.manifest import (
     _senate_class_next_election,
     assign_comparison_elections,

@@ -18,13 +18,9 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import joinedload
 
 DATA_DIR = Path(__file__).resolve().parents[1]
-for directory in (
-    DATA_DIR / "models" / "us",
-    DATA_DIR / "old_data" / "scripts" / "usa",
-):
-    sys.path.insert(0, str(directory))
+sys.path.insert(0, str(DATA_DIR / "old_data" / "scripts" / "usa"))
 
-import _common as us
+from models.us import _common as us
 from console.services.model_outputs import build_output_detail_context
 from db import Database
 from electoral_votes import (
@@ -36,7 +32,7 @@ from import_presidential_elections import import_presidential
 from model_support import trends
 from model_support.persistence import OutputScope, OutputVote, replace_output
 from model_support.trends import reconstruct_trends
-from models import Election, ElectionType, Map, Seat, USElectoralVoteAllocation
+from schema import Election, ElectionType, Map, Seat, USElectoralVoteAllocation
 from scripts.export_elections import _export_page
 from scripts.migrate_us_electoral_votes import migrate
 from tests.us_ev_fixtures import seed_canonical_allocations, set_model_target

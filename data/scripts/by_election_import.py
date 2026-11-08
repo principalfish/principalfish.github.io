@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 
 DEFAULT_PARENT_ELECTION_NAME = "2024 General Election"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

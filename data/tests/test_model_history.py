@@ -10,24 +10,21 @@ from collections.abc import Callable
 from contextlib import closing
 from datetime import date
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "us"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "holyrood"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westminster"))
-
-import _common
-import run_holyrood_uns_model
-import run_uns_model
-from _common import UsSimulationConfig
 from db import Database
 from model_support import trends
 from model_support.history import HistoryRecomputationError
 from model_support.io import OutputPublicationError, publish_json
 from model_support.persistence import OutputScope, OutputVote, replace_output
 from model_support.trends import TREND_MODELS, reconstruct_trends
+from models.holyrood import run_holyrood_uns_model
+from models.us import _common
+from models.us._common import UsSimulationConfig
+from models.westminster import run_uns_model
 
 from tests import test_holyrood_model as holy
 from tests import test_us_model as us
@@ -63,6 +60,7 @@ def history_case(
     monkeypatch.setattr(
         trends, "default_trend_path", lambda _: tmp_path / "unused.json"
     )
+    module: ModuleType
     if model == "westminster":
         world = request.getfixturevalue("westminster_world")
         cache, _ = west._guard_writes(tmp_path, monkeypatch, only_the_test_database)

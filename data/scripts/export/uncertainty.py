@@ -30,7 +30,7 @@ from model_support.persistence import (
     westminster_uns_scope,
 )
 from model_support.public_uncertainty import SeatBand, public_document, seat_bands
-from models import Election, ElectionType, Party
+from schema import Election, ElectionType, Party
 from scripts.export.serialize import write_json
 
 UNCERTAINTY_FILENAME = "prediction-uncertainty.json"

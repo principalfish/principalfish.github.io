@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-import sys
 import zipfile
 from collections import Counter
 from dataclasses import dataclass
@@ -22,10 +21,6 @@ from typing import Any
 
 import numpy as np
 import pytest
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westminster"))
-
-from run_uns_model import project_seat_votes
 
 from model_support.monte_carlo import (
     COMPACT_SHARE_FLOOR,
@@ -59,6 +54,7 @@ from model_support.uncertainty import (
     share_scale,
     weighted_average_variance,
 )
+from models.westminster.run_uns_model import project_seat_votes
 
 SEED = date(2026, 10, 5).toordinal()
 DEFAULTS = UncertaintyConfig()

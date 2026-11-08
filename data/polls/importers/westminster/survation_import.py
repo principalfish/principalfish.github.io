@@ -19,7 +19,6 @@ from sqlalchemy import select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
-from models import Poll, PollBaseKind, PollRow
 from polls.importers.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -30,6 +29,7 @@ from polls.importers.bases import (
     replace_poll_bases,
 )
 from polls.importers.types import PollImportResult
+from schema import Poll, PollBaseKind, PollRow
 
 DEFAULT_XLSX_URL = "https://cdn.survation.com/wp-content/uploads/2026/01/30163059/Survation_Voter_Intention_Jan_2026.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

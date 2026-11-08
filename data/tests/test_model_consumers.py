@@ -16,7 +16,7 @@ from model_support.persistence import (
     replace_output,
 )
 from model_support.trends import TREND_MODELS
-from models import ElectionType, Vote
+from schema import ElectionType, Vote
 from scripts.export.payload import SeatRow, build_result_payload
 from scripts.rebuild_model_trends import main
 from sqlalchemy import select

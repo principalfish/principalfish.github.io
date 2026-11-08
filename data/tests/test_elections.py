@@ -3,7 +3,7 @@
 import pytest
 
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 
 
 class TestAddElection:

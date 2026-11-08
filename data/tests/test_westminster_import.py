@@ -15,7 +15,7 @@ from typing import Protocol, cast
 import pytest
 
 from db import Database
-from models import ElectionType, Map, Party
+from schema import ElectionType, Map, Party
 
 
 class GeneralElectionImporter(Protocol):

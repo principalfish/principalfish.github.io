@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Protocol
 
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 
 from console.paths import (
     EXPORT_ELECTION_SCRIPT,

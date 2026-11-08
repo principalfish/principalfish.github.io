@@ -12,7 +12,7 @@ from typing import cast
 import pytest
 
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 from scripts import migrate_drop_seat_geometry as migration
 
 

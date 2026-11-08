@@ -19,7 +19,6 @@ from sqlalchemy import select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
-from models import Poll, PollRow, Pollster
 from polls.importers.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -30,6 +29,7 @@ from polls.importers.bases import (
     replace_poll_bases,
 )
 from polls.importers.types import PollImportResult
+from schema import Poll, PollRow, Pollster
 
 DEFAULT_XLSX_URL = "https://www.moreincommon.org.uk/media/dshdwjt0/voting-intention-and-trackers-10-feb.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

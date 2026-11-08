@@ -7,7 +7,6 @@ import argparse
 import csv
 import json
 import math
-import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
@@ -19,15 +18,10 @@ from sqlalchemy import text
 
 DATA_DIR = Path(__file__).resolve().parents[2]
 REPO_ROOT = DATA_DIR.parent
-SCRIPTS_DIR = DATA_DIR / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
 TREND_CACHE_META_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
 # Default baseline election the projection swings from (override with --baseline-election-name).
 # Bump to the latest general election once it lands. Mirrors Holyrood's BASELINE_ELECTION_NAME.
 BASELINE_ELECTION_NAME = "2024 General Election"
-if str(DATA_DIR) not in sys.path:
-    sys.path.insert(0, str(DATA_DIR))
 
 from config import DatabaseConfig
 from db import Database
@@ -89,7 +83,7 @@ from model_support.polling import (
     select_poll_endpoint,
     effective_pollster_weight,
 )
-from models import Election, Map, Region
+from schema import Election, Map, Region
 
 TREND_CACHE_JSON = default_trend_path("westminster")
 

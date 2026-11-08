@@ -145,20 +145,12 @@ import argparse
 import json
 import math
 import re
-import sys
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
-
-DATA_DIR = Path(__file__).resolve().parents[2]
-SCRIPTS_DIR = DATA_DIR / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
-if str(DATA_DIR) not in sys.path:
-    sys.path.insert(0, str(DATA_DIR))
 
 from sqlalchemy import select as sa_select
 
@@ -198,7 +190,7 @@ from model_support.polling import (
     effective_pollster_weight,
 )
 from model_support.summaries import recorded_vote_rows, summarize_votes
-from models import Election, ElectionType, Pollster, Seat
+from schema import Election, ElectionType, Pollster, Seat
 
 BASELINE_ELECTION_NAME = "2026 Scottish Parliament Election"
 LIST_SEATS_PER_REGION = 7

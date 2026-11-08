@@ -29,7 +29,7 @@ import pytest
 from flask import Flask
 
 from db import Database
-from models import PollBase
+from schema import PollBase
 
 from tests.console_fixtures import app, flashes as _flashes
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows

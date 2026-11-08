@@ -7,7 +7,7 @@ from flask.typing import ResponseReturnValue
 from pydantic import ValidationError
 from sqlalchemy import select
 
-from models import Election, ElectionType
+from schema import Election, ElectionType
 from scripts import by_election_import
 
 from console.db import get_db

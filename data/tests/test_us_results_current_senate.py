@@ -440,9 +440,7 @@ class TestModelLoader:
     def test_the_senate_model_still_reads_the_derived_file(
         self, snapshot: dict[str, Any], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # The runner is imported by bare name, as the model tests do.
-        monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "models" / "us"))
-        from run_us_senate_model import class_state_allowlist
+        from models.us.run_us_senate_model import class_state_allowlist
 
         election = senate_election(snapshot, Texas=senate_race(None, None, seat_class=2, called=False))
         path = tmp_path / "senate-current.json"

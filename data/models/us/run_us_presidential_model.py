@@ -23,10 +23,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from _common import UsModelSpec, main_for_spec
 from model_support.trends import default_trend_path
+from models.us._common import UsModelSpec, main_for_spec
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 RESULTS_DIR = REPO_ROOT / "uselectionmaps" / "data" / "results"
@@ -50,8 +48,7 @@ SPEC = UsModelSpec(
 
 def main() -> int:
     """CLI entry point — see module docstring; returns a process exit code."""
-    # int(): _common is imported by bare module name, so it is untyped here.
-    return int(main_for_spec(SPEC))
+    return main_for_spec(SPEC)
 
 
 if __name__ == "__main__":

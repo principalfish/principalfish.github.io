@@ -20,7 +20,7 @@ from electoral_votes import (
     get_electoral_votes_sqlite,
     positive_integer,
 )
-from models import ElectionType
+from schema import ElectionType
 from scripts.migrate_us_electoral_votes import migrate
 
 

@@ -30,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from db import Database
-from models import Map
+from schema import Map
 
 SOURCE_FILE = (
     Path(__file__).resolve().parents[2]

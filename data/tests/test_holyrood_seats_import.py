@@ -11,7 +11,7 @@ from typing import Protocol, cast
 import pytest
 
 from db import Database
-from models import Map
+from schema import Map
 
 
 class HolyroodSeatsImporter(Protocol):

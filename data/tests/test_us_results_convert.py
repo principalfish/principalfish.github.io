@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 from scripts.us_results import convert
 from scripts.us_results.adapters import apply_runoffs, parse
 from scripts.us_results.cli import (

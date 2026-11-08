@@ -32,7 +32,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from db import Database
-from models import ElectionType, Map, Party, Seat
+from schema import ElectionType, Map, Party, Seat
 
 
 POST_2022_MAP_NAME_CANDIDATES = (
@@ -180,7 +180,7 @@ def choose_map(db: Database, map_name: str | None, map_candidates: tuple[str, ..
             in error messages only.
 
     Returns:
-        The matched :class:`~models.Map` database record.
+        The matched :class:`~schema.Map` database record.
 
     Raises:
         ValueError: If ``map_name`` is provided but not found, or if none of the
@@ -213,12 +213,12 @@ def ensure_party(db: Database, cache: dict[str, Party], party_key: str) -> Party
 
     Args:
         db: Active database connection used to look up or insert the party.
-        cache: Mutable mapping of normalised party key to :class:`~models.Party`,
+        cache: Mutable mapping of normalised party key to :class:`~schema.Party`,
             shared across calls for the same import run.
         party_key: Raw party key string as it appears in the JSON data file.
 
     Returns:
-        The :class:`~models.Party` database record, newly created or pre-existing.
+        The :class:`~schema.Party` database record, newly created or pre-existing.
     """
     normalized_key = normalize_party_key(party_key)
     if normalized_key in cache:

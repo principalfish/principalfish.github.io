@@ -27,7 +27,6 @@ from sqlalchemy import select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
-from models import Poll, PollRow, Pollster
 from polls.importers.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -38,6 +37,7 @@ from polls.importers.bases import (
 )
 from polls.importers.sanity import regional_alignment_problem
 from polls.importers.types import PollImportResult
+from schema import Poll, PollRow, Pollster
 
 DEFAULT_PDF_URL = (
     "https://d3nkl3psvxxpe9.cloudfront.net/documents/"

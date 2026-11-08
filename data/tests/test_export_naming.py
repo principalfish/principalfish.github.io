@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import pytest
 
-from models import ElectionType
+from schema import ElectionType
 from export_elections import (
     file_stem_for_election,
     is_folded_senate_special,

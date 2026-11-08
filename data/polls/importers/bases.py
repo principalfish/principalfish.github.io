@@ -31,7 +31,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from models import PollBase, PollBaseKind, Region
+from schema import PollBase, PollBaseKind, Region
 
 # A printed count cell: digits, optionally with thousands separators.
 _COUNT_TEXT = re.compile(r"^\d{1,3}(?:,\d{3})*$|^\d+$")
@@ -67,7 +67,7 @@ class ParsedBase(_HasN):
         unweighted_n: Respondents interviewed in the column, or None when the
             pollster prints only a weighted base.
         weighted_n: The column's weighted base, rounded, when printed.
-        kind: What the base counts (see ``models.PollBaseKind``).
+        kind: What the base counts (see ``schema.PollBaseKind``).
     """
 
     regions: tuple[str, ...] = ()

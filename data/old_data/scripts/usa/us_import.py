@@ -16,7 +16,7 @@ from typing import Any, Callable
 from sqlalchemy import delete
 
 from db import Database, SeatStatus
-from models import Election, ElectionSeatStatus, ElectionType, Map, Vote
+from schema import Election, ElectionSeatStatus, ElectionType, Map, Vote
 from regions import STATE_NAMES, division_for_state
 
 # Re-exported so importers can ``from us_import import STATE_NAMES`` alongside the load

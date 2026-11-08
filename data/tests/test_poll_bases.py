@@ -28,7 +28,6 @@ from model_support.poll_bases import (
     poll_base_coverage,
     resolve_poll_n,
 )
-from models import Poll, PollBase, PollRow, Region
 from polls.importers.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -41,6 +40,7 @@ from polls.importers.bases import (
     region_refs,
     weighted_value,
 )
+from schema import Poll, PollBase, PollRow, Region
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 
 # ── Cell readers ──────────────────────────────────────────────────────────────

@@ -31,7 +31,7 @@ from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services.preview import PREVIEW_CACHE, store_preview
 from console.services.us_models import MODEL_RUN_LOCK, model_run_slot
 from db import Database
-from models import Election, ElectionType, Party
+from schema import Election, ElectionType, Party
 from scripts.us_results import cli
 from scripts.us_results.convert import ConversionResult
 from scripts.us_results.current_senate import DEFAULT_SNAPSHOT, render

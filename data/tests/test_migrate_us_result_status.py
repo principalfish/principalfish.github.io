@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 
 from config import DatabaseConfig
 from db import Database, SeatStatus, ensure_elections_sqlite_schema
-from models import Election, ElectionType, Seat
+from schema import Election, ElectionType, Seat
 from scripts.migrate_add_us_result_status import STEPS, main, migrate, open_database
 
 # The tables this migration touches (and their FK targets) as the live
@@ -378,7 +378,7 @@ class TestSchemaParity:
 
 
 class TestEnsureElectionsSqliteSchema:
-    """ensure_elections_sqlite_schema(): its hand-copied DDL tracks models.py."""
+    """ensure_elections_sqlite_schema(): its hand-copied DDL tracks schema.py."""
 
     def test_fresh_database_gets_source_note(self, tmp_path: Path) -> None:
         with closing(sqlite3.connect(tmp_path / "fresh.db")) as conn:

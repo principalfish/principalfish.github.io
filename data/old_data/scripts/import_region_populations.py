@@ -25,7 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from db import Database
-from models import Region
+from schema import Region
 
 
 Record = dict[str, str | int]
@@ -171,7 +171,7 @@ def main() -> None:
     """CLI entry point for importing region populations.
 
     Parses command-line arguments, loads records from the input file, and
-    updates the ``population`` column on matching :class:`~models.Region` rows
+    updates the ``population`` column on matching :class:`~schema.Region` rows
     for the specified map. Region name matching is case-insensitive after
     whitespace normalisation.
 

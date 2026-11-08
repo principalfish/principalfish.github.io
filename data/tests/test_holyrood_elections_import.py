@@ -12,7 +12,7 @@ from typing import Protocol, cast
 import pytest
 
 from db import Database
-from models import ElectionType, Map, Party, Seat
+from schema import ElectionType, Map, Party, Seat
 
 
 class Spec(Protocol):

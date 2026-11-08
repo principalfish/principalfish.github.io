@@ -12,7 +12,7 @@ from types import ModuleType
 import pytest
 
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 
 USA_DIR = Path(__file__).resolve().parents[1] / "old_data" / "scripts" / "usa"
 

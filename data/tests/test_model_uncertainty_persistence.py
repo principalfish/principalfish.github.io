@@ -46,7 +46,7 @@ from model_support.persistence import (
     uncertainty_status,
     westminster_uns_scope,
 )
-from models import ElectionType
+from schema import ElectionType
 
 Row = tuple[str, str, str | None, str | None]
 

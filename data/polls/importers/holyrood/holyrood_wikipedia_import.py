@@ -29,7 +29,7 @@ from sqlalchemy import select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
-from models import Poll, PollRow, Pollster
+from schema import Poll, PollRow, Pollster
 
 # `parse_date_range` is re-exported from this module, its historic home, for
 # callers that still import it from here. The redundant alias is what marks a

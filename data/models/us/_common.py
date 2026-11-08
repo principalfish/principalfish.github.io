@@ -52,11 +52,6 @@ from typing import Any, Callable, Literal
 
 from sqlalchemy import select, text
 
-# ``data/`` root — home of config.py / db.py / models.py.
-DATA_DIR = Path(__file__).resolve().parents[2]
-if str(DATA_DIR) not in sys.path:
-    sys.path.insert(0, str(DATA_DIR))
-
 from config import DatabaseConfig
 from db import Database
 from electoral_votes import allocation_year, get_electoral_votes, positive_integer
@@ -96,7 +91,6 @@ from model_support.summaries import (
     recorded_vote_rows,
     summarize_votes,
 )
-from models import Election, Map, Region, Vote
 from polls.importers.us.us_geography import parent_seat_name
 from polls.importers.us.us_polls_common import (
     MAJOR_PARTY_NAMES,
@@ -105,6 +99,7 @@ from polls.importers.us.us_polls_common import (
     matchup_candidates,
     matchup_stored_candidate_count,
 )
+from schema import Election, Map, Region, Vote
 from scripts.export.naming import is_folded_senate_special, manifest_id_for_election
 
 # US polls insert Democrat/Republican rows directly, so no party-id merge is

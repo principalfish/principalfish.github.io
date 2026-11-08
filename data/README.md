@@ -13,7 +13,7 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 
 | Path | What it is |
 |-|-|
-| `models.py`, `db.py`, `config.py` | SQLAlchemy schema, DB access, configuration |
+| `schema.py`, `db.py`, `config.py` | SQLAlchemy schema, DB access, configuration |
 | `console/` | Local web console for the data (`create_app`) |
 | `server.py` | Local data preview server (`:5055`) |
 | `archive/` | Finished one-offs and retired setup files (not maintained, not type-checked; see its README) |

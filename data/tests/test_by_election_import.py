@@ -28,7 +28,7 @@ import pytest
 from bs4 import BeautifulSoup, Tag
 
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 from scripts import by_election_import
 from scripts.by_election_import import (
     ByElectionImportPlan,

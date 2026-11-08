@@ -51,7 +51,7 @@ from sqlalchemy.orm import joinedload, Session
 from db import Database, SeatStatus
 from electoral_votes import allocation_year, get_electoral_votes
 from model_support.persistence import load_uncertainty
-from models import Election, ElectionSeatStatus, ElectionType, Map, Party, Region, Seat, Vote
+from schema import Election, ElectionSeatStatus, ElectionType, Map, Party, Region, Seat, Vote
 from scripts.export.naming import (
     PARTY_NAME_TO_KEY,
     normalize_token,

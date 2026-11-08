@@ -13,7 +13,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 
 
 class TopojsonImporter(Protocol):

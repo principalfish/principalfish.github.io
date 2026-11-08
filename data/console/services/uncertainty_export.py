@@ -33,7 +33,7 @@ from model_support.public_uncertainty import (
     run_size,
     trend_uncertainty,
 )
-from models import Region, Seat, Vote
+from schema import Region, Seat, Vote
 from scripts.export.payload import SeatRow, build_result_payload
 from scripts.export.serialize import compact_json
 from scripts.export.uncertainty import (

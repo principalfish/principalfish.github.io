@@ -1,7 +1,7 @@
 """Explicit presidential allocations for consumer tests, never an autouse seed."""
 
 from db import Database
-from models import Election, USElectoralVoteAllocation, USElectoralVoteEra
+from schema import Election, USElectoralVoteAllocation, USElectoralVoteEra
 from scripts.migrate_us_electoral_votes import bootstrap_seeds
 
 

@@ -1,6 +1,6 @@
 """Add the poll_bases table: the respondent counts behind each poll's shares.
 
-Brings a database created before ``models.PollBase`` up to date:
+Brings a database created before ``schema.PollBase`` up to date:
 
 - the ``poll_bases`` table (FK ``polls.id`` with ``ON DELETE CASCADE``, FK
   ``regions.id``), with CHECK constraints on its counts and ``kind``;

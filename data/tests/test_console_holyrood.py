@@ -36,7 +36,7 @@ import pytest
 from flask import Flask
 
 from db import Database
-from models import ElectionType
+from schema import ElectionType
 
 from console.blueprints.holyrood import (
     _choices_for_holyrood_model_form,

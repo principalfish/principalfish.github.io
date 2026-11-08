@@ -1,14 +1,27 @@
 # Decisions: Restructure the data folder and rethink the data console
 
+Full sweep reports, read-only at master `35e5326c`: `findings/us-importers.md`, `findings/data-structure.md`, `findings/console.md`.
+
 ## Settled
 - Scope is wider than the original US importer tidy: a full assessment of `data/`, UK and US, plus a rethink of the data console (user, 2026-11-08)
-- The US importer untangling is one input to this issue, not a separate one, unless the discussion splits it (2026-11-08)
 - Nothing is built in this chat; done means approved `issue.md` and `plan.md` with current and proposed structure, every caller of what moves, and how behaviour preservation is checked (2026-11-08)
 
 ## Open
-- Is this one issue or several? A folder restructure and a console UI rethink have different risk profiles and different ways of proving they worked.
-- The folder restructure is behaviour-preserving; the console rethink is a deliberate UI change. What has to stay the same in the console, and what may change?
-- US importer brief still to be verified against master (written before PRs 74 and 80 merged)
-- Overlap with 0003 and 0004 still to be checked
+- One issue or several? Folder moves are behaviour-preserving and the console rethink is a deliberate UI change; they are proven differently and the console's nav work touches no import paths.
+- Organising axis for `data/`: role first with jurisdiction second (recommended), or jurisdiction first? It fixes the shape of every later move.
+- When does `model_support/` move? It is hashed by the Westminster validation report (8 source paths on master) and directly conflicts with 0003 and 0004.
+- Console scope: nav and layout only, or also URL renames, missing confirms, a run log or background jobs, and Holyrood/US diagnostic views?
+- What specifically hurts in the console today? Sets what the rethink is for and how to judge it.
+- Later: are the five pure `migrate_*` scripts applied on the live DB and safe to delete? (they are still given as the upgrade path in the README)
+- Later: is `core/` worth 271 rewritten imports?
+- Later: where the 538 and Wikipedia one-shot converters and the unreferenced TopoJSON builders live.
 
 ## Assumed
+- Local `master` and `origin/master` are both `35e5326c` (user pulled during this chat; confirmed)
+
+## Brief corrections, verified against master
+- `convert_538_house.py` is still needed: `scripts/us_results/convert.py:75` imports its constant at module level, and the console imports that at startup. `convert_538_senate.py` is test-only.
+- Both presidential converters are manual one-shots; only tests call them.
+- `cli.py:57-60` inserts on `sys.path`; only `convert.py` and `current_senate.py` append.
+- `old_data/scripts/usa/` also holds `regions`, `convert_senate_current`, `house_2026_sources` and `check_redistricting`.
+- `us_electoral_votes` is live: rebuild step 2, through `migrate_us_electoral_votes.py:37`.

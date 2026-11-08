@@ -10,7 +10,7 @@ The work lives on branch `poll-errors-simulation`.
 
 ## Plan
 
-_2026-11-08 · 15 of 17 pieces done · now: piece 7 in progress_
+_2026-11-08 · 15 of 17 pieces done · now: waiting on review of piece 7_
 
 - [x] **Threads 1–4** · 40 checkpoints, commits in each thread plan
   The calibrated Monte Carlo engine, poll bases and effective n, console diagnostics, map and tracker uncertainty, and the frozen validation replay.
@@ -44,7 +44,7 @@ _2026-11-08 · 15 of 17 pieces done · now: piece 7 in progress_
   No blank left space in the Chances and vote-only views.
 - [x] **6g/8 Seats as the simulated mean** · `be4222f5`, `789e36ae`
   Mean seats, rounded by largest remainder to add up to 650, in the table, headline and tracker.
-- [ ] **7/8 Split the map page: UNS by default, opt-in modelled uncertainty** · in progress
+- [ ] **7/8 Split the map page: UNS by default, opt-in modelled uncertainty** · waiting on you
   Added 2026-11-08: a "Show with modelled uncertainty" checkbox replaces Show uncertainty; the latest poll and nowcast note move below the map; the tracker line follows its checkbox.
 - [ ] **8/8 PR text** · not started
   The first final description went on PR #74 on 2026-11-08; `/publish` again after piece 7.

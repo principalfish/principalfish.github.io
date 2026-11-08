@@ -28,3 +28,4 @@
 - 2026-11-07 23:12 · poll-errors-simulation (0001) · review → ready
 - 2026-11-07 23:12 · poll-errors-simulation (0001) · PR #74 description final
 - 2026-11-08 10:37 · import-2026-us-midterm-results (0002) · PR #80 marked ready for review
+- 2026-11-08 10:42 · import-2026-us-midterm-results (0002) · merged → done

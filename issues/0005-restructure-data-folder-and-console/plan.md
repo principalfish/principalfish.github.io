@@ -181,7 +181,7 @@ Every piece also meets the standard proof in **Verification**.
 ## Checkpoints
 
 - [x] 1: Editable install, archive folder, dead files, baselines
-- [ ] 2: `schema.py` and `models/` package
+- [x] 2: `schema.py` and `models/` package
 - [ ] 3: `inputs/`
 - [ ] 4: UK and poll importers
 - [ ] 5: US importers

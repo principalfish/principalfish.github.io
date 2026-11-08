@@ -13,7 +13,7 @@ import re
 
 import pytest
 
-from polls.importers.us.us_geography import (
+from core.us_geography import (
     AT_LARGE_STATES,
     HOUSE_DISTRICT_COUNTS,
     PRESIDENT_DISTRICT_STATES,

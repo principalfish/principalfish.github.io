@@ -2,7 +2,7 @@
 
 Three layers are covered here, bottom-up:
 
-- ``polls/importers/westminster/wikipedia_index.py`` — parsed from the inline
+- ``importers/polls/westminster/wikipedia_index.py`` — parsed from the inline
   HTML fixture below, which replicates the page's current markup (per-year
   ``<section>`` elements, a ``<div class="mw-heading">`` wrapper around the
   heading, and a reference list carrying both numeric and *named* ids).
@@ -32,8 +32,8 @@ import pytest
 from flask import Flask
 
 from db import Database
-from polls.importers.types import PollImportResult, ScrapedPollRow
-from polls.importers.westminster.wikipedia_index import (
+from importers.polls.types import PollImportResult, ScrapedPollRow
+from importers.polls.westminster.wikipedia_index import (
     PollIndex,
     WikipediaIndexError,
     WikipediaPollRow,
@@ -46,7 +46,6 @@ from console.blueprints.poll_import import (
     WESTMINSTER_MAP_NAME,
     WIKIPEDIA_PREVIEW_TYPE,
 )
-from console.importers_registry import IMPORTERS, ImporterMeta
 from console.services.preview import PREVIEW_CACHE, store_preview
 from console.services.wikipedia_queue import (
     NO_CUTOFF,
@@ -66,6 +65,7 @@ from console.services.wikipedia_queue import (
     progress,
     summarise,
 )
+from importers.polls.westminster.registry import IMPORTERS, ImporterMeta
 
 # ── HTML fixture ──────────────────────────────────────────────────────────────
 # Mirrors the live page's shape: <section> per heading level, the heading itself

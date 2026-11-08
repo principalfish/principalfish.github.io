@@ -20,14 +20,14 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
 
 from config import DatabaseConfig
-from console.importers_registry import IMPORTERS
 from db import Database
-from polls.importers.holyrood import holyrood_wikipedia_import
-from polls.importers.westminster import (
+from importers.polls.holyrood import holyrood_wikipedia_import
+from importers.polls.westminster import (
     find_out_now_import,
     lord_ashcroft_import,
     survation_import,
 )
+from importers.polls.westminster.registry import IMPORTERS
 from schema import Base, ElectionType, Party
 
 from models.holyrood.run_holyrood_uns_model import (

@@ -30,15 +30,15 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
 from pydantic import ValidationError
 
-from polls.importers.types import ScrapedPollRow
-from polls.importers.westminster.wikipedia_index import (
+from importers.polls.types import ScrapedPollRow
+from importers.polls.westminster.registry import IMPORTERS
+from importers.polls.westminster.wikipedia_index import (
     WikipediaIndexError,
     fetch_poll_index,
 )
 
 from console.db import get_db
 from console.forms import PollImportForm, WikipediaQueueStartForm
-from console.importers_registry import IMPORTERS
 from console.paths import (
     DATA_DIR,
     EXPORT_ELECTION_SCRIPT,

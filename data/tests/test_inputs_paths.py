@@ -7,10 +7,8 @@ finds nothing, so each default is checked against the real folder here.
 
 from __future__ import annotations
 
-import importlib.util
-import sys
+import importlib
 from pathlib import Path
-from types import ModuleType
 
 import pytest
 
@@ -19,18 +17,6 @@ from scripts.us_results import cli, current_senate
 
 DATA_DIR = Path(__file__).resolve().parents[1]
 INPUTS = DATA_DIR / "inputs"
-OLD_SCRIPTS = DATA_DIR / "old_data" / "scripts"
-
-
-def _load(relative: str) -> ModuleType:
-    path = OLD_SCRIPTS / relative
-    name = f"inputs_paths_{path.stem}"
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 def test_inputs_has_one_folder_per_jurisdiction() -> None:
@@ -59,25 +45,29 @@ def test_script_defaults_point_at_inputs(actual: Path, expected: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("script", "constant", "expected"),
+    ("module", "constant", "expected"),
     [
         (
-            "westminster/import_general_elections.py",
+            "importers.results.westminster.import_general_elections",
             "FILES_DIR",
             INPUTS / "westminster",
         ),
-        ("holyrood/import_holyrood_elections.py", "FILES_DIR", INPUTS / "holyrood"),
         (
-            "holyrood/import_holyrood_seats.py",
+            "importers.results.holyrood.import_holyrood_elections",
+            "FILES_DIR",
+            INPUTS / "holyrood",
+        ),
+        (
+            "importers.results.holyrood.import_holyrood_seats",
             "SOURCE_FILE",
             INPUTS / "holyrood" / "constituency_regions.json",
         ),
     ],
 )
 def test_importer_input_constants_point_at_inputs(
-    script: str, constant: str, expected: Path
+    module: str, constant: str, expected: Path
 ) -> None:
-    assert getattr(_load(script), constant) == expected
+    assert getattr(importlib.import_module(module), constant) == expected
     assert expected.exists()
 
 

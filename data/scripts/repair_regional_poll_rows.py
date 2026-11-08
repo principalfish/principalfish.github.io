@@ -9,7 +9,7 @@ Two parser bugs stored wrong regional shares on the "UK Constituencies post
   ABC1, C2DE, England, Wales, Scotland) as Wales, Scotland, North, Midlands,
   London and Rest of South. Such rows put the SNP or Plaid Cymru well above
   zero outside Scotland and Wales, or near zero inside them, which
-  ``polls.importers.sanity.regional_alignment_problem`` detects. One poll
+  ``importers.polls.sanity.regional_alignment_problem`` detects. One poll
   (931) instead stored the constituency question's rows, don't-knows left
   out, so its regions add up to 68-76; a region totalling under
   ``YOUGOV_MIN_REGION_TOTAL`` is broken too. Correct stored headline rows
@@ -20,7 +20,7 @@ Two parser bugs stored wrong regional shares on the "UK Constituencies post
 - **Lord Ashcroft**. Regional shares were a count (or a percentage) divided
   by the column's all-adult "Weighted Sample", not the percentage the
   workbook prints, so the regions' party shares added up to far less than
-  the national ones. ``polls.importers.sanity.regional_basis_problem`` (the
+  the national ones. ``importers.polls.sanity.regional_basis_problem`` (the
   same guard the importer now applies) detects them.
 
 Only polls whose stored regional rows fail their pollster's test are
@@ -87,13 +87,13 @@ if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
 from config import DatabaseConfig
-from polls.importers.bases import (
+from importers.polls.bases import (
     HasRegionalShares,
     PlannedPollBase,
     RegionRef,
     plan_poll_bases,
 )
-from polls.importers.sanity import regional_alignment_problem, regional_basis_problem
+from importers.polls.sanity import regional_alignment_problem, regional_basis_problem
 from scripts.migrate_add_us_poll_scope import open_database
 from scripts.poll_sources import (
     Fetcher,

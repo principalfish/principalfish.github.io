@@ -1,7 +1,7 @@
 """Resolve the respondent count (n) behind a poll's shares, per region.
 
 Pollsters print the base of each voting-intention column, captured into
-``poll_bases`` by the importers (see ``polls.importers.bases``). Where none was
+``poll_bases`` by the importers (see ``importers.polls.bases``). Where none was
 captured, n falls back in a fixed order. :func:`resolve_poll_n` returns, for
 one poll and one region (``None`` = national):
 

@@ -36,8 +36,8 @@ import xlrd
 from openpyxl import Workbook
 
 from db import Database
-from polls.importers.westminster import lord_ashcroft_import
-from polls.importers.westminster.lord_ashcroft_import import (
+from importers.polls.westminster import lord_ashcroft_import
+from importers.polls.westminster.lord_ashcroft_import import (
     PARTY_NAME_MAP,
     SOURCE_REGION_TO_INTERNAL,
     ImportPlan,

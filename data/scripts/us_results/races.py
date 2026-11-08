@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
-from polls.importers.us.us_geography import STATE_POSTAL
+from core.us_geography import STATE_POSTAL
 from scripts.us_results.sources import Chamber, Kind
 
 PartyKey = Literal[

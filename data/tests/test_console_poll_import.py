@@ -38,8 +38,8 @@ from flask.testing import FlaskClient
 from openpyxl import Workbook
 
 from db import Database
-from polls.importers.types import PollImportResult
-from polls.importers.westminster import survation_import
+from importers.polls.types import PollImportResult
+from importers.polls.westminster import survation_import
 
 from console.blueprints.poll_import import _run_model_and_export
 from console.paths import (

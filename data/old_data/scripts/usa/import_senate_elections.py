@@ -11,7 +11,7 @@ cannot share the regular election's seat, so it is converted into its own
 ``senate-YYYY-special.json`` and imported as a separate election on the same map, linked
 to the regular one with ``--parent-name``.
 
-Run ``import_parties.py`` first so the US Party rows exist.
+Run ``importers/seed/import_parties.py`` first so the US Party rows exist.
 
 Usage:
     python old_data/scripts/usa/import_senate_elections.py \

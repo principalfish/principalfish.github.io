@@ -53,8 +53,16 @@ from typing import Any, Callable, Literal
 from sqlalchemy import select, text
 
 from config import DatabaseConfig
+from core.us_geography import parent_seat_name
 from db import Database
 from electoral_votes import allocation_year, get_electoral_votes, positive_integer
+from importers.polls.us.us_polls_common import (
+    MAJOR_PARTY_NAMES,
+    MatchupCandidate,
+    candidate_matches,
+    matchup_candidates,
+    matchup_stored_candidate_count,
+)
 from model_support.history import HistoryRecomputationError
 from model_support.io import publish_json, validate_output_target
 from model_support.trends import (
@@ -90,14 +98,6 @@ from model_support.summaries import (
     non_overlapping_seat_ids,
     recorded_vote_rows,
     summarize_votes,
-)
-from polls.importers.us.us_geography import parent_seat_name
-from polls.importers.us.us_polls_common import (
-    MAJOR_PARTY_NAMES,
-    MatchupCandidate,
-    candidate_matches,
-    matchup_candidates,
-    matchup_stored_candidate_count,
 )
 from schema import Election, Map, Region, Vote
 from scripts.export.naming import is_folded_senate_special, manifest_id_for_election

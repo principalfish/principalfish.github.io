@@ -10,7 +10,7 @@ not the DB.
 Each House district set has its own map: a file with a ``meta`` block names it
 (``meta.map_id``/``meta.map_name``); a file without one goes on map 21.
 
-Run ``import_parties.py`` first so the US Party rows exist.
+Run ``importers/seed/import_parties.py`` first so the US Party rows exist.
 
 Usage:
     python old_data/scripts/usa/import_house_elections.py \

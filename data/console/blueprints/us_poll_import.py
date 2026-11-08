@@ -48,7 +48,7 @@ from pydantic import ValidationError
 from pydantic_core import ErrorDetails
 
 from db import Database
-from polls.importers.us.us_wikipedia_polls import (
+from importers.polls.us.us_wikipedia_polls import (
     AUTO_TRACKING_OUTCOMES,
     US_CONTESTS,
     US_CONTESTS_BY_SLUG,

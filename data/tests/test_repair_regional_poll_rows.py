@@ -16,8 +16,8 @@ from pathlib import Path
 import pytest
 
 from db import Database
-from polls.importers.bases import ParsedBase, ParsedPollWithBases
-from polls.importers.westminster import lord_ashcroft_import, yougov_import
+from importers.polls.bases import ParsedBase, ParsedPollWithBases
+from importers.polls.westminster import lord_ashcroft_import, yougov_import
 from scripts import repair_regional_poll_rows as repair
 from scripts.poll_sources import Fetcher, MissingTableError, poll_fingerprint
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows

@@ -1,6 +1,6 @@
 """Tests for poll bases: parsing helpers, apportioning, and the n resolver.
 
-``polls.importers.bases`` turns printed column bases into planned rows;
+``importers.polls.bases`` turns printed column bases into planned rows;
 ``model_support.poll_bases`` resolves the n behind a poll's shares from them
 (falling back to ``sample_size`` or a population estimate) and summarises
 coverage. Importer-specific parsing is tested in each importer's test file and
@@ -16,6 +16,18 @@ import pytest
 from pydantic import ValidationError
 
 from db import Database
+from importers.polls.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    RegionRef,
+    apportion,
+    count_value,
+    make_base,
+    make_weighted_base,
+    plan_poll_bases,
+    region_refs,
+    weighted_value,
+)
 from model_support.poll_bases import (
     UNRESOLVED,
     CapturedBase,
@@ -27,18 +39,6 @@ from model_support.poll_bases import (
     ResolvedN,
     poll_base_coverage,
     resolve_poll_n,
-)
-from polls.importers.bases import (
-    ParsedBase,
-    PlannedPollBase,
-    RegionRef,
-    apportion,
-    count_value,
-    make_base,
-    make_weighted_base,
-    plan_poll_bases,
-    region_refs,
-    weighted_value,
 )
 from schema import Poll, PollBase, PollRow, Region
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows

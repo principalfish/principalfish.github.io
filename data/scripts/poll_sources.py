@@ -29,13 +29,13 @@ DATA_DIR = SCRIPT_DIR.parent
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
-from console.importers_registry import IMPORTERS
-from polls.importers.bases import (
+from importers.polls.bases import (
     HasRegionalShares,
     ParsedPollWithBases,
     PlannedPollBase,
     RegionRef,
 )
+from importers.polls.westminster.registry import IMPORTERS
 
 MAP_NAME = "UK Constituencies post 2022"
 SHARE_TOLERANCE = 0.5

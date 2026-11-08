@@ -15,11 +15,9 @@ from pathlib import Path
 
 import pytest
 
-from console.importers_registry import IMPORTERS
 from db import Database
-from model_support.poll_bases import PollsterCoverage
-from polls.importers.bases import ParsedBase, ParsedPollWithBases
-from polls.importers.westminster import (
+from importers.polls.bases import ParsedBase, ParsedPollWithBases
+from importers.polls.westminster import (
     bmg_research_import,
     deltapoll_import,
     find_out_now_import,
@@ -32,6 +30,8 @@ from polls.importers.westminster import (
     techne_import,
     yougov_import,
 )
+from importers.polls.westminster.registry import IMPORTERS
+from model_support.poll_bases import PollsterCoverage
 from scripts import backfill_poll_bases as backfill
 from scripts.poll_sources import Fetcher, fetch_with_importer
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows

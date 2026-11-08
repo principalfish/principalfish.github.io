@@ -19,7 +19,7 @@ import pytest
 from openpyxl import Workbook
 
 from db import Database
-from polls.importers.westminster import focaldata_import as fd
+from importers.polls.westminster import focaldata_import as fd
 from tests.uk_fixtures import (
     FakeUrlResponse,
     WestminsterWorld,

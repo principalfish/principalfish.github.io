@@ -52,6 +52,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NotRequired, TypedDict
 
+from core.us_geography import parent_seat_name
 from electoral_votes import (
     ElectoralVoteError,
     allocation_year,
@@ -73,7 +74,6 @@ from model_support.public_uncertainty import (
     TrendUncertainty,
     trend_uncertainty,
 )
-from polls.importers.us.us_geography import parent_seat_name
 
 
 class TrendEntry(TypedDict):

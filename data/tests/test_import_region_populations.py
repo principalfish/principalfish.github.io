@@ -2,29 +2,14 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 from pathlib import Path
-from types import ModuleType
 
 import pytest
 
 from db import Database
-
-OLD_SCRIPTS = Path(__file__).resolve().parents[1] / "old_data" / "scripts"
-
-
-def _load(name: str) -> ModuleType:
-    spec = importlib.util.spec_from_file_location(name, OLD_SCRIPTS / f"{name}.py")
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-populations = _load("import_region_populations")
+from importers.seed import import_region_populations as populations
 
 
 @pytest.mark.parametrize(

@@ -38,7 +38,7 @@ from bs4 import BeautifulSoup, Tag
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from db import Database
-from polls.importers.wikipedia_common import clean_text, fetch_html
+from importers.polls.wikipedia_common import clean_text, fetch_html
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import json
 import sys
 from pathlib import Path
@@ -28,16 +28,7 @@ class HolyroodSeatsImporter(Protocol):
 
 
 def _load() -> HolyroodSeatsImporter:
-    path = (
-        Path(__file__).resolve().parents[1]
-        / "old_data/scripts/holyrood/import_holyrood_seats.py"
-    )
-    name = "test_holyrood_seats_import_module"
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
+    module = importlib.import_module("importers.results.holyrood.import_holyrood_seats")
     return cast(HolyroodSeatsImporter, module)
 
 

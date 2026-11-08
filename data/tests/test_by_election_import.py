@@ -1,4 +1,4 @@
-"""Unit tests for the by-election importer (``scripts/by_election_import.py``).
+"""Unit tests for the by-election importer (``importers/results/westminster/by_election_import.py``).
 
 Parsing tests use synthetic Wikipedia HTML only. ``fetch_wikipedia_html``,
 ``build_import_plan``, ``commit_import_plan`` and ``main`` additionally use the
@@ -28,9 +28,8 @@ import pytest
 from bs4 import BeautifulSoup, Tag
 
 from db import Database
-from schema import ElectionType
-from scripts import by_election_import
-from scripts.by_election_import import (
+from importers.results.westminster import by_election_import
+from importers.results.westminster.by_election_import import (
     ByElectionImportPlan,
     DEFAULT_MAP_NAME,
     DEFAULT_PARENT_ELECTION_NAME,
@@ -49,6 +48,7 @@ from scripts.by_election_import import (
     parse_election_name_from_title,
     parse_results_table,
 )
+from schema import ElectionType
 from tests.uk_fixtures import FakeUrlResponse, WestminsterWorld
 
 # ── Synthetic HTML helpers ────────────────────────────────────────────────────

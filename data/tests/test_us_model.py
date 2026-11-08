@@ -27,10 +27,10 @@ from typing import Any, Literal, cast
 import pytest
 from sqlalchemy import event, text
 
-from model_support.io import OutputPublicationError
 from db import Database
-from polls.importers.us import us_polls_common
-from polls.importers.us.us_polls_common import CandidateColumn, matchup_label
+from importers.polls.us import us_polls_common
+from importers.polls.us.us_polls_common import CandidateColumn, matchup_label
+from model_support.io import OutputPublicationError
 from schema import ElectionType, Map, Party, Pollster, Seat
 from tests.us_ev_fixtures import seed_canonical_allocations
 

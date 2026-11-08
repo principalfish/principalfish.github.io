@@ -3,7 +3,7 @@
 Polls imported before ``poll_bases`` existed have no captured bases. For each
 poll on the "UK Constituencies post 2022" map that has none, this script
 re-fetches ``source_url`` with its pollster's importer
-(``fetch_parsed_poll``, looked up in ``console.importers_registry.IMPORTERS``)
+(``fetch_parsed_poll``, looked up in ``importers.polls.westminster.registry.IMPORTERS``)
 and inserts **only** ``poll_bases`` rows; polls and poll rows are never
 touched.
 
@@ -64,14 +64,14 @@ if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
 from config import DatabaseConfig
-from console.importers_registry import IMPORTERS
+from importers.polls.bases import PlannedPollBase, RegionRef, plan_poll_bases
+from importers.polls.westminster.registry import IMPORTERS
 from model_support.poll_bases import (
     COVERAGE_SQL,
     REPORTED_ROW_SQL,
     PollsterCoverage,
     coverage_from_rows,
 )
-from polls.importers.bases import PlannedPollBase, RegionRef, plan_poll_bases
 from scripts.migrate_add_us_poll_scope import open_database
 from scripts.poll_sources import (
     Fetcher,

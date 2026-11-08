@@ -85,24 +85,24 @@ summary before treating the rebuilt outputs as complete.
 
 ### Underlying importers
 
-The orchestrator chains these (all under `old_data/scripts/`, run from `data/`);
+The orchestrator chains these (under `importers/` and `old_data/scripts/`, run from `data/`);
 you can also run any one directly with `--refresh`:
 
 ```bash
-./election_data/bin/python old_data/scripts/import_parties.py
+./election_data/bin/python importers/seed/import_parties.py
 ./election_data/bin/python scripts/migrate_us_electoral_votes.py \
   --legacy-forecast-target-year 2028
-./election_data/bin/python old_data/scripts/westminster/import_topojson.py --refresh
-./election_data/bin/python old_data/scripts/import_region_populations.py \
+./election_data/bin/python importers/results/westminster/import_topojson.py --refresh
+./election_data/bin/python importers/seed/import_region_populations.py \
 	--map-name "UK Constituencies post 2022" \
 	--input inputs/westminster/region_populations.csv
-./election_data/bin/python old_data/scripts/westminster/import_general_elections.py --refresh
-./election_data/bin/python old_data/scripts/holyrood/import_holyrood_seats.py --refresh
-./election_data/bin/python old_data/scripts/holyrood/import_holyrood_elections.py --refresh
+./election_data/bin/python importers/results/westminster/import_general_elections.py --refresh
+./election_data/bin/python importers/results/holyrood/import_holyrood_seats.py --refresh
+./election_data/bin/python importers/results/holyrood/import_holyrood_elections.py --refresh
 ./election_data/bin/python old_data/scripts/usa/import_house_elections.py \
 	--file inputs/us/house-2024.json --year 2024 \
 	--name "2024 US House Election" --refresh      # + senate / presidential per file
-./election_data/bin/python scripts/by_election_import.py \
+./election_data/bin/python importers/results/westminster/by_election_import.py \
 	--url <wikipedia-url> --refresh                # one per line in
 	                                               # inputs/westminster/by_elections.txt
 ```

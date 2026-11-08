@@ -9,7 +9,7 @@ tally-only. Electoral-vote weights come from the database allocation tables, not
 the JSON or seat rows. Seat geometry lives in the frontend TopoJSON
 (``uselectionmaps/data/maps/map-22.topo.json``).
 
-Run ``import_parties.py`` and the electoral-vote migration/bootstrap first.
+Run ``importers/seed/import_parties.py`` and the electoral-vote migration/bootstrap first.
 
 Usage:
     python old_data/scripts/usa/import_presidential_elections.py \

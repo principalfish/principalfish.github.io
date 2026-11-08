@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from typing import Literal, get_args
 
 from db import Database, MatchupSummary
-from polls.importers.us.us_wikipedia_polls import US_CONTESTS_BY_SLUG
+from importers.polls.us.us_wikipedia_polls import US_CONTESTS_BY_SLUG
 from schema import TrackedMatchupSource
 
 # Chamber slug → the contest whose seat-level polls and automatic lead-table

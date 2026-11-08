@@ -15,11 +15,11 @@ from pathlib import Path
 
 import pytest
 
-from schema import Poll
-import scripts.repair_poll_records as repair_script
 from config import DatabaseConfig
 from db import Database
-from polls.importers.westminster import techne_import
+from importers.polls.westminster import techne_import
+from schema import Poll
+import scripts.repair_poll_records as repair_script
 from scripts.migrate_add_us_poll_scope import open_database
 from scripts.repair_poll_records import (
     CORRECTIONS,

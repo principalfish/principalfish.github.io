@@ -24,7 +24,7 @@ What makes the US queue different from Westminster's:
 - **Renamed matchups.** A stored poll the page now lists under a renamed
   matchup (a candidate column was added) never enters the queue; the finish
   step moves it onto the new label instead (see
-  :func:`~polls.importers.us.us_wikipedia_polls.find_relabelled_polls`).
+  :func:`~importers.polls.us.us_wikipedia_polls.find_relabelled_polls`).
 - **A finish step with three jobs.** Renamed matchups are applied, automatic
   matchup tracking runs over every row the run scraped, then the three US
   models and the export run once if the run imported anything, moved a stored
@@ -48,9 +48,9 @@ from typing import Any
 from sqlalchemy.exc import SQLAlchemyError
 
 from db import Database
-from polls.importers.types import ScrapedPollRow
-from polls.importers.us.us_polls_common import surname
-from polls.importers.us.us_wikipedia_polls import (
+from importers.polls.types import ScrapedPollRow
+from importers.polls.us.us_polls_common import surname
+from importers.polls.us.us_wikipedia_polls import (
     US_CONTESTS,
     US_CONTESTS_BY_SLUG,
     UsImportError,

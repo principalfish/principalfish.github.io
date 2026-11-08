@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import json
 import sys
 from datetime import date
@@ -63,16 +63,7 @@ class Importer(Protocol):
 
 
 def _load() -> Importer:
-    path = Path(__file__).resolve().parents[1] / (
-        "old_data/scripts/holyrood/import_holyrood_elections.py"
-    )
-    spec = importlib.util.spec_from_file_location(
-        "test_holyrood_elections_module", path,
-    )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    module = importlib.import_module("importers.results.holyrood.import_holyrood_elections")
     return cast(Importer, module)
 
 

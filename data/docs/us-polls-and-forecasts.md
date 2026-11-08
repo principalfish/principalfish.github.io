@@ -140,10 +140,10 @@ The same scrape without the review step. **The default is a dry-run listing**;
 `--commit` writes and applies automatic matchup tracking.
 
 ```bash
-./election_data/bin/python polls/importers/us/us_house_generic_ballot_import.py   # house_national + house_districts
-./election_data/bin/python polls/importers/us/us_senate_import.py
-./election_data/bin/python polls/importers/us/us_presidential_import.py
-./election_data/bin/python polls/importers/us/us_senate_import.py --state Michigan --commit
+./election_data/bin/python importers/polls/us/us_house_generic_ballot_import.py   # house_national + house_districts
+./election_data/bin/python importers/polls/us/us_senate_import.py
+./election_data/bin/python importers/polls/us/us_presidential_import.py
+./election_data/bin/python importers/polls/us/us_senate_import.py --state Michigan --commit
 ```
 
 Options: `--contest SLUG` (repeatable), `--state STATE` (repeatable; name or postal

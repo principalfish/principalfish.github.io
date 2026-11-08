@@ -70,7 +70,7 @@ if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
 from config import DatabaseConfig
-from polls.importers.westminster import bmg_research_import, techne_import
+from importers.polls.westminster import bmg_research_import, techne_import
 from scripts.migrate_add_us_poll_scope import open_database
 
 MAP_NAME = techne_import.DEFAULT_MAP_NAME

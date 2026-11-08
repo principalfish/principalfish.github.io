@@ -14,12 +14,13 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 | Path | What it is |
 |-|-|
 | `schema.py`, `db.py`, `config.py` | SQLAlchemy schema, DB access, configuration |
+| `core/` | Shared modules (US geography names so far; the root modules above join it in a later step) |
 | `console/` | Local web console for the data (`create_app`) |
 | `server.py` | Local data preview server (`:5055`) |
 | `archive/` | Finished one-offs and retired setup files (not maintained, not type-checked; see its README) |
 | `inputs/` | Committed source data files per jurisdiction (`westminster/`, `holyrood/`, `us/`) read by the importers |
-| `old_data/` | Base-data importers (TopoJSON maps, parties, general elections) |
-| `polls/` | Wikipedia-driven poll importers |
+| `importers/` | `seed/` (parties, region populations), `results/` (Westminster and Holyrood elections, boundaries, by-elections) and `polls/` (Wikipedia-driven poll importers, `registry.py` lists the Westminster pollsters) |
+| `old_data/` | US result importers, TopoJSON builders and converters (`scripts/usa/`) |
 | `models/` | Election models — `westminster/`, `holyrood/` (UNS retrospective), `us/` (House, President, Senate forecasts) |
 | `scripts/` | Static export scripts that partition elections by parliament into the per-page data dirs (`electionmaps/data`, `uselectionmaps/data`) |
 | `tests/` | Pytest suite — run with `./run_tests.sh` (strict mypy, then pytest) |

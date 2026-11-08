@@ -7,8 +7,8 @@ from flask.typing import ResponseReturnValue
 from pydantic import ValidationError
 from sqlalchemy import select
 
+from importers.results.westminster import by_election_import
 from schema import Election, ElectionType
-from scripts import by_election_import
 
 from console.db import get_db
 from console.forms import ByElectionPreviewForm

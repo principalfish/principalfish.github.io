@@ -7,3 +7,30 @@ This redesigns it around five uniform sections: Westminster, Holyrood, House, Se
 Model runs move to the background with live progress, and every run's output is kept in a log. Each run form gets an "export when done" tick box, on by default.
 
 Every existing diagnostic number stays visible, along with the safeguards around imports and destructive actions. Full stage-by-stage diagnostics for Holyrood and US are a separate follow-up issue. This builds on the folder restructure in #82.
+
+## Plan
+
+_2026-11-08 · 0 of 11 pieces done · now: not started, waiting on #82_
+
+- [ ] **1/11 Section registry and internal layout** · not started
+  Define the five sections in one place and reorganise the console's code, with no visible change.
+- [ ] **2/11 Navigation and section pages** · not started
+  Add navigation everywhere and a landing page per section; home becomes links only.
+- [ ] **3/11 Template and route consolidation** · not started
+  Merge near-duplicate pages and routes.
+- [ ] **4/11 One URL shape** · not started
+  Give every section the same URLs, with redirects for old pages.
+- [ ] **5/11 Section parity** · not started
+  Filtered polls, per-chamber US runs and imports, and export-when-done on each run form.
+- [ ] **6/11 Global export page** · not started
+  One page to tick sections and what to write, with dry run on by default.
+- [ ] **7/11 Admin page, confirms and small fixes** · not started
+  Gather rebuild, backup and restore, and add confirm steps to destructive actions.
+- [ ] **8/11 Looks and readability** · not started
+  Consistent styling, tables and spacing, in light and dark.
+- [ ] **9/11 Run log** · not started
+  Keep every run's output, viewable afterwards.
+- [ ] **10/11 Background runs with live progress** · not started
+  Runs stop blocking the page and show progress as they go.
+- [ ] **11/11 Docs** · not started
+  Document the new layout, export page and run log.

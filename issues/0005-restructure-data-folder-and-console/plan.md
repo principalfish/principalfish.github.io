@@ -182,7 +182,7 @@ Every piece also meets the standard proof in **Verification**.
 
 - [x] 1: Editable install, archive folder, dead files, baselines
 - [x] 2: `schema.py` and `models/` package
-- [ ] 3: `inputs/`
+- [x] 3: `inputs/`
 - [ ] 4: UK and poll importers
 - [ ] 5: US importers
 - [ ] 6: `export/`
@@ -218,3 +218,4 @@ Every piece also meets the standard proof in **Verification**.
 - Hazard for later: the editable install's `.pth` sits last on `sys.path`, after site-packages. A pip package named `schema`, `config` or `db` would silently shadow ours when a script runs by path. None is installed now; piece 9's `core/` removes the top-level collision risk for `config` and `db`.
 - 2026-11-08, piece 3: built on Sonnet (experiment), inline. Beyond the plan's list: `current_senate.py:70`, `us_results/cli.py:103` and `scrape_holyrood_2026.py:52` constants, usage docstrings in the importers and converters, and `test_us_results_current_senate.py:764` (it pins the data folder's name, so it became "us" here rather than in piece 5). Added `tests/test_inputs_paths.py` (11 tests) pinning each default path and the three `parents[3]` constants. One round of the five checks: style asked for line widths, a Layout-table row for `inputs/` and a stale comment (fixed), coverage asked for a pin on the scraper's output folder (added); security, correctness and common-mistakes clean (common-mistakes appended one general entry about `__file__`-depth paths). `data/archive/import_all.sh` still names the old folder: left as an archived record.
 - The rebuild proof reads `inputs/` directly, so a wrong path fails its 43-step check. `rebuild_database.py --dry-run` differs from the baseline only in those paths (checked by rewriting the baseline's paths and diffing: empty).
+- 2026-11-08, piece 3: final full run on the committed tree: 6597 passed (6586 earlier plus the 11 new tests in test_inputs_paths.py).

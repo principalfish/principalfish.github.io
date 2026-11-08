@@ -1,7 +1,7 @@
 # Resume point — read this first
 
 ## Where we are
-Issue 0002 "Import 2018–2026 US House and Senate results from NYT data" (GitHub #79) is ready. All 14 pieces are built and pushed (HEAD `3efe8c83`, check with `git rev-parse --short origin/import-2026-us-midterm-results`). The live steps are done, and draft PR #80 carries the final description (`gh pr view 80 --json state,isDraft`). Marking it ready and merging are Phil's.
+Issue 0002 "Import 2018–2026 US House and Senate results from NYT data" (GitHub #79) is ready. All 14 pieces are built and pushed (HEAD `3efe8c83`, check with `git rev-parse --short origin/import-2026-us-midterm-results`). The live steps are done, and PR #80 carries the final description and is marked ready for review (`gh pr view 80 --json state,isDraft`). Merging is Phil's.
 
 No pending decision. Next: Phil merges #80. Then `/issues` marks the issue done, and the builder can be retired (`planner.py check-builder import-2026-us-midterm-results`, then archive on Phil's yes).
 

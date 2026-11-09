@@ -57,24 +57,20 @@ election.
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from pathlib import Path
 from typing import Any
 
-from scripts.us_results.fetch import FetchResult
-from scripts.us_results.races import Race
-from scripts.us_results.sources import Chamber, Kind, supported_years
+from importers.results.us.nyt.fetch import FetchResult
+from importers.results.us.nyt.races import Race
+from importers.results.us.nyt.sources import Chamber, Kind, supported_years
 
-_USA_SCRIPTS = Path(__file__).resolve().parents[2] / "old_data" / "scripts" / "usa"
-if str(_USA_SCRIPTS) not in sys.path:
-    sys.path.append(str(_USA_SCRIPTS))
-
-from convert_538_house import (  # noqa: E402
-    UNOPPOSED_NOMINAL_VOTES as UNOPPOSED_NOMINAL_VOTES,
-)
+# A seat with a sole unopposed winner carries no vote counts in the source files, so it
+# would aggregate to zero and be dropped downstream as a zero-vote seat. Giving the winner
+# a nominal total makes them 100%, so the seat imports, projects (as a safe hold) and
+# displays like any other. The magnitude is a placeholder; only the 100% share is meaningful.
+UNOPPOSED_NOMINAL_VOTES = 100
 
 META_KEY = "meta"
 SOURCE_CREDIT = "The New York Times / AP"

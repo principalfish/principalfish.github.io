@@ -25,17 +25,19 @@ from flask import Flask, Response
 from flask.testing import FlaskClient
 from sqlalchemy.exc import OperationalError
 
-import scripts.us_results.fetch as fetch_module
 from console.blueprints import us_results
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services.preview import PREVIEW_CACHE, store_preview
 from console.services.us_models import MODEL_RUN_LOCK, model_run_slot
 from db import Database
+from importers.results.us.import_senate_elections import import_senate
+from importers.results.us.nyt import cli
+from importers.results.us.nyt import fetch as fetch_module
+from importers.results.us.nyt.convert import ConversionResult
+from importers.results.us.nyt.current_senate import DEFAULT_SNAPSHOT, render
+from importers.results.us.nyt.sources import source_for, supported_years
+from importers.results.us.us_import import PARTY_KEY_TO_NAME
 from schema import Election, ElectionType, Party
-from scripts.us_results import cli
-from scripts.us_results.convert import ConversionResult
-from scripts.us_results.current_senate import DEFAULT_SNAPSHOT, render
-from scripts.us_results.sources import source_for, supported_years
 from tests.console_fixtures import (
     RecordingRunner,
     app,
@@ -45,8 +47,6 @@ from tests.console_fixtures import (
     select_block,
 )
 from tests.senate_current_fixtures import senate_election
-from import_senate_elections import import_senate
-from us_import import PARTY_KEY_TO_NAME
 
 FIXTURES = Path(__file__).parent / "fixtures" / "nyt"
 _EXPIRED = "Preview expired. Please preview again."

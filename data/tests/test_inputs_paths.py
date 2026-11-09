@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from importers.results.us.nyt import cli, current_senate
 from scripts import export_elections, rebuild_database, scrape_holyrood_2026
-from scripts.us_results import cli, current_senate
 
 DATA_DIR = Path(__file__).resolve().parents[1]
 INPUTS = DATA_DIR / "inputs"
@@ -37,6 +37,10 @@ def test_inputs_has_one_folder_per_jurisdiction() -> None:
         (cli.DEFAULT_OUT_DIR, INPUTS / "us"),
         (scrape_holyrood_2026.DEFAULT_OUT_DIR, INPUTS / "holyrood"),
         (current_senate.DEFAULT_ELECTION_FILE, INPUTS / "us" / "senate-2026.json"),
+        (
+            current_senate.DEFAULT_SNAPSHOT,
+            DATA_DIR.parent / "uselectionmaps" / "data" / "results" / "senate-current.json",
+        ),
     ],
 )
 def test_script_defaults_point_at_inputs(actual: Path, expected: Path) -> None:

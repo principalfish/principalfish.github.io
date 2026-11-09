@@ -3,7 +3,7 @@
 ``uselectionmaps/data/results/senate-current.json`` is a ``pf-senate-current-v1``
 snapshot of all 100 seats: per state, its two senators (``party``, ``name``,
 Senate ``class`` 1/2/3), and ``w``, the pair's combined party or ``"split"``.
-``old_data/scripts/usa/convert_senate_current.py`` builds it from the
+``archive/convert_senate_current.py`` first built it from the
 congress-legislators list. Once the 2026 Senate election is imported, this
 module rebuilds it from that election instead:
 
@@ -46,20 +46,16 @@ import json
 import math
 import os
 import stat
-import sys
 import tempfile
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-DATA_DIR = Path(__file__).resolve().parents[2]
-REPO_ROOT = DATA_DIR.parent
-_USA_SCRIPTS = DATA_DIR / "old_data" / "scripts" / "usa"
-if str(_USA_SCRIPTS) not in sys.path:
-    sys.path.append(str(_USA_SCRIPTS))
+from importers.results.us.us_import import PARTY_KEY_TO_NAME, STATE_NAMES
 
-from us_import import PARTY_KEY_TO_NAME, STATE_NAMES  # noqa: E402
+DATA_DIR = Path(__file__).resolve().parents[4]
+REPO_ROOT = DATA_DIR.parent
 
 SCHEMA = "pf-senate-current-v1"
 META_KEY = "meta"
@@ -208,7 +204,7 @@ def build_current_senate(
 
 
 def render(payload: Mapping[str, Any]) -> str:
-    """Return ``payload`` as the text ``convert_senate_current.py`` writes.
+    """Return ``payload`` as the text the retired ``convert_senate_current.py`` wrote.
 
     Raises:
         CurrentSenateError: If the payload holds a NaN or infinite number, which

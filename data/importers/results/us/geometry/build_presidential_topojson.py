@@ -16,7 +16,7 @@ converter so the front-end joins them: "California", "District of Columbia",
 "Maine CD-1", "Nebraska CD-3", etc. ``properties.region`` is the state name.
 
 Usage:
-    python old_data/scripts/usa/build_presidential_topojson.py \
+    python importers/results/us/geometry/build_presidential_topojson.py \
         --state-shp state_geo/cb_2024_us_state_500k.shp \
         --cd-shp cd119/cb_2024_us_cd119_500k.shp \
         --out ../uselectionmaps/data/maps/map-22.topo.json
@@ -84,7 +84,7 @@ def main() -> None:
     parser.add_argument("--state-shp", required=True, type=Path, help="cb_2024_us_state_500k.shp")
     parser.add_argument("--cd-shp", required=True, type=Path, help="cb_2024_us_cd119_500k.shp")
     parser.add_argument("--out", required=True, type=Path, help="Output TopoJSON path")
-    parser.add_argument("--simplify", default="12%", help="mapshaper simplification (default 12%)")
+    parser.add_argument("--simplify", default="12%", help="mapshaper simplification (default 12%%)")
     args = parser.parse_args()
 
     with tempfile.TemporaryDirectory() as tmp:

@@ -3,7 +3,7 @@
 A :class:`Race` is a single House district or Senate seat contest as one NYT
 file reports it: its candidates with their votes, who (if anyone) has been
 called the winner, and how much of the vote is counted. The adapters in
-:mod:`scripts.us_results.adapters` build these from each schema family; later
+:mod:`importers.results.us.nyt.adapters` build these from each schema family; later
 steps turn them into the project's election JSON.
 
 Seat keys follow the project's US maps: House districts are ``ST-NN``
@@ -18,7 +18,7 @@ from datetime import date
 from typing import Literal
 
 from core.us_geography import STATE_POSTAL
-from scripts.us_results.sources import Chamber, Kind
+from importers.results.us.nyt.sources import Chamber, Kind
 
 PartyKey = Literal[
     "democrat",

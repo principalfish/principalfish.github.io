@@ -11,7 +11,7 @@ Polygon ``properties.name`` is the state name (matches the 538 ``state`` field u
 the results converter); ``properties.region`` is the state name too.
 
 Usage:
-    python old_data/scripts/usa/build_senate_topojson.py \
+    python importers/results/us/geometry/build_senate_topojson.py \
         --state-shp state_geo/cb_2024_us_state_500k.shp \
         --out ../uselectionmaps/data/maps/map-23.topo.json
 """
@@ -61,7 +61,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state-shp", required=True, type=Path, help="cb_2024_us_state_500k.shp")
     parser.add_argument("--out", required=True, type=Path, help="Output TopoJSON path")
-    parser.add_argument("--simplify", default="12%", help="mapshaper simplification (default 12%)")
+    parser.add_argument("--simplify", default="12%", help="mapshaper simplification (default 12%%)")
     args = parser.parse_args()
 
     with tempfile.TemporaryDirectory() as tmp:

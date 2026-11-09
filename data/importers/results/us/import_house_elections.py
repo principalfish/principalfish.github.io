@@ -1,10 +1,10 @@
 """Import a US House election from a project election-JSON file into the database.
 
 Reads the ``{ "TX-01": {seatInfo, partyInfo}, ... }`` JSON produced by
-``convert_538_house.py`` or ``scripts/us_results`` and loads it as a ``us_house``
-election: a Map (a fixed id, so manifest wiring is deterministic), one Region per
-state, 435 Seats named by district code (e.g. ``TX-01``), and per-party Vote rows. Seat
-geometry lives in the frontend TopoJSON (``uselectionmaps/data/maps/map-<id>.topo.json``),
+``importers/results/us/nyt`` (or the retired, archived ``convert_538_house.py``) and loads
+it as a ``us_house`` election: a Map (a fixed id, so manifest wiring is deterministic), one
+Region per state, 435 Seats named by district code (e.g. ``TX-01``), and per-party Vote
+rows. Seat geometry lives in the frontend TopoJSON (``uselectionmaps/data/maps/map-<id>.topo.json``),
 not the DB.
 
 Each House district set has its own map: a file with a ``meta`` block names it
@@ -13,7 +13,7 @@ Each House district set has its own map: a file with a ``meta`` block names it
 Run ``importers/seed/import_parties.py`` first so the US Party rows exist.
 
 Usage:
-    python old_data/scripts/usa/import_house_elections.py \
+    python importers/results/us/import_house_elections.py \
         --file inputs/us/house-2024.json \
         --year 2024 --name "2024 US House Election"
 """
@@ -23,15 +23,10 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
 from db import Database
-from schema import ElectionType
-from us_import import (
+from importers.results.us.us_import import (
     STATE_NAMES,
     check_election_map,
     ensure_us_map,
@@ -39,6 +34,7 @@ from us_import import (
     map_from_meta,
     plan_us_election,
 )
+from schema import ElectionType
 
 # Fixed map id for US House files without a ``meta`` block (convention: 1-9 westminster,
 # 11-19 holyrood, 21+ US).

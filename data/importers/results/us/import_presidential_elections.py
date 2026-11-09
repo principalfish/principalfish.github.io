@@ -1,7 +1,7 @@
 """Import a US presidential (Electoral College) election from a project JSON file.
 
 Reads the ``{ "California": {seatInfo, partyInfo}, ... }`` JSON produced by
-``convert_538_presidential.py`` and loads it as a ``us_presidential`` election: a Map
+the retired, archived ``convert_538_presidential.py`` and loads it as a ``us_presidential`` election: a Map
 (fixed id 22), one Region per state, 56 elector-unit Seats (50 states + DC + the
 Maine/Nebraska statewide and district units), and
 per-party Vote rows. The two statewide ME/NE units have no map polygon — they are
@@ -12,7 +12,7 @@ the JSON or seat rows. Seat geometry lives in the frontend TopoJSON
 Run ``importers/seed/import_parties.py`` and the electoral-vote migration/bootstrap first.
 
 Usage:
-    python old_data/scripts/usa/import_presidential_elections.py \
+    python importers/results/us/import_presidential_elections.py \
         --file inputs/us/presidential-2024.json \
         --year 2024 --name "2024 US Presidential Election"
 """
@@ -21,16 +21,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from db import Database
 from electoral_votes import get_electoral_votes
+from importers.results.us.us_import import ensure_us_map, import_us_election
 from schema import ElectionType
-from us_import import ensure_us_map, import_us_election
 
 # Fixed map id for US Presidential (convention: 21 house, 22 president, 23 senate).
 MAP_ID = 22

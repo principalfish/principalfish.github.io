@@ -75,6 +75,11 @@ def test_the_module_list_covers_every_role() -> None:
         "importers.polls.holyrood.holyrood_wikipedia_import",
         "importers.polls.us.us_wikipedia_polls",
         "importers.polls.westminster.registry",
+        "importers.results.us.us_import",
+        "importers.results.us.nyt.cli",
+        "importers.results.us.geometry.build_house_topojson",
+        "importers.seed.us_electoral_votes",
+        "importers.seed.migrate_us_electoral_votes",
     ):
         assert name in MODULES, name
 

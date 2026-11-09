@@ -1,6 +1,6 @@
-"""Read each NYT results schema family into :class:`~scripts.us_results.races.Race`.
+"""Read each NYT results schema family into :class:`~importers.results.us.nyt.races.Race`.
 
-One parser per layout (see :mod:`scripts.us_results.sources` for which cycles
+One parser per layout (see :mod:`importers.results.us.nyt.sources` for which cycles
 use which):
 
 - :func:`parse_a` reads schema A (2024 on) and A2 (2022). Both keep races in a
@@ -33,7 +33,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date
 
-from scripts.us_results.races import (
+from importers.results.us.nyt.races import (
     Candidate,
     DecisiveRound,
     Race,
@@ -41,7 +41,7 @@ from scripts.us_results.races import (
     senate_class_for_year,
     sort_candidates,
 )
-from scripts.us_results.sources import Chamber, Kind, Source
+from importers.results.us.nyt.sources import Chamber, Kind, Source
 
 logger = logging.getLogger(__name__)
 

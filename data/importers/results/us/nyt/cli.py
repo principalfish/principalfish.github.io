@@ -15,7 +15,7 @@ Subcommands, each for one ``--year`` and ``--chamber``:
 A fifth subcommand, ``current-senate``, takes no ``--year`` or ``--chamber``: it
 rebuilds the Current Senate snapshot (``senate-current.json``) from the
 committed 2026 Senate election file and never touches the database (see
-``scripts/us_results/current_senate.py``). Options: ``--snapshot`` (input),
+``importers/results/us/nyt/current_senate.py``). Options: ``--snapshot`` (input),
 ``--election-file``, ``--out`` (both default to the committed paths) and
 ``--dry-run``, which writes nothing and prints the holdover, winner and
 uncalled counts.
@@ -31,13 +31,13 @@ change.
 
 Usage (from ``data/``)::
 
-    python scripts/us_results/cli.py fetch --year 2026 --chamber house
-    python scripts/us_results/cli.py convert --year 2026 --chamber house --dry-run
-    python scripts/us_results/cli.py import --year 2026 --chamber house --refresh
-    python scripts/us_results/cli.py all --year 2026 --chamber senate --refresh
-    python scripts/us_results/cli.py current-senate --dry-run
+    python importers/results/us/nyt/cli.py fetch --year 2026 --chamber house
+    python importers/results/us/nyt/cli.py convert --year 2026 --chamber house --dry-run
+    python importers/results/us/nyt/cli.py import --year 2026 --chamber house --refresh
+    python importers/results/us/nyt/cli.py all --year 2026 --chamber senate --refresh
+    python importers/results/us/nyt/cli.py current-senate --dry-run
 
-``python -m scripts.us_results.cli ...`` works too.
+``python -m importers.results.us.nyt.cli ...`` works too.
 """
 
 from __future__ import annotations
@@ -51,18 +51,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-DATA_DIR = Path(__file__).resolve().parents[2]
-# The US importers live with the other seed scripts and import each other by bare
-# module name, so their folder goes on the path as well as data/.
-_USA_SCRIPTS = DATA_DIR / "old_data" / "scripts" / "usa"
-for _path in (DATA_DIR, _USA_SCRIPTS):
-    if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
-
-import config  # noqa: E402
-from db import Database  # noqa: E402
-from scripts.us_results.adapters import AdapterError, apply_runoffs, parse  # noqa: E402
-from scripts.us_results.convert import (  # noqa: E402
+import config
+from db import Database
+from importers.results.us.import_house_elections import district_state, import_house
+from importers.results.us.import_senate_elections import import_senate
+from importers.results.us.nyt.adapters import AdapterError, apply_runoffs, parse
+from importers.results.us.nyt.convert import (
     META_KEY,
     VOTES_538,
     VOTES_NOMINAL,
@@ -73,15 +67,15 @@ from scripts.us_results.convert import (  # noqa: E402
     convert_races,
     output_name,
 )
-from scripts.us_results.current_senate import (  # noqa: E402
+from importers.results.us.nyt.current_senate import (
     DEFAULT_ELECTION_FILE,
     DEFAULT_SNAPSHOT,
     CurrentSenateError,
     rebuild_current_senate,
 )
-from scripts.us_results.fetch import FetchError, FetchResult, fetch  # noqa: E402
-from scripts.us_results.races import Race  # noqa: E402
-from scripts.us_results.sources import (  # noqa: E402
+from importers.results.us.nyt.fetch import FetchError, FetchResult, fetch
+from importers.results.us.nyt.races import Race
+from importers.results.us.nyt.sources import (
     SOURCES,
     Chamber,
     Source,
@@ -90,9 +84,7 @@ from scripts.us_results.sources import (  # noqa: E402
     source_for,
     supported_years,
 )
-from import_house_elections import district_state, import_house  # noqa: E402
-from import_senate_elections import import_senate  # noqa: E402
-from us_import import (  # noqa: E402
+from importers.results.us.us_import import (
     PARTY_KEY_TO_NAME,
     check_election_map,
     check_us_election_file,
@@ -100,6 +92,7 @@ from us_import import (  # noqa: E402
     plan_us_election,
 )
 
+DATA_DIR = Path(__file__).resolve().parents[4]
 DEFAULT_OUT_DIR = DATA_DIR / "inputs" / "us"
 DEFAULT_TOP_N = 10
 # The subcommand with its own options (no year or chamber); see _run_current_senate.

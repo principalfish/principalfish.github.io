@@ -1,7 +1,7 @@
 """Import a US Senate election (one cycle's regular races) from a project JSON file.
 
 Reads the ``{ "Texas": {seatInfo, partyInfo}, ... }`` JSON produced by
-``convert_538_senate.py`` and loads it as a ``us_senate`` election: a Map (fixed id 23),
+the retired, archived ``convert_538_senate.py`` and loads it as a ``us_senate`` election: a Map (fixed id 23),
 one Region per state, one Seat per state with a race that cycle (named by state), and
 per-party Vote rows. States not up that cycle have no seat and render with the map's
 neutral fill. Seat geometry lives in ``uselectionmaps/data/maps/map-23.topo.json``.
@@ -14,10 +14,10 @@ to the regular one with ``--parent-name``.
 Run ``importers/seed/import_parties.py`` first so the US Party rows exist.
 
 Usage:
-    python old_data/scripts/usa/import_senate_elections.py \
+    python importers/results/us/import_senate_elections.py \
         --file inputs/us/senate-2024.json \
         --year 2024 --name "2024 US Senate Election"
-    python old_data/scripts/usa/import_senate_elections.py \
+    python importers/results/us/import_senate_elections.py \
         --file inputs/us/senate-2024-special.json \
         --year 2024 --name "2024 US Senate Special Election" \
         --parent-name "2024 US Senate Election"
@@ -27,21 +27,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
 from db import Database
-from schema import ElectionType
-from us_import import (
+from importers.results.us.us_import import (
     check_election_map,
     ensure_us_map,
     import_us_election,
     map_from_meta,
     plan_us_election,
 )
+from schema import ElectionType
 
 # Fixed map id for US Senate (convention: 21 house, 22 president, 23 senate).
 MAP_ID = 23

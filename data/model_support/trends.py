@@ -199,7 +199,7 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             if "target_election_year" not in election_columns:
                 raise ElectoralVoteError(
                     "Presidential target metadata is missing; run "
-                    "scripts/migrate_us_electoral_votes.py "
+                    "importers/seed/migrate_us_electoral_votes.py "
                     "with an explicit legacy target."
                 )
             year_by_election = {

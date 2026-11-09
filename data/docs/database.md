@@ -85,12 +85,12 @@ summary before treating the rebuilt outputs as complete.
 
 ### Underlying importers
 
-The orchestrator chains these (under `importers/` and `old_data/scripts/`, run from `data/`);
+The orchestrator chains these (all under `importers/`, run from `data/`);
 you can also run any one directly with `--refresh`:
 
 ```bash
 ./election_data/bin/python importers/seed/import_parties.py
-./election_data/bin/python scripts/migrate_us_electoral_votes.py \
+./election_data/bin/python importers/seed/migrate_us_electoral_votes.py \
   --legacy-forecast-target-year 2028
 ./election_data/bin/python importers/results/westminster/import_topojson.py --refresh
 ./election_data/bin/python importers/seed/import_region_populations.py \
@@ -99,7 +99,7 @@ you can also run any one directly with `--refresh`:
 ./election_data/bin/python importers/results/westminster/import_general_elections.py --refresh
 ./election_data/bin/python importers/results/holyrood/import_holyrood_seats.py --refresh
 ./election_data/bin/python importers/results/holyrood/import_holyrood_elections.py --refresh
-./election_data/bin/python old_data/scripts/usa/import_house_elections.py \
+./election_data/bin/python importers/results/us/import_house_elections.py \
 	--file inputs/us/house-2024.json --year 2024 \
 	--name "2024 US House Election" --refresh      # + senate / presidential per file
 ./election_data/bin/python importers/results/westminster/by_election_import.py \
@@ -121,8 +121,8 @@ forecasts use the required `elections.target_election_year`. A forecast's
 `year`, `election_date` and dated name still identify its **as-of run**, not its
 target cycle. Current and baseline comparisons resolve their own allocations.
 The old `seats.electoral_votes` column is no longer authoritative. Converter JSON
-weights are descriptive only: both offline converters use the same bounded
-bootstrap dataset, independently of later operator edits in the database.
+weights are descriptive only: the retired offline converters (now in `archive/`) used
+the same bounded bootstrap dataset, independently of later operator edits in the database.
 
 For an existing database, stop writing processes, confirm the configured file,
 back it up ([Backups](#backups)), then inspect migration's read-only report. Run these
@@ -133,7 +133,7 @@ EV_DB=$(./election_data/bin/python -c \
   'from config import DatabaseConfig; print(DatabaseConfig.from_env().database_path)')
 printf '%s\n' "$EV_DB"
 ./election_data/bin/python scripts/backup_db.py
-./election_data/bin/python scripts/migrate_us_electoral_votes.py --dry-run
+./election_data/bin/python importers/seed/migrate_us_electoral_votes.py --dry-run
 ```
 
 Migration opens the configured **existing** file; it never creates a missing
@@ -145,9 +145,9 @@ changes. Only when all reported legacy forecasts belong to the current 2028
 pipeline, apply:
 
 ```bash
-./election_data/bin/python scripts/migrate_us_electoral_votes.py \
+./election_data/bin/python importers/seed/migrate_us_electoral_votes.py \
   --dry-run --legacy-forecast-target-year 2028
-./election_data/bin/python scripts/migrate_us_electoral_votes.py \
+./election_data/bin/python importers/seed/migrate_us_electoral_votes.py \
   --legacy-forecast-target-year 2028
 ```
 
@@ -200,7 +200,7 @@ FROM us_electoral_vote_allocations WHERE era_year = 2030;
 
 Database-added eras work for application readers; supporting them in offline
 converters or future fresh rebuilds also requires updating the single canonical
-bootstrap dataset in `data/old_data/scripts/usa/us_electoral_votes.py` and its
+bootstrap dataset in `data/importers/seed/us_electoral_votes.py` and its
 bounded interval metadata.
 
 After migration or a weight correction, republish old EV totals without

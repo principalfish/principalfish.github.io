@@ -12,8 +12,8 @@ from typing import Any
 
 import pytest
 
-from scripts.us_results import cli
-from scripts.us_results.current_senate import (
+from importers.results.us.nyt import cli
+from importers.results.us.nyt.current_senate import (
     DEFAULT_SNAPSHOT,
     CurrentSenateError,
     build_current_senate,

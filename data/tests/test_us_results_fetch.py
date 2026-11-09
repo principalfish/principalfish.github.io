@@ -1,6 +1,6 @@
 """Tests for the NYT results source table and fetch/cache layer.
 
-The HTTP layer (``urlopen`` in ``scripts.us_results.fetch``) is stubbed, so no
+The HTTP layer (``urlopen`` in ``importers.results.us.nyt.fetch``) is stubbed, so no
 test touches the network; every cache lives under ``tmp_path``.
 """
 
@@ -21,8 +21,8 @@ from urllib.request import HTTPRedirectHandler, Request
 import pytest
 
 import config
-from scripts.us_results import fetch as fetch_module
-from scripts.us_results.fetch import (
+from importers.results.us.nyt import fetch as fetch_module
+from importers.results.us.nyt.fetch import (
     CachedSnapshot,
     DisallowedHostError,
     InvalidJsonError,
@@ -32,7 +32,7 @@ from scripts.us_results.fetch import (
     fetch,
     source_updated_at,
 )
-from scripts.us_results.sources import (
+from importers.results.us.nyt.sources import (
     SOURCES,
     Chamber,
     SchemaId,

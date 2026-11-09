@@ -20,8 +20,8 @@ from electoral_votes import (
     get_electoral_votes_sqlite,
     positive_integer,
 )
+from importers.seed.migrate_us_electoral_votes import migrate
 from schema import ElectionType
-from scripts.migrate_us_electoral_votes import migrate
 
 
 @pytest.fixture()

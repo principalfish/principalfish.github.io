@@ -26,8 +26,8 @@ SUPPLEMENTAL_LEGACY_ELECTIONS: list[dict[str, Any]] = [
     },
     {
         # The current Senate composition is a snapshot, not an election. Its result file
-        # is generated directly by convert_senate_current.py or, once the 2026 results
-        # are imported, derived from them by scripts/us_results/current_senate.py
+        # was first built by archive/convert_senate_current.py and is now derived from the
+        # imported 2026 results by importers/results/us/nyt/current_senate.py
         # (prebuilt), so the export only registers the manifest entry. Shares the
         # 50-state Senate geometry (map 23).
         "id": "current-senate",

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import io
 import json
 import shutil
@@ -11,30 +11,16 @@ import sys
 import zipfile
 from collections import Counter
 from pathlib import Path
-from types import ModuleType
 from typing import Any
 
 import pytest
 
-USA_DIR = Path(__file__).resolve().parents[1] / "old_data" / "scripts" / "usa"
 MAPS_DIR = Path(__file__).resolve().parents[2] / "uselectionmaps" / "data" / "maps"
+GEOMETRY = "importers.results.us.geometry"
 
-
-def _load(name: str) -> ModuleType:
-    """Load a usa/ script module by file path (they are run as scripts, not a package)."""
-    if str(USA_DIR) not in sys.path:
-        sys.path.insert(0, str(USA_DIR))
-    spec = importlib.util.spec_from_file_location(name, USA_DIR / f"{name}.py")
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-sources = _load("house_2026_sources")
-builder = _load("build_house_topojson")
-check = _load("check_redistricting")
+sources = importlib.import_module(f"{GEOMETRY}.house_2026_sources")
+builder = importlib.import_module(f"{GEOMETRY}.build_house_topojson")
+check = importlib.import_module(f"{GEOMETRY}.check_redistricting")
 
 # Voting seats per state after the 2010 and 2020 censuses.
 SEATS_2010 = {

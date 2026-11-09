@@ -11,7 +11,7 @@ import pytest
 
 from db import Database, ensure_elections_sqlite_schema
 from electoral_votes import ElectoralVoteError
-from scripts.migrate_us_electoral_votes import (
+from importers.seed.migrate_us_electoral_votes import (
     ALLOCATIONS_DDL,
     ERAS_DDL,
     bootstrap_seeds,

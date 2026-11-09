@@ -19,8 +19,7 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 | `server.py` | Local data preview server (`:5055`) |
 | `archive/` | Finished one-offs and retired setup files (not maintained, not type-checked; see its README) |
 | `inputs/` | Committed source data files per jurisdiction (`westminster/`, `holyrood/`, `us/`) read by the importers |
-| `importers/` | `seed/` (parties, region populations), `results/` (Westminster and Holyrood elections, boundaries, by-elections) and `polls/` (Wikipedia-driven poll importers, `registry.py` lists the Westminster pollsters) |
-| `old_data/` | US result importers, TopoJSON builders and converters (`scripts/usa/`) |
+| `importers/` | `seed/` (parties, region populations), `results/` (Westminster, Holyrood and US elections, boundaries, by-elections; US has `nyt/` for the New York Times fetch-and-convert pipeline and `geometry/` for the TopoJSON builders) and `polls/` (Wikipedia-driven poll importers, `registry.py` lists the Westminster pollsters) |
 | `models/` | Election models — `westminster/`, `holyrood/` (UNS retrospective), `us/` (House, President, Senate forecasts) |
 | `scripts/` | Static export scripts that partition elections by parliament into the per-page data dirs (`electionmaps/data`, `uselectionmaps/data`) |
 | `tests/` | Pytest suite — run with `./run_tests.sh` (strict mypy, then pytest) |

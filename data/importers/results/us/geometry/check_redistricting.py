@@ -26,7 +26,7 @@ Inputs (all paths local; ``ogr2ogr`` converts them):
     --counties   Census county shapefile (cb_*_us_county_500k)
 
 Usage (from ``data/``):
-    python old_data/scripts/usa/check_redistricting.py \
+    python importers/results/us/geometry/check_redistricting.py \
         --nyt <nyt-cache>/2026/house-general-<timestamp>.json \
         --districts ../uselectionmaps/data/maps/map-24.topo.json \
         --old ../uselectionmaps/data/maps/map-21.topo.json \

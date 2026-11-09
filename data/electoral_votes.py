@@ -69,7 +69,7 @@ def select_era(eras: Iterable[ElectoralVoteEra], year: int) -> ElectoralVoteEra:
     if len(matches) != 1:
         raise ElectoralVoteError(
             f"Expected one electoral-vote era for year {year}; found {len(matches)}. "
-            "Run scripts/migrate_us_electoral_votes.py or add the required era.",
+            "Run importers/seed/migrate_us_electoral_votes.py or add the required era.",
         )
     return matches[0]
 
@@ -91,7 +91,7 @@ def allocation_year(
         if target_election_year is None:
             raise ElectoralVoteError(
                 "Presidential model is missing target_election_year; run "
-                "scripts/migrate_us_electoral_votes.py with an explicit legacy target.",
+                "importers/seed/migrate_us_electoral_votes.py with an explicit legacy target.",
             )
         return positive_integer(
             target_election_year, context="Presidential target year",
@@ -151,7 +151,7 @@ def get_electoral_votes(
             raise
         raise ElectoralVoteError(
             "Electoral-vote schema is unavailable; run "
-            "scripts/migrate_us_electoral_votes.py.",
+            "importers/seed/migrate_us_electoral_votes.py.",
         ) from error
 
 
@@ -180,5 +180,5 @@ def get_electoral_votes_sqlite(
             raise
         raise ElectoralVoteError(
             "Electoral-vote schema is unavailable; run "
-            "scripts/migrate_us_electoral_votes.py.",
+            "importers/seed/migrate_us_electoral_votes.py.",
         ) from error

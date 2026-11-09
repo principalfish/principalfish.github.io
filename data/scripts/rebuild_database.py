@@ -31,7 +31,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parents[1]
-OLD_SCRIPTS = DATA_DIR / "old_data" / "scripts"
 IMPORTERS_DIR = DATA_DIR / "importers"
 USA_FILES = DATA_DIR / "inputs" / "us"
 WESTMINSTER_FILES = DATA_DIR / "inputs" / "westminster"
@@ -159,7 +158,7 @@ def us_election_steps(usa_files_dir: Path) -> list[Step]:
         steps.append(
             Step(
                 label=f"Import {name}",
-                script=OLD_SCRIPTS / "usa" / script_name,
+                script=IMPORTERS_DIR / "results" / "us" / script_name,
                 args=(
                     "--file", str(json_file),
                     "--year", str(year),
@@ -245,7 +244,7 @@ def build_steps() -> list[Step]:
         Step("Import parties", IMPORTERS_DIR / "seed" / "import_parties.py", ()),
         Step(
             "Bootstrap US electoral vote allocations",
-            DATA_DIR / "scripts" / "migrate_us_electoral_votes.py",
+            IMPORTERS_DIR / "seed" / "migrate_us_electoral_votes.py",
             ("--legacy-forecast-target-year", "2028"),
         ),
         Step(

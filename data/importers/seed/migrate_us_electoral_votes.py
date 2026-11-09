@@ -9,17 +9,9 @@ from __future__ import annotations
 
 import argparse
 import sqlite3
-import sys
 from collections.abc import Iterable
 from contextlib import closing
 from dataclasses import dataclass
-from pathlib import Path
-
-DATA_DIR = Path(__file__).resolve().parents[1]
-USA_DIR = DATA_DIR / "old_data" / "scripts" / "usa"
-for directory in (DATA_DIR, USA_DIR):
-    if str(directory) not in sys.path:
-        sys.path.insert(0, str(directory))
 
 from config import DatabaseConfig
 from electoral_votes import (
@@ -29,12 +21,12 @@ from electoral_votes import (
     select_era,
     validate_eras,
 )
+from importers.seed.us_electoral_votes import ELECTION_YEAR_INTERVALS, EV_BY_ERA, ev_map_for_year
 from scripts.migrate_add_us_poll_scope import (
     column_exists,
     open_database as open_database,
     schema_object_exists,
 )
-from us_electoral_votes import ELECTION_YEAR_INTERVALS, EV_BY_ERA, ev_map_for_year
 
 ERAS_DDL = """
 CREATE TABLE IF NOT EXISTS us_electoral_vote_eras (

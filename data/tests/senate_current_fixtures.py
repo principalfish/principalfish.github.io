@@ -1,6 +1,6 @@
 """Hand-made Senate fixtures shared by the Current Senate tests.
 
-The election files use the shape ``scripts/us_results/convert.py`` writes.
+The election files use the shape ``importers/results/us/nyt/convert.py`` writes.
 """
 
 from __future__ import annotations

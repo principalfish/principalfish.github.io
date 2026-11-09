@@ -16,11 +16,11 @@ from typing import Any, Callable
 from sqlalchemy import delete
 
 from db import Database, SeatStatus
+from importers.results.us.regions import STATE_NAMES, division_for_state
 from schema import Election, ElectionSeatStatus, ElectionType, Map, Vote
-from regions import STATE_NAMES, division_for_state
 
-# Re-exported so importers can ``from us_import import STATE_NAMES`` alongside the load
-# helpers; the canonical table lives in regions.py.
+# Re-exported so importers can import STATE_NAMES from this module alongside the load
+# helpers; the canonical table lives in ``importers/results/us/regions.py``.
 __all__ = [
     "META_KEY",
     "PARTY_KEY_TO_NAME",

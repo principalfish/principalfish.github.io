@@ -25,14 +25,14 @@ geometry stays in lon/lat and Alaska/Hawaii are placed by the projection, not th
 
 Usage (from ``data/``):
     # map 21
-    python old_data/scripts/usa/build_house_topojson.py \
+    python importers/results/us/geometry/build_house_topojson.py \
         --shp cd119/cb_2024_us_cd119_500k.shp \
         --out ../uselectionmaps/data/maps/map-21.topo.json
     # map 24: --fetch downloads the base file and the nine replacement states into DIR
-    python old_data/scripts/usa/build_house_topojson.py --map 24 --fetch /path/to/scratch \
+    python importers/results/us/geometry/build_house_topojson.py --map 24 --fetch /path/to/scratch \
         --out ../uselectionmaps/data/maps/map-24.topo.json
     # map 25
-    python old_data/scripts/usa/build_house_topojson.py --map 25 --fetch /path/to/scratch \
+    python importers/results/us/geometry/build_house_topojson.py --map 25 --fetch /path/to/scratch \
         --out ../uselectionmaps/data/maps/map-25.topo.json
 """
 
@@ -42,7 +42,6 @@ import argparse
 import json
 import shutil
 import subprocess
-import sys
 import tempfile
 import urllib.request
 import zipfile
@@ -57,8 +56,8 @@ from shapely.ops import unary_union
 from shapely.strtree import STRtree
 from shapely.validation import make_valid
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import house_2026_sources as sources  # noqa: E402
+from importers.results.us.geometry import house_2026_sources as sources
+
 
 Feature = dict[str, Any]
 

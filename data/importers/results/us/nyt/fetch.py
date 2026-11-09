@@ -33,7 +33,7 @@ from typing import IO, Any, Protocol, TypeGuard
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from scripts.us_results.sources import SchemaId, Source, SourceStatus
+from importers.results.us.nyt.sources import SchemaId, Source, SourceStatus
 
 logger = logging.getLogger(__name__)
 

@@ -57,3 +57,4 @@
 - 2026-11-09 10:42 · restructure-data-folder-and-console (0005) · building → review
 - 2026-11-09 14:44 · restructure-data-folder-and-console (0005) · review → ready
 - 2026-11-09 14:44 · restructure-data-folder-and-console (0005) · PR #84 description final
+- 2026-11-09 14:51 · restructure-data-folder-and-console (0005) · merged → done

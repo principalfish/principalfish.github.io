@@ -87,13 +87,13 @@ def bare_patch_strings(source: str) -> list[str]:
 def stale_module_references(source: str) -> list[str]:
     """Return docstring/comment references that name a core module without ``core.``.
 
-    Matches cross-reference roles and code spans such as ``~schema.Poll`` or
-    ``db.Database``; lower-case attributes (``config.chunk_size``, ``db.session()``)
-    are instances that happen to share a module's name and are left alone.
+    An explicit target (``~schema.Poll``, ``:func:`config.load_x```) is flagged
+    whatever follows the dot. A bare code span is flagged only when a class follows
+    (``db.Database``): lower-case attributes such as ``config.chunk_size`` and
+    ``db.session()`` are instances that happen to share a module's name.
     """
-    pattern = re.compile(
-        r"(?:~|``|:[a-z]+:`)(?:%s)\.[A-Z]" % "|".join(MOVED)
-    )
+    names = "|".join(MOVED)
+    pattern = re.compile(rf"(?:``(?:{names})\.[A-Z]|(?:~|:[a-z]+:`)(?:{names})\.\w)")
     return [m.group(0) for m in pattern.finditer(source)]
 
 
@@ -165,22 +165,28 @@ def test_the_patch_scan_flags_bare_names() -> None:
 def test_the_stale_reference_scan_flags_bare_module_names() -> None:
     source = (
         "See :class:`~schema.Poll` and ``db.Database`` and :meth:`db.Database.x`,\n"
-        "``config.NYT_CACHE_DIR``, but not ``core.schema.Poll``,\n"
-        "``~core.db.Database``, ``config.chunk_size`` or ``db.session()``.\n"
+        "``config.NYT_CACHE_DIR``, :func:`~backup.backup_database`,\n"
+        ":func:`config.load_x` and :meth:`db.session`, but not ``core.schema.Poll``,\n"
+        "``~core.db.Database``, :func:`core.backup.backup_database`,\n"
+        "``config.chunk_size`` or ``db.session()``.\n"
     )
     assert stale_module_references(source) == [
         "~schema.P",
         "``db.D",
         ":meth:`db.D",
         "``config.N",
+        "~backup.b",
+        ":func:`config.l",
+        ":meth:`db.s",
     ]
 
 
 def test_no_docstring_names_a_core_module_without_the_package() -> None:
+    this_file = Path(__file__).resolve()
     offenders = [
         f"{path.relative_to(DATA_DIR)}: {name}"
         for path in _sources()
-        if "archive" not in path.relative_to(DATA_DIR).parts and path != Path(__file__)
+        if "archive" not in path.relative_to(DATA_DIR).parts and path != this_file
         for name in stale_module_references(path.read_text(encoding="utf-8"))
     ]
     assert offenders == []

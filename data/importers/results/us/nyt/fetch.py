@@ -1,6 +1,6 @@
 """Download NYT results JSON into a local cache, or read it back offline.
 
-Cache layout, under ``cache_dir`` (``config.NYT_CACHE_DIR`` by default)::
+Cache layout, under ``cache_dir`` (``core.config.NYT_CACHE_DIR`` by default)::
 
     <year>/<chamber>-<kind>-<UTC timestamp>.json   one file per download
     <year>/<chamber>-<kind>-latest.json            pointer to the newest one

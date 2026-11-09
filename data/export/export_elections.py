@@ -239,8 +239,8 @@ def partition_elections_by_page(elections: Sequence[Election]) -> dict[str, list
 def seat_statuses_for_election(session: Session, election_id: int) -> dict[int, SeatStatus]:
     """Return an election's seat statuses keyed by seat id (seats without a row are absent).
 
-    The in-session counterpart of :meth:`db.Database.get_seat_statuses`, so the export
-    reads statuses in the same session as the votes.
+    The in-session counterpart of :meth:`core.db.Database.get_seat_statuses`, so the
+    export reads statuses in the same session as the votes.
     """
     rows = session.execute(
         select(ElectionSeatStatus).where(ElectionSeatStatus.election_id == election_id)

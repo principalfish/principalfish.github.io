@@ -569,14 +569,14 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
     Matches on pollster ID, map ID, fieldwork start/end dates, and sample size.
 
     Args:
-        db: Active :class:`~db.Database` connection.
+        db: Active :class:`~core.db.Database` connection.
         pollster_id: Primary key of the pollster record.
         map_id: Primary key of the constituency map record.
         parsed: Parsed poll data supplying the fieldwork dates and sample size
             to match against.
 
     Returns:
-        The matching :class:`~schema.Poll` row, or ``None`` if no match exists.
+        The matching :class:`~core.schema.Poll` row, or ``None`` if no match exists.
     """
     with db.session() as session:
         return session.execute(
@@ -625,7 +625,7 @@ def build_import_plan(
     objects.  Does **not** write anything to the database.
 
     Args:
-        db: Active :class:`~db.Database` connection.
+        db: Active :class:`~core.db.Database` connection.
         xlsx_url: URL of the Opinium XLSX data-tables file.  Defaults to
             :data:`DEFAULT_XLSX_URL`.
         map_name: Name of the constituency map to associate with the poll.
@@ -745,11 +745,11 @@ def commit_import_plan(
     Creates the pollster record if it does not yet exist; otherwise updates its
     ``regions_mapping`` if it has changed.  Creates the poll record if absent;
     otherwise updates ``source_url`` if it has changed.  Inserts
-    :class:`~schema.PollRow` records for all rows in the plan unless rows
+    :class:`~core.schema.PollRow` records for all rows in the plan unless rows
     already exist and ``replace_rows`` is ``False``.
 
     Args:
-        db: Active :class:`~db.Database` connection.
+        db: Active :class:`~core.db.Database` connection.
         plan: Fully built :class:`ImportPlan` from :func:`build_import_plan`.
         replace_rows: When ``True``, delete any existing poll rows before
             inserting the new ones.  When ``False`` (the default), skip

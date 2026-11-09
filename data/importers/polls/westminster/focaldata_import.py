@@ -812,14 +812,14 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
     Matches on pollster ID, map ID, fieldwork start/end dates, and sample size.
 
     Args:
-        db: Active :class:`~db.Database` connection.
+        db: Active :class:`~core.db.Database` connection.
         pollster_id: Primary key of the pollster record.
         map_id: Primary key of the constituency map record.
         parsed: Parsed poll data supplying fieldwork dates and sample size to
             match against.
 
     Returns:
-        The matching :class:`~schema.Poll` ORM instance, or ``None`` if no
+        The matching :class:`~core.schema.Poll` ORM instance, or ``None`` if no
         matching record exists.
     """
     with db.session() as session:
@@ -878,7 +878,7 @@ def build_import_plan(
     passed directly to :func:`commit_import_plan`.
 
     Args:
-        db: Active :class:`~db.Database` connection used for lookups.
+        db: Active :class:`~core.db.Database` connection used for lookups.
         xlsx_url: URL of the XLSX file (or Google Sheets browser URL) to
             import. Defaults to :data:`DEFAULT_XLSX_URL`.
         map_name: Name of the constituency map to associate the poll with.
@@ -1001,12 +1001,12 @@ def commit_import_plan(
     rows from the plan are inserted.
 
     Side effects:
-        - May insert a :class:`~schema.Pollster` row.
-        - May insert a :class:`~schema.Poll` row (or update its ``source_url``).
-        - May delete and re-insert :class:`~schema.PollRow` rows.
+        - May insert a :class:`~core.schema.Pollster` row.
+        - May insert a :class:`~core.schema.Poll` row (or update its ``source_url``).
+        - May delete and re-insert :class:`~core.schema.PollRow` rows.
 
     Args:
-        db: Active :class:`~db.Database` connection.
+        db: Active :class:`~core.db.Database` connection.
         plan: The :class:`ImportPlan` produced by :func:`build_import_plan`.
         replace_rows: If ``True``, delete existing poll rows before inserting
             new ones. Defaults to ``False``.

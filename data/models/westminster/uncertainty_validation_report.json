@@ -1174,13 +1174,13 @@
     "config_file_sha256": "a47be0d8ead397a57258ec4f66611665b062bfe804eae7312c65cbe2c6b6f882",
     "config_hash": "730a3349d3836bc6",
     "final_polls_sha256": "7a01a6a73185486f3ea8d5646d3b2099b5f6107dad5443f2017fdf00a422b933",
-    "numpy_version": "2.5.4",
+    "numpy_version": "2.5.3",
     "source_sha256": {
       "models/support/calibration.py": "cf6c67796842e3735d6960c19c46b958943401993f93d70cd68fca51519a022c",
       "models/support/monte_carlo.py": "c3b6f387b9f21d53273bbfa545c42ef7a6f6e5797e7064de5f20d7a49b9a59ff",
       "models/support/uncertainty.py": "cc6c70c7e4e9c2c85490373051ad1bd0a3639da5addd54c0972540e8543dc3be",
-      "models/westminster/calibrate_uncertainty.py": "2d5064d4f9a167fd8c327d0400a5eff9aed271632775803143bb948da3a94eb1",
-      "models/westminster/validate_westminster_uncertainty.py": "33bef5210f3bbf3eba7f0a9f95996df716f9f41a4fa622a37cc5f479900fb6a3",
+      "models/westminster/calibrate_uncertainty.py": "983b06f2114fa699593421030756025f1deda955a7b6d172eb417181ad47357c",
+      "models/westminster/validate_westminster_uncertainty.py": "3f860ee0b5c7af5710242b17df10d56bd295d5e231cdd7d70bcfadda790b9695",
       "models/westminster/westminster_validation.py": "86aa77428f89787c8e96b5d72759ba4e52b3418adcc71a92ea062c456af343de",
       "models/westminster/westminster_validation_inputs.py": "a68cc32dcd84a86478cdb7586e761f94e76953029570141b8c743cbc6d56bdb5",
       "models/westminster/westminster_validation_replay.py": "a068a7d982f05b28326d6f1f636b528df45ca159baeeb35fe8295751becacb7e"
@@ -2280,6 +2280,6 @@
       }
     ]
   },
-  "report_hash": "b7d2bf5c13824dcbceaf4cd0b960a304c89a5d78b446b62e161064b42d070fdc",
+  "report_hash": "667a14c4ccf7f8c1450c681d6251913cd07033fba33b44db8c40d2dc593ee05f",
   "schema": "westminster-validation-v1"
 }

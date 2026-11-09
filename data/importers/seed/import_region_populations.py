@@ -168,7 +168,7 @@ def main() -> None:
     """CLI entry point for importing region populations.
 
     Parses command-line arguments, loads records from the input file, and
-    updates the ``population`` column on matching :class:`~schema.Region` rows
+    updates the ``population`` column on matching :class:`~core.schema.Region` rows
     for the specified map. Region name matching is case-insensitive after
     whitespace normalisation.
 

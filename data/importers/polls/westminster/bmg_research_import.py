@@ -950,14 +950,14 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
     ``fieldwork_end``, and ``sample_size`` together.
 
     Args:
-        db: Active :class:`~db.Database` connection.
+        db: Active :class:`~core.db.Database` connection.
         pollster_id: Primary key of the pollster in the database.
         map_id: Primary key of the constituency map in the database.
         parsed: :class:`ParsedPoll` whose fieldwork and sample metadata are
             used for the lookup.
 
     Returns:
-        The matching :class:`~schema.Poll` row, or ``None`` if no match exists.
+        The matching :class:`~core.schema.Poll` row, or ``None`` if no match exists.
     """
     with db.session() as session:
         return session.execute(
@@ -1007,7 +1007,7 @@ def build_import_plan(
     pollster and poll already exist.  No data is written to the database.
 
     Args:
-        db: Active :class:`~db.Database` connection.
+        db: Active :class:`~core.db.Database` connection.
         xlsx_url: URL of the BMG Research XLSX file to import.  Defaults to
             :data:`DEFAULT_XLSX_URL`.
         map_name: Name of the constituency map to associate the poll with.
@@ -1118,9 +1118,9 @@ def commit_import_plan(
     5. Inserts all :class:`PlannedPollRow` entries from the plan.
 
     Args:
-        db: Active :class:`~db.Database` connection.
+        db: Active :class:`~core.db.Database` connection.
         plan: The :class:`ImportPlan` produced by :func:`build_import_plan`.
-        replace_rows: If ``True``, delete any existing :class:`~schema.PollRow`
+        replace_rows: If ``True``, delete any existing :class:`~core.schema.PollRow`
             records for the poll before inserting new ones.  Defaults to
             ``False``, in which case existing rows are left untouched and the
             result will have ``skipped_existing_rows=True``.

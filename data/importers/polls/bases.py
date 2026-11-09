@@ -67,7 +67,7 @@ class ParsedBase(_HasN):
         unweighted_n: Respondents interviewed in the column, or None when the
             pollster prints only a weighted base.
         weighted_n: The column's weighted base, rounded, when printed.
-        kind: What the base counts (see ``schema.PollBaseKind``).
+        kind: What the base counts (see ``core.schema.PollBaseKind``).
     """
 
     regions: tuple[str, ...] = ()

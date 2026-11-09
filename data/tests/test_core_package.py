@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -83,6 +84,19 @@ def bare_patch_strings(source: str) -> list[str]:
     return found
 
 
+def stale_module_references(source: str) -> list[str]:
+    """Return docstring/comment references that name a core module without ``core.``.
+
+    Matches cross-reference roles and code spans such as ``~schema.Poll`` or
+    ``db.Database``; lower-case attributes (``config.chunk_size``, ``db.session()``)
+    are instances that happen to share a module's name and are left alone.
+    """
+    pattern = re.compile(
+        r"(?:~|``|:[a-z]+:`)(?:%s)\.[A-Z]" % "|".join(MOVED)
+    )
+    return [m.group(0) for m in pattern.finditer(source)]
+
+
 def _run_isolated(code: str) -> subprocess.CompletedProcess[str]:
     """Run ``code`` in a fresh interpreter that sees only the editable install."""
     return subprocess.run(
@@ -146,6 +160,30 @@ def test_the_patch_scan_flags_bare_names() -> None:
         "electoral_votes.X",
         "config",
     ]
+
+
+def test_the_stale_reference_scan_flags_bare_module_names() -> None:
+    source = (
+        "See :class:`~schema.Poll` and ``db.Database`` and :meth:`db.Database.x`,\n"
+        "``config.NYT_CACHE_DIR``, but not ``core.schema.Poll``,\n"
+        "``~core.db.Database``, ``config.chunk_size`` or ``db.session()``.\n"
+    )
+    assert stale_module_references(source) == [
+        "~schema.P",
+        "``db.D",
+        ":meth:`db.D",
+        "``config.N",
+    ]
+
+
+def test_no_docstring_names_a_core_module_without_the_package() -> None:
+    offenders = [
+        f"{path.relative_to(DATA_DIR)}: {name}"
+        for path in _sources()
+        if "archive" not in path.relative_to(DATA_DIR).parts and path != Path(__file__)
+        for name in stale_module_references(path.read_text(encoding="utf-8"))
+    ]
+    assert offenders == []
 
 
 def test_no_code_imports_a_core_module_by_its_bare_name() -> None:

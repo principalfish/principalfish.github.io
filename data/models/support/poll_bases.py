@@ -6,7 +6,7 @@ captured, n falls back in a fixed order. :func:`resolve_poll_n` returns, for
 one poll and one region (``None`` = national):
 
 1. the captured base — source ``"base:<kind>"``, e.g. ``"base:decided"`` or
-   ``"base:all_adults"`` (see ``schema.PollBaseKind``): its unweighted count,
+   ``"base:all_adults"`` (see ``core.schema.PollBaseKind``): its unweighted count,
    or for a weighted-only base (Find Out Now) its weighted count, labelled
    ``"base:<kind>(weighted)"``;
 2. nationally, ``polls.sample_size`` — source ``"sample_size"``;

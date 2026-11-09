@@ -19,7 +19,7 @@ _2026-11-09 · 3 of 12 pieces done · now: waiting on review of piece 4_
 - [x] **3/12 Template and route consolidation** · `4a7a8b9e`
   Merge near-duplicate pages and routes.
 - [ ] **4/12 One URL shape** · waiting on you
-  Give every section the same URLs, with redirects for old pages.
+  Give every section the same URLs.
 - [ ] **5/12 Section parity** · not started
   Filtered polls, per-chamber US runs and imports, and export-when-done on each run form.
 - [ ] **6/12 Global export page** · not started

@@ -1,6 +1,6 @@
 # Resume point — read this first
 
-State checks: builder session `local_25f43011-ef61-46dc-9023-7e1b5918b096` has piece 4 staged and uncommitted (`git -C .claude/worktrees/redesign-data-console-into-five-sections-e76f9c diff --cached -M --shortstat`: 26 files, +509/−366, with the redirects removed) on top of `4a7a8b9e`. Draft PR #85 is open. State is `building`.
+State checks: builder session `local_25f43011-ef61-46dc-9023-7e1b5918b096`, branch `claude/redesign-data-console-into-five-sections-e76f9c`, HEAD `572cee15` (piece 4/12, pushed), tree clean. Pieces 1–4 are done. Draft PR #85 is open. State is `building`.
 
-## The pending decision (exact)
-Approval of piece 4's diff (no manual review). Then the builder commits and pushes; tick piece 4 on #83 and give the next-stage briefing for piece 5.
+## Next
+Checkpoint 5 (section parity, manual review). Start it only when the planner chat relays the user's go-ahead. Pieces 4's docs leftovers (old URLs in `data/README.md:84` and `data/docs/us-polls-and-forecasts.md`) belong to piece 11.

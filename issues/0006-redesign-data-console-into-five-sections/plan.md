@@ -202,7 +202,7 @@ Rejected:
 - [x] 1: Section registry and internal layout
 - [x] 2: Navigation and section pages
 - [x] 3: Template and route consolidation
-- [ ] 4: One URL shape
+- [x] 4: One URL shape
 - [ ] 5: Section parity
 - [ ] 6: Global export page
 - [ ] 7: Admin page, confirms and small fixes

@@ -22,12 +22,14 @@
     {
       "kind": "worktree",
       "name": "/home/philiph/workspace/principalfish.github.io/.claude/worktrees/restructure-data-folder-e05123",
-      "added": "2026-11-08 16:13"
+      "added": "2026-11-08 16:13",
+      "removed": "2026-11-09 14:52"
     },
     {
       "kind": "branch",
       "name": "claude/restructure-data-folder-e05123",
-      "added": "2026-11-08 16:13"
+      "added": "2026-11-08 16:13",
+      "removed": "2026-11-09 14:52"
     }
   ],
   "pr": 84

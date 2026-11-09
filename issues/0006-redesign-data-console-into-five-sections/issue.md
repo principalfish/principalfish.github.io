@@ -10,13 +10,13 @@ Every existing diagnostic number stays visible, along with the safeguards around
 
 ## Plan
 
-_2026-11-09 · 2 of 12 pieces done · now: piece 3 in progress_
+_2026-11-09 · 2 of 12 pieces done · now: waiting on review of piece 3_
 
 - [x] **1/12 Section registry and internal layout** · `0b98a7b1`
   Define the five sections in one place and reorganise the console's code, with no visible change.
 - [x] **2/12 Navigation and section pages** · `2178b777`
   Add navigation everywhere and a landing page per section; home becomes links only.
-- [ ] **3/12 Template and route consolidation** · in progress
+- [ ] **3/12 Template and route consolidation** · waiting on you
   Merge near-duplicate pages and routes.
 - [ ] **4/12 One URL shape** · not started
   Give every section the same URLs, with redirects for old pages.

@@ -10,9 +10,9 @@ Every existing diagnostic number stays visible, along with the safeguards around
 
 ## Plan
 
-_2026-11-09 · 0 of 11 pieces done · now: piece 1 in progress_
+_2026-11-09 · 0 of 11 pieces done · now: waiting on review of piece 1_
 
-- [ ] **1/11 Section registry and internal layout** · in progress
+- [ ] **1/11 Section registry and internal layout** · waiting on you
   Define the five sections in one place and reorganise the console's code, with no visible change.
 - [ ] **2/11 Navigation and section pages** · not started
   Add navigation everywhere and a landing page per section; home becomes links only.

@@ -7,7 +7,7 @@ prefix) keeps the bulky region and seat blocks; every run keeps its national
 block. Every replacement re-applies that rule while the table exists, so the
 result does not depend on the order runs are saved in. Runs without a payload
 store nothing, so models work against a database migrated before the table
-existed (``scripts/migrate_add_model_uncertainty.py``), and there they do not
+existed (``archive/migrate_add_model_uncertainty.py``), and there they do not
 touch it at all.
 """
 
@@ -313,8 +313,9 @@ def replace_output(
             has_uncertainty_table = _has_uncertainty_table(conn)
             if encoded is not None and not has_uncertainty_table:
                 raise UncertaintyStoreError(
-                    f"No {UNCERTAINTY_TABLE} table in {sqlite_path}: run "
-                    "scripts/migrate_add_model_uncertainty.py first"
+                    f"No {UNCERTAINTY_TABLE} table in {sqlite_path}: rebuild the "
+                    "database (the retired migration is "
+                    "archive/migrate_add_model_uncertainty.py)"
                 )
             _delete_range(conn, scope, as_of, as_of)
             columns = "map_id, year, name, type, election_date"

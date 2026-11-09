@@ -14,7 +14,7 @@ import pytest
 
 from export import export_elections
 from importers.results.us.nyt import cli, current_senate
-from scripts import rebuild_database, scrape_holyrood_2026
+from scripts import rebuild_database
 from tests.layout_helpers import leftover_files
 
 DATA_DIR = Path(__file__).resolve().parents[1]
@@ -37,7 +37,6 @@ def test_inputs_has_one_folder_per_jurisdiction() -> None:
         (rebuild_database.WESTMINSTER_FILES, INPUTS / "westminster"),
         (export_elections.LEGACY_FILES_DIR_DEFAULT, INPUTS / "westminster"),
         (cli.DEFAULT_OUT_DIR, INPUTS / "us"),
-        (scrape_holyrood_2026.DEFAULT_OUT_DIR, INPUTS / "holyrood"),
         (current_senate.DEFAULT_ELECTION_FILE, INPUTS / "us" / "senate-2026.json"),
         (
             current_senate.DEFAULT_SNAPSHOT,

@@ -97,8 +97,8 @@ and take them one at a time.
    transaction. Until it has run, the console, export and importers on this code fail on any
    `elections` query.
    ```bash
-   ./election_data/bin/python scripts/migrate_add_us_result_status.py --dry-run
-   ./election_data/bin/python scripts/migrate_add_us_result_status.py
+   ./election_data/bin/python archive/migrate_add_us_result_status.py --dry-run
+   ./election_data/bin/python archive/migrate_add_us_result_status.py
    ```
 3. **Import**, dry run first, for 2018, 2020, 2022, 2024 and 2026 and both chambers. Read the
    diff for House 2022-24 and Senate 2020-24 against the 538 data: no winner should change (known differences: NYT

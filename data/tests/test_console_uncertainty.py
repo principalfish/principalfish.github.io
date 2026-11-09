@@ -271,7 +271,8 @@ class TestHubStoredStatus:
 
         assert self.stored(app) == (
             "Stored uncertainty: table not migrated yet "
-            "(run scripts/migrate_add_model_uncertainty.py)."
+            "(rebuild the database; the retired migration is "
+            "archive/migrate_add_model_uncertainty.py)."
         )
 
     def test_no_westminster_map(self, app: Flask) -> None:

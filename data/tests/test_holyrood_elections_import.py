@@ -341,7 +341,7 @@ def test_list_dry_run_writes_no_rows(db: Database, files: Path) -> None:
 )
 def test_missing_constituency_file_hints(db: Database, files: Path, spec: Spec) -> None:
     map_row, _ = _world(db)
-    hint = "scrape_holyrood_2026" if spec.year == 2026 else "check it out"
+    hint = "archive/scrape_holyrood_2026" if spec.year == 2026 else "check it out"
     with pytest.raises(FileNotFoundError, match=hint):
         importer.import_constituency_results(db, spec, map_row, {}, False, False)
 

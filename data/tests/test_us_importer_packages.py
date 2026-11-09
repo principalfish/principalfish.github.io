@@ -101,17 +101,19 @@ def test_each_retired_converter_is_in_the_archive(name: str) -> None:
 
 
 def test_no_live_code_imports_from_the_archive() -> None:
-    names = {"archive", *CONVERTERS}
+    names = {"archive", *(path.stem for path in ARCHIVE_DIR.glob("*.py"))}
     offenders: list[str] = []
     for path in LIVE_SOURCES:
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.Import):
-                modules = [alias.name for alias in node.names]
+                parts = [part for alias in node.names for part in alias.name.split(".")]
             elif isinstance(node, ast.ImportFrom) and not node.level:
-                modules = [node.module or ""]
+                parts = (node.module or "").split(".") + [alias.name for alias in node.names]
             else:
                 continue
-            if any(module.split(".")[0] in names for module in modules):
+            # Any component counts, so ``from scripts import backfill_poll_bases`` and
+            # ``from scripts.backfill_poll_bases import x`` are caught as well as ``import archive``.
+            if names & set(parts):
                 offenders.append(f"{path.relative_to(DATA_DIR)}:{node.lineno}")
     assert offenders == []
 

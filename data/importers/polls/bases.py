@@ -97,7 +97,7 @@ class PlannedPollBase(_HasN):
 class ParsedPollWithBases(Protocol):
     """What every Westminster importer's ``ParsedPoll`` exposes about itself.
 
-    The backfill (``scripts/backfill_poll_bases.py``) checks a re-parsed source
+    The backfill (``archive/backfill_poll_bases.py``) checks a re-parsed source
     against the stored poll through this interface, whichever importer parsed
     it.
     """

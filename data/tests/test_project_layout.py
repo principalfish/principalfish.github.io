@@ -53,3 +53,28 @@ def test_pytest_run_is_limited_to_tests_folder() -> None:
     assert not (DATA_DIR / "pytest.ini").exists()
     assert not (ARCHIVE_DIR / "conftest.py").exists()
     assert not list(ARCHIVE_DIR.glob("test_*.py"))
+
+
+def test_scripts_folder_holds_only_the_live_scripts() -> None:
+    """Finished one-offs live in archive/; scripts/ keeps the rebuild tools and the
+    Westminster uncertainty tools that have not moved into models/ yet."""
+    scripts = sorted(path.name for path in (DATA_DIR / "scripts").glob("*.py"))
+    assert scripts == [
+        "__init__.py",
+        "backup_db.py",
+        "build_final_poll_errors.py",
+        "calibrate_uncertainty.py",
+        "rebuild_database.py",
+        "rebuild_model_trends.py",
+        "validate_westminster_uncertainty.py",
+    ]
+
+
+def test_every_archived_one_off_is_documented_in_the_archive_readme() -> None:
+    readme = (ARCHIVE_DIR / "README.md").read_text(encoding="utf-8")
+    undocumented = [
+        path.name
+        for path in sorted(ARCHIVE_DIR.glob("*.py"))
+        if path.name not in readme
+    ]
+    assert undocumented == []

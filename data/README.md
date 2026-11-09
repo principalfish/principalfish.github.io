@@ -14,7 +14,7 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 | Path | What it is |
 |-|-|
 | `schema.py`, `db.py`, `config.py` | SQLAlchemy schema, DB access, configuration |
-| `core/` | Shared modules (US geography names so far; the root modules above join it in a later step) |
+| `core/` | Shared modules (US geography names and the SQLite migration helpers so far; the root modules above join it in a later step) |
 | `console/` | Local web console for the data (`create_app`) |
 | `server.py` | Local data preview server (`:5055`) |
 | `archive/` | Finished one-offs and retired setup files (not maintained, not type-checked; see its README) |
@@ -22,7 +22,7 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 | `importers/` | `seed/` (parties, region populations), `results/` (Westminster, Holyrood and US elections, boundaries, by-elections; US has `nyt/` for the New York Times fetch-and-convert pipeline and `geometry/` for the TopoJSON builders) and `polls/` (Wikipedia-driven poll importers, `registry.py` lists the Westminster pollsters) |
 | `models/` | Election models — `westminster/`, `holyrood/` (UNS retrospective), `us/` (House, President, Senate forecasts) |
 | `export/` | The static export: `export_elections.py` partitions elections by parliament into the per-page data dirs (`electionmaps/data`, `uselectionmaps/data`), with its helpers beside it |
-| `scripts/` | Rebuild, backup and the remaining one-off scripts |
+| `scripts/` | Database rebuild, model-trend rebuild and backup, plus the Westminster uncertainty calibration and validation scripts (they move into `models/` in a later step) |
 | `tests/` | Pytest suite — run with `./run_tests.sh` (strict mypy, then pytest) |
 
 ## Prerequisites

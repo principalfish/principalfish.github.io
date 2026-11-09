@@ -307,7 +307,8 @@ def status_line(status: UncertaintyStatus | None) -> str:
     if status is None:
         return (
             "Stored uncertainty: table not migrated yet "
-            "(run scripts/migrate_add_model_uncertainty.py)."
+            "(rebuild the database; the retired migration is "
+            "archive/migrate_add_model_uncertainty.py)."
         )
     count = status.stored_runs
     runs = "1 run has" if count == 1 else f"{count} runs have"

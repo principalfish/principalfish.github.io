@@ -72,11 +72,11 @@ An existing database needs these once, in this order, from `data/`. Back up
 first (`scripts/backup_db.py`). Each takes `--dry-run`, which writes nothing:
 
 ```bash
-./election_data/bin/python scripts/migrate_add_poll_bases.py          # 1. create poll_bases
-./election_data/bin/python scripts/migrate_add_model_uncertainty.py   # 2. create model_uncertainty
-./election_data/bin/python scripts/repair_poll_records.py             # 3. fix wrong sample sizes and dates
-./election_data/bin/python scripts/repair_regional_poll_rows.py       # 4. fix wrong regional shares
-./election_data/bin/python scripts/backfill_poll_bases.py             # 5. fill poll_bases from the sources
+./election_data/bin/python archive/migrate_add_poll_bases.py          # 1. create poll_bases
+./election_data/bin/python archive/migrate_add_model_uncertainty.py   # 2. create model_uncertainty
+./election_data/bin/python archive/repair_poll_records.py             # 3. fix wrong sample sizes and dates
+./election_data/bin/python archive/repair_regional_poll_rows.py       # 4. fix wrong regional shares
+./election_data/bin/python archive/backfill_poll_bases.py             # 5. fill poll_bases from the sources
 ```
 
 Steps 3 to 5 re-fetch poll sources, and step 5's matching relies on the values

@@ -286,7 +286,7 @@ class Election(Base):
     parent_election: Mapped[Optional["Election"]] = relationship("Election", remote_side="Election.id")
     votes: Mapped[list["Vote"]] = relationship("Vote", back_populates="election", cascade="all, delete-orphan")
     # passive_deletes: deleting an election must not SELECT this table, which
-    # a database migrated before migrate_add_model_uncertainty.py lacks; the
+    # a database migrated before archive/migrate_add_model_uncertainty.py lacks; the
     # foreign key's ON DELETE CASCADE removes the row where it exists.
     uncertainty: Mapped[Optional["ModelUncertainty"]] = relationship(
         "ModelUncertainty",

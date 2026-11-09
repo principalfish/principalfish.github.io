@@ -50,9 +50,8 @@ DATA_DIR = SCRIPT_DIR.parent
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
-from models.westminster.run_uns_model import PARTY_ID_ALIASES as PARTY_ID_ALIASES
-
 from config import DatabaseConfig
+from core.migration_helpers import open_database
 from model_support.calibration import (
     CALIBRATION_REPORT_PATH,
     CALIBRATION_REPORT_SCHEMA,
@@ -89,7 +88,7 @@ from model_support.uncertainty import (
     UncertaintyConfigError,
     load_uncertainty_config,
 )
-from scripts.migrate_add_us_poll_scope import open_database
+from models.westminster.run_uns_model import PARTY_ID_ALIASES as PARTY_ID_ALIASES
 
 # Consecutive general elections on the same boundaries: (label, earlier, later).
 ELECTION_PAIRS: tuple[tuple[str, str, str], ...] = (

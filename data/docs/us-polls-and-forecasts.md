@@ -160,8 +160,8 @@ that database.
 2. **Migrate** — adds `polls.matchup`, `polls.seat_id`, `poll_rows.candidate_name`
    and the `tracked_matchups` table. Idempotent, one transaction.
    ```bash
-   ./election_data/bin/python scripts/migrate_add_us_poll_scope.py --dry-run
-   ./election_data/bin/python scripts/migrate_add_us_poll_scope.py
+   ./election_data/bin/python archive/migrate_add_us_poll_scope.py --dry-run
+   ./election_data/bin/python archive/migrate_add_us_poll_scope.py
    sqlite3 "$DATABASE_PATH" "PRAGMA table_info(polls);"   # matchup, seat_id listed
    ```
 3. **Reset the legacy polls** — deletes the old matchup-averaged presidential polls
@@ -171,8 +171,8 @@ that database.
    to run before step 2. Dry run by default (read-only); expect 22 presidential
    polls, 12 Senate polls and 6 pollsters. A second `--apply` finds nothing.
    ```bash
-   ./election_data/bin/python scripts/reset_us_poll_matchups.py
-   ./election_data/bin/python scripts/reset_us_poll_matchups.py --apply
+   ./election_data/bin/python archive/reset_us_poll_matchups.py
+   ./election_data/bin/python archive/reset_us_poll_matchups.py --apply
    ```
 4. **First import** — `/us/import` with all contests and a blank cutoff (about 530
    rows across 130 races); bulk-approve race by race. Leave "Run US models" unticked.

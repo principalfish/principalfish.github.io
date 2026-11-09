@@ -33,3 +33,23 @@ produced is committed under `inputs/us/`, which is now the source of truth.
 `convert_senate_current.py` import `regions` and `us_electoral_votes` by bare
 name, and those modules have moved under `importers/`, so those three no longer
 run as they stand.
+
+## Retired migrations and repair scripts
+
+Idempotent one-offs that upgraded an existing database to a schema or data change that
+`schema.py` and the importers now build from scratch, so a rebuild never needs them.
+
+- `migrate_add_poll_bases.py`, `migrate_add_model_uncertainty.py`,
+  `migrate_add_us_poll_scope.py`, `migrate_add_us_result_status.py`,
+  `migrate_add_electoral_votes.py`, `migrate_drop_seat_geometry.py`,
+  `migrate_rename_model_uns.py` (a PostgreSQL enum rename from before the SQLite move):
+  schema migrations.
+  `migrate_add_us_poll_scope.py` keeps its own copy of the helpers that
+  `core/migration_helpers.py` now provides, because it needs them itself. The other archived
+  scripts import them with `from scripts.migrate_add_us_poll_scope import ...`, which no
+  longer resolves, so those scripts do not run.
+- `backfill_poll_bases.py`, `repair_poll_records.py`, `repair_regional_poll_rows.py`,
+  `reset_us_poll_matchups.py`, with `poll_sources.py` (their shared fetch helpers): data
+  repairs run once against the live database.
+- `scrape_holyrood_2026.py`: wrote the 2026 Holyrood result files under
+  `inputs/holyrood/`, which are committed.

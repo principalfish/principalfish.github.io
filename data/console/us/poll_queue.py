@@ -733,8 +733,8 @@ def finish_us_queue(
             payload[MODEL_RUN_KEY] = None
             payload[MODEL_ERROR_KEY] = (
                 "US models not run: another US model run or history rebuild "
-                "was in progress. Run US Models from the home page once it "
-                "finishes."
+                "was in progress. Run US Models from a US section page once "
+                "it finishes."
             )
             return
         try:

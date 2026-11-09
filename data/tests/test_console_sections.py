@@ -62,6 +62,8 @@ def test_section_specific_tools_stay_in_their_sections() -> None:
         return [section.slug for section in SECTIONS if section.has(capability)]
 
     assert having(Capability.POLL_IMPORT) == ["westminster"]
+    assert having(Capability.POLL_COVERAGE) == ["westminster"]
+    assert having(Capability.QUEUE_IMPORT) == ["house", "senate", "president"]
     assert having(Capability.BY_ELECTIONS) == ["westminster"]
     assert having(Capability.MATCHUPS) == ["house", "senate", "president"]
     assert having(Capability.NYT_RESULTS) == ["house", "senate"]
@@ -116,3 +118,13 @@ def test_only_the_westminster_output_page_links_to_uncertainty(
     body = response.get_data(as_text=True)
     assert ("Uncertainty results" in body) is has_links
     assert ("Error budget" in body) is has_links
+
+
+def test_labels_are_the_display_names() -> None:
+    assert [section.label for section in SECTIONS] == [
+        "Westminster",
+        "Holyrood",
+        "US House",
+        "US Senate",
+        "US President",
+    ]

@@ -169,8 +169,8 @@ def test_restore_route_with_nothing_to_restore(app: Flask, live_db: Path) -> Non
     conn.close()
 
 
-def test_home_shows_the_new_buttons(app: Flask) -> None:
-    body = app.test_client().get("/").get_data(as_text=True)
+def test_the_admin_page_shows_the_backup_and_restore_buttons(app: Flask) -> None:
+    body = app.test_client().get("/admin").get_data(as_text=True)
 
     assert "Backup now" in body
     assert "Restore newest archive" in body

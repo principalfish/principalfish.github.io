@@ -11,6 +11,7 @@ import os
 from flask import Flask, Response, request
 
 from console.csrf import same_origin_only
+from console.nav import nav_context
 from core import backup
 
 
@@ -25,12 +26,15 @@ def create_app() -> Flask:
     app.config["SECRET_KEY"] = os.environ.get("POLLS_SECRET_KEY", "local-polls-dev-key")
     app.config["TRUSTED_HOSTS"] = ["127.0.0.1", "localhost"]
     app.before_request(same_origin_only)
+    app.context_processor(nav_context)
 
     from console.admin.db_admin import bp as db_admin_bp
+    from console.admin.pages import bp as admin_bp
     from console.admin.site import bp as site_bp
     from console.holyrood.model import bp as holyrood_bp
     from console.home import bp as home_bp
     from console.polls.views import bp as polls_bp
+    from console.section_pages import bp as sections_bp
     from console.us.poll_import import bp as us_poll_import_bp
     from console.us.results import bp as us_results_bp
     from console.us.views import bp as us_bp
@@ -43,6 +47,8 @@ def create_app() -> Flask:
 
     for blueprint in (
         home_bp,
+        sections_bp,
+        admin_bp,
         poll_import_bp,
         polls_bp,
         westminster_bp,

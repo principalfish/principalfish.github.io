@@ -136,25 +136,28 @@ class TestUsRoutesRegistered:
             assert f"us.delete_selected_{slug}_outputs" in endpoints
 
 
-class TestHomeCard:
-    """The home dashboard shows the USA action card."""
+US_LANDING_PAGES = ("/house", "/senate", "/president")
 
-    def test_home_renders_usa_actions(self, app: Flask) -> None:
-        body = app.test_client().get("/").get_data(as_text=True)
-        for needle in (
-            "Import US Polls",
-            "Run US Models",
-            "View House Outputs",
-            "View President Outputs",
-            "View Senate Outputs",
-        ):
-            assert needle in body
 
-    def test_import_us_polls_links_to_the_review_queue(self, app: Flask) -> None:
-        body = app.test_client().get("/").get_data(as_text=True)
+class TestLandingPages:
+    """Each US section's landing page offers its import, run form and outputs."""
+
+    @pytest.mark.parametrize("path", US_LANDING_PAGES)
+    def test_landing_renders_the_us_actions(self, app: Flask, path: str) -> None:
+        body = app.test_client().get(path).get_data(as_text=True)
+        assert "Import polls" in body
+        assert "Run US Models" in body
+        assert 'action="/us/run-models"' in body
+        assert f'href="/us/{path.lstrip("/")}/outputs"' in body
+
+    @pytest.mark.parametrize("path", US_LANDING_PAGES)
+    def test_import_polls_links_to_the_review_queue(
+        self, app: Flask, path: str
+    ) -> None:
+        body = app.test_client().get(path).get_data(as_text=True)
         assert (
             '<a class="button primary button-block" href="/us/import">'
-            "Import US Polls</a>"
+            "Import polls</a>"
         ) in body
         assert "/us/import-polls" not in body
 
@@ -716,8 +719,11 @@ class TestRebuildAllHistory:
         assert ("run_us_senate_model.py", REBUILD_TIMEOUT_SECONDS) in runner.timeouts
         assert not MODEL_RUN_LOCK.locked()
 
-    def test_the_home_page_offers_the_box_behind_a_warning(self, app: Flask) -> None:
-        body = html.unescape(app.test_client().get("/").get_data(as_text=True))
+    @pytest.mark.parametrize("path", ["/house", "/senate", "/president"])
+    def test_the_landing_pages_offer_the_box_behind_a_warning(
+        self, app: Flask, path: str
+    ) -> None:
+        body = html.unescape(app.test_client().get(path).get_data(as_text=True))
 
         form = body[body.index('action="/us/run-models"') :]
         form = form[: form.index("</form>")]
@@ -832,11 +838,14 @@ class TestMatchupRoutesRegistered:
         assert "GET" in methods["/us/matchups"]
         assert "POST" in methods["/us/matchups/<int:map_id>/<int:seat_id>"]
 
-    def test_home_links_to_matchup_pages(self, app: Flask) -> None:
-        body = app.test_client().get("/").get_data(as_text=True)
-        assert 'href="/us/president/matchup"' in body
-        assert 'href="/us/matchups?chamber=senate"' in body
-        assert 'href="/us/matchups?chamber=house"' in body
+    def test_landing_pages_link_to_their_matchup_pages(self, app: Flask) -> None:
+        client = app.test_client()
+        assert 'href="/us/president/matchup"' in client.get("/president").get_data(
+            as_text=True
+        )
+        for chamber in ("senate", "house"):
+            body = client.get(f"/{chamber}").get_data(as_text=True)
+            assert f'href="/us/matchups?chamber={chamber}"' in body
 
     def test_import_page_links_to_matchup_pages(self, app: Flask) -> None:
         body = app.test_client().get("/us/import").get_data(as_text=True)

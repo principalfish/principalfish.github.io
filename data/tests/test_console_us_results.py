@@ -282,8 +282,9 @@ class TestForm:
         assert "which is missing" in body
         assert "not the current" in body
 
-    def test_home_links_to_the_tool(self, app: Flask) -> None:
-        body = app.test_client().get("/").get_data(as_text=True)
+    @pytest.mark.parametrize("path", ["/house", "/senate"])
+    def test_landing_pages_link_to_the_tool(self, app: Flask, path: str) -> None:
+        body = app.test_client().get(path).get_data(as_text=True)
 
         assert 'href="/us/results"' in body
 

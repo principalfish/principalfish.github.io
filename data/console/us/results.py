@@ -119,7 +119,7 @@ SNAPSHOT_CONFIG = "US_RESULTS_CURRENT_SENATE"
 # The converted 2026 Senate election, in the out-dir.
 CURRENT_SENATE_ELECTION_FILE = output_name(2026, "senate")
 
-# The same full export as the site page's "Rebuild Site Data" and its timeout.
+# The same full export as the Admin page's "Rebuild Site Data" and its timeout.
 EXPORT_TIMEOUT_SECONDS = 900
 EXPORT_COMMAND_LABEL = "export_elections.py (rebuild site data)"
 CURRENT_SENATE_COMMAND_LABEL = "cli.py current-senate (rebuild senate-current.json)"
@@ -457,7 +457,7 @@ def us_results_confirm(token: str) -> ResponseReturnValue:
 def us_results_export() -> ResponseReturnValue:
     """POST /us/results/export — Run the site export (``export_elections.py``).
 
-    The same full export as the site page's rebuild, run separately from the
+    The same full export as the Admin page's Rebuild Site Data, run separately from the
     import so a provisional refresh is only published on purpose.
 
     Returns:

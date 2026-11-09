@@ -26,12 +26,13 @@ class TestSiteRoutesRegistered:
         assert "/site/rebuild-database" in rules
 
 
-class TestHomeCard:
-    """The Site card shows the Rebuild Database button with its health warning."""
+class TestAdminPage:
+    """The Admin page shows the Rebuild Database button with its health warning."""
 
-    def test_home_renders_rebuild_database_button(self, app: Flask) -> None:
-        body = app.test_client().get("/").get_data(as_text=True)
+    def test_admin_renders_rebuild_database_button(self, app: Flask) -> None:
+        body = app.test_client().get("/admin").get_data(as_text=True)
         assert "Rebuild Database" in body
+        assert 'action="/site/rebuild"' in body
         assert 'action="/site/rebuild-database"' in body
         # Health-warning confirm mentions the destructive rewrite + preservation.
         assert "Rebuild the DATABASE from source" in body

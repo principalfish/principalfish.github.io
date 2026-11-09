@@ -1143,14 +1143,14 @@ class TestFinish:
         with MODEL_RUN_LOCK:
             finish_us_queue(us_db, payload, runner=runner)
         # Recorded, not retried: a refresh once the other run has ended does
-        # not start a surprise run; the summary points at the home page.
+        # not start a surprise run; the summary points at a US section page.
         finish_us_queue(us_db, payload, runner=runner)
 
         assert runner.calls == []
         assert payload[MODEL_RUN_KEY] is None
         assert payload[MODEL_ERROR_KEY] == (
             "US models not run: another US model run or history rebuild was in "
-            "progress. Run US Models from the home page once it finishes."
+            "progress. Run US Models from a US section page once it finishes."
         )
         assert not MODEL_RUN_LOCK.locked()
 

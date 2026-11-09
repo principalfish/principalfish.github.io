@@ -9,9 +9,31 @@
   <body>
     <header class="topbar">
       <a href="{{ url_for('home.home') }}" class="brand">Election Data Console</a>
+      <nav class="topnav" aria-label="Sections">
+        {% for item in nav.top %}
+          <a href="{{ item.url }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label }}</a>
+        {% endfor %}
+      </nav>
     </header>
 
+    {% if nav.section_items %}
+      <nav class="subnav" aria-label="{{ nav.section.label }}">
+        {% for item in nav.section_items %}
+          <a href="{{ item.url }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label }}</a>
+        {% endfor %}
+      </nav>
+    {% endif %}
+
     <main class="container{% block container_class %}{% endblock %}">
+      {% if nav.breadcrumbs %}
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          {% for crumb in nav.breadcrumbs %}
+            {% if crumb.url %}<a href="{{ crumb.url }}">{{ crumb.label }}</a>{% else %}<span aria-current="page">{{ crumb.label }}</span>{% endif %}
+            {% if not loop.last %}<span class="crumb-sep" aria-hidden="true">›</span>{% endif %}
+          {% endfor %}
+        </nav>
+      {% endif %}
+
       {% with messages = get_flashed_messages() %}
         {% if messages %}
           <div class="alerts">

@@ -19,6 +19,7 @@ SKIPPED_DIRS = {"archive", "election_data", ".venv", "venv", "__pycache__"}
 # The only mypy sections for our own modules: a Flask stub artifact, not an import path.
 LOCAL_MYPY_SECTIONS = {
     "mypy-console.home",
+    "mypy-console.section_pages",
     "mypy-console.admin.*",
     "mypy-console.holyrood.*",
     "mypy-console.polls.*",

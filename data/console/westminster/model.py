@@ -26,14 +26,18 @@ from console.paths import (
 )
 from console.sections import WESTMINSTER_MAP_NAME
 from console.shared.run_form import (
+    EXPORT_CHECKBOX_NAME,
     RunForm,
     RunFormField,
     days_field,
     dry_run_field,
     election_options,
+    export_checkbox,
     half_life_field,
     name_options,
     output_csv_options,
+    run_summary,
+    ticked,
 )
 from console.shared.runner import run_command
 from console.westminster.outputs import register_outputs
@@ -157,6 +161,7 @@ def _model_run_form(choices: dict[str, object]) -> RunForm:
             ),
             dry_run_field(choices),
         ],
+        checkboxes=[export_checkbox()],
     )
 
 
@@ -178,6 +183,7 @@ def model_run_form() -> str:
             "half_life_days": "15.0",
             "output_csv": "",
             "dry_run": "true",
+            EXPORT_CHECKBOX_NAME: "on",
         },
         run_result=None,
     )
@@ -195,6 +201,9 @@ def model_run_execute() -> ResponseReturnValue:
         half_life_days (float, >0): Time-decay half-life for poll weighting.
         output_csv (str, optional): File path for seat-projection CSV output.
         dry_run (str): 'true' to preview without writing to DB; 'false' to commit.
+        export_when_done (checkbox): With 'on', a successful non-dry run is followed
+            by the simulation export; unticked, the model runs alone. A dry run
+            never exports.
 
     Returns:
         Rendered model_run.html with run output, or redirects with flash on validation error.
@@ -208,6 +217,7 @@ def model_run_execute() -> ResponseReturnValue:
         "half_life_days": raw_form.get("half_life_days", ""),
         "output_csv": raw_form.get("output_csv", ""),
         "dry_run": raw_form.get("dry_run", "true"),
+        **ticked(raw_form, EXPORT_CHECKBOX_NAME),
     }
 
     db = get_db()
@@ -248,7 +258,8 @@ def model_run_execute() -> ResponseReturnValue:
     result = run_command(command, timeout=1800)
 
     export_result = None
-    if not form.dry_run and result.returncode == 0:
+    export_return_code: int | None = None
+    if form.export_when_done and not form.dry_run and result.returncode == 0:
         if not EXPORT_ELECTION_SCRIPT.exists():
             export_result = {
                 "command": "",
@@ -256,6 +267,7 @@ def model_run_execute() -> ResponseReturnValue:
                 "stderr": f"Export script not found: {EXPORT_ELECTION_SCRIPT}",
                 "return_code": 1,
             }
+            export_return_code = 1
         else:
             export_command = [
                 sys.executable,
@@ -271,6 +283,7 @@ def model_run_execute() -> ResponseReturnValue:
                 "stderr": export_proc.stderr,
                 "return_code": export_proc.returncode,
             }
+            export_return_code = export_proc.returncode
 
     run_result = {
         "command": shlex.join(command),
@@ -278,6 +291,12 @@ def model_run_execute() -> ResponseReturnValue:
         "stderr": result.stderr,
         "return_code": result.returncode,
         "export_result": export_result,
+        "summary": run_summary(
+            dry_run=form.dry_run,
+            export=form.export_when_done,
+            return_code=result.returncode,
+            export_return_code=export_return_code,
+        ),
     }
 
     return render_template(

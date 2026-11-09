@@ -99,6 +99,7 @@ def _valid_form(world: WestminsterWorld, **overrides: str) -> dict[str, str]:
         "half_life_days": "30.0",
         "output_csv": "",
         "dry_run": "true",
+        "export_when_done": "on",
     }
     form.update(overrides)
     return form
@@ -419,6 +420,57 @@ class TestModelRunExecute:
         assert _pre_after_heading(body, "h5", "Stdout") == "ran export_elections.py"
         assert _pre_after_heading(body, "h5", "Stderr") == "(no stderr)"
 
+    def test_export_off_runs_the_model_without_the_export(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        export_script = tmp_path / "export_elections.py"
+        export_script.write_text("# stub for test", encoding="utf-8")
+        monkeypatch.setattr(
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", export_script
+        )
+        form = _valid_form(westminster_world, dry_run="false")
+        del form["export_when_done"]
+
+        response = app.test_client().post("/westminster/model", data=form)
+
+        assert response.status_code == 200
+        assert recording_runner.scripts == ["run_uns_model.py"]
+        body = response.get_data(as_text=True)
+        assert "Simulation JSON Export" not in body
+        assert "Export when done was off, so nothing was exported." in body
+        # The unticked box is drawn unticked again.
+        assert '<input type="checkbox" name="export_when_done">' in body
+
+    def test_a_dry_run_never_exports_even_with_the_box_ticked(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        recording_runner: _RecordingRunner,
+    ) -> None:
+        form = _valid_form(westminster_world, dry_run="true", export_when_done="on")
+
+        response = app.test_client().post("/westminster/model", data=form)
+
+        assert recording_runner.scripts == ["run_uns_model.py"]
+        body = response.get_data(as_text=True)
+        assert "Simulation JSON Export" not in body
+        assert "nothing was exported" in body
+
+    def test_the_form_opens_with_the_export_box_ticked(
+        self, app: Flask, db: Database
+    ) -> None:
+        body = app.test_client().get("/westminster/model").get_data(as_text=True)
+
+        assert '<input type="checkbox" name="export_when_done" checked>' in body
+        assert "A dry run never exports" in body
+
     def test_non_zero_exit_skips_export(
         self,
         app: Flask,
@@ -468,6 +520,30 @@ class TestModelRunExecute:
         assert recording_runner.scripts == ["run_uns_model.py"]
         body = response.get_data(as_text=True)
         assert f"Export script not found: {missing_script}" in body
+        assert "The run finished but the export failed with exit code 1" in body
+
+    def test_a_successful_export_keeps_the_export_requested_headline(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        export_script = tmp_path / "export_elections.py"
+        export_script.write_text("# stub for test", encoding="utf-8")
+        monkeypatch.setattr(
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", export_script
+        )
+        form = _valid_form(westminster_world, dry_run="false")
+
+        response = app.test_client().post("/westminster/model", data=form)
+
+        body = response.get_data(as_text=True)
+        assert recording_runner.scripts == ["run_uns_model.py", "export_elections.py"]
+        assert "The run finished and the export was requested" in body
+        assert "the export failed" not in body
 
     def test_output_csv_passed_through(
         self,

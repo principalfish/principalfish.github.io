@@ -14,7 +14,6 @@ from console.nav import (
     ADMIN,
     ALL_POLLS,
     UNSECTIONED_BLUEPRINTS,
-    UNSECTIONED_ENDPOINTS,
     Nav,
     NavItem,
     build_nav,
@@ -104,12 +103,14 @@ def test_the_holyrood_landing_page_holds_the_one_click_import(
     assert "Import Scottish Polls" in body
 
 
-def test_only_the_us_landing_pages_hold_the_run_form(app: Flask) -> None:  # noqa: F811
+def test_every_landing_page_links_to_its_own_model_page(
+    app: Flask,  # noqa: F811
+) -> None:
     client = app.test_client()
     for section in SECTIONS:
         body = client.get(f"/{section.slug}").get_data(as_text=True)
-        has_form = 'action="/us/run-models"' in body
-        assert has_form is (section.slug in {"house", "senate", "president"})
+        assert f'href="/{section.slug}/model">Run model</a>' in body
+        assert "run-models" not in body
 
 
 def test_every_nav_link_resolves_and_renders(seeded_app: Flask) -> None:
@@ -131,6 +132,7 @@ def test_each_section_nav_is_built_from_its_capabilities() -> None:
         return [link.label for link in section_links(SECTIONS_BY_SLUG[slug])]
 
     assert labels("westminster") == [
+        "Polls",
         "Import poll",
         "By-elections",
         "Poll coverage",
@@ -138,10 +140,30 @@ def test_each_section_nav_is_built_from_its_capabilities() -> None:
         "Outputs",
         "Uncertainty",
     ]
-    assert labels("holyrood") == ["Run model", "Outputs"]
-    assert labels("house") == ["Import polls", "Matchups", "Results", "Outputs"]
-    assert labels("senate") == ["Import polls", "Matchups", "Results", "Outputs"]
-    assert labels("president") == ["Import polls", "Matchup", "Outputs"]
+    assert labels("holyrood") == ["Polls", "Run model", "Outputs"]
+    assert labels("house") == [
+        "Polls",
+        "Auto import",
+        "Matchups",
+        "Results",
+        "Run model",
+        "Outputs",
+    ]
+    assert labels("senate") == [
+        "Polls",
+        "Auto import",
+        "Matchups",
+        "Results",
+        "Run model",
+        "Outputs",
+    ]
+    assert labels("president") == [
+        "Polls",
+        "Auto import",
+        "Matchup",
+        "Run model",
+        "Outputs",
+    ]
 
 
 def test_every_endpoint_belongs_to_an_area_or_is_listed_as_sectionless(
@@ -149,17 +171,15 @@ def test_every_endpoint_belongs_to_an_area_or_is_listed_as_sectionless(
 ) -> None:
     for rule in app.url_map.iter_rules():
         blueprint = rule.endpoint.partition(".")[0]
-        area = current_area(rule.endpoint, {"chamber": "house"})
-        listed = (
-            blueprint in {"home", "us_poll_import", "us_results", "static"}
-            or rule.endpoint in {"us.run_us_models", "us.set_race_matchup"}
+        area = current_area(
+            rule.endpoint, {"chamber": "house", "section": "house"}
         )
+        listed = blueprint in {"home", "static"}
         assert (area is None) is listed, rule.endpoint
 
 
-def test_the_sectionless_lists_match_the_pinned_ones() -> None:
-    assert UNSECTIONED_BLUEPRINTS == {"home", "us_poll_import", "us_results", "static"}
-    assert UNSECTIONED_ENDPOINTS == {"us.run_us_models", "us.set_race_matchup"}
+def test_the_sectionless_list_matches_the_pinned_one() -> None:
+    assert UNSECTIONED_BLUEPRINTS == {"home", "static"}
 
 
 @pytest.mark.parametrize(
@@ -170,6 +190,11 @@ def test_the_sectionless_lists_match_the_pinned_ones() -> None:
         ("polls.poll_coverage", {}, "westminster"),
         ("polls.poll_list", {}, ALL_POLLS),
         ("polls.poll_detail", {}, ALL_POLLS),
+        ("polls.section_poll_list", {"section": "westminster"}, "westminster"),
+        ("polls.section_poll_list", {"section": "holyrood"}, "holyrood"),
+        ("polls.section_poll_list", {"section": "president"}, "president"),
+        ("polls.section_poll_list", {"section": "nope"}, None),
+        ("polls.section_poll_list", {}, None),
         ("holyrood.holyrood_outputs", {}, "holyrood"),
         ("us.senate_outputs", {}, "senate"),
         ("us.delete_selected_house_outputs", {}, "house"),
@@ -179,7 +204,26 @@ def test_the_sectionless_lists_match_the_pinned_ones() -> None:
         ("us.race_matchups", {"chamber": "House"}, None),
         ("us.race_matchups", {"chamber": "nope"}, None),
         ("us.race_matchups", {}, None),
-        ("us.run_us_models", {}, None),
+        ("us.model_run_form", {"chamber": "house"}, "house"),
+        ("us.model_run_form", {"chamber": "senate"}, "senate"),
+        ("us.model_run", {"chamber": "president"}, "president"),
+        ("us.model_run_form", {"chamber": "President"}, None),
+        ("us.model_run_form", {"chamber": "nope"}, None),
+        ("us.model_run", {}, None),
+        ("us_poll_import.import_form", {"chamber": "house"}, "house"),
+        ("us_poll_import.queue", {"chamber": "senate"}, "senate"),
+        ("us_poll_import.finish", {"chamber": "president"}, "president"),
+        ("us_poll_import.import_form", {"chamber": "nope"}, None),
+        ("us_poll_import.import_form", {}, None),
+        ("us_results.us_results_form", {"chamber": "house"}, "house"),
+        ("us_results.us_results_confirm", {"chamber": "senate"}, "senate"),
+        ("us_results.us_results_current_senate", {"chamber": "senate"}, "senate"),
+        ("us_results.us_results_form", {"chamber": "president"}, None),
+        ("us_results.us_results_form", {}, None),
+        ("us.set_race_matchup", {"chamber": "house"}, "house"),
+        ("us.set_race_matchup", {"chamber": "senate"}, "senate"),
+        ("us.set_race_matchup", {"chamber": "president"}, None),
+        ("us.set_race_matchup", {}, None),
         ("db_admin.backup_database", {}, ADMIN),
         ("site.rebuild_database", {}, ADMIN),
         ("sections.house", {}, "house"),
@@ -214,7 +258,7 @@ def test_pages_outside_a_section_have_no_section_nav(
     seeded_app: Flask,
 ) -> None:
     client = seeded_app.test_client()
-    for path in ("/polls", "/admin", "/us/import", "/"):
+    for path in ("/polls", "/admin", "/"):
         assert 'class="subnav"' not in client.get(path).get_data(as_text=True), path
 
 
@@ -237,7 +281,14 @@ def _active(items: tuple[NavItem, ...]) -> list[str]:
     ("path", "crumbs"),
     [
         ("/", []),
-        ("/us/import", [("Home", "/")]),
+        (
+            "/house/polls/import",
+            [("Home", "/"), ("US House", "/house"), ("Auto import", None)],
+        ),
+        (
+            "/senate/results",
+            [("Home", "/"), ("US Senate", "/senate"), ("Results", None)],
+        ),
         ("/admin", [("Home", "/"), ("Admin", None)]),
         ("/polls", [("Home", "/"), ("All polls", None)]),
         ("/holyrood", [("Home", "/"), ("Holyrood", None)]),
@@ -269,7 +320,11 @@ def test_breadcrumbs(
     ("path", "top"),
     [
         ("/", []),
-        ("/us/import", []),
+        ("/house/polls/import", ["US House"]),
+        ("/president/polls/import", ["US President"]),
+        ("/senate/results", ["US Senate"]),
+        ("POST /senate/results/current-senate", ["US Senate"]),
+        ("POST /house/matchups/1/2", ["US House"]),
         ("/holyrood", ["Holyrood"]),
         ("/admin", ["Admin"]),
         ("POST /db/backup", ["Admin"]),
@@ -291,6 +346,9 @@ def test_the_top_bar_marks_the_current_area(
     ("path", "label"),
     [
         ("/westminster", None),
+        ("/westminster/polls", "Polls"),
+        ("/holyrood/polls", "Polls"),
+        ("/house/polls", "Polls"),
         ("/westminster/polls/import", "Import poll"),
         ("/westminster/by-elections", "By-elections"),
         ("/westminster/polls/coverage", "Poll coverage"),
@@ -303,7 +361,17 @@ def test_the_top_bar_marks_the_current_area(
         ("/holyrood/model", "Run model"),
         ("/holyrood/outputs/7", "Outputs"),
         ("/house/matchups", "Matchups"),
+        ("/house/polls/import", "Auto import"),
+        ("/senate/polls/import/abc/finish", "Auto import"),
+        ("POST /president/polls/import/start", "Auto import"),
+        ("/house/results", "Results"),
+        ("POST /senate/results/preview", "Results"),
+        ("POST /senate/results/current-senate", "Results"),
+        ("POST /senate/matchups/1/2", "Matchups"),
         ("/president/matchup", "Matchup"),
+        ("/house/model", "Run model"),
+        ("/senate/model", "Run model"),
+        ("POST /president/model", "Run model"),
         ("/house/outputs", "Outputs"),
         ("/senate/outputs/5", "Outputs"),
         ("POST /president/outputs/delete-selected", "Outputs"),
@@ -350,7 +418,9 @@ def test_home_cards_link_to_each_sections_pages(app: Flask) -> None:  # noqa: F8
         "/westminster",
         "/westminster/outputs",
         "/westminster/polls/import",
-        "/us/import",
+        "/house/polls/import",
+        "/senate/polls/import",
+        "/president/polls/import",
         "/senate/matchups",
         "/president/matchup",
         "/holyrood/outputs",
@@ -358,7 +428,7 @@ def test_home_cards_link_to_each_sections_pages(app: Flask) -> None:  # noqa: F8
         "/admin",
     ):
         assert f'href="{href}"' in cards, href
-    assert 'class="button primary button-block" href="/us/import"' in cards
+    assert 'class="button primary button-block" href="/house/polls/import"' in cards
 
 
 @pytest.mark.parametrize("section", SECTIONS, ids=lambda section: section.slug)

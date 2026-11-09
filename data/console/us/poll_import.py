@@ -9,20 +9,23 @@ preview-cache token and the templates.
 
 What the US flow adds:
 
-- **Several contests in one run** — the House generic ballot, House districts,
-  Senate races and the President — each on its own map.
+- **One chamber per run, several contests** — the House offers its generic
+  ballot and district polls, the Senate its race polls, the President its own —
+  each contest on its own map. The routes live under the chamber's URL
+  (``/<chamber>/polls/import``).
 - **"Approve all remaining in this race"**, since a race is reviewed as a block.
 - **A finish step with two jobs**: automatic matchup tracking over every
-  scraped row, then the three US models and the export, once.
+  scraped row, then the chamber's model and the export, once.
 
 The queue lives in the shared preview cache under one token, as a payload of
 type :data:`US_QUEUE_PREVIEW_TYPE` holding the ``QueueState`` under
-``STATE_KEY`` and the scraped ``UsPollIndex`` under ``INDEX_KEY`` (tracked over
-by the finish step, and kept for the summary's diagnostics). The finish step
-adds its results under the service's ``AUTO_TRACKING_KEY`` (or
-``AUTO_TRACKING_ERROR_KEY``), ``MODEL_RUN_KEY`` and ``MODEL_ERROR_KEY``. The
-payload type keeps the Westminster and US queues apart: each flow's routes
-reject the other's tokens as expired.
+``STATE_KEY``, the scraped ``UsPollIndex`` under ``INDEX_KEY`` (tracked over
+by the finish step, and kept for the summary's diagnostics) and the chamber's
+slug under ``CHAMBER_KEY``. The finish step adds its results under the service's
+``AUTO_TRACKING_KEY`` (or ``AUTO_TRACKING_ERROR_KEY``), ``MODEL_RUN_KEY`` and
+``MODEL_ERROR_KEY``. The payload type keeps the Westminster and US queues apart,
+and the chamber keeps the three US queues apart: each route rejects a token that
+is not its own flow's and chamber's as expired.
 
 The payload is mutated in place across requests, and Flask's dev server is
 threaded, so every route that reads or moves a queue holds that queue's lock
@@ -62,9 +65,11 @@ from console.shared.wikipedia_queue import (
     progress,
     summarise,
 )
+from console.us.models import US_CHAMBER_CONVERTER, US_CHAMBERS_BY_SLUG
 from console.us.poll_queue import (
     AUTO_TRACKING_ERROR_KEY,
     AUTO_TRACKING_KEY,
+    CHAMBER_KEY,
     INDEX_KEY,
     MODEL_ERROR_KEY,
     MODEL_RUN_KEY,
@@ -83,7 +88,6 @@ from console.us.poll_queue import (
 from core.db import Database
 from importers.polls.us.us_wikipedia_polls import (
     AUTO_TRACKING_OUTCOMES,
-    US_CONTESTS,
     US_CONTESTS_BY_SLUG,
     UsImportPlan,
     UsPollIndex,
@@ -105,6 +109,8 @@ US_QUEUE_PREVIEW_TYPE = "us_wikipedia_queue"
 # each queue's lock serialises that queue's requests.
 _QUEUE_LOCKS: dict[str, threading.Lock] = {}
 _QUEUE_LOCKS_GUARD = threading.Lock()
+
+_CHAMBER_ROUTE = US_CHAMBER_CONVERTER
 
 # What each automatic-tracking outcome means, in the order the summary lists
 # them (the importer's own order).
@@ -138,8 +144,8 @@ def _queue_lock(token: str) -> Iterator[None]:
 
 
 def _serialised(
-    view: Callable[[str], ResponseReturnValue],
-) -> Callable[[str], ResponseReturnValue]:
+    view: Callable[[str, str], ResponseReturnValue],
+) -> Callable[[str, str], ResponseReturnValue]:
     """Run a queue route under its token's lock (see :func:`_queue_lock`).
 
     The routes check the cursor and then act on the shared, in-place payload.
@@ -150,40 +156,57 @@ def _serialised(
     """
 
     @functools.wraps(view)
-    def locked(token: str) -> ResponseReturnValue:
+    def locked(chamber: str, token: str) -> ResponseReturnValue:
         with _queue_lock(token):
-            return view(token)
+            return view(chamber, token)
 
     return locked
 
 
-@bp.route("/us/import", methods=["GET"])
-def import_form() -> str:
-    """GET /us/import — Render the US catch-up start form."""
-    return render_template("us_poll_import.html", contests=US_CONTESTS)
+@bp.route(f"/{_CHAMBER_ROUTE}/polls/import", methods=["GET"])
+def import_form(chamber: str) -> str:
+    """GET /house|senate|president/polls/import — Render the catch-up start form.
+
+    Args:
+        chamber: The chamber slug from the path.
+
+    Returns:
+        The start form, offering only the chamber's own contests.
+    """
+    spec = US_CHAMBERS_BY_SLUG[chamber]
+    return render_template(
+        "us_poll_import.html",
+        chamber=spec,
+        contests=[US_CONTESTS_BY_SLUG[slug] for slug in spec.contest_slugs],
+    )
 
 
-@bp.route("/us/import/start", methods=["POST"])
-def start() -> ResponseReturnValue:
-    """POST /us/import/start — Scrape Wikipedia and open a US catch-up queue.
+@bp.route(f"/{_CHAMBER_ROUTE}/polls/import/start", methods=["POST"])
+def start(chamber: str) -> ResponseReturnValue:
+    """POST /<chamber>/polls/import/start — Scrape Wikipedia, open a catch-up queue.
+
+    Args:
+        chamber: The chamber slug from the path.
 
     Form parameters:
-        contests (str, repeatable): Contest slugs to scrape; at least one.
+        contests (str, repeatable): Contest slugs to scrape; at least one, and
+            all of them the chamber's own.
         states (str, optional): Comma-separated state names or postal codes
             limiting the per-state race pages. Blank reads every state.
         cutoff_date (str, optional): ISO date. Only polls whose fieldwork ends
             on or after it are considered, in every race. Blank windows each
             race on its own latest stored poll.
-        run_model_at_end (str, optional): 'on' to run the US models and the
-            export once the queue is finished.
+        run_model_at_end (str, optional): 'on' to run the chamber's model and
+            the export once the queue is finished.
         include_collapsed_for_uncovered (str, optional): 'on' to import hidden
             hypothetical tables for races that have no visible table.
 
     Returns:
         Redirect to the queue's first step, or back to the start form with a
-        flash message if the options are invalid, or the scrape or building the
-        queue fails.
+        flash message if the options are invalid (a contest of another chamber
+        included), or the scrape or building the queue fails.
     """
+    spec = US_CHAMBERS_BY_SLUG[chamber]
     try:
         form = UsQueueStartForm.model_validate(
             {
@@ -194,11 +217,12 @@ def start() -> ResponseReturnValue:
                 "include_collapsed_for_uncovered": (
                     request.form.get("include_collapsed_for_uncovered") == "on"
                 ),
-            }
+            },
+            context={"allowed_contests": spec.contest_slugs},
         )
     except ValidationError as err:
         flash(f"Could not read the import options: {_describe_errors(err)}.")
-        return redirect(url_for("us_poll_import.import_form"))
+        return redirect(url_for("us_poll_import.import_form", chamber=chamber))
 
     db = get_db()
     contests = [US_CONTESTS_BY_SLUG[slug] for slug in form.contests]
@@ -220,20 +244,25 @@ def start() -> ResponseReturnValue:
         # that escapes is a parser fault, or a database fault while scraping or
         # building the queue. It is logged in full and surfaced to the user
         # instead of a bare 500.
-        logger.exception("Starting the US import failed")
-        flash(f"Could not start the US import: {err}")
-        return redirect(url_for("us_poll_import.import_form"))
+        logger.exception("Starting the %s import failed", spec.label)
+        flash(f"Could not start the {spec.label} import: {err}")
+        return redirect(url_for("us_poll_import.import_form", chamber=chamber))
 
     token = store_preview(
-        {"type": US_QUEUE_PREVIEW_TYPE, STATE_KEY: state, INDEX_KEY: index}
+        {
+            "type": US_QUEUE_PREVIEW_TYPE,
+            CHAMBER_KEY: chamber,
+            STATE_KEY: state,
+            INDEX_KEY: index,
+        }
     )
-    return redirect(url_for("us_poll_import.queue", token=token))
+    return redirect(url_for("us_poll_import.queue", chamber=chamber, token=token))
 
 
-@bp.route("/us/import/<token>", methods=["GET"])
+@bp.route(f"/{_CHAMBER_ROUTE}/polls/import/<token>", methods=["GET"])
 @_serialised
-def queue(token: str) -> ResponseReturnValue:
-    """GET /us/import/<token> — Show the queue's current poll for approval.
+def queue(chamber: str, token: str) -> ResponseReturnValue:
+    """GET /<chamber>/polls/import/<token> — Show the queue's current poll.
 
     The import plan is built lazily here, so the row is resolved against the
     database as it stands when the user sees it, and exactly what is approved
@@ -241,21 +270,22 @@ def queue(token: str) -> ResponseReturnValue:
     and leaves it under the cursor for the user to retry or skip.
 
     Args:
+        chamber: The chamber slug from the path.
         token: Token identifying the cached US queue.
 
     Returns:
         Rendered us_poll_queue.html, a redirect to the finish step once the
         queue is exhausted, or a redirect to the start form if the token is not
-        a live US queue.
+        a live queue of this chamber.
     """
-    payload = _load_queue(token)
+    payload = _load_queue(token, chamber)
     if payload is None:
-        return _queue_expired()
+        return _queue_expired(chamber)
     state: QueueState = payload[STATE_KEY]
 
     item = current_item(state)
     if item is None:
-        return redirect(url_for("us_poll_import.finish", token=token))
+        return redirect(url_for("us_poll_import.finish", chamber=chamber, token=token))
 
     db = get_db()
     prepare_us_item(db, item, state)
@@ -266,6 +296,7 @@ def queue(token: str) -> ResponseReturnValue:
     contest_label = contest.label if contest is not None else row.contest
     return render_template(
         "us_poll_queue.html",
+        chamber=US_CHAMBERS_BY_SLUG[chamber],
         token=token,
         item=item,
         row=row,
@@ -279,10 +310,10 @@ def queue(token: str) -> ResponseReturnValue:
     )
 
 
-@bp.route("/us/import/<token>/confirm", methods=["POST"])
+@bp.route(f"/{_CHAMBER_ROUTE}/polls/import/<token>/confirm", methods=["POST"])
 @_serialised
-def confirm(token: str) -> ResponseReturnValue:
-    """POST /us/import/<token>/confirm — Import the queue's current poll.
+def confirm(chamber: str, token: str) -> ResponseReturnValue:
+    """POST /<chamber>/polls/import/<token>/confirm — Import the current poll.
 
     The commit re-checks presence, so a poll stored since the queue was built
     is skipped rather than duplicated. That check is not atomic with the
@@ -292,6 +323,7 @@ def confirm(token: str) -> ResponseReturnValue:
     cursor for a retry.
 
     Args:
+        chamber: The chamber slug from the path.
         token: Token identifying the cached US queue.
 
     Form parameters:
@@ -301,38 +333,39 @@ def confirm(token: str) -> ResponseReturnValue:
 
     Returns:
         Redirect back to the queue step, or to the start form if the token is
-        not a live US queue.
+        not a live queue of this chamber.
     """
-    payload = _load_queue(token)
+    payload = _load_queue(token, chamber)
     if payload is None:
-        return _queue_expired()
+        return _queue_expired(chamber)
     state: QueueState = payload[STATE_KEY]
 
     if not _cursor_matches(state):
-        return _stale_step(token)
+        return _stale_step(chamber, token)
 
     item = current_item(state)
     if item is None:
-        return redirect(url_for("us_poll_import.finish", token=token))
+        return redirect(url_for("us_poll_import.finish", chamber=chamber, token=token))
     if item.plan is None:
         # Nothing to commit: a pending item needs the step rendering again
         # first, and a failed one offers retry or skip instead.
-        return redirect(url_for("us_poll_import.queue", token=token))
+        return redirect(url_for("us_poll_import.queue", chamber=chamber, token=token))
 
     # confirm_us_item only acts on a pending item, so an item whose commit
     # already failed (it keeps its plan) is left alone here and not advanced.
     confirm_us_item(get_db(), item)
     if item.status != "failed":
         advance(state)
-    return redirect(url_for("us_poll_import.queue", token=token))
+    return redirect(url_for("us_poll_import.queue", chamber=chamber, token=token))
 
 
-@bp.route("/us/import/<token>/skip", methods=["POST"])
+@bp.route(f"/{_CHAMBER_ROUTE}/polls/import/<token>/skip", methods=["POST"])
 @_serialised
-def skip(token: str) -> ResponseReturnValue:
-    """POST /us/import/<token>/skip — Skip or retry the queue's current poll.
+def skip(chamber: str, token: str) -> ResponseReturnValue:
+    """POST /<chamber>/polls/import/<token>/skip — Skip or retry the current poll.
 
     Args:
+        chamber: The chamber slug from the path.
         token: Token identifying the cached US queue.
 
     Form parameters:
@@ -343,27 +376,27 @@ def skip(token: str) -> ResponseReturnValue:
 
     Returns:
         Redirect back to the queue step, or to the start form if the token is
-        not a live US queue.
+        not a live queue of this chamber.
     """
-    payload = _load_queue(token)
+    payload = _load_queue(token, chamber)
     if payload is None:
-        return _queue_expired()
+        return _queue_expired(chamber)
     state: QueueState = payload[STATE_KEY]
 
     if not _cursor_matches(state):
-        return _stale_step(token)
+        return _stale_step(chamber, token)
 
     if current_item(state) is None:
-        return redirect(url_for("us_poll_import.finish", token=token))
+        return redirect(url_for("us_poll_import.finish", chamber=chamber, token=token))
 
     apply_skip_or_retry(state, request.form.get("action", ""))
-    return redirect(url_for("us_poll_import.queue", token=token))
+    return redirect(url_for("us_poll_import.queue", chamber=chamber, token=token))
 
 
-@bp.route("/us/import/<token>/approve-race", methods=["POST"])
+@bp.route(f"/{_CHAMBER_ROUTE}/polls/import/<token>/approve-race", methods=["POST"])
 @_serialised
-def approve_race(token: str) -> ResponseReturnValue:
-    """POST /us/import/<token>/approve-race — Import the rest of the current race.
+def approve_race(chamber: str, token: str) -> ResponseReturnValue:
+    """POST /<chamber>/polls/import/<token>/approve-race — Import the rest of a race.
 
     The race is the one of the poll under the cursor — never a value from the
     form — so a stale or tampered submission cannot approve another race.
@@ -372,6 +405,7 @@ def approve_race(token: str) -> ResponseReturnValue:
     summary is flashed onto the next step.
 
     Args:
+        chamber: The chamber slug from the path.
         token: Token identifying the cached US queue.
 
     Form parameters:
@@ -380,19 +414,19 @@ def approve_race(token: str) -> ResponseReturnValue:
 
     Returns:
         Redirect back to the queue step, or to the start form if the token is
-        not a live US queue.
+        not a live queue of this chamber.
     """
-    payload = _load_queue(token)
+    payload = _load_queue(token, chamber)
     if payload is None:
-        return _queue_expired()
+        return _queue_expired(chamber)
     state: QueueState = payload[STATE_KEY]
 
     if not _cursor_matches(state):
-        return _stale_step(token)
+        return _stale_step(chamber, token)
 
     item = current_item(state)
     if item is None:
-        return redirect(url_for("us_poll_import.finish", token=token))
+        return redirect(url_for("us_poll_import.finish", chamber=chamber, token=token))
 
     row = narrow_us_row(item.row)
     outcome = approve_group(get_db(), state, group_key(row))
@@ -402,34 +436,35 @@ def approve_race(token: str) -> ResponseReturnValue:
         f"{race}: {outcome.imported} imported, {outcome.skipped} already stored, "
         f"{outcome.failed} failed."
     )
-    return redirect(url_for("us_poll_import.queue", token=token))
+    return redirect(url_for("us_poll_import.queue", chamber=chamber, token=token))
 
 
-@bp.route("/us/import/<token>/finish", methods=["GET", "POST"])
+@bp.route(f"/{_CHAMBER_ROUTE}/polls/import/<token>/finish", methods=["GET", "POST"])
 @_serialised
-def finish(token: str) -> ResponseReturnValue:
-    """GET,POST /us/import/<token>/finish — Close a US catch-up run and report on it.
+def finish(chamber: str, token: str) -> ResponseReturnValue:
+    """GET,POST /<chamber>/polls/import/<token>/finish — Close a run, report on it.
 
     Applies automatic matchup tracking over every scraped row, then runs the
-    US models and the export once, if the run was started with that option, was
-    not abandoned, and imported anything or moved a race's tracked matchup. Both
-    results — or a tracking failure's message — are recorded on the cached
-    payload, so refreshing the summary repeats neither.
+    chamber's model and the export once, if the run was started with that
+    option, was not abandoned, and imported anything or moved a race's tracked
+    matchup. Both results — or a tracking failure's message — are recorded on
+    the cached payload, so refreshing the summary repeats neither.
 
     Args:
+        chamber: The chamber slug from the path.
         token: Token identifying the cached US queue.
 
     Form parameters:
         abandon (str, optional): 'on' to leave the queue early without running
-            the models. Tracking is still applied for the polls already stored.
+            the model. Tracking is still applied for the polls already stored.
 
     Returns:
         Rendered us_poll_queue_summary.html, or a redirect to the start form if
-        the token is not a live US queue.
+        the token is not a live queue of this chamber.
     """
-    payload = _load_queue(token)
+    payload = _load_queue(token, chamber)
     if payload is None:
-        return _queue_expired()
+        return _queue_expired(chamber)
     state: QueueState = payload[STATE_KEY]
 
     abandon = request.method == "POST" and request.form.get("abandon") == "on"
@@ -439,12 +474,15 @@ def finish(token: str) -> ResponseReturnValue:
     auto_tracking: dict[str, int] | None = payload.get(AUTO_TRACKING_KEY)
     return render_template(
         "us_poll_queue_summary.html",
+        chamber=US_CHAMBERS_BY_SLUG[chamber],
         state=state,
         index=payload[INDEX_KEY],
         grouped=summarise(state),
         progress=progress(state),
         cutoff_label=cutoff_label(state),
-        contest_labels={contest.slug: contest.label for contest in US_CONTESTS},
+        contest_labels={
+            slug: contest.label for slug, contest in US_CONTESTS_BY_SLUG.items()
+        },
         auto_tracking=_auto_tracking_lines(auto_tracking),
         tracking_changed=tracking_changed(auto_tracking),
         auto_tracking_error=payload.get(AUTO_TRACKING_ERROR_KEY, ""),
@@ -455,19 +493,22 @@ def finish(token: str) -> ResponseReturnValue:
     )
 
 
-def _load_queue(token: str) -> dict[str, Any] | None:
-    """Return the cached US queue payload for a token.
+def _load_queue(token: str, chamber: str) -> dict[str, Any] | None:
+    """Return the cached US queue payload for a token under one chamber's URL.
 
     Args:
         token: Token from the request path.
+        chamber: The chamber slug from the request path.
 
     Returns:
         The live payload dict — mutating it is how the queue advances — or None
         if the token is unknown, belongs to another flow (the Westminster queue
-        included), or has lost its state or index.
+        included) or another chamber, or has lost its state or index.
     """
     cached = get_preview(token)
     if cached is None or cached.get("type") != US_QUEUE_PREVIEW_TYPE:
+        return None
+    if cached.get(CHAMBER_KEY) != chamber:
         return None
     if not isinstance(cached.get(STATE_KEY), QueueState):
         return None
@@ -476,16 +517,16 @@ def _load_queue(token: str) -> dict[str, Any] | None:
     return cached
 
 
-def _queue_expired() -> ResponseReturnValue:
-    """Redirect to the start form, explaining that the queue is gone."""
+def _queue_expired(chamber: str) -> ResponseReturnValue:
+    """Redirect to the chamber's start form, explaining that the queue is gone."""
     flash("Queue expired or not found. Start a new US import from the import page.")
-    return redirect(url_for("us_poll_import.import_form"))
+    return redirect(url_for("us_poll_import.import_form", chamber=chamber))
 
 
-def _stale_step(token: str) -> ResponseReturnValue:
+def _stale_step(chamber: str, token: str) -> ResponseReturnValue:
     """Redirect back to the current step after rejecting a stale submission."""
     flash("That step has already been actioned.")
-    return redirect(url_for("us_poll_import.queue", token=token))
+    return redirect(url_for("us_poll_import.queue", chamber=chamber, token=token))
 
 
 def _cursor_matches(state: QueueState) -> bool:

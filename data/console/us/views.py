@@ -1,26 +1,29 @@
 """US election routes: model runs, tracked matchups and per-chamber outputs.
 
 Mirrors the Holyrood flow for the three US election types (House / President /
-Senate). One button runs all three forecast models and then the static export;
-poll import is the reviewed Wikipedia queue in
-:mod:`console.us.poll_import`. Two matchup pages choose which stored
-matchup the models follow: the national presidential one, and per-race
-overrides of the importer's automatic choice for Senate and House races (the
-decisions live in :mod:`console.us.matchups`). The model-output list/detail
-and delete pages are registered per chamber from :mod:`console.us.outputs`.
+Senate). Each chamber has its own model page, which runs that chamber's
+forecast model and then, optionally, the static export; poll import is the
+reviewed Wikipedia queue in :mod:`console.us.poll_import`. Two matchup pages
+choose which stored matchup the models follow: the national presidential one,
+and per-race overrides of the importer's automatic choice for Senate and House
+races (the decisions live in :mod:`console.us.matchups`). The model-output
+list/detail and delete pages are registered per chamber from
+:mod:`console.us.outputs`.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
 from typing import Protocol
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
+from pydantic import ValidationError
 
 from console.db import get_db
+from console.forms import UsModelRunForm
 from console.paths import EXPORT_ELECTION_SCRIPT
+from console.shared.run_form import run_summary
 from console.shared.runner import render_command_result, run_python_script
 from console.us.matchups import (
     MatchupChoiceError,
@@ -31,17 +34,27 @@ from console.us.matchups import (
     race_map_name,
     set_national_matchup,
 )
+from console.us.model_form import (
+    us_arg_explanations,
+    us_form_defaults,
+    us_form_values,
+    us_run_form,
+)
 from console.us.models import (
     EXPORT_STEP_LABEL,
+    NO_MATCHUP_NOTE,
+    US_CHAMBER_CONVERTER,
     US_CHAMBERS,
     US_CHAMBERS_BY_SLUG,
+    US_RACE_CHAMBER_CONVERTER,
     UsChamber,
+    UsModelOptions,
     UsModelRun,
     UsModelRunInterrupted,
     busy_message,
     model_run_slot,
     run_us_chamber_and_export,
-    run_us_models_and_export,
+    tracked_matchup_in_force,
 )
 from console.us.outputs import register_outputs
 from core.db import Database
@@ -58,104 +71,181 @@ REBUILD_INTERRUPTED_NOTE = (
     "to restore it; the export did not run, or did not finish."
 )
 
-# The same for a rebuild of every chamber: the one whose step died may have a
-# partial history, and those rebuilt before it were never exported.
-REBUILD_ALL_INTERRUPTED_NOTE = (
-    "The rebuild did not finish, so the trend history of the chamber it stopped "
-    "on may be partial: the runner clears the old points before recomputing them. "
-    "Any chamber rebuilt before it (shown below) has a new history the export "
-    "never picked up. Re-run the rebuild; if only the export failed, every "
-    "history is complete and just needs exporting."
+# Shown when a plain model run's subprocess dies part-way. A model that saved a
+# new output may have been left unexported, and an export that died may have
+# rewritten only some of its files.
+RUN_INTERRUPTED_NOTE = (
+    "The run did not finish, so the model and the export may be out of step: "
+    "re-run them. The export did not run, or did not finish."
 )
 
-# Shown when a plain model run's subprocess dies part-way. Chambers that
-# finished first have saved new outputs the export never picked up, and an
-# export that died may have rewritten only some of its files.
-RUN_INTERRUPTED_NOTE = (
-    "The run did not finish, so the models and the export may be out of step: "
-    "re-run them. The export did not run, or did not finish."
+# A dry run writes nothing, so a dry run that dies leaves nothing to repair.
+DRY_RUN_INTERRUPTED_NOTE = (
+    "The dry run did not finish. It writes nothing, so nothing needs repairing: "
+    "run it again."
 )
 
 bp = Blueprint("us", __name__)
 register_outputs(bp)
 
 
-@bp.route("/us/run-models", methods=["POST"])
-def run_us_models() -> ResponseReturnValue:
-    """POST /us/run-models — Re-run all three US forecast models and refresh exports.
+def _render_model_form(
+    chamber: UsChamber,
+    form_values: dict[str, str],
+    run_result: dict[str, object] | None = None,
+) -> str:
+    """Render ``chamber``'s model run page, with a run's result if it has one."""
+    return render_template(
+        "model_run.html",
+        run_form=us_run_form(chamber),
+        explanations=us_arg_explanations(),
+        form_values=form_values,
+        run_result=run_result,
+    )
 
-    Runs the House, Senate, and Presidential forecast runners (each persists a
-    ``us_*_model`` election and updates its trend JSON), then export_elections.py
-    to rewrite the static data files (the export is the single manifest writer).
-    The sequence itself lives in ``console.us.models`` — a chamber
-    whose tracked matchup is unset is skipped without stopping the others.
 
-    With the form's ``rebuild_history`` box ticked, every chamber's runner
-    recomputes its whole trend history (``--rebuild-history``, under the long
-    rebuild timeout), one after another: a single request that can take hours.
-    Either way the run holds the console's one model-run slot
-    (:func:`~console.us.models.model_run_slot`), so it is refused with
-    a flash while another run or rebuild is in progress.
+@bp.route(f"/{US_CHAMBER_CONVERTER}/model", methods=["GET"])
+def model_run_form(chamber: str) -> str:
+    """GET /house/model, /senate/model, /president/model — The model run form.
 
-    A step that times out or cannot be started renders a failed result saying
-    the models and the export may be out of step, instead of a 500.
+    The form opens as a dry run with the chamber's usual poll window and
+    "export when done" ticked.
+
+    Args:
+        chamber: The chamber slug from the path.
 
     Returns:
-        Rendered command_result.html showing combined stdout, stderr, and return
-        code, or a redirect home when another run is in progress.
+        The rendered form.
     """
-    scripts: list[Path] = [chamber.model_script for chamber in US_CHAMBERS]
-    scripts.append(EXPORT_ELECTION_SCRIPT)
+    spec = US_CHAMBERS_BY_SLUG[chamber]
+    return _render_model_form(spec, us_form_defaults(spec))
+
+
+@bp.route(f"/{US_CHAMBER_CONVERTER}/model", methods=["POST"])
+def model_run(chamber: str) -> ResponseReturnValue:
+    """POST /house/model, /senate/model, /president/model — Run one chamber's model.
+
+    Validates the form and runs the chamber's forecast runner with the posted
+    poll window, half-life, seat prior weight and seat-poll switch, then the
+    static export when "export when done" is ticked. A dry run computes without
+    writing and never exports; a dry run combined with a history rebuild is
+    refused, because the runner skips the rebuild in dry-run mode. A chamber
+    whose tracked matchup is unset (the President before one is chosen) is
+    skipped with a note, and nothing is exported.
+
+    With "rebuild history" ticked the runner recomputes the chamber's whole
+    trend history (``--rebuild-history``, under the long rebuild timeout): one
+    request that can take hours. Any run holds the console's one model-run slot
+    (:func:`~console.us.models.model_run_slot`), so it is refused with a flash
+    while another run or rebuild is in progress.
+
+    A step that times out or cannot be started renders a failed result saying
+    what it may have left behind, instead of a 500.
+
+    Args:
+        chamber: The chamber slug from the path.
+
+    Returns:
+        The form with the run's result below it, the form again with a flash
+        for an invalid value, or a redirect back to the form when the slot is
+        taken or a script is missing.
+    """
+    spec = US_CHAMBERS_BY_SLUG[chamber]
+    db = get_db()
+    raw_form = {key: (val or "").strip() for key, val in request.form.items()}
+    form_values = us_form_values(raw_form)
+
+    try:
+        form = UsModelRunForm.model_validate(raw_form)
+    except ValidationError as exc:
+        error = exc.errors()[0]
+        field = f"{error['loc'][0]}: " if error["loc"] else ""
+        flash(f"Invalid model argument value: {field}{error['msg']}")
+        return _render_model_form(spec, form_values)
+
+    back = url_for("us.model_run_form", chamber=chamber)
+    will_export = form.export_when_done and not form.dry_run
+    scripts = [spec.model_script, *([EXPORT_ELECTION_SCRIPT] if will_export else [])]
     for script in scripts:
         if not script.exists():
             flash(f"Script not found: {script}")
-            return redirect(url_for("home.home"))
+            return redirect(back)
 
-    rebuild = _rebuild_requested()
-    command = " → ".join(
-        [
-            " ".join(
-                (
-                    chamber.model_script.name,
-                    *chamber.model_args,
-                    *((chamber.rebuild_flag,) if rebuild else ()),
-                ),
-            )
-            for chamber in US_CHAMBERS
-        ]
-        + [EXPORT_ELECTION_SCRIPT.name]
+    options = UsModelOptions(
+        since_days_back=form.since_days_back,
+        half_life_days=form.half_life_days,
+        seat_prior_weight=form.seat_prior_weight,
+        ignore_seat_polls=form.ignore_seat_polls,
+        dry_run=form.dry_run,
     )
+    skipped = not tracked_matchup_in_force(db, spec)
+    steps = [
+        " ".join(
+            (
+                spec.model_script.name,
+                *options.args_for(spec, rebuild_history=form.rebuild_history),
+            )
+        )
+    ]
+    if skipped:
+        steps[0] += " (skipped: no tracked matchup)"
+    elif will_export:
+        steps.append(EXPORT_ELECTION_SCRIPT.name)
 
     def result_page(
-        *,
-        stdout: str,
-        stderr: str,
-        return_code: int,
+        *, stdout: str, stderr: str, return_code: int
     ) -> ResponseReturnValue:
-        return render_command_result(
-            title="Rebuild US History" if rebuild else "Run US Models",
-            command=command,
-            stdout=stdout,
-            stderr=stderr,
-            return_code=return_code,
+        return _render_model_form(
+            spec,
+            form_values,
+            {
+                "command": " → ".join(steps),
+                "stdout": stdout,
+                "stderr": stderr,
+                "return_code": return_code,
+                "summary": NO_MATCHUP_NOTE
+                if skipped and return_code == 0
+                else run_summary(
+                    dry_run=form.dry_run,
+                    export=form.export_when_done,
+                    return_code=return_code,
+                ),
+            },
         )
 
-    db = get_db()
-    slugs = (
-        frozenset(chamber.slug for chamber in US_CHAMBERS) if rebuild else frozenset()
-    )
+    if form.rebuild_history:
+        note = REBUILD_INTERRUPTED_NOTE
+    elif form.dry_run:
+        note = DRY_RUN_INTERRUPTED_NOTE
+    else:
+        note = RUN_INTERRUPTED_NOTE
     with model_run_slot() as free:
         if not free:
-            refused = "History not rebuilt" if rebuild else "Models not run"
-            flash(busy_message(refused))
-            return redirect(url_for("home.home"))
+            flash(
+                busy_message(
+                    "History not rebuilt"
+                    if form.rebuild_history
+                    else f"{spec.label} model not run"
+                )
+            )
+            return redirect(back)
         # ``run_python_script`` is looked up here at call time, so tests can
         # monkeypatch it, as for :func:`_rebuild_history`.
         return _guarded_run(
-            lambda: run_us_models_and_export(
-                db, runner=run_python_script, rebuild=slugs
+            lambda: run_us_chamber_and_export(
+                db,
+                spec,
+                runner=run_python_script,
+                rebuild_history=form.rebuild_history,
+                since_days_back=form.since_days_back,
+                half_life_days=form.half_life_days,
+                seat_prior_weight=form.seat_prior_weight,
+                ignore_seat_polls=form.ignore_seat_polls,
+                dry_run=form.dry_run,
+                # A skipped chamber ran nothing new, so there is nothing to export.
+                export=form.export_when_done and not skipped,
             ),
-            note=REBUILD_ALL_INTERRUPTED_NOTE if rebuild else RUN_INTERRUPTED_NOTE,
+            note=note,
             result_page=result_page,
         )
 
@@ -212,7 +302,7 @@ def president_matchup() -> ResponseReturnValue:
     return _rebuild_history(db, chamber, back_endpoint="us.president_matchup")
 
 
-@bp.route("/<any(house,senate):chamber>/matchups", methods=["GET"])
+@bp.route(f"/{US_RACE_CHAMBER_CONVERTER}/matchups", methods=["GET"])
 def race_matchups(chamber: str) -> ResponseReturnValue:
     """GET /house/matchups, /senate/matchups — Review each race's tracked matchup.
 
@@ -247,9 +337,12 @@ def race_matchups(chamber: str) -> ResponseReturnValue:
     )
 
 
-@bp.route("/us/matchups/<int:map_id>/<int:seat_id>", methods=["POST"])
-def set_race_matchup(map_id: int, seat_id: int) -> ResponseReturnValue:
-    """POST /us/matchups/<map_id>/<seat_id> — Override one race's tracked matchup.
+@bp.route(
+    f"/{US_RACE_CHAMBER_CONVERTER}/matchups/<int:map_id>/<int:seat_id>",
+    methods=["POST"],
+)
+def set_race_matchup(chamber: str, map_id: int, seat_id: int) -> ResponseReturnValue:
+    """POST /house|senate/matchups/<map_id>/<seat_id> — Override a race's matchup.
 
     The ``action`` field is ``set`` (follow the posted ``matchup``, which must
     be stored for this race), ``ignore`` (skip the race's polls) or ``auto``
@@ -259,6 +352,8 @@ def set_race_matchup(map_id: int, seat_id: int) -> ResponseReturnValue:
     export.
 
     Args:
+        chamber: The chamber slug from the path; it must be the chamber whose
+            race map ``map_id`` is, or the request is refused.
         map_id: Primary key of the race's map.
         seat_id: Primary key of the race's seat.
 
@@ -267,11 +362,15 @@ def set_race_matchup(map_id: int, seat_id: int) -> ResponseReturnValue:
         the rebuild.
     """
     db = get_db()
-    chamber_slug = race_chamber_for_map(db, map_id)
-    if chamber_slug is None:
-        flash(f"Map #{map_id} has no per-race matchups.")
-        return redirect(url_for("home.home"))
-    back = url_for("us.race_matchups", chamber=chamber_slug)
+    back = url_for("us.race_matchups", chamber=chamber)
+    map_chamber = race_chamber_for_map(db, map_id)
+    if map_chamber != chamber:
+        label = US_CHAMBERS_BY_SLUG[chamber].label
+        if map_chamber is None:
+            flash(f"Map #{map_id} has no per-race matchups.")
+        else:
+            flash(f"Map #{map_id} is not the {label} race map.")
+        return redirect(back)
 
     seat = db.get_seat(seat_id)
     race = seat.seat_name if seat is not None else f"Seat #{seat_id}"
@@ -292,9 +391,9 @@ def set_race_matchup(map_id: int, seat_id: int) -> ResponseReturnValue:
         return redirect(back)
     return _rebuild_history(
         db,
-        US_CHAMBERS_BY_SLUG[chamber_slug],
+        US_CHAMBERS_BY_SLUG[chamber],
         back_endpoint="us.race_matchups",
-        back_values={"chamber": chamber_slug},
+        back_values={"chamber": chamber},
     )
 
 

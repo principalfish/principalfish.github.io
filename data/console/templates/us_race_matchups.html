@@ -63,7 +63,7 @@
                   {% endif %}
                 </td>
                 <td>
-                  <form method="post" action="{{ url_for('us.set_race_matchup', map_id=map_id, seat_id=race.seat_id) }}"
+                  <form method="post" action="{{ url_for('us.set_race_matchup', chamber=chamber.slug, map_id=map_id, seat_id=race.seat_id) }}"
                         class="inline-form">
                     {% if race.labels %}
                       <select name="matchup" aria-label="Matchup for {{ race.seat_name }}">

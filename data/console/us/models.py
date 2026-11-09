@@ -1,15 +1,15 @@
-"""Chamber wiring for the US console, and the "run all models" sequence.
+"""Chamber wiring for the US console, and the model-run sequence.
 
 :data:`US_CHAMBERS` is the single description of the three US election types —
-their model runners, forecast/baseline election types and trend caches. The US
-blueprint re-exports it for the per-chamber output routes it registers.
+their model runners, forecast/baseline election types, trend caches and the
+poll-queue contests each one imports. The US blueprint re-exports it for the
+per-chamber output routes it registers.
 
-:func:`run_us_models_and_export` runs those runners and then the static export.
-It is Flask-free so it can be called both from ``POST /us/run-models`` and from
-the end of the poll-review queue, and it takes its subprocess runner as an
-argument so tests never shell out. :func:`run_us_chamber_and_export` is the
-same sequence narrowed to one chamber, for the matchup pages' "rebuild
-history" option.
+:func:`run_us_chamber_and_export` runs one chamber's runner and then, optionally,
+the static export. It is Flask-free so it can be called from the end of the
+poll-review queue, and it takes its subprocess runner as an argument so tests
+never shell out. It serves each chamber's model page, the matchup pages'
+"rebuild history" option and the poll queue's "run model at end" option.
 """
 
 from __future__ import annotations
@@ -48,6 +48,7 @@ STEP_TIMEOUT_SECONDS = 300
 REBUILD_TIMEOUT_SECONDS = 3600
 
 REBUILD_HISTORY_FLAG = "--rebuild-history"
+SINCE_DAYS_BACK_FLAG = "--since-days-back"
 
 EXPORT_STEP_LABEL = "Export elections to static data files"
 
@@ -77,7 +78,7 @@ class UsChamber:
 
     Attributes:
         slug: URL segment and endpoint-name stem (``"house"``). Also the name
-            used in the ``rebuild`` set of :func:`run_us_models_and_export`.
+            used in the ``rebuild`` set of :func:`_run_chambers_and_export`.
         label: Display name used in headings (``"US House"``).
         model_type: The forecast-output election type this chamber lists.
         baseline_type: Real-election type eligible as the seat-level baseline
@@ -87,6 +88,8 @@ class UsChamber:
             models blend in are sparse, so every chamber widens the default
             30-day window; the President's matchup polls are sparser still.
         trend_cache_path: The chamber's shipped poll-tracker trend JSON.
+        contest_slugs: The poll-queue contests (``UsContest.slug``) that import
+            this chamber's polls; the chamber's import page offers only these.
         tracked_matchup_map_name: Map whose *national* tracked matchup this
             chamber's model needs, or None when it needs none. Set only for the
             President, whose national series is a head-to-head between two named
@@ -103,8 +106,15 @@ class UsChamber:
     model_script: Path
     model_args: tuple[str, ...]
     trend_cache_path: Path
+    contest_slugs: tuple[str, ...]
     tracked_matchup_map_name: str | None = None
     rebuild_flag: str = REBUILD_HISTORY_FLAG
+
+    @property
+    def default_since_days_back(self) -> int:
+        """The poll window, in days, that :attr:`model_args` passes the runner."""
+        index = self.model_args.index(SINCE_DAYS_BACK_FLAG)
+        return int(self.model_args[index + 1])
 
     @property
     def tracked_matchup_required(self) -> bool:
@@ -117,6 +127,66 @@ class UsChamber:
         return f"Run {self.label} model"
 
 
+@dataclass(frozen=True)
+class UsModelOptions:
+    """Per-run overrides of a chamber's runner arguments.
+
+    A field left at its default adds no argument, so the runner's own default
+    (or the chamber's :attr:`UsChamber.model_args`) applies.
+
+    Attributes:
+        since_days_back: Poll window in days; replaces the chamber's own.
+        half_life_days: Poll decay half-life in days.
+        seat_prior_weight: Weight of the uniform-swing prior against a seat's
+            own polls.
+        ignore_seat_polls: Project the pure uniform national swing.
+        dry_run: Compute without writing to the database or to disk.
+    """
+
+    since_days_back: int | None = None
+    half_life_days: float | None = None
+    seat_prior_weight: float | None = None
+    ignore_seat_polls: bool = False
+    dry_run: bool = False
+
+    def args_for(
+        self, chamber: UsChamber, *, rebuild_history: bool = False
+    ) -> tuple[str, ...]:
+        """The runner arguments for ``chamber`` under these options.
+
+        Args:
+            chamber: The chamber whose runner is invoked.
+            rebuild_history: Whether to append the chamber's
+                :attr:`UsChamber.rebuild_flag`.
+
+        Returns:
+            The arguments, in the order the runner is called with. With the
+            default options and no rebuild this is exactly
+            :attr:`UsChamber.model_args`.
+
+        Raises:
+            ValueError: A dry run was asked to rebuild history. The runner
+                skips the rebuild in dry-run mode, so the request would do
+                nothing.
+        """
+        if rebuild_history and self.dry_run:
+            raise ValueError("A dry run cannot rebuild history: it writes nothing.")
+        args = list(chamber.model_args)
+        if self.since_days_back is not None:
+            args[args.index(SINCE_DAYS_BACK_FLAG) + 1] = str(self.since_days_back)
+        if self.half_life_days is not None:
+            args += ["--half-life-days", str(self.half_life_days)]
+        if self.seat_prior_weight is not None:
+            args += ["--seat-prior-weight", str(self.seat_prior_weight)]
+        if self.ignore_seat_polls:
+            args.append("--ignore-seat-polls")
+        if self.dry_run:
+            args.append("--dry-run")
+        if rebuild_history:
+            args.append(chamber.rebuild_flag)
+        return tuple(args)
+
+
 US_CHAMBERS: tuple[UsChamber, ...] = (
     UsChamber(
         slug="house",
@@ -126,6 +196,7 @@ US_CHAMBERS: tuple[UsChamber, ...] = (
         model_script=US_HOUSE_MODEL_SCRIPT,
         model_args=("--since-days-back", "60"),
         trend_cache_path=US_HOUSE_TREND_CACHE_JSON,
+        contest_slugs=("house_national", "house_districts"),
     ),
     UsChamber(
         slug="president",
@@ -135,6 +206,7 @@ US_CHAMBERS: tuple[UsChamber, ...] = (
         model_script=US_PRESIDENT_MODEL_SCRIPT,
         model_args=("--since-days-back", "120"),
         trend_cache_path=US_PRESIDENT_TREND_CACHE_JSON,
+        contest_slugs=("president",),
         tracked_matchup_map_name="US Presidential 2024",
     ),
     UsChamber(
@@ -145,6 +217,7 @@ US_CHAMBERS: tuple[UsChamber, ...] = (
         model_script=US_SENATE_MODEL_SCRIPT,
         model_args=("--since-days-back", "60"),
         trend_cache_path=US_SENATE_TREND_CACHE_JSON,
+        contest_slugs=("senate_races",),
     ),
 )
 
@@ -153,10 +226,24 @@ US_CHAMBERS_BY_SLUG: Mapping[str, UsChamber] = {
     chamber.slug: chamber for chamber in US_CHAMBERS
 }
 
+US_CHAMBER_SLUGS: tuple[str, ...] = tuple(chamber.slug for chamber in US_CHAMBERS)
+
+# The chambers decided race by race (House districts, Senate races): they have
+# a matchup per race, unlike the President's one national matchup. Those are the
+# chambers that need no tracked national matchup.
+US_RACE_CHAMBER_SLUGS: tuple[str, ...] = tuple(
+    chamber.slug for chamber in US_CHAMBERS if not chamber.tracked_matchup_required
+)
+
+# Flask URL converters restricting ``<chamber>`` to those slugs, so a route
+# never has to repeat the list.
+US_CHAMBER_CONVERTER = f"<any({','.join(US_CHAMBER_SLUGS)}):chamber>"
+US_RACE_CHAMBER_CONVERTER = f"<any({','.join(US_RACE_CHAMBER_SLUGS)}):chamber>"
+
 
 @dataclass(frozen=True)
 class UsModelRun:
-    """Combined outcome of one "run the US models and export" sequence.
+    """Combined outcome of one "run a US model and export" sequence.
 
     Attributes:
         stdout: Every step's stdout, each under an ``=== <label> ===`` heading.
@@ -210,8 +297,8 @@ def _output_text(output: str | bytes | None) -> str:
     return output or ""
 
 
-# Held by every console run of the US models: an ordinary run, a one-chamber
-# history rebuild, a rebuild of all three, and the poll queue's finish step.
+# Held by every console run of a US model: an ordinary run, a history rebuild,
+# and the poll queue's finish step.
 # One lock, not one per chamber, because every run ends with the export, which
 # publishes *every* chamber's trend history: a run that exported while another
 # chamber's rebuild had cleared its points would publish that half-cleared
@@ -282,52 +369,25 @@ def tracked_matchup_in_force(db: Database, chamber: UsChamber) -> bool:
     return tracked is not None and tracked.matchup is not None
 
 
-def run_us_models_and_export(
-    db: Database,
-    *,
-    runner: ScriptRunner = run_python_script,
-    rebuild: Collection[str] = frozenset(),
-) -> UsModelRun:
-    """Run each US chamber's forecast model, then the static export.
-
-    A chamber whose required tracked matchup is unset is skipped on its own —
-    the other chambers and the export still run, because their forecasts do not
-    depend on it. Any step that fails stops the sequence, so a broken model
-    never gets exported over a good one.
-
-    Args:
-        db: Active Database instance, used only to read tracked matchups.
-        runner: Subprocess runner; injected so tests record calls instead of
-            shelling out.
-        rebuild: Chamber slugs whose whole trend history should be recomputed.
-            Unknown slugs are ignored. Each named chamber's runner gets its
-            :attr:`UsChamber.rebuild_flag` and :data:`REBUILD_TIMEOUT_SECONDS`;
-            chambers outside the set are run exactly as before, so an
-            unsupported flag can only affect a run the caller explicitly asked
-            to rebuild.
-
-    Returns:
-        The combined :class:`UsModelRun`.
-
-    Raises:
-        UsModelRunInterrupted: A step timed out or could not be started. It
-            carries the output of every step before it.
-    """
-    return _run_chambers_and_export(db, US_CHAMBERS, runner=runner, rebuild=rebuild)
-
-
 def run_us_chamber_and_export(
     db: Database,
     chamber: UsChamber,
     *,
     runner: ScriptRunner = run_python_script,
     rebuild_history: bool,
+    since_days_back: int | None = None,
+    half_life_days: float | None = None,
+    seat_prior_weight: float | None = None,
+    ignore_seat_polls: bool = False,
+    dry_run: bool = False,
+    export: bool = True,
 ) -> UsModelRun:
-    """Run one US chamber's forecast model, then the static export.
+    """Run one US chamber's forecast model, then (optionally) the static export.
 
-    The single-chamber form of :func:`run_us_models_and_export`, with the same
-    matchup gating and stop-on-failure rules: the export only runs once the
-    model has succeeded (or been skipped for want of a matchup).
+    A chamber whose required tracked matchup is unset is skipped, and the
+    export still runs. A step that fails stops the sequence, so a broken model
+    never gets exported over a good one. Called with only ``rebuild_history`` it
+    runs the chamber's own :attr:`UsChamber.model_args`, then the export.
 
     Args:
         db: Active Database instance, used only to read tracked matchups.
@@ -337,15 +397,39 @@ def run_us_chamber_and_export(
         rebuild_history: Whether to append the chamber's
             :attr:`UsChamber.rebuild_flag`, recomputing its whole trend
             history rather than only today's point.
+        since_days_back: Poll window in days, replacing the chamber's own.
+        half_life_days: Poll decay half-life in days.
+        seat_prior_weight: Weight of the uniform-swing prior against a seat's
+            own polls.
+        ignore_seat_polls: Project the pure uniform national swing.
+        dry_run: Compute without writing anything. A dry run never exports,
+            whatever ``export`` says.
+        export: Whether to run the static export after the model.
 
     Returns:
         The combined :class:`UsModelRun`.
 
     Raises:
+        ValueError: ``dry_run`` and ``rebuild_history`` were both set.
         UsModelRunInterrupted: A step timed out or could not be started.
     """
     rebuild = frozenset({chamber.slug}) if rebuild_history else frozenset()
-    return _run_chambers_and_export(db, (chamber,), runner=runner, rebuild=rebuild)
+    options = UsModelOptions(
+        since_days_back=since_days_back,
+        half_life_days=half_life_days,
+        seat_prior_weight=seat_prior_weight,
+        ignore_seat_polls=ignore_seat_polls,
+        dry_run=dry_run,
+    )
+    options.args_for(chamber, rebuild_history=rebuild_history)  # validates the pair
+    return _run_chambers_and_export(
+        db,
+        (chamber,),
+        runner=runner,
+        rebuild=rebuild,
+        options=options,
+        export=export and not dry_run,
+    )
 
 
 def _run_chambers_and_export(
@@ -354,6 +438,8 @@ def _run_chambers_and_export(
     *,
     runner: ScriptRunner,
     rebuild: Collection[str],
+    options: UsModelOptions = UsModelOptions(),
+    export: bool = True,
 ) -> UsModelRun:
     """Run the given chambers' models in order, then the export.
 
@@ -362,9 +448,12 @@ def _run_chambers_and_export(
         chambers: The chambers to run, in order.
         runner: Subprocess runner.
         rebuild: Chamber slugs to run with their rebuild flag.
+        options: Argument overrides applied to every chamber's runner.
+        export: Whether to run the export once every model has succeeded or
+            been skipped.
 
     Returns:
-        The combined :class:`UsModelRun`; see :func:`run_us_models_and_export`
+        The combined :class:`UsModelRun`; see :func:`run_us_chamber_and_export`
         for the skip and failure rules.
 
     Raises:
@@ -407,11 +496,9 @@ def _run_chambers_and_export(
             stdout_parts.append(f"=== {chamber.model_step_label} ===\n{NO_MATCHUP_NOTE}")
             continue
 
-        args = chamber.model_args
-        timeout = STEP_TIMEOUT_SECONDS
-        if chamber.slug in rebuild:
-            args = (*args, chamber.rebuild_flag)
-            timeout = REBUILD_TIMEOUT_SECONDS
+        rebuilding = chamber.slug in rebuild
+        args = options.args_for(chamber, rebuild_history=rebuilding)
+        timeout = REBUILD_TIMEOUT_SECONDS if rebuilding else STEP_TIMEOUT_SECONDS
 
         return_code = run_step(
             chamber.model_step_label, chamber.model_script, args, timeout=timeout
@@ -419,7 +506,8 @@ def _run_chambers_and_export(
         if return_code != 0:
             break
     else:
-        return_code = run_step(EXPORT_STEP_LABEL, EXPORT_ELECTION_SCRIPT, ())
+        if export:
+            return_code = run_step(EXPORT_STEP_LABEL, EXPORT_ELECTION_SCRIPT, ())
 
     return UsModelRun(
         stdout="\n".join(stdout_parts),

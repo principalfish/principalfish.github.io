@@ -235,3 +235,29 @@ def test_the_optional_csv_select_offers_none_for_the_empty_value(
     body = seeded_app.test_client().get("/westminster/model").get_data(as_text=True)
     select = select_block(body, "output_csv")
     assert re.search(r'<option value=""[^>]*>\s*None\s*</option>', select)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/westminster/model",
+        "/holyrood/model",
+        "/house/model",
+        "/senate/model",
+        "/president/model",
+    ],
+)
+def test_every_model_run_form_offers_the_export_checkbox(
+    seeded_app: Flask,  # noqa: F811
+    path: str,
+) -> None:
+    body = seeded_app.test_client().get(path).get_data(as_text=True)
+
+    assert body.count('<input type="checkbox" name="export_when_done" checked>') == 1
+    assert "Export when done" in body
+    assert "A dry run never exports, whatever this says." in body
+    # Every form opens as a preview.
+    assert '<option value="true" selected>' in select_block(body, "dry_run")
+    # Only the US forms rebuild history, so only they ask for confirmation.
+    is_us = path.split("/")[1] in {"house", "senate", "president"}
+    assert ("onsubmit=" in body) is is_us

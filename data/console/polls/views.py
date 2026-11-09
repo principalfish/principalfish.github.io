@@ -26,6 +26,7 @@ from flask import (
     flash,
     redirect,
     render_template,
+    request,
     send_file,
     url_for,
 )
@@ -34,7 +35,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from console.db import get_db
-from console.sections import WESTMINSTER_MAP_NAME
+from console.sections import SECTIONS_BY_SLUG, WESTMINSTER_MAP_NAME, Section
 from core.schema import Map, Party, Poll, PollBase, PollRow, Pollster, Region, Seat
 from models.support.poll_bases import PollNIndex, ResolvedN, poll_base_coverage
 from models.support.uncertainty import (
@@ -78,9 +79,20 @@ def _share_cell(
     return {"share": value, "moe": moe}
 
 
-@bp.route("/polls", methods=["GET"])
-def poll_list() -> str:
-    """GET /polls — List all polls ordered by fieldwork end date descending with row counts."""
+def _poll_list_page(
+    parliament: str | None, title: str, section: Section | None
+) -> str:
+    """Render the poll table for one parliament's polls, or every poll.
+
+    Args:
+        parliament: The ``Map.parliament`` value to list, or None for all polls.
+        title: Heading of the page.
+        section: The section the list belongs to, or None for the all-polls
+            list; it decides where Delete sends the user back to.
+
+    Returns:
+        The rendered ``poll_list.html``.
+    """
     db = get_db()
     config: UncertaintyConfig | None
     try:
@@ -89,11 +101,16 @@ def poll_list() -> str:
         config, config_error = None, str(err)
     with db.session() as session:
         westminster_id = _westminster_map_id(session)
-        polls = session.execute(
+        query = (
             select(Poll, Pollster)
             .join(Pollster, Poll.pollster_id == Pollster.id)
             .order_by(Poll.fieldwork_end.desc(), Poll.id.desc())
-        ).all()
+        )
+        if parliament is not None:
+            query = query.join(Map, Poll.map_id == Map.id).where(
+                Map.parliament == parliament
+            )
+        polls = session.execute(query).all()
 
         row_counts: dict[int, int] = {
             poll_id: count
@@ -141,8 +158,34 @@ def poll_list() -> str:
         )
 
     return render_template(
-        "poll_list.html", polls=items, config=config, config_error=config_error
+        "poll_list.html",
+        polls=items,
+        config=config,
+        config_error=config_error,
+        title=title,
+        section=section,
     )
+
+
+@bp.route("/polls", methods=["GET"])
+def poll_list() -> str:
+    """GET /polls — List all polls ordered by fieldwork end date descending with row counts."""
+    return _poll_list_page(None, "All Polls", None)
+
+
+@bp.route(f"/<any({','.join(SECTIONS_BY_SLUG)}):section>/polls", methods=["GET"])
+def section_poll_list(section: str) -> str:
+    """GET /<section>/polls — List one section's polls, in the all-polls format.
+
+    Args:
+        section: Slug of a console section; the polls shown are those on maps of
+            that section's parliament.
+
+    Returns:
+        The rendered poll table, headed with the section's name.
+    """
+    found = SECTIONS_BY_SLUG[section]
+    return _poll_list_page(found.parliament, f"{found.label} polls", found)
 
 
 @bp.route("/polls/<int:poll_id>", methods=["GET"])
@@ -271,6 +314,18 @@ def poll_coverage() -> str:
     )
 
 
+def _after_delete_url() -> str:
+    """The list to land on after a delete: the section's own, else all polls.
+
+    The form's ``next_section`` is honoured only when it is a registered
+    section slug, so the redirect can never leave the console.
+    """
+    slug = request.form.get("next_section", "")
+    if slug in SECTIONS_BY_SLUG:
+        return url_for("polls.section_poll_list", section=slug)
+    return url_for("polls.poll_list")
+
+
 @bp.route("/polls/<int:poll_id>/delete", methods=["POST"])
 def delete_poll(poll_id: int) -> ResponseReturnValue:
     """POST /polls/<poll_id>/delete — Delete a poll and its rows.
@@ -279,14 +334,16 @@ def delete_poll(poll_id: int) -> ResponseReturnValue:
         poll_id: Primary key of the Poll row to delete.
 
     Returns:
-        Redirect to poll_list with a flash message indicating rows deleted.
+        Redirect to the poll list the form came from (the section's list when
+        ``next_section`` names a section, else all polls) with a flash message
+        indicating rows deleted.
     """
     db = get_db()
     with db.session() as session:
         poll = session.get(Poll, poll_id)
         if poll is None:
             flash(f"Poll #{poll_id} not found.")
-            return redirect(url_for("polls.poll_list"))
+            return redirect(_after_delete_url())
 
         deleted_rows = session.execute(
             delete(PollRow).where(PollRow.poll_id == poll.id)
@@ -294,7 +351,7 @@ def delete_poll(poll_id: int) -> ResponseReturnValue:
         session.delete(poll)
 
     flash(f"Deleted poll #{poll_id} and {deleted_rows} poll rows.")
-    return redirect(url_for("polls.poll_list"))
+    return redirect(_after_delete_url())
 
 
 @bp.route("/polls/<int:poll_id>/csv", methods=["GET"])

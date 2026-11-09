@@ -54,7 +54,7 @@
     <div class="actions">
       <a class="button" href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate race matchups</a>
       <a class="button" href="{{ url_for('us.race_matchups', chamber='house') }}">House race matchups</a>
-      <a class="button" href="{{ url_for('us_poll_import.import_form') }}">Import US Polls</a>
+      <a class="button" href="{{ url_for('us_poll_import.import_form', chamber='president') }}">Auto import President polls</a>
     </div>
   </section>
 {% endblock %}

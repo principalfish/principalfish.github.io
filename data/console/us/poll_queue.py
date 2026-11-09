@@ -25,9 +25,12 @@ What makes the US queue different from Westminster's:
   matchup (a candidate column was added) never enters the queue; the finish
   step moves it onto the new label instead (see
   :func:`~importers.polls.us.us_wikipedia_polls.find_relabelled_polls`).
+- **One chamber per run.** A queue belongs to one chamber (House, Senate or
+  President), which offers only its own contests; the payload remembers it
+  under :data:`CHAMBER_KEY`.
 - **A finish step with three jobs.** Renamed matchups are applied, automatic
-  matchup tracking runs over every row the run scraped, then the three US
-  models and the export run once if the run imported anything, moved a stored
+  matchup tracking runs over every row the run scraped, then the chamber's
+  model and the export run once if the run imported anything, moved a stored
   poll onto a renamed matchup or moved a race's tracked matchup.
 
 The finish step records its results on the cached payload under
@@ -58,10 +61,11 @@ from console.shared.wikipedia_queue import (
     pending_in_group,
 )
 from console.us.models import (
+    US_CHAMBERS_BY_SLUG,
     ScriptRunner,
     UsModelRunInterrupted,
     model_run_slot,
-    run_us_models_and_export,
+    run_us_chamber_and_export,
 )
 from core.db import Database
 from importers.polls.types import ScrapedPollRow
@@ -87,6 +91,11 @@ PER_RACE_CUTOFF_NOTE = "one cutoff per race"
 
 #: Payload key holding the ``QueueState``. The blueprint stores it there.
 STATE_KEY = "state"
+
+#: Payload key holding the slug of the chamber the queue belongs to. The
+#: blueprint stores it there; every route rejects a token opened under another
+#: chamber's URL, and the finish step runs only that chamber's model.
+CHAMBER_KEY = "chamber"
 
 #: Payload key holding the scraped ``UsPollIndex`` the queue was built from.
 #: The blueprint stores it there; the finish step tracks over all its rows.
@@ -188,8 +197,8 @@ def build_us_queue(
         index: The scraped index.
         cutoff: Earliest fieldwork end date to consider in every race. None
             windows each race on its own latest stored poll.
-        run_model_at_end: Whether the finish step should run the US models and
-            the export.
+        run_model_at_end: Whether the finish step should run the chamber's model
+            and the export.
 
     Returns:
         The merged :class:`QueueState`, race by race (contest order, then seat
@@ -646,7 +655,7 @@ def finish_us_queue(
     runner: ScriptRunner,
     abandon: bool = False,
 ) -> None:
-    """Close a queue run: relabel, track every scraped race, then run the models.
+    """Close a queue run: relabel, track every scraped race, then run the model.
 
     Stored polls the scrape lists under a renamed matchup are moved onto it
     first, over every scraped row like tracking, so the renamed race keeps its
@@ -667,30 +676,34 @@ def finish_us_queue(
     created by another connection at the same moment is an ``IntegrityError``
     — the message is recorded instead and the model run still goes ahead.
 
-    The models and the export then run once, if the run asked for that, was not
-    abandoned, and either imported anything, relabelled a stored poll or moved a
-    race onto a new tracked matchup — a run whose only effect was tracking must
-    still move the forecast off the old pairing. Every result is recorded on the
-    payload, so a refresh of the summary repeats none of them. The relabel and
-    tracking outcomes are read back off the payload, so they count on a refresh
-    too, when an earlier request applied them. A tracking pass that raised counts as no change, even if it moved some
-    races before failing; its error is shown on the summary instead.
+    The queue's chamber's model and the export then run once, with the chamber's
+    default model arguments and no history rebuild, if the run asked for that,
+    was not abandoned, and either imported anything, relabelled a stored poll or
+    moved a race onto a new tracked matchup — a run whose only effect was
+    tracking must still move the forecast off the old pairing. Every result is
+    recorded on the payload, so a refresh of the summary repeats none of them.
+    The relabel and tracking outcomes are read back off the payload, so they
+    count on a refresh too, when an earlier request applied them. A tracking
+    pass that raised counts as no change, even if it moved some races before
+    failing; its error is shown on the summary instead.
 
     Args:
         db: Active Database instance.
         payload: The cached queue payload, holding the ``QueueState`` under
-            :data:`STATE_KEY` and the ``UsPollIndex`` under :data:`INDEX_KEY`.
+            :data:`STATE_KEY`, the ``UsPollIndex`` under :data:`INDEX_KEY` and
+            the chamber's slug under :data:`CHAMBER_KEY`.
             Results are written to it under :data:`RELABEL_KEY` (or
             :data:`RELABEL_ERROR_KEY`), :data:`AUTO_TRACKING_KEY` (or
             :data:`AUTO_TRACKING_ERROR_KEY` if tracking raised),
             :data:`MODEL_RUN_KEY` and, if the model run raised or was refused
             because another run was in progress, :data:`MODEL_ERROR_KEY`.
-        runner: Subprocess runner handed to ``run_us_models_and_export``.
+        runner: Subprocess runner handed to ``run_us_chamber_and_export``.
         abandon: True when the user left the queue early; turns the model run
             off for good, as in the UK queue.
 
     Raises:
-        TypeError: If the payload holds no ``QueueState`` or no ``UsPollIndex``.
+        TypeError: If the payload holds no ``QueueState``, no ``UsPollIndex`` or
+            no known chamber.
     """
     state = payload.get(STATE_KEY)
     if not isinstance(state, QueueState):
@@ -698,6 +711,10 @@ def finish_us_queue(
     index = payload.get(INDEX_KEY)
     if not isinstance(index, UsPollIndex):
         raise TypeError("the payload holds no scraped index")
+    chamber_slug = payload.get(CHAMBER_KEY)
+    if not isinstance(chamber_slug, str) or chamber_slug not in US_CHAMBERS_BY_SLUG:
+        raise TypeError("the payload holds no known chamber")
+    chamber = US_CHAMBERS_BY_SLUG[chamber_slug]
 
     if abandon:
         state.run_model_at_end = False
@@ -732,15 +749,17 @@ def finish_us_queue(
             # after the other run has ended must not start a surprise run.
             payload[MODEL_RUN_KEY] = None
             payload[MODEL_ERROR_KEY] = (
-                "US models not run: another US model run or history rebuild "
-                "was in progress. Run US Models from a US section page once "
-                "it finishes."
+                f"{chamber.label} model not run: another US model run or "
+                "history rebuild was in progress. Run it from the "
+                f"{chamber.label} section's Run model page once it finishes."
             )
             return
         try:
-            payload[MODEL_RUN_KEY] = run_us_models_and_export(db, runner=runner)
+            payload[MODEL_RUN_KEY] = run_us_chamber_and_export(
+                db, chamber, runner=runner, rebuild_history=False
+            )
         except UsModelRunInterrupted as err:
-            # Keep what finished before the failing step, as the Run US Models
-            # page does, so the summary shows which chambers saved new outputs.
+            # Keep what finished before the failing step, so the summary shows
+            # whether the model saved an output the export never picked up.
             payload[MODEL_RUN_KEY] = err.partial
             payload[MODEL_ERROR_KEY] = f"US model run failed: {err}"

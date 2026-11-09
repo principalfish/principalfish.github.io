@@ -3,9 +3,8 @@
 The navigation is data. :func:`section_links` builds a section's links from the
 registry in :mod:`console.sections`, :func:`current_area` says which part of the
 console an endpoint belongs to, and :func:`build_nav` turns both into what
-``base.html`` renders. A page that is not in :data:`UNSECTIONED_BLUEPRINTS` or
-:data:`UNSECTIONED_ENDPOINTS` and maps to no area is a bug, which
-``tests/test_console_nav.py`` catches.
+``base.html`` renders. A page that is not in :data:`UNSECTIONED_BLUEPRINTS` and
+maps to no area is a bug, which ``tests/test_console_nav.py`` catches.
 """
 
 from __future__ import annotations
@@ -53,13 +52,28 @@ _ENDPOINT_AREAS: Mapping[str, str] = {
     "us.president_matchup": "president",
 }
 
-# Pages that belong to no one section: the US import queue and results pages
-# serve House, Senate and President together, and the combined "Run US models"
-# action has no chamber.
-UNSECTIONED_BLUEPRINTS = frozenset({"home", "us_poll_import", "us_results", "static"})
-UNSECTIONED_ENDPOINTS = frozenset({"us.run_us_models", "us.set_race_matchup"})
+# Pages that belong to no one section: the home page and static files.
+UNSECTIONED_BLUEPRINTS = frozenset({"home", "static"})
 
 _RACE_CHAMBERS = frozenset({"house", "senate"})
+_US_CHAMBERS = frozenset({"house", "senate", "president"})
+
+# US endpoints that serve several sections and name theirs in the ``chamber`` URL
+# argument, with the chambers each is placed for.
+_CHAMBER_ARG_ENDPOINTS: Mapping[str, frozenset[str]] = {
+    "us.race_matchups": _RACE_CHAMBERS,
+    "us.set_race_matchup": _RACE_CHAMBERS,
+    "us.model_run_form": _US_CHAMBERS,
+    "us.model_run": _US_CHAMBERS,
+}
+
+# The same for whole blueprints: every endpoint of the US poll import queue
+# serves the three US sections, and the NYT results pages the two with seat
+# results.
+_CHAMBER_ARG_BLUEPRINTS: Mapping[str, frozenset[str]] = {
+    "us_poll_import": _US_CHAMBERS,
+    "us_results": _RACE_CHAMBERS,
+}
 
 
 @dataclass(frozen=True)
@@ -122,7 +136,8 @@ def current_area(
     Args:
         endpoint: The endpoint, or None for a request that matched no route.
         view_args: The matched route's URL arguments, which name the chamber on
-            the race-matchup page.
+            the US pages that serve several sections (race matchups, model
+            runs, poll import, results) and the section on its poll list.
 
     Returns:
         A section slug, ``"admin"``, ``"polls"``, or None for a page that
@@ -132,14 +147,17 @@ def current_area(
         return None
     if endpoint in _ENDPOINT_AREAS:
         return _ENDPOINT_AREAS[endpoint]
-    if endpoint == "us.race_matchups":
+    blueprint = endpoint.partition(".")[0]
+    chambers = _CHAMBER_ARG_ENDPOINTS.get(
+        endpoint, _CHAMBER_ARG_BLUEPRINTS.get(blueprint)
+    )
+    if chambers is not None:
         chamber = (view_args or {}).get("chamber")
-        if isinstance(chamber, str) and chamber in _RACE_CHAMBERS:
-            return chamber
-        return None
-    if endpoint in UNSECTIONED_ENDPOINTS:
-        return None
-    return _BLUEPRINT_AREAS.get(endpoint.partition(".")[0])
+        return chamber if isinstance(chamber, str) and chamber in chambers else None
+    if endpoint == "polls.section_poll_list":
+        slug = (view_args or {}).get("section")
+        return slug if isinstance(slug, str) and slug in SECTIONS_BY_SLUG else None
+    return _BLUEPRINT_AREAS.get(blueprint)
 
 
 def _chamber_outputs(slug: str) -> tuple[str, tuple[str, ...]]:
@@ -164,19 +182,28 @@ _OUTPUTS: Mapping[str, tuple[str, tuple[str, ...]]] = {
     "president": _chamber_outputs("president"),
 }
 
-# The US sections have no model page; they run from the landing page form.
+# Each section's model run page. The three US sections share one route pair and
+# are told apart by its ``chamber`` argument.
 _MODEL_FORMS: Mapping[str, tuple[str, tuple[str, ...]]] = {
     "westminster": ("westminster.model_run_form", ("westminster.model_run",)),
     "holyrood": (
         "holyrood.run_holyrood_model_form",
         ("holyrood.run_holyrood_model",),
     ),
+    **{
+        slug: ("us.model_run_form", ("us.model_run",))
+        for slug in ("house", "senate", "president")
+    },
 }
 
 
 def section_links(section: Section) -> tuple[NavLink, ...]:
     """A section's navigation links, in display order."""
-    links: list[NavLink] = []
+    links: list[NavLink] = [
+        NavLink(
+            "Polls", "polls.section_poll_list", values=(("section", section.slug),)
+        )
+    ]
     if section.has(Capability.POLL_IMPORT):
         links.append(
             NavLink(
@@ -189,8 +216,9 @@ def section_links(section: Section) -> tuple[NavLink, ...]:
     if section.has(Capability.QUEUE_IMPORT):
         links.append(
             NavLink(
-                "Import polls",
+                "Auto import",
                 "us_poll_import.import_form",
+                values=(("chamber", section.slug),),
                 matches=("us_poll_import.",),
                 primary=True,
             )
@@ -214,16 +242,22 @@ def section_links(section: Section) -> tuple[NavLink, ...]:
                     "Matchups",
                     "us.race_matchups",
                     values=(("chamber", section.slug),),
-                    matches=("us.race_matchups",),
+                    matches=("us.race_matchups", "us.set_race_matchup"),
                 )
             )
     if section.has(Capability.NYT_RESULTS):
         links.append(
-            NavLink("Results", "us_results.us_results_form", matches=("us_results.",))
+            NavLink(
+                "Results",
+                "us_results.us_results_form",
+                values=(("chamber", section.slug),),
+                matches=("us_results.",),
+            )
         )
     if section.slug in _MODEL_FORMS:
         endpoint, matches = _MODEL_FORMS[section.slug]
-        links.append(NavLink("Run model", endpoint, matches=matches))
+        values = (("chamber", section.slug),) if section.slug in _US_CHAMBERS else ()
+        links.append(NavLink("Run model", endpoint, values=values, matches=matches))
     endpoint, matches = _OUTPUTS[section.slug]
     links.append(NavLink("Outputs", endpoint, matches=matches))
     if section.has(Capability.UNCERTAINTY):

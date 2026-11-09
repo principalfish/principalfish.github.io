@@ -3,26 +3,30 @@
 The console face of ``importers/results/us/nyt/cli.py``, reusing its steps rather than
 repeating them:
 
-- **Form** (GET ``/us/results``): pick a cycle year and chamber, and whether to
-  fetch the latest NYT files or read the newest cached snapshot (offline). The
-  page lists what the cache holds for every source.
-- **Preview** (POST ``/us/results/preview``): fetch (or read the cache), parse,
+- **Form** (GET ``/house/results`` or ``/senate/results``): pick a cycle year,
+  and whether to fetch the latest NYT files or read the newest cached snapshot
+  (offline). The chamber is the one in the URL: each section's page imports only
+  its own office and lists what the cache holds for that office's sources.
+- **Preview** (POST ``/<chamber>/results/preview``): fetch (or read the cache), parse,
   apply runoffs, convert, and run every check the import makes, writing nothing
   to the database or the out-dir (a fresh fetch does add a cache snapshot).
   Every stage's numbers are shown: the files read and their times, a row per
   race, the party mapping, warnings, the diff against the committed file and the
   database, and whether the import creates or refreshes each election. The
   conversion is held under a one-time token.
-- **Confirm** (POST ``/us/results/confirm/<token>``): write the converted
+- **Confirm** (POST ``/<chamber>/results/confirm/<token>``): write the converted
   file(s) to the out-dir and import them, refreshing existing elections in
   place. Every file is checked before anything is written, and the CLI's
-  import plans every file before importing any.
-- **Export** (POST ``/us/results/export``): a separate button that runs the
-  site export. Importing never exports.
-- **Rebuild Current Senate** (POST ``/us/results/current-senate``): a separate
-  button that re-derives ``senate-current.json`` from the imported 2026 Senate
-  file (``importers/results/us/nyt/current_senate.py``). It writes one file, never
-  touches the database, and does not run during an import.
+  import plans every file before importing any. A token made under the other
+  chamber's URL is treated as expired.
+- **Export** (POST ``/<chamber>/results/export``): a separate button that runs
+  the site export. Importing never exports. The export is the whole site's,
+  not the chamber's: the URL only decides which page the result links back to.
+- **Rebuild Current Senate** (POST ``/senate/results/current-senate``, Senate
+  only): a separate button that re-derives ``senate-current.json`` from the
+  imported 2026 Senate file (``importers/results/us/nyt/current_senate.py``). It
+  writes one file, never touches the database, and does not run during an
+  import.
 
 The out-dir and the NYT cache come from the app config keys
 :data:`OUT_DIR_CONFIG` and :data:`CACHE_DIR_CONFIG`, defaulting to the CLI's
@@ -66,7 +70,11 @@ from console.shared.preview import (
     store_preview,
 )
 from console.shared.runner import render_command_result, run_python_script
-from console.us.models import busy_message, model_run_slot
+from console.us.models import (
+    US_RACE_CHAMBER_CONVERTER,
+    busy_message,
+    model_run_slot,
+)
 from core import config
 from core.db import Database
 from importers.results.us.nyt.adapters import AdapterError
@@ -112,6 +120,8 @@ from importers.results.us.nyt.sources import (
 from importers.results.us.us_import import PARTY_KEY_TO_NAME
 
 bp = Blueprint("us_results", __name__)
+
+_CHAMBER_ROUTE = US_RACE_CHAMBER_CONVERTER
 
 OUT_DIR_CONFIG = "US_RESULTS_OUT_DIR"
 CACHE_DIR_CONFIG = "US_RESULTS_CACHE_DIR"
@@ -291,19 +301,32 @@ class ImportedElection:
 # --- routes ----------------------------------------------------------------------
 
 
-@bp.route("/us/results", methods=["GET"])
-def us_results_form() -> str:
-    """GET /us/results — Choose a cycle and chamber to import NYT results for."""
-    return _render_form()
+@bp.route(f"/{_CHAMBER_ROUTE}/results", methods=["GET"])
+def us_results_form(chamber: str) -> str:
+    """GET /house|senate/results — Choose a cycle to import NYT results for.
+
+    Args:
+        chamber: The chamber slug from the path.
+
+    Returns:
+        The form, for that chamber's office only.
+    """
+    return _render_form(_CHAMBERS[chamber])
 
 
-@bp.route("/us/results/preview", methods=["POST"])
-def us_results_preview() -> ResponseReturnValue:
-    """POST /us/results/preview — Fetch, convert and check results, writing nothing.
+@bp.route(f"/{_CHAMBER_ROUTE}/results/preview", methods=["POST"])
+def us_results_preview(chamber: str) -> ResponseReturnValue:
+    """POST /<chamber>/results/preview — Fetch, convert and check results.
+
+    Nothing is written to the database or the out-dir.
+
+    Args:
+        chamber: The chamber slug from the path; the office to import.
 
     Form parameters:
         year (int): A supported cycle year.
-        chamber (str): ``house`` or ``senate``.
+        chamber (str, optional): Must equal the chamber in the path if sent;
+            another office is refused.
         source (str): ``fetch`` (download the latest NYT files into the cache)
             or ``cache`` (read the newest cached snapshot).
 
@@ -311,19 +334,16 @@ def us_results_preview() -> ResponseReturnValue:
         The preview page with a confirm form, or the form again with the error
         (a 400 for an invalid choice).
     """
+    office = _CHAMBERS[chamber]
     year_text = request.form.get("year", "")
-    chamber_text = request.form.get("chamber", "")
     mode = request.form.get("source", "")
-    chamber = _CHAMBERS.get(chamber_text)
     year = int(year_text) if year_text.isdecimal() else None
-    if (
-        chamber is None
-        or year is None
-        or year not in supported_years()
-        or mode not in _SOURCE_MODES
-    ):
-        flash("Choose a year, a chamber, and whether to fetch or use the cache.")
-        return _render_form(year=year, chamber=chamber_text, mode=mode), 400
+    if request.form.get("chamber", chamber) != chamber:
+        flash(f"This page imports US {_CHAMBER_LABELS[office]} results only.")
+        return _render_form(office, year=year, mode=mode), 400
+    if year is None or year not in supported_years() or mode not in _SOURCE_MODES:
+        flash("Choose a year, and whether to fetch or use the cache.")
+        return _render_form(office, year=year, mode=mode), 400
 
     db = get_db()
     out_dir = _out_dir()
@@ -331,7 +351,7 @@ def us_results_preview() -> ResponseReturnValue:
     try:
         general, runoffs = fetch_cycle(
             year,
-            chamber,
+            office,
             _cache_dir(),
             offline=mode == USE_CACHE,
             echo=fetch_log.append,
@@ -339,7 +359,7 @@ def us_results_preview() -> ResponseReturnValue:
         races = parse_cycle(general, runoffs)
         result = convert_cycle(general, runoffs, out_dir=out_dir, races=races)
         targets = _check_and_describe(
-            db, result, year=year, chamber=chamber, out_dir=out_dir,
+            db, result, year=year, chamber=office, out_dir=out_dir,
         )
     except (
         FetchError,
@@ -350,31 +370,31 @@ def us_results_preview() -> ResponseReturnValue:
         OSError,
     ) as err:
         flash(f"Preview failed: {err}")
-        return _render_form(year=year, chamber=chamber, mode=mode)
+        return _render_form(office, year=year, mode=mode)
     except (KeyError, TypeError, ValueError) as err:
         # The CLI reports the same: a file the adapters accepted but the
         # converter could not shape.
-        flash(f"Preview failed: could not convert {year} {chamber}: {err!r}")
-        return _render_form(year=year, chamber=chamber, mode=mode)
+        flash(f"Preview failed: could not convert {year} {office}: {err!r}")
+        return _render_form(office, year=year, mode=mode)
 
-    rows = _race_rows(db, races, result, year=year, chamber=chamber)
+    rows = _race_rows(db, races, result, year=year, chamber=office)
     token = store_preview(
-        {"type": PREVIEW_TYPE, "year": year, "chamber": chamber, "result": result},
+        {"type": PREVIEW_TYPE, "year": year, "chamber": office, "result": result},
     )
     return render_template(
         "us_results_preview.html",
-        title=f"Preview {year} US {_CHAMBER_LABELS[chamber]} results",
+        title=f"Preview {year} US {_CHAMBER_LABELS[office]} results",
         token=token,
         year=year,
-        chamber=chamber,
-        chamber_label=_CHAMBER_LABELS[chamber],
+        chamber=office,
+        chamber_label=_CHAMBER_LABELS[office],
         mode=mode,
         out_dir=out_dir,
         fetches=[general, *runoffs],
         fetch_log=fetch_log,
         pipeline=_pipeline_counts(races, rows, files_checked=len(targets)),
         targets=targets,
-        specials_note=_specials_note(db, result, year=year, chamber=chamber),
+        specials_note=_specials_note(db, result, year=year, chamber=office),
         rows=rows,
         uncalled=[
             row.seat for row in rows if row.file != NOT_IMPORTED and not row.called
@@ -388,9 +408,9 @@ def us_results_preview() -> ResponseReturnValue:
     )
 
 
-@bp.route("/us/results/confirm/<token>", methods=["POST"])
-def us_results_confirm(token: str) -> ResponseReturnValue:
-    """POST /us/results/confirm/<token> — Write the previewed files and import them.
+@bp.route(f"/{_CHAMBER_ROUTE}/results/confirm/<token>", methods=["POST"])
+def us_results_confirm(chamber: str, token: str) -> ResponseReturnValue:
+    """POST /<chamber>/results/confirm/<token> — Write the previewed files, import.
 
     Existing elections are refreshed in place (their ids kept). A failure
     keeps the token, so the same preview can be confirmed again; the files
@@ -400,77 +420,86 @@ def us_results_confirm(token: str) -> ResponseReturnValue:
     of it is dropped.
 
     Args:
-        token: One-time token naming the cached conversion.
+        chamber: The chamber slug from the path.
+        token: One-time token naming the cached conversion. A token previewed
+            under the other chamber's URL counts as unknown.
 
     Returns:
         The result page (with the separate export button), or a redirect to
         the form with a flash on an unknown token or a failed import.
     """
-    if _cached_import(token) is None:
+    form = url_for("us_results.us_results_form", chamber=chamber)
+    if _cached_import(token, chamber) is None:
         flash(_EXPIRED_MESSAGE)
-        return redirect(url_for("us_results.us_results_form"))
+        return redirect(form)
 
     out_dir = _out_dir()
     db = get_db()
     with model_run_slot() as free:
         if not free:
             flash(busy_message("Results not imported"))
-            return redirect(url_for("us_results.us_results_form"))
+            return redirect(form)
         # Read again now the slot is held: a double submit that got past the
         # check above while the first request was importing finds it gone.
-        cached = _cached_import(token)
+        cached = _cached_import(token, chamber)
         if cached is None:
             flash(_EXPIRED_MESSAGE)
-            return redirect(url_for("us_results.us_results_form"))
+            return redirect(form)
         year: int = cached["year"]
-        chamber: Chamber = cached["chamber"]
+        office: Chamber = cached["chamber"]
         result: ConversionResult = cached["result"]
         try:
-            _refuse_older_preview(result, year=year, chamber=chamber, out_dir=out_dir)
+            _refuse_older_preview(result, year=year, chamber=office, out_dir=out_dir)
             written, report = _write_and_import(
-                db, result, year=year, chamber=chamber, out_dir=out_dir,
+                db, result, year=year, chamber=office, out_dir=out_dir,
             )
         except (CliError, OSError) as err:
             flash(f"Import failed: {err}")
-            return redirect(url_for("us_results.us_results_form"))
+            return redirect(form)
         # Still inside the slot, so a second submit of this token finds it gone.
         pop_preview(token)
-        _drop_previews_for(year, chamber)
+        _drop_previews_for(year, office)
 
-    elections = _imported_elections(db, written, year=year, chamber=chamber)
+    elections = _imported_elections(db, written, year=year, chamber=office)
     flash(
-        f"Imported {year} US {_CHAMBER_LABELS[chamber]} results: "
+        f"Imported {year} US {_CHAMBER_LABELS[office]} results: "
         + "; ".join(f"{e.name} (id {e.election_id})" for e in elections),
     )
     return render_template(
         "us_results_result.html",
-        title=f"Imported {year} US {_CHAMBER_LABELS[chamber]} results",
+        title=f"Imported {year} US {_CHAMBER_LABELS[office]} results",
+        chamber=chamber,
         year=year,
-        chamber_label=_CHAMBER_LABELS[chamber],
+        chamber_label=_CHAMBER_LABELS[office],
         written=written,
         elections=elections,
         report=report,
     )
 
 
-@bp.route("/us/results/export", methods=["POST"])
-def us_results_export() -> ResponseReturnValue:
-    """POST /us/results/export — Run the site export (``export_elections.py``).
+@bp.route(f"/{_CHAMBER_ROUTE}/results/export", methods=["POST"])
+def us_results_export(chamber: str) -> ResponseReturnValue:
+    """POST /<chamber>/results/export — Run the site export (``export_elections.py``).
 
     The same full export as the Admin page's Rebuild Site Data, run separately from the
-    import so a provisional refresh is only published on purpose.
+    import so a provisional refresh is only published on purpose. It exports the
+    whole site whichever chamber's URL it is posted to.
+
+    Args:
+        chamber: The chamber slug from the path; where the result links back to.
 
     Returns:
         The command result, or a redirect to the form when the script is
         missing or another US run holds the slot.
     """
+    form = url_for("us_results.us_results_form", chamber=chamber)
     if not EXPORT_ELECTION_SCRIPT.exists():
         flash(f"Export script not found: {EXPORT_ELECTION_SCRIPT}")
-        return redirect(url_for("us_results.us_results_form"))
+        return redirect(form)
     with model_run_slot() as free:
         if not free:
             flash(busy_message("Not exported"))
-            return redirect(url_for("us_results.us_results_form"))
+            return redirect(form)
         try:
             export = run_python_script(
                 EXPORT_ELECTION_SCRIPT, timeout=EXPORT_TIMEOUT_SECONDS,
@@ -486,19 +515,28 @@ def us_results_export() -> ResponseReturnValue:
         stderr=stderr,
         return_code=code,
         back_endpoint="us_results.us_results_form",
-        back_label="Back to US results",
+        back_label=f"Back to US {_CHAMBER_LABELS[_CHAMBERS[chamber]]} results",
+        back_values={"chamber": chamber},
     )
 
 
-@bp.route("/us/results/current-senate", methods=["POST"])
-def us_results_current_senate() -> ResponseReturnValue:
-    """POST /us/results/current-senate — Re-derive the Current Senate snapshot.
+@bp.route(
+    "/senate/results/current-senate",
+    methods=["POST"],
+    defaults={"chamber": "senate"},
+)
+def us_results_current_senate(chamber: str) -> ResponseReturnValue:
+    """POST /senate/results/current-senate — Re-derive the Current Senate snapshot.
 
     Reads the committed Current Senate file and the imported 2026 Senate
     election file in the out-dir and rewrites the Current Senate file from
     them (holdovers plus the 2026 winners, uncalled seats left unknown). The
     result is the same however often it is run. Nothing is exported; run the
     export afterwards to publish it.
+
+    Args:
+        chamber: Always ``"senate"``: the route's default, which also names the
+            section the page belongs to. The House has no such route.
 
     Returns:
         The command result with the build report, or a redirect to the form
@@ -509,7 +547,7 @@ def us_results_current_senate() -> ResponseReturnValue:
     with model_run_slot() as free:
         if not free:
             flash(busy_message("Current Senate not rebuilt"))
-            return redirect(url_for("us_results.us_results_form"))
+            return redirect(url_for("us_results.us_results_form", chamber=chamber))
         try:
             report = rebuild_current_senate(snapshot_path=snapshot, election_path=election)
         except (CurrentSenateError, OSError) as err:
@@ -523,17 +561,20 @@ def us_results_current_senate() -> ResponseReturnValue:
         stderr=stderr,
         return_code=code,
         back_endpoint="us_results.us_results_form",
-        back_label="Back to US results",
+        back_label="Back to US Senate results",
+        back_values={"chamber": chamber},
     )
 
 
 # --- steps -----------------------------------------------------------------------
 
 
-def _cached_import(token: str) -> dict[str, Any] | None:
-    """The cached preview for ``token``, if it is one of this flow's."""
+def _cached_import(token: str, chamber: str) -> dict[str, Any] | None:
+    """The cached preview for ``token``, if it is this flow's and this chamber's."""
     cached = get_preview(token)
     if cached is None or cached.get("type") != PREVIEW_TYPE:
+        return None
+    if cached.get("chamber") != chamber:
         return None
     return cached
 
@@ -1019,24 +1060,28 @@ def _specials_note(
 
 
 def _render_form(
+    chamber: Chamber,
     *,
     year: int | None = None,
-    chamber: str = "house",
     mode: str = FETCH_LATEST,
 ) -> str:
     years = sorted(supported_years(), reverse=True)
     return render_template(
         "us_results_form.html",
-        title="Import US Results",
+        title=f"Import US {_CHAMBER_LABELS[chamber]} Results",
+        chamber=chamber,
+        chamber_label=_CHAMBER_LABELS[chamber],
         years=years,
-        chambers=list(_CHAMBER_LABELS.items()),
         selected_year=year if year in years else years[0],
-        selected_chamber=chamber if chamber in _CHAMBERS else "house",
         selected_mode=mode if mode in _SOURCE_MODES else FETCH_LATEST,
         cache_dir=_cache_dir(),
         out_dir=_out_dir(),
         senate_file=_out_dir() / CURRENT_SENATE_ELECTION_FILE,
-        cache=cache_entries(_cache_dir()),
+        cache=[
+            entry
+            for entry in cache_entries(_cache_dir())
+            if entry.chamber == chamber
+        ],
     )
 
 

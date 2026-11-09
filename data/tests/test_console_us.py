@@ -22,15 +22,21 @@ from console.us.models import (
     MODEL_RUN_LOCK,
     REBUILD_TIMEOUT_SECONDS,
     STEP_TIMEOUT_SECONDS,
+    US_CHAMBER_CONVERTER,
+    US_CHAMBER_SLUGS,
+    US_CHAMBERS,
     US_CHAMBERS_BY_SLUG,
-    UsModelRun,
+    US_RACE_CHAMBER_CONVERTER,
+    US_RACE_CHAMBER_SLUGS,
     UsModelRunInterrupted,
     model_run_slot,
+    NO_MATCHUP_NOTE,
+    UsModelOptions,
     run_us_chamber_and_export,
-    run_us_models_and_export,
 )
 from core.db import Database
 from core.schema import ElectionType
+from tests.console_fixtures import select_block
 from tests.us_ev_fixtures import seed_allocations, set_model_target
 
 
@@ -97,20 +103,51 @@ def _seed_us_president(db: Database) -> dict[str, int]:
 class TestUsRoutesRegistered:
     """create_app wires the US action routes plus all per-chamber endpoints."""
 
-    def test_action_routes_exist(self, app: Flask) -> None:
+    def test_model_run_routes_exist(self, app: Flask) -> None:
+        methods: set[str] = set()
+        for rule in app.url_map.iter_rules():
+            if str(rule) == f"/{US_CHAMBER_CONVERTER}/model":
+                methods |= rule.methods or set()
+        assert {"GET", "POST"} <= methods
+
+    def test_the_combined_run_route_is_gone(self, app: Flask) -> None:
         rules = {str(rule) for rule in app.url_map.iter_rules()}
-        assert "/us/run-models" in rules
+        endpoints = {rule.endpoint for rule in app.url_map.iter_rules()}
+        assert "/us/run-models" not in rules
+        assert "us.run_us_models" not in endpoints
+        assert app.test_client().post("/us/run-models").status_code == 404
 
     def test_import_queue_routes_exist(self, app: Flask) -> None:
         methods = {
             str(rule): rule.methods or set() for rule in app.url_map.iter_rules()
         }
-        assert "GET" in methods["/us/import"]
-        assert "POST" in methods["/us/import/start"]
-        assert "GET" in methods["/us/import/<token>"]
+        base = f"/{US_CHAMBER_CONVERTER}/polls/import"
+        assert "GET" in methods[base]
+        assert "POST" in methods[f"{base}/start"]
+        assert "GET" in methods[f"{base}/<token>"]
         for suffix in ("confirm", "skip", "approve-race"):
-            assert "POST" in methods[f"/us/import/<token>/{suffix}"]
-        assert {"GET", "POST"} <= methods["/us/import/<token>/finish"]
+            assert "POST" in methods[f"{base}/<token>/{suffix}"]
+        assert {"GET", "POST"} <= methods[f"{base}/<token>/finish"]
+
+    def test_the_chamber_converters_are_the_chamber_constants(self, app: Flask) -> None:
+        """Every ``<chamber>`` rule restricts to one of two shared slug lists."""
+        pattern = re.compile(r"<any\((.*?)\):chamber>")
+        found: dict[tuple[str, ...], int] = {}
+        for rule in app.url_map.iter_rules():
+            match = pattern.search(rule.rule)
+            if match is not None:
+                slugs = tuple(match.group(1).split(","))
+                found[slugs] = found.get(slugs, 0) + 1
+
+        assert set(found) == {US_CHAMBER_SLUGS, US_RACE_CHAMBER_SLUGS}
+        assert US_CHAMBER_SLUGS == tuple(chamber.slug for chamber in US_CHAMBERS)
+        assert set(US_CHAMBER_SLUGS) == {"house", "senate", "president"}
+        assert set(US_RACE_CHAMBER_SLUGS) == {"house", "senate"}
+        assert US_CHAMBER_CONVERTER == f"<any({','.join(US_CHAMBER_SLUGS)}):chamber>"
+        assert (
+            US_RACE_CHAMBER_CONVERTER
+            == f"<any({','.join(US_RACE_CHAMBER_SLUGS)}):chamber>"
+        )
 
     def test_legacy_import_route_is_gone(self, app: Flask) -> None:
         rules = {str(rule) for rule in app.url_map.iter_rules()}
@@ -140,26 +177,28 @@ US_LANDING_PAGES = ("/house", "/senate", "/president")
 
 
 class TestLandingPages:
-    """Each US section's landing page offers its import, run form and outputs."""
+    """Each US section's landing page links its import, model page and outputs."""
 
     @pytest.mark.parametrize("path", US_LANDING_PAGES)
     def test_landing_renders_the_us_actions(self, app: Flask, path: str) -> None:
         body = app.test_client().get(path).get_data(as_text=True)
-        assert "Import polls" in body
-        assert "Run US Models" in body
-        assert 'action="/us/run-models"' in body
+        assert "Auto import" in body
+        assert f'href="{path}/model">Run model</a>' in body
         assert f'href="{path}/outputs"' in body
+        # The model forms live on their own pages, not on the landing page.
+        assert "<form" not in body
+        assert "run-models" not in body
 
     @pytest.mark.parametrize("path", US_LANDING_PAGES)
-    def test_import_polls_links_to_the_review_queue(
+    def test_auto_import_links_to_the_sections_own_review_queue(
         self, app: Flask, path: str
     ) -> None:
         body = app.test_client().get(path).get_data(as_text=True)
         assert (
-            '<a class="button primary button-block" href="/us/import">'
-            "Import polls</a>"
+            f'<a class="button primary button-block" href="{path}/polls/import">'
+            "Auto import</a>"
         ) in body
-        assert "/us/import-polls" not in body
+        assert "/us/import" not in body
 
 
 class TestUsOutputsPages:
@@ -365,24 +404,8 @@ def _seed_president_map(db: Database) -> int:
     return db.add_map("US Presidential 2024").id
 
 
-class TestRunUsModelsAndExport:
-    """The model-run service: matchup gating, step order, rebuild flags, failures."""
-
-    def test_president_skipped_when_no_matchup_set(self, db: Database) -> None:
-        _seed_president_map(db)
-        runner = _RecordingRunner()
-
-        run = run_us_models_and_export(db, runner=runner)
-
-        assert runner.scripts == [
-            "run_us_house_model.py",
-            "run_us_senate_model.py",
-            "export_elections.py",
-        ]
-        assert run.skipped == frozenset({"president"})
-        assert "SKIPPED: no tracked presidential matchup set" in run.stdout
-        assert "=== Run US President model ===" in run.stdout
-        assert run.return_code == 0
+class TestRunUsChamberServiceGating:
+    """The model-run service: matchup gating, step order, failures."""
 
     def test_null_matchup_row_also_skips_the_president(self, db: Database) -> None:
         map_id = _seed_president_map(db)
@@ -391,134 +414,544 @@ class TestRunUsModelsAndExport:
         db.set_tracked_matchup(map_id, None, None, source="manual")
         runner = _RecordingRunner()
 
-        run = run_us_models_and_export(db, runner=runner)
+        run = run_us_chamber_and_export(
+            db, US_CHAMBERS_BY_SLUG["president"], runner=runner, rebuild_history=False
+        )
 
-        assert "run_us_presidential_model.py" not in runner.scripts
+        assert runner.scripts == ["export_elections.py"]
         assert run.skipped == frozenset({"president"})
-        assert "SKIPPED: no tracked presidential matchup set" in run.stdout
+        assert "=== Run US President model ===" in run.stdout
+        assert NO_MATCHUP_NOTE in run.stdout
+        assert run.return_code == 0
 
-    def test_all_four_steps_run_when_matchup_set(self, db: Database) -> None:
+    def test_the_president_runs_when_a_matchup_is_set(self, db: Database) -> None:
         map_id = _seed_president_map(db)
-        db.set_tracked_matchup(map_id, None, "Vance (R) vs Newsom (D)", source="manual")
+        db.set_tracked_matchup(map_id, None, VANCE_NEWSOM, source="manual")
         runner = _RecordingRunner()
 
-        run = run_us_models_and_export(db, runner=runner)
+        run = run_us_chamber_and_export(
+            db, US_CHAMBERS_BY_SLUG["president"], runner=runner, rebuild_history=False
+        )
 
-        assert runner.scripts == [
-            "run_us_house_model.py",
-            "run_us_presidential_model.py",
-            "run_us_senate_model.py",
-            "export_elections.py",
-        ]
+        assert runner.scripts == ["run_us_presidential_model.py", "export_elections.py"]
         assert run.skipped == frozenset()
-        assert run.return_code == 0
-        assert "SKIPPED" not in run.stdout
         assert "ran export_elections.py" in run.stdout
 
-    def test_model_args_widen_the_poll_window(self, db: Database) -> None:
+    @pytest.mark.parametrize(
+        ("slug", "script", "days"),
+        [
+            ("house", "run_us_house_model.py", "60"),
+            ("senate", "run_us_senate_model.py", "60"),
+            ("president", "run_us_presidential_model.py", "120"),
+        ],
+    )
+    def test_model_args_widen_the_poll_window(
+        self, db: Database, slug: str, script: str, days: str
+    ) -> None:
         map_id = _seed_president_map(db)
-        db.set_tracked_matchup(map_id, None, "Vance (R) vs Newsom (D)", source="manual")
+        db.set_tracked_matchup(map_id, None, VANCE_NEWSOM, source="manual")
         runner = _RecordingRunner()
 
-        run_us_models_and_export(db, runner=runner)
+        run_us_chamber_and_export(
+            db, US_CHAMBERS_BY_SLUG[slug], runner=runner, rebuild_history=False
+        )
 
-        assert runner.args_for("run_us_house_model.py") == ("--since-days-back", "60")
-        assert runner.args_for("run_us_senate_model.py") == ("--since-days-back", "60")
-        assert runner.args_for("run_us_presidential_model.py") == ("--since-days-back", "120")
+        assert runner.args_for(script) == ("--since-days-back", days)
         assert runner.args_for("export_elections.py") == ()
 
-    def test_failing_step_stops_the_run(self, db: Database) -> None:
-        map_id = _seed_president_map(db)
-        db.set_tracked_matchup(map_id, None, "Vance (R) vs Newsom (D)", source="manual")
-        runner = _RecordingRunner(return_codes={"run_us_presidential_model.py": 2})
-
-        run = run_us_models_and_export(db, runner=runner)
-
-        assert runner.scripts == ["run_us_house_model.py", "run_us_presidential_model.py"]
-        assert run.return_code == 2
-        assert "=== Run US President model ===\nboom" in run.stderr
-
     def test_export_failure_is_surfaced(self, db: Database) -> None:
-        map_id = _seed_president_map(db)
-        db.set_tracked_matchup(map_id, None, "Vance (R) vs Newsom (D)", source="manual")
         runner = _RecordingRunner(return_codes={"export_elections.py": 1})
 
-        run = run_us_models_and_export(db, runner=runner)
+        run = run_us_chamber_and_export(
+            db, US_CHAMBERS_BY_SLUG["house"], runner=runner, rebuild_history=False
+        )
 
         assert run.return_code == 1
 
-    def test_rebuild_flag_only_for_named_chambers(self, db: Database) -> None:
-        map_id = _seed_president_map(db)
-        db.set_tracked_matchup(map_id, None, "Vance (R) vs Newsom (D)", source="manual")
+    def test_rebuild_flag_is_appended_for_the_rebuilt_chamber(
+        self, db: Database
+    ) -> None:
         runner = _RecordingRunner()
 
-        run_us_models_and_export(db, runner=runner, rebuild={"senate"})
+        run_us_chamber_and_export(
+            db, US_CHAMBERS_BY_SLUG["senate"], runner=runner, rebuild_history=True
+        )
 
         assert runner.args_for("run_us_senate_model.py") == (
             "--since-days-back",
             "60",
             "--rebuild-history",
         )
-        assert runner.args_for("run_us_house_model.py") == ("--since-days-back", "60")
-        assert "--rebuild-history" not in runner.args_for("run_us_presidential_model.py")
         assert runner.args_for("export_elections.py") == ()
 
-    def test_unknown_rebuild_slug_is_ignored(self, db: Database) -> None:
-        map_id = _seed_president_map(db)
-        db.set_tracked_matchup(map_id, None, "Vance (R) vs Newsom (D)", source="manual")
+    def test_every_queue_contest_belongs_to_exactly_one_chamber(self) -> None:
+        from importers.polls.us.us_wikipedia_polls import US_CONTESTS
+
+        offered = [
+            slug for chamber in US_CHAMBERS_BY_SLUG.values() for slug in chamber.contest_slugs
+        ]
+        assert sorted(offered) == sorted(contest.slug for contest in US_CONTESTS)
+
+
+class TestRunUsChamberOptions:
+    """The single-chamber service: extra model arguments, dry runs, the export."""
+
+    def test_default_call_runs_the_chambers_own_args_then_exports(
+        self, db: Database
+    ) -> None:
         runner = _RecordingRunner()
 
-        run_us_models_and_export(db, runner=runner, rebuild={"congress"})
+        run = run_us_chamber_and_export(
+            db, US_CHAMBERS_BY_SLUG["house"], runner=runner, rebuild_history=False
+        )
 
-        assert all("--rebuild-history" not in args for _name, args in runner.calls)
+        assert runner.calls == [
+            ("run_us_house_model.py", ("--since-days-back", "60")),
+            ("export_elections.py", ()),
+        ]
+        assert run.return_code == 0
 
-    def test_skipped_chamber_is_not_a_failure_for_later_steps(self, db: Database) -> None:
-        _seed_president_map(db)
-        runner = _RecordingRunner(return_codes={"run_us_house_model.py": 5})
+    def test_extra_arguments_follow_the_poll_window(self, db: Database) -> None:
+        runner = _RecordingRunner()
 
-        run = run_us_models_and_export(db, runner=runner)
+        run_us_chamber_and_export(
+            db,
+            US_CHAMBERS_BY_SLUG["senate"],
+            runner=runner,
+            rebuild_history=True,
+            since_days_back=90,
+            half_life_days=14.0,
+            seat_prior_weight=0.0,
+            ignore_seat_polls=True,
+        )
 
-        # House fails first, so the president is never even reached for skipping.
+        assert runner.args_for("run_us_senate_model.py") == (
+            "--since-days-back",
+            "90",
+            "--half-life-days",
+            "14.0",
+            "--seat-prior-weight",
+            "0.0",
+            "--ignore-seat-polls",
+            "--rebuild-history",
+        )
+        assert runner.timeouts["run_us_senate_model.py"] == REBUILD_TIMEOUT_SECONDS
+
+    def test_export_can_be_left_out(self, db: Database) -> None:
+        runner = _RecordingRunner()
+
+        run = run_us_chamber_and_export(
+            db,
+            US_CHAMBERS_BY_SLUG["house"],
+            runner=runner,
+            rebuild_history=False,
+            export=False,
+        )
+
         assert runner.scripts == ["run_us_house_model.py"]
-        assert run.return_code == 5
-        assert run.skipped == frozenset()
+        assert run.return_code == 0
 
+    def test_a_dry_run_never_exports_even_when_asked_to(self, db: Database) -> None:
+        runner = _RecordingRunner()
 
-class TestRunUsModelsRoute:
-    """POST /us/run-models renders whatever the service produced."""
+        run_us_chamber_and_export(
+            db,
+            US_CHAMBERS_BY_SLUG["house"],
+            runner=runner,
+            rebuild_history=False,
+            dry_run=True,
+            export=True,
+        )
 
-    def test_route_renders_service_output(
-        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr("console.us.views.get_db", lambda: db)
-        captured: dict[str, object] = {}
+        assert runner.calls == [
+            ("run_us_house_model.py", ("--since-days-back", "60", "--dry-run"))
+        ]
 
-        def fake_run(
-            database: Database,
-            *,
-            runner: object = None,
-            rebuild: frozenset[str] = frozenset(),
-        ) -> UsModelRun:
-            captured["db"] = database
-            captured["rebuild"] = rebuild
-            return UsModelRun(
-                stdout="=== Run US President model ===\nSKIPPED: no tracked presidential matchup set",
-                stderr="",
-                return_code=0,
-                skipped=frozenset({"president"}),
+    def test_a_dry_run_cannot_rebuild_history(self, db: Database) -> None:
+        runner = _RecordingRunner()
+
+        with pytest.raises(ValueError, match="dry run cannot rebuild"):
+            run_us_chamber_and_export(
+                db,
+                US_CHAMBERS_BY_SLUG["house"],
+                runner=runner,
+                rebuild_history=True,
+                dry_run=True,
             )
 
-        monkeypatch.setattr("console.us.views.run_us_models_and_export", fake_run)
+        assert runner.calls == []
 
-        response = app.test_client().post("/us/run-models")
+    def test_default_options_add_no_arguments(self) -> None:
+        for chamber in US_CHAMBERS_BY_SLUG.values():
+            assert UsModelOptions().args_for(chamber) == chamber.model_args
+
+    @pytest.mark.parametrize(
+        ("slug", "days"), [("house", 60), ("senate", 60), ("president", 120)]
+    )
+    def test_the_default_poll_window_is_read_from_the_model_args(
+        self, slug: str, days: int
+    ) -> None:
+        assert US_CHAMBERS_BY_SLUG[slug].default_since_days_back == days
+
+
+# ── The per-chamber model pages ───────────────────────────────────────────
+
+US_MODEL_SCRIPTS = {
+    "house": "run_us_house_model.py",
+    "senate": "run_us_senate_model.py",
+    "president": "run_us_presidential_model.py",
+}
+US_SLUGS = list(US_MODEL_SCRIPTS)
+
+
+def _model_form(
+    overrides: dict[str, str] | None = None, *, drop: tuple[str, ...] = ()
+) -> dict[str, str]:
+    """A valid real-run post for a US model page: not a dry run, export ticked.
+
+    Every value differs from the form's defaults, so a command that carries them
+    can only have got them from the post.
+    """
+    form = {
+        "since_days_back": "45",
+        "half_life_days": "21.0",
+        "seat_prior_weight": "2.0",
+        "dry_run": "false",
+        "export_when_done": "on",
+    }
+    form.update(overrides or {})
+    return {name: value for name, value in form.items() if name not in drop}
+
+
+def _track_president(db: Database) -> None:
+    """Choose a national matchup, so the President's model is not skipped."""
+    map_id = _seed_president_map(db)
+    db.set_tracked_matchup(map_id, None, VANCE_NEWSOM, source="manual")
+
+
+def _alerts(body: str) -> list[str]:
+    return [html.unescape(message.strip()) for message in _ALERT.findall(body)]
+
+
+class TestModelFormPage:
+    """GET /<chamber>/model draws the chamber's run form."""
+
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    def test_the_form_opens_with_the_chambers_defaults(
+        self, app: Flask, slug: str
+    ) -> None:
+        chamber = US_CHAMBERS_BY_SLUG[slug]
+
+        response = app.test_client().get(f"/{slug}/model")
 
         assert response.status_code == 200
-        assert captured["db"] is db
-        # No box ticked: an ordinary run, rebuilding nothing.
-        assert captured["rebuild"] == frozenset()
         body = response.get_data(as_text=True)
-        assert "Run US Models" in body
-        assert "SKIPPED: no tracked presidential matchup set" in body
+        assert f"<h2>Run {chamber.label} Model</h2>" in body
+        assert f'action="/{slug}/model"' in body
+        window = select_block(body, "since_days_back")
+        assert f'<option value="{chamber.default_since_days_back}" selected>' in window
+        assert '<option value="30.0" selected>' in select_block(body, "half_life_days")
+        assert '<option value="1.0" selected>' in select_block(
+            body, "seat_prior_weight"
+        )
+        # Safe by default: a preview that exports, once switched to a real run.
+        assert '<option value="true" selected>' in select_block(body, "dry_run")
+        assert '<input type="checkbox" name="export_when_done" checked>' in body
+        assert '<input type="checkbox" name="rebuild_history">' in body
+        assert '<input type="checkbox" name="ignore_seat_polls">' in body
+        assert "A dry run never exports" in body
+        # Date-range backfills are not offered.
+        assert "--start-date" not in body
+        assert "--continue-on-error" not in body
+
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    def test_the_rebuild_confirm_names_the_one_chamber(
+        self, app: Flask, slug: str
+    ) -> None:
+        label = US_CHAMBERS_BY_SLUG[slug].label
+        body = app.test_client().get(f"/{slug}/model").get_data(as_text=True)
+
+        match = re.search(r'<form[^>]*onsubmit="([^"]*)"', body)
+        assert match is not None
+        onsubmit = html.unescape(match.group(1))
+        assert onsubmit.startswith("return !this.rebuild_history.checked || confirm(")
+        assert f"Rebuild {label} history?" in onsubmit
+        assert "ALL" not in onsubmit
+        assert "can take hours" in onsubmit
+
+    def test_an_unknown_chamber_has_no_page(self, app: Flask) -> None:
+        assert app.test_client().get("/congress/model").status_code == 404
+
+
+@pytest.fixture()
+def model_db(db: Database, monkeypatch: pytest.MonkeyPatch) -> Database:
+    """The temp database behind the US routes."""
+    monkeypatch.setattr("console.us.views.get_db", lambda: db)
+    return db
+
+
+class TestModelRun:
+    """POST /<chamber>/model validates the form, runs the model, maybe exports."""
+
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    def test_a_real_run_posts_only_its_own_chamber_then_exports(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+        slug: str,
+    ) -> None:
+        _track_president(model_db)
+
+        response = app.test_client().post(
+            f"/{slug}/model", data=_model_form({"ignore_seat_polls": "on"})
+        )
+
+        assert response.status_code == 200
+        assert recording_runner.calls == [
+            (
+                US_MODEL_SCRIPTS[slug],
+                (
+                    "--since-days-back",
+                    "45",
+                    "--half-life-days",
+                    "21.0",
+                    "--seat-prior-weight",
+                    "2.0",
+                    "--ignore-seat-polls",
+                ),
+            ),
+            ("export_elections.py", ()),
+        ]
+        assert recording_runner.timeouts == {
+            US_MODEL_SCRIPTS[slug]: STEP_TIMEOUT_SECONDS,
+            "export_elections.py": STEP_TIMEOUT_SECONDS,
+        }
+        body = html.unescape(response.get_data(as_text=True))
+        assert (
+            f"{US_MODEL_SCRIPTS[slug]} --since-days-back 45 --half-life-days 21.0 "
+            "--seat-prior-weight 2.0 --ignore-seat-polls → export_elections.py"
+        ) in body
+        assert "The run finished and the export was requested" in body
+        assert "ran export_elections.py" in body
+        # The posted values are drawn back into the form.
+        assert '<option value="45" selected>' in select_block(body, "since_days_back")
+        assert '<input type="checkbox" name="ignore_seat_polls" checked>' in body
+        assert not MODEL_RUN_LOCK.locked()
+
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    def test_export_off_runs_the_model_alone(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+        slug: str,
+    ) -> None:
+        _track_president(model_db)
+
+        response = app.test_client().post(
+            f"/{slug}/model", data=_model_form(drop=("export_when_done",))
+        )
+
+        assert recording_runner.scripts == [US_MODEL_SCRIPTS[slug]]
+        body = response.get_data(as_text=True)
+        assert "Export when done was off, so nothing was exported." in body
+        assert "export_elections.py" not in body
+        assert '<input type="checkbox" name="export_when_done">' in body
+
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    def test_a_dry_run_skips_the_export_even_with_the_box_ticked(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+        slug: str,
+    ) -> None:
+        _track_president(model_db)
+
+        response = app.test_client().post(
+            f"/{slug}/model",
+            data=_model_form({"dry_run": "true", "export_when_done": "on"}),
+        )
+
+        assert recording_runner.scripts == [US_MODEL_SCRIPTS[slug]]
+        assert recording_runner.args_for(US_MODEL_SCRIPTS[slug])[-1] == "--dry-run"
+        body = response.get_data(as_text=True)
+        assert "Dry run: the model computed without writing anything" in body
+        assert "export_elections.py" not in body
+
+    def test_a_post_without_the_dry_run_field_is_a_dry_run(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+    ) -> None:
+        app.test_client().post("/house/model", data=_model_form(drop=("dry_run",)))
+
+        assert recording_runner.scripts == ["run_us_house_model.py"]
+        assert "--dry-run" in recording_runner.args_for("run_us_house_model.py")
+
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    def test_rebuild_history_uses_the_flag_and_the_rebuild_timeout(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+        slug: str,
+    ) -> None:
+        _track_president(model_db)
+
+        response = app.test_client().post(
+            f"/{slug}/model", data=_model_form({"rebuild_history": "on"})
+        )
+
+        script = US_MODEL_SCRIPTS[slug]
+        assert recording_runner.scripts == [script, "export_elections.py"]
+        assert recording_runner.args_for(script)[-1] == "--rebuild-history"
+        assert "--dry-run" not in recording_runner.args_for(script)
+        # A rebuild at the ordinary step timeout would be killed part-way.
+        assert recording_runner.timeouts[script] == REBUILD_TIMEOUT_SECONDS
+        assert recording_runner.timeouts["export_elections.py"] == STEP_TIMEOUT_SECONDS
+        body = html.unescape(response.get_data(as_text=True))
+        assert f"{script} --since-days-back 45" in body
+        assert "--rebuild-history → export_elections.py" in body
+
+    def test_rebuild_history_with_a_dry_run_is_refused(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+    ) -> None:
+        response = app.test_client().post(
+            "/house/model",
+            data=_model_form({"dry_run": "true", "rebuild_history": "on"}),
+        )
+
+        assert response.status_code == 200
+        body = response.get_data(as_text=True)
+        [alert] = _alerts(body)
+        assert alert.startswith("Invalid model argument value: ")
+        assert "cannot rebuild history" in alert
+        assert recording_runner.calls == []
+        # The form is drawn again as posted, so only the conflict needs fixing.
+        assert '<input type="checkbox" name="rebuild_history" checked>' in body
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("since_days_back", "0"),
+            ("since_days_back", "-5"),
+            ("since_days_back", "abc"),
+            ("since_days_back", "30.5"),
+            ("half_life_days", "0"),
+            ("half_life_days", "-1"),
+            ("half_life_days", "inf"),
+            ("half_life_days", "nan"),
+            ("seat_prior_weight", "-1"),
+            ("seat_prior_weight", "inf"),
+            ("seat_prior_weight", "nan"),
+            ("seat_prior_weight", "abc"),
+        ],
+    )
+    def test_an_invalid_value_flashes_and_runs_nothing(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+        field: str,
+        value: str,
+    ) -> None:
+        response = app.test_client().post(
+            "/senate/model", data=_model_form({field: value})
+        )
+
+        assert response.status_code == 200
+        [alert] = _alerts(response.get_data(as_text=True))
+        assert alert.startswith(f"Invalid model argument value: {field}: ")
+        assert recording_runner.calls == []
+
+    def test_a_zero_seat_prior_weight_is_valid(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+    ) -> None:
+        app.test_client().post(
+            "/house/model", data=_model_form({"seat_prior_weight": "0"})
+        )
+
+        args = recording_runner.args_for("run_us_house_model.py")
+        assert args[args.index("--seat-prior-weight") + 1] == "0.0"
+
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    @pytest.mark.parametrize(
+        ("form", "refused"),
+        [
+            ({"rebuild_history": "on"}, "History not rebuilt"),
+            ({}, "{label} model not run"),
+            ({"dry_run": "true"}, "{label} model not run"),
+        ],
+    )
+    def test_a_run_in_progress_refuses_it_and_runs_nothing(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+        slug: str,
+        form: dict[str, str],
+        refused: str,
+    ) -> None:
+        _track_president(model_db)
+        client = app.test_client()
+        with model_run_slot() as free:
+            assert free
+            response = client.post(f"/{slug}/model", data=_model_form(form))
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == f"/{slug}/model"
+        assert recording_runner.calls == []
+        assert _flashes(client, response)[-1] == (
+            f"{refused.format(label=US_CHAMBERS_BY_SLUG[slug].label)}: "
+            "another US model run or history rebuild is in progress; "
+            "wait for it to finish, then try again."
+        )
+
+    def test_the_president_is_skipped_without_a_tracked_matchup(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+    ) -> None:
+        _seed_president_map(model_db)
+
+        response = app.test_client().post("/president/model", data=_model_form())
+
+        assert response.status_code == 200
+        # Nothing ran, so there is nothing to export either.
+        assert recording_runner.calls == []
+        body = html.unescape(response.get_data(as_text=True))
+        assert NO_MATCHUP_NOTE in body
+        assert "(skipped: no tracked matchup)" in body
+        assert "export_elections.py" not in body
+
+    def test_a_missing_export_script_is_refused_before_anything_runs(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        missing = tmp_path / "missing.py"
+        monkeypatch.setattr("console.us.views.EXPORT_ELECTION_SCRIPT", missing)
+        client = app.test_client()
+
+        response = client.post("/house/model", data=_model_form())
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/house/model"
+        assert recording_runner.calls == []
+        assert _flashes(client, response)[-1] == f"Script not found: {missing}"
 
     @pytest.mark.parametrize(
         ("fail", "error", "error_name", "partial"),
@@ -550,160 +983,50 @@ class TestRunUsModelsRoute:
     def test_an_interrupted_run_renders_a_result_not_a_500(
         self,
         app: Flask,
-        db: Database,
+        model_db: Database,
         monkeypatch: pytest.MonkeyPatch,
         fail: str,
         error: Exception,
         error_name: str,
         partial: str | None,
     ) -> None:
-        monkeypatch.setattr("console.us.views.get_db", lambda: db)
         runner = _TimeoutRecorder(fail=fail, error=error)
         monkeypatch.setattr("console.us.views.run_python_script", runner)
 
-        response = app.test_client().post("/us/run-models")
+        response = app.test_client().post("/house/model", data=_model_form())
 
         assert response.status_code == 200
         body = html.unescape(response.get_data(as_text=True))
-        assert "Run US Models" in body
         assert "The run did not finish" in body
         assert "The export did not run, or did not finish." in body
+        assert "failed with exit code 1" in body
         assert error_name in body
         if partial is not None:
             assert partial in body
         # The sequence stopped at the failing step.
         assert [name for name, _ in runner.timeouts][-1] == fail
-
-    def test_a_run_whose_model_fails_leads_with_the_note(
-        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr("console.us.views.get_db", lambda: db)
-        runner = _RecordingRunner(return_codes={"run_us_house_model.py": 2})
-        monkeypatch.setattr("console.us.views.run_python_script", runner)
-
-        body = html.unescape(
-            app.test_client().post("/us/run-models").get_data(as_text=True)
-        )
-
-        assert "The run did not finish" in body
-        assert "ran run_us_house_model.py" in body
-
-    def test_a_successful_run_has_no_note(
-        self,
-        app: Flask,
-        db: Database,
-        monkeypatch: pytest.MonkeyPatch,
-        recording_runner: _RecordingRunner,
-    ) -> None:
-        monkeypatch.setattr("console.us.views.get_db", lambda: db)
-
-        body = app.test_client().post("/us/run-models").get_data(as_text=True)
-
-        assert "did not finish" not in body
-
-    def test_an_interrupted_run_shows_the_chambers_that_finished(
-        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr("console.us.views.get_db", lambda: db)
-        runner = _TimeoutRecorder(
-            fail="export_elections.py",
-            error=subprocess.TimeoutExpired(["python", "export_elections.py"], 300),
-        )
-        monkeypatch.setattr("console.us.views.run_python_script", runner)
-
-        body = html.unescape(
-            app.test_client().post("/us/run-models").get_data(as_text=True)
-        )
-
-        # Both models that ran finished; only the export died.
-        assert "=== Run US House model ===" in body
-        assert "=== Run US Senate model ===" in body
-        assert (
-            "Export elections to static data files did not finish: TimeoutExpired"
-            in body
-        )
-
-
-class TestRebuildAllHistory:
-    """The home page's "rebuild all US history" box on Run US Models."""
-
-    @pytest.fixture(autouse=True)
-    def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("console.us.views.get_db", lambda: db)
-
-    def test_ticked_rebuilds_every_chamber_then_exports(
-        self, app: Flask, db: Database, recording_runner: _RecordingRunner
-    ) -> None:
-        map_id = _seed_president_map(db)
-        db.set_tracked_matchup(map_id, None, VANCE_NEWSOM, source="manual")
-
-        response = app.test_client().post(
-            "/us/run-models", data={"rebuild_history": "on"}
-        )
-
-        assert response.status_code == 200
-        assert recording_runner.scripts == [
-            "run_us_house_model.py",
-            "run_us_presidential_model.py",
-            "run_us_senate_model.py",
-            "export_elections.py",
-        ]
-        for script in recording_runner.scripts[:3]:
-            assert recording_runner.args_for(script)[-1] == "--rebuild-history"
-            # A rebuild at the ordinary step timeout would be killed part-way.
-            assert recording_runner.timeouts[script] == REBUILD_TIMEOUT_SECONDS
-        assert recording_runner.timeouts["export_elections.py"] == STEP_TIMEOUT_SECONDS
-        body = html.unescape(response.get_data(as_text=True))
-        assert "Rebuild US History" in body
-        # The page shows the command that ran, poll windows included.
-        assert (
-            "run_us_house_model.py --since-days-back 60 --rebuild-history" in body
-        )
         assert not MODEL_RUN_LOCK.locked()
 
-    @pytest.mark.parametrize(
-        ("form", "refused"),
-        [({"rebuild_history": "on"}, "History not rebuilt"), ({}, "Models not run")],
-    )
-    def test_a_run_in_progress_refuses_it_and_runs_nothing(
-        self,
-        app: Flask,
-        recording_runner: _RecordingRunner,
-        form: dict[str, str],
-        refused: str,
+    def test_an_interrupted_dry_run_says_nothing_needs_repairing(
+        self, app: Flask, model_db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # An ordinary run is refused too: its export would publish whatever
-        # half-cleared history a rebuild in progress had left.
-        client = app.test_client()
-        with MODEL_RUN_LOCK:
-            response = client.post("/us/run-models", data=form)
-
-        assert response.status_code == 302
-        assert response.headers["Location"] == "/"
-        assert recording_runner.calls == []
-        assert _flashes(client, response)[-1] == (
-            f"{refused}: another US model run or history rebuild is in progress; "
-            "wait for it to finish, then try again."
+        runner = _TimeoutRecorder(
+            fail="run_us_house_model.py",
+            error=subprocess.TimeoutExpired(["python", "run_us_house_model.py"], 300),
         )
-
-    def test_a_rebuild_whose_model_fails_says_history_may_be_partial(
-        self, app: Flask, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        # Exiting non-zero stops the sequence like a timeout does, after the
-        # runner may have cleared that chamber's points.
-        runner = _RecordingRunner(return_codes={"run_us_senate_model.py": 1})
         monkeypatch.setattr("console.us.views.run_python_script", runner)
 
-        response = app.test_client().post(
-            "/us/run-models", data={"rebuild_history": "on"}
+        body = html.unescape(
+            app.test_client()
+            .post("/house/model", data=_model_form({"dry_run": "true"}))
+            .get_data(as_text=True)
         )
 
-        body = html.unescape(response.get_data(as_text=True))
-        assert "the chamber it stopped on may be partial" in body
-        assert "export_elections.py" not in runner.scripts
+        assert "The dry run did not finish. It writes nothing" in body
+        assert "export may be out of step" not in body
 
     def test_an_interrupted_rebuild_says_history_may_be_partial(
-        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+        self, app: Flask, model_db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         runner = _TimeoutRecorder(
             fail="run_us_senate_model.py",
@@ -712,31 +1035,61 @@ class TestRebuildAllHistory:
         monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         response = app.test_client().post(
-            "/us/run-models", data={"rebuild_history": "on"}
+            "/senate/model", data=_model_form({"rebuild_history": "on"})
         )
 
         assert response.status_code == 200
         body = html.unescape(response.get_data(as_text=True))
-        assert "Rebuild US History" in body
-        assert "the chamber it stopped on may be partial" in body
+        assert "this chamber's trend history may be partial" in body
         assert "Re-run the rebuild" in body
-        assert "=== Run US House model ===" in body
         assert ("run_us_senate_model.py", REBUILD_TIMEOUT_SECONDS) in runner.timeouts
         assert not MODEL_RUN_LOCK.locked()
 
-    @pytest.mark.parametrize("path", ["/house", "/senate", "/president"])
-    def test_the_landing_pages_offer_the_box_behind_a_warning(
-        self, app: Flask, path: str
+    def test_a_model_that_fails_leads_with_the_note_and_skips_the_export(
+        self, app: Flask, model_db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        body = html.unescape(app.test_client().get(path).get_data(as_text=True))
+        runner = _RecordingRunner(return_codes={"run_us_house_model.py": 2})
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
 
-        form = body[body.index('action="/us/run-models"') :]
-        form = form[: form.index("</form>")]
-        # No ``value``: the browser then sends "on", which the route matches.
-        assert '<input type="checkbox" name="rebuild_history">' in form
-        assert "Rebuild all US history" in form
-        assert "return !this.rebuild_history.checked || confirm(" in form
-        assert "can take hours" in form
+        body = html.unescape(
+            app.test_client().post("/house/model", data=_model_form()).get_data(
+                as_text=True
+            )
+        )
+
+        assert runner.scripts == ["run_us_house_model.py"]
+        assert "The run did not finish" in body
+        assert "ran run_us_house_model.py" in body
+        assert "The run failed with exit code 2" in body
+
+    def test_an_export_that_fails_is_shown_as_a_failed_run(
+        self, app: Flask, model_db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        runner = _RecordingRunner(return_codes={"export_elections.py": 1})
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
+
+        body = html.unescape(
+            app.test_client().post("/house/model", data=_model_form()).get_data(
+                as_text=True
+            )
+        )
+
+        assert runner.scripts == ["run_us_house_model.py", "export_elections.py"]
+        assert "<strong>Exit code:</strong> 1</p>" in body
+        assert "The run failed with exit code 1" in body
+
+    def test_a_successful_run_has_no_interruption_note(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+    ) -> None:
+        body = app.test_client().post("/house/model", data=_model_form()).get_data(
+            as_text=True
+        )
+
+        assert "did not finish" not in body
+        assert "<strong>Exit code:</strong> 0</p>" in body
 
 
 # ── Matchup pages ─────────────────────────────────────────────────────────
@@ -841,7 +1194,9 @@ class TestMatchupRoutesRegistered:
         }
         assert {"GET", "POST"} <= methods["/president/matchup"]
         assert "GET" in methods["/<any(house,senate):chamber>/matchups"]
-        assert "POST" in methods["/us/matchups/<int:map_id>/<int:seat_id>"]
+        assert "POST" in methods[
+            "/<any(house,senate):chamber>/matchups/<int:map_id>/<int:seat_id>"
+        ]
 
     def test_landing_pages_link_to_their_matchup_pages(self, app: Flask) -> None:
         client = app.test_client()
@@ -852,10 +1207,15 @@ class TestMatchupRoutesRegistered:
             body = client.get(f"/{chamber}").get_data(as_text=True)
             assert f'href="/{chamber}/matchups"' in body
 
-    def test_import_page_links_to_matchup_pages(self, app: Flask) -> None:
-        body = app.test_client().get("/us/import").get_data(as_text=True)
-        assert 'href="/president/matchup"' in body
-        assert 'href="/senate/matchups"' in body
+    def test_import_pages_link_to_their_own_matchup_page(self, app: Flask) -> None:
+        client = app.test_client()
+        president = client.get("/president/polls/import").get_data(as_text=True)
+        assert 'href="/president/matchup"' in president
+        assert 'href="/senate/matchups"' not in president
+        for chamber in ("senate", "house"):
+            body = client.get(f"/{chamber}/polls/import").get_data(as_text=True)
+            assert f'href="/{chamber}/matchups"' in body
+            assert 'href="/president/matchup"' not in body
 
 
 class TestPresidentMatchupPage:
@@ -1066,7 +1426,7 @@ class TestPollDetailShowsUsScope:
 
 
 class TestRaceMatchupsPage:
-    """GET /house|senate/matchups and POST /us/matchups/<map_id>/<seat_id>."""
+    """GET /house|senate/matchups and POST /<chamber>/matchups/<map_id>/<seat_id>."""
 
     @pytest.fixture(autouse=True)
     def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1094,7 +1454,7 @@ class TestRaceMatchupsPage:
         assert f"{PAXTON_TALARICO} — 2 poll(s), latest" in texas_row
         assert "2026-09-05" in texas_row
         assert f"{CORNYN_TALARICO} — 1 poll(s), latest" in texas_row
-        assert f"/us/matchups/{map_id}/{seeded['texas']}" in texas_row
+        assert f"/senate/matchups/{map_id}/{seeded['texas']}" in texas_row
         georgia_row = body[body.index('<th scope="row">Georgia</th>'):]
         georgia_row = georgia_row[: georgia_row.index("</tr>")]
         assert f"{OSSOFF_COLLINS} (auto)" in georgia_row
@@ -1136,7 +1496,7 @@ class TestRaceMatchupsPage:
         client = app.test_client()
 
         response = client.post(
-            f"/us/matchups/{map_id}/{texas}",
+            f"/senate/matchups/{map_id}/{texas}",
             data={"action": "set", "matchup": CORNYN_TALARICO},
         )
 
@@ -1164,7 +1524,7 @@ class TestRaceMatchupsPage:
         db.set_tracked_matchup(map_id, texas, CORNYN_TALARICO, source="manual")
         client = app.test_client()
 
-        response = client.post(f"/us/matchups/{map_id}/{texas}", data={"action": "auto"})
+        response = client.post(f"/senate/matchups/{map_id}/{texas}", data={"action": "auto"})
 
         tracked = db.get_tracked_matchup(map_id, texas)
         assert tracked is not None
@@ -1179,7 +1539,7 @@ class TestRaceMatchupsPage:
         client = app.test_client()
 
         response = client.post(
-            f"/us/matchups/{seeded['map_id']}/{seeded['texas']}", data={"action": "auto"}
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}", data={"action": "auto"}
         )
 
         assert response.status_code == 302
@@ -1201,7 +1561,7 @@ class TestRaceMatchupsPage:
             db.clear_tracked_matchup_override(map_id, texas)
         client = app.test_client()
 
-        response = client.post(f"/us/matchups/{map_id}/{texas}", data={"action": "auto"})
+        response = client.post(f"/senate/matchups/{map_id}/{texas}", data={"action": "auto"})
 
         assert db.get_tracked_matchup(map_id, texas) is None
         (message,) = _flashes(client, response)
@@ -1217,7 +1577,7 @@ class TestRaceMatchupsPage:
         db.set_tracked_matchup(map_id, texas, PAXTON_TALARICO, source="auto")
         client = app.test_client()
 
-        response = client.post(f"/us/matchups/{map_id}/{texas}", data={"action": "ignore"})
+        response = client.post(f"/senate/matchups/{map_id}/{texas}", data={"action": "ignore"})
 
         tracked = db.get_tracked_matchup(map_id, texas)
         assert tracked is not None
@@ -1237,7 +1597,7 @@ class TestRaceMatchupsPage:
         client = app.test_client()
 
         response = client.post(
-            f"/us/matchups/{map_id}/{texas}",
+            f"/senate/matchups/{map_id}/{texas}",
             data={"action": "set", "matchup": OSSOFF_COLLINS},
         )
 
@@ -1253,7 +1613,7 @@ class TestRaceMatchupsPage:
         seeded = _seed_senate_races(db)
         client = app.test_client()
 
-        response = client.post(f"/us/matchups/{seeded['map_id']}/{seeded['texas']}", data={"action": "set"})
+        response = client.post(f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}", data={"action": "set"})
 
         assert "not a matchup stored for this race" in _flashes(client, response)[0]
         assert db.get_tracked_matchup(seeded["map_id"], seeded["texas"]) is None
@@ -1263,7 +1623,7 @@ class TestRaceMatchupsPage:
         client = app.test_client()
 
         response = client.post(
-            f"/us/matchups/{seeded['map_id']}/{seeded['texas']}", data={"action": "delete"}
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}", data={"action": "delete"}
         )
 
         assert _flashes(client, response) == ["Texas: not saved — Unknown matchup action 'delete'."]
@@ -1278,7 +1638,7 @@ class TestRaceMatchupsPage:
         client = app.test_client()
 
         response = client.post(
-            f"/us/matchups/{seeded['map_id']}/{house_seat.id}",
+            f"/senate/matchups/{seeded['map_id']}/{house_seat.id}",
             data={"action": action, "matchup": PAXTON_TALARICO},
         )
 
@@ -1294,7 +1654,7 @@ class TestRaceMatchupsPage:
         house_seat = db.add_seat(house_map_id, "TX-07")
         client = app.test_client()
 
-        response = client.post(f"/us/matchups/{seeded['map_id']}/{house_seat.id}", data={"action": "ignore"})
+        response = client.post(f"/senate/matchups/{seeded['map_id']}/{house_seat.id}", data={"action": "ignore"})
 
         assert _flashes(client, response) == [
             f"TX-07: not saved — seat {house_seat.id} belongs to map {house_map_id},"
@@ -1304,15 +1664,49 @@ class TestRaceMatchupsPage:
     def test_map_without_race_matchups_is_flashed(self, app: Flask, db: Database) -> None:
         president_map_id = _seed_president_matchups(db)
         nevada = db.get_seats_for_map(president_map_id)[0]
+        db.add_map("US Senate 2024")  # so the page the refusal returns to renders
         client = app.test_client()
 
         response = client.post(
-            f"/us/matchups/{president_map_id}/{nevada.id}", data={"action": "ignore"}
+            f"/senate/matchups/{president_map_id}/{nevada.id}", data={"action": "ignore"}
         )
 
         assert response.status_code == 302
         assert _flashes(client, response) == [f"Map #{president_map_id} has no per-race matchups."]
         assert db.get_tracked_matchup(president_map_id, nevada.id) is None
+
+    def test_a_chamber_that_does_not_own_the_map_is_refused(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        seeded = _seed_senate_races(db)
+        map_id, texas = seeded["map_id"], seeded["texas"]
+        db.add_map("US House Districts 2024")  # so the page it returns to renders
+        client = app.test_client()
+
+        response = client.post(
+            f"/house/matchups/{map_id}/{texas}",
+            data={"action": "ignore", "rebuild_history": "on"},
+        )
+
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith("/house/matchups")
+        assert _flashes(client, response) == [
+            f"Map #{map_id} is not the US House race map."
+        ]
+        assert db.get_tracked_matchup(map_id, texas) is None
+        assert recording_runner.calls == []
+
+    def test_the_president_is_not_a_matchup_chamber(
+        self, app: Flask, db: Database
+    ) -> None:
+        seeded = _seed_senate_races(db)
+
+        response = app.test_client().post(
+            f"/president/matchups/{seeded['map_id']}/{seeded['texas']}",
+            data={"action": "ignore"},
+        )
+
+        assert response.status_code == 404
 
     def test_rebuild_runs_the_chamber_model_with_rebuild_history(
         self, app: Flask, db: Database, recording_runner: _RecordingRunner
@@ -1320,7 +1714,7 @@ class TestRaceMatchupsPage:
         seeded = _seed_senate_races(db)
 
         response = app.test_client().post(
-            f"/us/matchups/{seeded['map_id']}/{seeded['texas']}",
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
             data={"action": "set", "matchup": PAXTON_TALARICO, "rebuild_history": "on"},
         )
 
@@ -1340,7 +1734,7 @@ class TestRaceMatchupsPage:
         seat = db.add_seat(map_id, "TX-07")
 
         app.test_client().post(
-            f"/us/matchups/{map_id}/{seat.id}",
+            f"/house/matchups/{map_id}/{seat.id}",
             data={"action": "ignore", "rebuild_history": "on"},
         )
 
@@ -1353,7 +1747,7 @@ class TestRaceMatchupsPage:
         seeded = _seed_senate_races(db)
 
         app.test_client().post(
-            f"/us/matchups/{seeded['map_id']}/{seeded['texas']}",
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
             data={"action": "set", "matchup": OSSOFF_COLLINS, "rebuild_history": "on"},
         )
 
@@ -1411,17 +1805,27 @@ class TestRebuildTimeout:
     def test_the_rebuild_timeout_is_much_larger_than_a_step(self) -> None:
         assert REBUILD_TIMEOUT_SECONDS >= 10 * STEP_TIMEOUT_SECONDS
 
-    def test_only_rebuilt_chambers_get_the_rebuild_timeout(self, db: Database) -> None:
-        map_id = _seed_president_map(db)
-        db.set_tracked_matchup(map_id, None, VANCE_NEWSOM, source="manual")
+    def test_only_the_rebuild_step_gets_the_rebuild_timeout(self, db: Database) -> None:
         runner = _TimeoutRecorder()
 
-        run_us_models_and_export(db, runner=runner, rebuild={"senate"})
+        run_us_chamber_and_export(
+            db, US_CHAMBERS_BY_SLUG["senate"], runner=runner, rebuild_history=True
+        )
 
         assert runner.timeouts == [
-            ("run_us_house_model.py", STEP_TIMEOUT_SECONDS),
-            ("run_us_presidential_model.py", STEP_TIMEOUT_SECONDS),
             ("run_us_senate_model.py", REBUILD_TIMEOUT_SECONDS),
+            ("export_elections.py", STEP_TIMEOUT_SECONDS),
+        ]
+
+    def test_a_plain_run_uses_the_step_timeout_throughout(self, db: Database) -> None:
+        runner = _TimeoutRecorder()
+
+        run_us_chamber_and_export(
+            db, US_CHAMBERS_BY_SLUG["senate"], runner=runner, rebuild_history=False
+        )
+
+        assert runner.timeouts == [
+            ("run_us_senate_model.py", STEP_TIMEOUT_SECONDS),
             ("export_elections.py", STEP_TIMEOUT_SECONDS),
         ]
 
@@ -1446,10 +1850,10 @@ class TestRebuildTimeout:
         )
         assert str(copied) == str(caught.value)
 
-    def test_an_interrupted_run_keeps_the_steps_that_finished(
+    def test_an_interrupted_run_keeps_what_the_dying_step_printed(
         self, db: Database
     ) -> None:
-        # House finishes; Senate times out after printing a line; no export.
+        # The Senate model times out after printing a line; no export.
         runner = _TimeoutRecorder(
             fail="run_us_senate_model.py",
             error=subprocess.TimeoutExpired(
@@ -1461,16 +1865,16 @@ class TestRebuildTimeout:
         )
 
         with pytest.raises(UsModelRunInterrupted) as caught:
-            run_us_models_and_export(db, runner=runner)
+            run_us_chamber_and_export(
+                db, US_CHAMBERS_BY_SLUG["senate"], runner=runner, rebuild_history=False
+            )
 
         interrupted = caught.value
         assert interrupted.step == "Run US Senate model"
         assert str(interrupted).startswith("Run US Senate model did not finish:")
         partial = interrupted.partial
         assert partial.return_code == 1
-        # President has no tracked matchup here, so it was skipped, not run.
-        assert partial.skipped == frozenset({"president"})
-        assert partial.stdout.split("\n=== ")[0] == "=== Run US House model ===\n"
+        assert partial.skipped == frozenset()
         senate = "=== Run US Senate model ===\nSENATE reached 2026-09-10"
         assert senate in partial.stdout
         assert "Export" not in partial.stdout
@@ -1540,7 +1944,7 @@ class TestRebuildRouteFailure:
         monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         response = app.test_client().post(
-            f"/us/matchups/{seeded['map_id']}/{seeded['texas']}",
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
             data={"action": "set", "matchup": PAXTON_TALARICO, "rebuild_history": "on"},
         )
 
@@ -1565,7 +1969,7 @@ class TestModelRunSlot:
         seeded = _seed_senate_races(db)
         client = app.test_client()
         response = client.post(
-            f"/us/matchups/{seeded['map_id']}/{seeded['texas']}",
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
             data={"action": "set", "matchup": PAXTON_TALARICO, "rebuild_history": "on"},
         )
         return client, response

@@ -1,14 +1,14 @@
 """Plain-data description of a model run form, rendered by ``model_run.html``.
 
-The Westminster and Holyrood model pages share one template; each route builds
-a :class:`RunForm` from its dropdown choices and the template loops over the
-fields.
+The Westminster, Holyrood and three US model pages share one template; each
+route builds a :class:`RunForm` from its dropdown choices and the template loops
+over the fields, then the checkboxes.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import cast
 
 
@@ -31,13 +31,105 @@ class RunFormField:
 
 
 @dataclass(frozen=True)
+class RunFormCheckbox:
+    """A labelled checkbox; the browser sends ``"on"`` when it is ticked.
+
+    Attributes:
+        name: Form field name.
+        label: Text beside the box.
+        help: Smaller explanatory text under the label, if any.
+    """
+
+    name: str
+    label: str
+    help: str = ""
+
+
+@dataclass(frozen=True)
 class RunForm:
-    """Everything the shared template needs to draw a model run form."""
+    """Everything the shared template needs to draw a model run form.
+
+    Attributes:
+        title: Heading of the form.
+        action_endpoint: Endpoint the form posts to.
+        export_heading: Heading of the export's result block.
+        fields: The dropdown fields, in order.
+        action_values: URL values for ``action_endpoint``.
+        checkboxes: The checkboxes, drawn after the dropdowns.
+        confirm_checkbox: Name of the checkbox that asks for confirmation on
+            submit, or empty for none.
+        confirm_message: The confirmation prompt shown when that checkbox is
+            ticked.
+    """
 
     title: str
     action_endpoint: str
     export_heading: str
     fields: list[RunFormField]
+    action_values: Mapping[str, str] = field(default_factory=dict)
+    checkboxes: list[RunFormCheckbox] = field(default_factory=list)
+    confirm_checkbox: str = ""
+    confirm_message: str = ""
+
+
+EXPORT_CHECKBOX_NAME = "export_when_done"
+
+
+def export_checkbox() -> RunFormCheckbox:
+    """The "export when done" checkbox every model run form carries."""
+    return RunFormCheckbox(
+        EXPORT_CHECKBOX_NAME,
+        "Export when done",
+        "Refreshes the static data files after a successful run. "
+        "A dry run never exports, whatever this says.",
+    )
+
+
+def ticked(raw_form: Mapping[str, str], *names: str) -> dict[str, str]:
+    """Which of the named checkboxes a posted form ticked.
+
+    Args:
+        raw_form: The posted form fields.
+        *names: Checkbox field names.
+
+    Returns:
+        ``"on"`` for each ticked box and ``""`` for each unticked one, the
+        values the template reads back to redraw the boxes.
+    """
+    return {name: "on" if raw_form.get(name) == "on" else "" for name in names}
+
+
+def run_summary(
+    *,
+    dry_run: bool,
+    export: bool,
+    return_code: int,
+    export_return_code: int | None = None,
+) -> str:
+    """One sentence saying what a finished model run did.
+
+    Args:
+        dry_run: Whether the run was a dry run.
+        export: Whether "export when done" was ticked.
+        return_code: The model run's exit code.
+        export_return_code: The export step's exit code, or None when no
+            export ran.
+    """
+    if return_code != 0:
+        return f"The run failed with exit code {return_code}; see the output below."
+    if export_return_code:
+        return (
+            "The run finished but the export failed with exit code "
+            f"{export_return_code}; see the output below."
+        )
+    if dry_run:
+        return (
+            "Dry run: the model computed without writing anything, "
+            "and nothing was exported."
+        )
+    if export:
+        return "The run finished and the export was requested; its output is below."
+    return "The run finished. Export when done was off, so nothing was exported."
 
 
 def name_options(names: Iterable[str]) -> list[RunFormOption]:
@@ -56,9 +148,14 @@ def day_options(values: Iterable[int]) -> list[RunFormOption]:
     return [RunFormOption(str(v), str(v)) for v in values]
 
 
+def decimal_options(values: Iterable[float]) -> list[RunFormOption]:
+    """Options for a decimal dropdown, shown to one decimal place."""
+    return [RunFormOption(f"{v:.1f}", f"{v:.1f}") for v in values]
+
+
 def half_life_options(values: Iterable[float]) -> list[RunFormOption]:
     """Options for the half-life dropdown, shown to one decimal place."""
-    return [RunFormOption(f"{v:.1f}", f"{v:.1f}") for v in values]
+    return decimal_options(values)
 
 
 def output_csv_options(values: Iterable[str]) -> list[RunFormOption]:

@@ -2,7 +2,7 @@
 {% block container_class %} container-wide{% endblock %}
 {% block content %}
   <section class="card">
-    <h2>All Polls</h2>
+    <h2>{{ title }}</h2>
     <p>
       n is the respondent count behind the national shares: the captured base
       (<code>base:&lt;kind&gt;</code>; <code>(weighted)</code> marks a pollster
@@ -27,7 +27,7 @@
       </p>
     {% endif %}
     {% if not polls %}
-      <p>No polls have been imported yet.</p>
+      <p>No {{ section.label ~ " " if section else "" }}polls have been imported yet.</p>
     {% else %}
       <div class="table-wrap">
         <table>
@@ -78,6 +78,7 @@
                 </td>
                 <td>
                   <form method="post" action="{{ url_for('polls.delete_poll', poll_id=poll.poll_id) }}" class="inline-form">
+                    {% if section %}<input type="hidden" name="next_section" value="{{ section.slug }}">{% endif %}
                     <button type="submit" class="button button-danger">Delete</button>
                   </form>
                 </td>

@@ -4,11 +4,21 @@
 {% block content %}
   <section class="card">
     <h2>{{ run_form.title }}</h2>
-    <form method="post" action="{{ url_for(run_form.action_endpoint) }}" class="form">
+    <form method="post" action="{{ url_for(run_form.action_endpoint, **run_form.action_values) }}" class="form"
+          {%- if run_form.confirm_checkbox %}
+          onsubmit="return !this.{{ run_form.confirm_checkbox }}.checked || confirm({{ run_form.confirm_message | tojson | forceescape }});"
+          {%- endif %}>
       {% for field in run_form.fields %}
         {% set help = (explanations | selectattr('flag', 'equalto', field.flag) | map(attribute='description') | list | first) %}
         {{ select_field(field.name, help, field.flag, field.options, form_values[field.name], field.required) }}
 
+      {% endfor %}
+      {% for checkbox in run_form.checkboxes %}
+        <label class="checkbox">
+          <input type="checkbox" name="{{ checkbox.name }}"{% if form_values[checkbox.name] %} checked{% endif %}>
+          {{ checkbox.label }}
+        </label>
+        {% if checkbox.help %}<small>{{ checkbox.help }}</small>{% endif %}
       {% endfor %}
       <button type="submit" class="button primary">Run Model</button>
     </form>
@@ -16,6 +26,7 @@
 
   {% if run_result %}
     <section class="card">
+      {% if run_result.summary %}<p><strong>{{ run_result.summary }}</strong></p>{% endif %}
       {{ run_result_block(run_result, "Run Result", 4) }}
 
       {% if run_result.export_result %}

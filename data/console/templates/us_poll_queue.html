@@ -5,7 +5,7 @@
   warning_alerts %}
 {% block content %}
   <section class="card">
-    <h2>US Poll Import</h2>
+    <h2>{{ chamber.label }} Poll Import</h2>
     {{ progress_line("Poll %s of %s"|format(progress.position, progress.total), progress) }}
     <p><strong>Contest:</strong> {{ contest_label }}</p>
     <p><strong>Race:</strong> {{ row.seat_name or "National" }}</p>
@@ -47,13 +47,13 @@
     {{ failed_card(
       item,
       "Retry resolves the poll against the database again; skip it below to move on.",
-      url_for('us_poll_import.skip', token=token),
+      url_for('us_poll_import.skip', chamber=chamber.slug, token=token),
       expected_index) }}
   {% elif plan %}
     <section class="card">
       <h3>Approve</h3>
       <p><strong>Stored as:</strong> {{ plan.pollster_name }}, {{ plan.rows|length }} row(s)</p>
-      <form method="post" action="{{ url_for('us_poll_import.confirm', token=token) }}" class="inline-form">
+      <form method="post" action="{{ url_for('us_poll_import.confirm', chamber=chamber.slug, token=token) }}" class="inline-form">
         <input type="hidden" name="expected_index" value="{{ expected_index }}" />
         <button type="submit" class="button primary">Approve &amp; Import</button>
       </form>
@@ -63,19 +63,19 @@
   <section class="card">
     <h3>Skip, Approve the Race, or Leave</h3>
     <div class="actions">
-      {{ skip_form(url_for('us_poll_import.skip', token=token), expected_index) }}
+      {{ skip_form(url_for('us_poll_import.skip', chamber=chamber.slug, token=token), expected_index) }}
       {% if group_remaining %}
-        <form method="post" action="{{ url_for('us_poll_import.approve_race', token=token) }}" class="inline-form">
+        <form method="post" action="{{ url_for('us_poll_import.approve_race', chamber=chamber.slug, token=token) }}" class="inline-form">
           <input type="hidden" name="expected_index" value="{{ expected_index }}" />
           <button type="submit" class="button">Approve all {{ group_remaining }} remaining in {{ race_label }}</button>
         </form>
       {% endif %}
-      {{ abandon_form(url_for('us_poll_import.finish', token=token)) }}
+      {{ abandon_form(url_for('us_poll_import.finish', chamber=chamber.slug, token=token)) }}
     </div>
     <p>
       Approving the race imports every poll still pending in it without showing each one.
       Abandoning stops the run without importing anything further and without running the
-      models; the races already imported are still tracked.
+      model; the races already imported are still tracked.
     </p>
   </section>
 {% endblock %}

@@ -9,15 +9,8 @@ from console.sections import SECTIONS_BY_SLUG
 bp = Blueprint("sections", __name__)
 
 # Actions that are not plain links and so are not in the navigation: Holyrood's
-# one-click import, and the combined US model run that the three US sections
-# share until each gets its own run form.
-_US_RUN_FORM = "_us_run_models_form.html"
-_EXTRAS = {
-    "holyrood": "_holyrood_import_form.html",
-    "house": _US_RUN_FORM,
-    "senate": _US_RUN_FORM,
-    "president": _US_RUN_FORM,
-}
+# one-click import.
+_EXTRAS = {"holyrood": "_holyrood_import_form.html"}
 
 
 def _landing(slug: str) -> str:

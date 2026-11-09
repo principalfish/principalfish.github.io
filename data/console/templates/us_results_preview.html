@@ -19,11 +19,11 @@
       {% endfor %}
     </ul>
     <p>{{ specials_note }}</p>
-    <form method="post" action="{{ url_for('us_results.us_results_confirm', token=token) }}" class="form-inline">
+    <form method="post" action="{{ url_for('us_results.us_results_confirm', chamber=chamber, token=token) }}" class="form-inline">
       <button type="submit" class="button primary">Confirm: write files and import</button>
     </form>
     <p>
-      <a class="button" href="{{ url_for('us_results.us_results_form') }}">Back to US results</a>
+      <a class="button" href="{{ url_for('us_results.us_results_form', chamber=chamber) }}">Back to US {{ chamber_label }} results</a>
     </p>
   </section>
 

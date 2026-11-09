@@ -27,7 +27,7 @@
 
 {% block content %}
   <section class="card">
-    <h2>US Poll Import Summary</h2>
+    <h2>{{ chamber.label }} Poll Import Summary</h2>
     {{ progress_line("%s polls queued"|format(progress.total), progress) }}
     <p><strong>Window:</strong> {{ cutoff_label }}</p>
     <p>
@@ -42,7 +42,7 @@
         instead of being imported again.
       </p>
     {% endif %}
-    {{ summary_actions(url_for('us_poll_import.import_form'), "Import again") }}
+    {{ summary_actions(url_for('us_poll_import.import_form', chamber=chamber.slug), "Import again") }}
   </section>
 
   <section class="card">
@@ -59,7 +59,7 @@
       {% if tracking_changed and model_run and model_run.return_code == 0 %}
         <p>
           Only today's trend point follows a moved matchup. To move the earlier
-          points, open that chamber's race matchups and press Use automatic on one
+          points, open the race matchups and press Use automatic on one
           of its races with Rebuild history ticked.
         </p>
       {% endif %}
@@ -67,9 +67,11 @@
       <p>No race's tracked matchup changed.</p>
     {% endif %}
     <div class="actions">
-      <a class="button" href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate race matchups</a>
-      <a class="button" href="{{ url_for('us.race_matchups', chamber='house') }}">House race matchups</a>
-      <a class="button" href="{{ url_for('us.president_matchup') }}">President matchup</a>
+      {% if chamber.slug == "president" %}
+        <a class="button" href="{{ url_for('us.president_matchup') }}">President matchup</a>
+      {% else %}
+        <a class="button" href="{{ url_for('us.race_matchups', chamber=chamber.slug) }}">{{ chamber.label }} race matchups</a>
+      {% endif %}
     </div>
   </section>
 
@@ -79,7 +81,7 @@
 
   {% if model_run %}
     <section class="card">
-      <h3>Models and Export</h3>
+      <h3>Model and Export</h3>
       <p>
         Return code {{ model_run.return_code }}{% if model_run.skipped %}
         · skipped: {{ model_run.skipped|sort|join(", ") }}{% endif %}

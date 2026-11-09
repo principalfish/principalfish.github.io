@@ -10,7 +10,7 @@ Every existing diagnostic number stays visible, along with the safeguards around
 
 ## Plan
 
-_2026-11-09 · 4 of 12 pieces done · now: waiting on a decision_
+_2026-11-09 · 4 of 12 pieces done · now: piece 5 in progress_
 
 - [x] **1/12 Section registry and internal layout** · `0b98a7b1`
   Define the five sections in one place and reorganise the console's code, with no visible change.
@@ -20,7 +20,7 @@ _2026-11-09 · 4 of 12 pieces done · now: waiting on a decision_
   Merge near-duplicate pages and routes.
 - [x] **4/12 One URL shape** · `572cee15`
   Give every section the same URLs.
-- [ ] **5/12 Section parity** · not started
+- [ ] **5/12 Section parity** · in progress
   Filtered polls, per-chamber US runs and imports, and export-when-done on each run form.
 - [ ] **6/12 Global export page** · not started
   One page to tick sections and what to write, with dry run on by default.

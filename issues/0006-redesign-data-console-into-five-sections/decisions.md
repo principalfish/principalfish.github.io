@@ -36,6 +36,11 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - `/polls` and poll detail sit under a top-level "All polls" link with no current section; `/polls/coverage` sits under Westminster (user, 2026-11-09, by starting piece 2 on that recommendation)
 - New pages are `/westminster`, `/holyrood`, `/house`, `/senate`, `/president`, `/admin`; the 75 existing rules stay unchanged (user, 2026-11-09, by starting piece 2 on that recommendation)
 - Until piece 5 replaces it, the "Run US models" form appears on all three US landing pages through one shared partial (user, 2026-11-09, by starting piece 2 on that recommendation)
+- Each US run form offers dry run (default yes), poll window (`--since-days-back`, defaulting to 60 House, 120 President, 60 Senate), half-life (30), seat prior weight (1.0), ignore seat polls (off) and rebuild history; date-range backfills and flags such as `--continue-on-error` stay command-line only (user, 2026-11-09, by starting piece 5 on that recommendation)
+- The rebuild confirm is reworded for the one chamber and pinned by a test, since "Rebuild ALL US history?" would be wrong on a one-chamber form; the rebuild options on the matchup pages stay (user, 2026-11-09, by starting piece 5 on that recommendation)
+- Piece 5's manual review starts one auto import and leaves it at the first step without pressing Abandon, because abandoning still relabels polls and applies automatic tracking to the live database; tests cover the abandon path (user, 2026-11-09, by starting piece 5 on that recommendation)
+- A dry run never exports, whatever the "export when done" box says, and the form says so; the queue's "run model at end" keeps exporting as it does now (user, 2026-11-09, by starting piece 5 on that recommendation)
+- The US import, queue and results pages become per-chamber pages built from shared views: `/<house, senate or president>/polls/import…`, `/<house or senate>/results…`, `/senate/results/current-senate`, `/<house or senate>/matchups/<map>/<seat>` (user, 2026-11-09, by starting piece 5 on that recommendation)
 
 ## Open
 

@@ -128,16 +128,16 @@ Rejected:
    - Files: `console/us/*`, `console/polls/*`, `console/holyrood/*`, `shared/runner.py`, the run form, `console/forms.py`.
    - What:
      - `/<section>/polls` lists that section's polls, filtered by `map.parliament`, with the same table and numbers as today. `/polls` stays as the all-polls view.
-     - House, Senate and President each get a run form with the US runners' parameters and a dry run default. Remove `/us/run-models`. The "Rebuild all history" option and its confirm move to each form, keeping the tested confirm text.
-     - Add "export when done" to all five run forms.
+     - House, Senate and President each get a run form: dry run (default yes), poll window (`--since-days-back`, defaulting to 60 House, 120 President, 60 Senate), half-life (30), seat prior weight (1.0), ignore seat polls (off) and rebuild history. Date-range backfills and flags such as `--continue-on-error` stay command-line only. Remove `/us/run-models`; there is no "run all US" action. The rebuild option moves to each form with its confirm reworded for the one chamber and pinned by a test. The rebuild options on the matchup pages stay.
+     - Add "export when done" to all five run forms. A dry run never exports, whatever the box says, and the form says so. The queue's "run model at end" keeps exporting as it does now.
      - Auto import opens the existing US queue limited to that section's contests. Queue finish runs only that section's model; automatic matchup tracking is unchanged.
-     - `/us/import…`, `/us/results…`, `/us/run-models` and the matchup save action `/us/matchups/<map>/<seat>` move to the section shape here, with no redirects, as in piece 4.
+     - `/us/import…`, `/us/results…` and the matchup save action `/us/matchups/<map>/<seat>` move to per-chamber pages built from shared views, with no redirects, as in piece 4: `/<house, senate or president>/polls/import…`, `/<house or senate>/results…`, `/senate/results/current-senate`, `/<house or senate>/matchups/<map>/<seat>`.
      - Matchups, NYT results and Current Senate move into their sections. Delete for polls and runs is available in every section.
    - Functions: `run_us_chamber_and_export`, `UsQueueStartForm`, queue `finish`.
    - Depends on: 4.
    - Acceptance: every section offers the agreed actions, with Import poll only on Westminster; `model_run_slot` held on every US run path.
    - Tests: section poll lists include only their own polls; each US run form sends only its chamber's script and parameters; "export when done" off skips the export and on runs what today's flow runs; queue finish runs only the section's model; `model_run_slot` refuses a concurrent run from each form.
-   - Manual review: open each section's Polls and Model pages. Do a dry-run model for one US section, and start then abandon one auto import.
+   - Manual review: open each section's Polls and Model pages. Do a dry-run model for one US section, and start one auto import and leave it at the first step without pressing Abandon: abandoning still relabels polls and applies automatic tracking to the live database, so tests cover that path.
 
 6. **Global export page**
    - Files: `export/export_elections.py`, new export view and template under `console/admin/`, `console/paths.py`, export tests.

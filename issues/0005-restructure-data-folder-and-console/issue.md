@@ -10,7 +10,7 @@ The console's pages don't change here, only its imports. Its redesign is a separ
 
 ## Plan
 
-_2026-11-09 · 10 of 10 pieces done · now: all done, in review, waiting on a decision_
+_2026-11-09 · 10 of 10 pieces done · now: all done, in review_
 
 - [x] **1/10 Editable install, archive folder, dead files** · `4b0f4475`
   Make `data/` installable so scripts can import normally, and create the archive folder.

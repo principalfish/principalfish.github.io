@@ -54,3 +54,4 @@
 - 2026-11-08 16:13 · restructure-data-folder-and-console (0005) · branch = claude/restructure-data-folder-e05123
 - 2026-11-08 16:13 · restructure-data-folder-and-console (0005) · planned → building
 - 2026-11-08 16:16 · restructure-data-folder-and-console (0005) · PR #84
+- 2026-11-09 10:42 · restructure-data-folder-and-console (0005) · building → review

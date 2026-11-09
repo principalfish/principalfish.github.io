@@ -3,13 +3,13 @@
   "slug": "restructure-data-folder-and-console",
   "title": "Reorganise data/ by pipeline role",
   "mode": "refactor",
-  "state": "building",
+  "state": "review",
   "branch": "claude/restructure-data-folder-e05123",
   "base": "master",
   "gh_issue": 82,
   "build_model": null,
   "created": "2026-11-08 15:09",
-  "updated": "2026-11-08 16:16",
+  "updated": "2026-11-09 10:42",
   "done": null,
   "local": [
     {

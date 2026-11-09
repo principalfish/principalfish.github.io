@@ -1,4 +1,4 @@
-"""Tests for scripts.export.manifest — mapMode region/override/Senate-cycle building.
+"""Tests for export.manifest — mapMode region/override/Senate-cycle building.
 
 Covers the region attachment, ``regionNameOverride`` application (and stripping), and
 the durable ``senateClassCycle`` → concrete ``senateClassNextElection`` resolution that
@@ -11,28 +11,24 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import pytest
 from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload
 
-import export_elections
 from db import Database, SeatStatus
-from export_elections import DEM_PARTY_ID, REP_PARTY_ID, export_pages, missing_export_inputs
-from schema import Election, ElectionType, Party
-from scripts.export.manifest import (
+from export import export_elections
+from export.export_elections import DEM_PARTY_ID, REP_PARTY_ID, export_pages, missing_export_inputs
+from export.manifest import (
     _senate_class_next_election,
     assign_comparison_elections,
     build_map_modes_with_regions,
 )
-from scripts.export.uncertainty import UNCERTAINTY_FILENAME
+from export.uncertainty import UNCERTAINTY_FILENAME
+from schema import Election, ElectionType, Party
 
 
 class TestSenateClassNextElection:
@@ -120,7 +116,7 @@ class TestSenateClassFloor:
         )["23"]["senateClassNextElection"]
 
     def test_the_2026_export_rolls_class_2_on_to_2032(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        import scripts.export.manifest as manifest_module
+        import export.manifest as manifest_module
 
         class FakeDate:
             @staticmethod
@@ -378,7 +374,7 @@ class TestShippedUsShell:
         assert {"key": "seatsup", "label": "Seats up (2028)"} in senate["predict"]["tabs"]
 
     def test_the_archived_2026_forecasts_still_compare_against_their_own_baselines(self) -> None:
-        from scripts.export.manifest import US_MODEL_COMPARISON_IDS
+        from export.manifest import US_MODEL_COMPARISON_IDS
 
         assert US_MODEL_COMPARISON_IDS["us_house_model"] == "2024-us-house"
         assert US_MODEL_COMPARISON_IDS["us_senate_model"] == "2020-us-senate"
@@ -388,20 +384,20 @@ class TestSenateClassUpIn:
     CYCLE = {"base": {"1": 2018, "2": 2020, "3": 2022}, "period": 6}
 
     def test_each_class_is_up_on_its_cycle_years(self) -> None:
-        from scripts.export.manifest import senate_class_up_in
+        from export.manifest import senate_class_up_in
 
         assert [senate_class_up_in(self.CYCLE, year) for year in (2026, 2028, 2030, 2032, 2034, 2036)] == [
             2, 3, 1, 2, 3, 1,
         ]
 
     def test_a_year_no_class_lands_on_is_none(self) -> None:
-        from scripts.export.manifest import senate_class_up_in
+        from export.manifest import senate_class_up_in
 
         assert senate_class_up_in(self.CYCLE, 2027) is None
         assert senate_class_up_in({"base": {"1": 2018, "2": 2018}, "period": 6}, 2024) is None
 
     def test_a_malformed_cycle_is_none(self) -> None:
-        from scripts.export.manifest import senate_class_up_in
+        from export.manifest import senate_class_up_in
 
         bad_cycles: list[Any] = [None, [], {}, {"base": []}, {"base": {"1": "2018"}}, {"base": {"1": 2018}, "period": 0}]
         for bad in bad_cycles:

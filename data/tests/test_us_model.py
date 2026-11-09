@@ -31,9 +31,6 @@ from db import Database
 from importers.polls.us import us_polls_common
 from importers.polls.us.us_polls_common import CandidateColumn, matchup_label
 from model_support.io import OutputPublicationError
-from schema import ElectionType, Map, Party, Pollster, Seat
-from tests.us_ev_fixtures import seed_canonical_allocations
-
 from models.us import _common
 from models.us._common import (
     LatestPollUsage,
@@ -76,6 +73,8 @@ from models.us._common import (
     weighted_average,
     write_trend_cache_meta,
 )
+from schema import ElectionType, Map, Party, Pollster, Seat
+from tests.us_ev_fixtures import seed_canonical_allocations
 
 DEMOCRAT = 20
 REPUBLICAN = 21
@@ -2546,7 +2545,7 @@ class TestSenateSpecialElections:
         # One rule, two readers: the runner's own filter and the export's, over
         # the same payload, must name the same seats — including when the cycle
         # has passed and neither should keep anything.
-        from scripts.export.manifest import _live_senate_specials, senate_next_election_year
+        from export.manifest import _live_senate_specials, senate_next_election_year
 
         from models.us.run_us_senate_model import senate_special_elections
 
@@ -2765,7 +2764,7 @@ class TestSenateBaselineOverrides:
         }
 
     def test_the_model_and_the_export_agree_on_one_shell(self, tmp_path: Path) -> None:
-        from scripts.export.manifest import build_map_modes_with_regions
+        from export.manifest import build_map_modes_with_regions
 
         from models.us.run_us_senate_model import senate_seat_baseline_overrides
 

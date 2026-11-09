@@ -56,27 +56,13 @@ from config import DatabaseConfig
 from core.us_geography import parent_seat_name
 from db import Database
 from electoral_votes import allocation_year, get_electoral_votes, positive_integer
+from export.naming import is_folded_senate_special, manifest_id_for_election
 from importers.polls.us.us_polls_common import (
     MAJOR_PARTY_NAMES,
     MatchupCandidate,
     candidate_matches,
     matchup_candidates,
     matchup_stored_candidate_count,
-)
-from model_support.history import HistoryRecomputationError
-from model_support.io import publish_json, validate_output_target
-from model_support.trends import (
-    default_trend_path,
-    publish_trends,
-    trend_batch,
-    validate_trend_scope,
-)
-from model_support.persistence import (
-    OutputScope,
-    OutputVote,
-    delete_outputs,
-    output_dates,
-    replace_output,
 )
 from model_support.cli import (
     single_date_window,
@@ -86,6 +72,15 @@ from model_support.cli import (
     validate_half_life,
     validate_prior_weight,
     validate_run_arguments,
+)
+from model_support.history import HistoryRecomputationError
+from model_support.io import publish_json, validate_output_target
+from model_support.persistence import (
+    OutputScope,
+    OutputVote,
+    delete_outputs,
+    output_dates,
+    replace_output,
 )
 from model_support.polling import (
     PollSource,
@@ -99,8 +94,13 @@ from model_support.summaries import (
     recorded_vote_rows,
     summarize_votes,
 )
+from model_support.trends import (
+    default_trend_path,
+    publish_trends,
+    trend_batch,
+    validate_trend_scope,
+)
 from schema import Election, Map, Region, Vote
-from scripts.export.naming import is_folded_senate_special, manifest_id_for_election
 
 # US polls insert Democrat/Republican rows directly, so no party-id merge is
 # needed (contrast the Westminster model, which aliases "Other" → "Others").
@@ -1583,7 +1583,7 @@ def resolve_special_baselines(
     manifest does (``"2022-us-senate"``) — that is the id the front end fetches, so
     the shell can hold one value the model and the map both understand. The model
     needs the row, so each id is matched against
-    :func:`~scripts.export.naming.manifest_id_for_election` over the map's elections.
+    :func:`~export.naming.manifest_id_for_election` over the map's elections.
 
     Args:
         db: Open database handle.

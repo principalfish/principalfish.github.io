@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from console.services.model_outputs import build_outputs_context
 from db import Database
+from export.payload import SeatRow, build_result_payload
 from model_support.persistence import (
     OutputScope,
     OutputVote,
@@ -17,7 +18,6 @@ from model_support.persistence import (
 )
 from model_support.trends import TREND_MODELS
 from schema import ElectionType, Vote
-from scripts.export.payload import SeatRow, build_result_payload
 from scripts.rebuild_model_trends import main
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload

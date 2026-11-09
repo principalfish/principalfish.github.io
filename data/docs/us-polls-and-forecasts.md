@@ -82,7 +82,7 @@ chamber, and **Run US Models** on the home page has one for all three (see
 ## Model runs
 
 Note: the House and Senate forecasts are currently not exported (`EXPORT_US_CHAMBER_FORECASTS`
-in `scripts/export_elections.py`, see [Full export](export.md#full-export-elections-and-latest-forecasts)); the runs and the poll tracker still work.
+in `export/export_elections.py`, see [Full export](export.md#full-export-elections-and-latest-forecasts)); the runs and the poll tracker still work.
 
 **Run US Models** (home page) runs House → President → Senate → export. Its
 **Rebuild all US history** box appends `--rebuild-history` to all three runners
@@ -97,7 +97,7 @@ serialised with them.) The CLI equivalent, with the console's poll windows:
 ./election_data/bin/python models/us/run_us_house_model.py --since-days-back 60
 ./election_data/bin/python models/us/run_us_presidential_model.py --since-days-back 120
 ./election_data/bin/python models/us/run_us_senate_model.py --since-days-back 60
-./election_data/bin/python scripts/export_elections.py
+./election_data/bin/python export/export_elections.py
 ```
 
 Each runner also takes `--dry-run`, `--as-of-date`, `--half-life-days`, and
@@ -184,7 +184,7 @@ that database.
    ./election_data/bin/python models/us/run_us_house_model.py --since-days-back 60 --rebuild-history
    ./election_data/bin/python models/us/run_us_presidential_model.py --since-days-back 120 --rebuild-history
    ./election_data/bin/python models/us/run_us_senate_model.py --since-days-back 60 --rebuild-history
-   ./election_data/bin/python scripts/export_elections.py
+   ./election_data/bin/python export/export_elections.py
    ```
    While `EXPORT_US_CHAMBER_FORECASTS` is off (the default) the export does not publish the
    House or Senate forecast; with it on, `uselectionmaps/data/results/us-senate-forecast.json`

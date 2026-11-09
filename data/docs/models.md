@@ -189,7 +189,7 @@ applicable command separately, stopping on failure before the next stage:
   --model <model> --map-id <map-id> --database "$MODEL_DB"
 # Optional isolated destination: add --output /tmp/repaired-trends.json
 
-./election_data/bin/python scripts/export_elections.py
+./election_data/bin/python export/export_elections.py
 ```
 
 Stop before export on any failed refresh. Successful dates are retained, failed

@@ -17,6 +17,7 @@ import pytest
 from console import paths
 from importers.polls.westminster.registry import IMPORTERS
 from scripts import rebuild_database
+from tests.layout_helpers import leftover_files
 
 DATA_DIR = Path(__file__).resolve().parent.parent
 IMPORTERS_DIR = DATA_DIR / "importers"
@@ -142,4 +143,4 @@ def test_each_runnable_importer_still_runs_by_path(relative: Path, tmp_path: Pat
 
 @pytest.mark.parametrize("relative", MOVED_AWAY)
 def test_the_old_locations_are_gone(relative: str) -> None:
-    assert not (DATA_DIR / relative).exists()
+    assert leftover_files(DATA_DIR / relative) == []

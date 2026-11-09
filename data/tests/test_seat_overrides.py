@@ -1,42 +1,49 @@
-"""Tests for scripts.export.seat_overrides — the Alaska 2026 candidate override."""
+"""Tests for export.seat_overrides — the Alaska 2026 candidate override."""
 
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
-from typing import Any
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+from typing import Any, cast
 
 import pytest
 
-from export_elections import SeatRow, build_result_payload
 from db import SeatStatus
-from scripts.export.seat_overrides import (
+from export.payload import SeatRow, build_result_payload
+from export.seat_overrides import (
     OVERRIDES_PATH,
     SeatOverridesError,
     apply_seat_overrides,
     load_seat_overrides,
 )
+from schema import Party, Vote
 
 ELECTION = "2026 US Senate Election"
 IDS = {"democrat": 20, "republican": 21, "others": 15}
 
 
-class _Party:
+class _FakeParty:
     def __init__(self, id: int) -> None:
         self.id = id
 
 
-class _Vote:
+def _party(*args: Any, **kwargs: Any) -> Party:
+    """Build the stand-in, typed as the real row the helpers are annotated to take."""
+    return cast(Party, _FakeParty(*args, **kwargs))
+
+
+class _FakeVote:
     def __init__(self, seat_id: int, total: float, party_id: int | None, name: str) -> None:
         self.seat_id = seat_id
         self.vote_total = total
-        self.party = _Party(party_id) if party_id is not None else None
+        self.party = _party(party_id) if party_id is not None else None
         self.elected = False
         self.candidate_name = name
+
+
+def _vote(*args: Any, **kwargs: Any) -> Vote:
+    """Build the stand-in, typed as the real row the helpers are annotated to take."""
+    return cast(Vote, _FakeVote(*args, **kwargs))
 
 
 def _alaska_payload(*, called: bool = False, sullivan: int = 102325) -> dict[str, Any]:
@@ -46,12 +53,12 @@ def _alaska_payload(*, called: bool = False, sullivan: int = 102325) -> dict[str
         SeatRow(2, "Texas", 229, None, None),
     ]
     votes = [
-        _Vote(1, sullivan, 21, "Dan Sullivan"),
-        _Vote(1, 4846, 21, "Gerald Heikes"),
-        _Vote(1, 102962, 20, "Mary Peltola"),
-        _Vote(1, 3600, 15, "Daniel Sullivan"),
-        _Vote(2, 600, 21, "Ted"),
-        _Vote(2, 400, 20, "Beto"),
+        _vote(1, sullivan, 21, "Dan Sullivan"),
+        _vote(1, 4846, 21, "Gerald Heikes"),
+        _vote(1, 102962, 20, "Mary Peltola"),
+        _vote(1, 3600, 15, "Daniel Sullivan"),
+        _vote(2, 600, 21, "Ted"),
+        _vote(2, 400, 20, "Beto"),
     ]
     statuses = {
         1: SeatStatus(seat_id=1, called=called, pct_counted=74.09),

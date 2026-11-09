@@ -24,6 +24,7 @@ from electoral_votes import (
     get_electoral_votes,
     get_electoral_votes_sqlite,
 )
+from export.export_elections import _export_page
 from importers.results.us.import_presidential_elections import import_presidential
 from importers.seed.migrate_us_electoral_votes import migrate
 from model_support import trends
@@ -31,7 +32,6 @@ from model_support.persistence import OutputScope, OutputVote, replace_output
 from model_support.trends import reconstruct_trends
 from models.us import _common as us
 from schema import Election, ElectionType, Map, Seat, USElectoralVoteAllocation
-from scripts.export_elections import _export_page
 from tests.us_ev_fixtures import seed_canonical_allocations, set_model_target
 
 

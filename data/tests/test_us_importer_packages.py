@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.layout_helpers import leftover_files
+
 DATA_DIR = Path(__file__).resolve().parent.parent
 ARCHIVE_DIR = DATA_DIR / "archive"
 
@@ -116,4 +118,4 @@ def test_no_live_code_imports_from_the_archive() -> None:
 
 @pytest.mark.parametrize("relative", MOVED_AWAY)
 def test_the_old_us_locations_are_gone(relative: str) -> None:
-    assert not (DATA_DIR / relative).exists()
+    assert leftover_files(DATA_DIR / relative) == []

@@ -8,7 +8,7 @@ All commands on this page run from `data/`.
 ## Full export (elections and latest forecasts)
 
 ```bash
-./election_data/bin/python scripts/export_elections.py
+./election_data/bin/python export/export_elections.py
 ```
 
 The full export includes supported UK and US elections and, when present in the
@@ -16,7 +16,7 @@ database, the latest Westminster UNS simulation and the latest US presidential
 forecast (the House and Senate forecasts only when `EXPORT_US_CHAMBER_FORECASTS` is
 on, see below). It writes each page's manifest and data files.
 
-Election placement is owned by `data/scripts/export/ordering.py`. The previous
+Election placement is owned by `data/export/ordering.py`. The previous
 generated manifest remains an ordering input; the shell does not define election
 order. After initial construction and restoration, final placement applies these
 rules in sequence:
@@ -40,7 +40,7 @@ rules in sequence:
    forecast and non-forecast order without regrouping interleaved parliaments.
 
 **US House and Senate forecasts are switched off.** The module constant
-`EXPORT_US_CHAMBER_FORECASTS` in `data/scripts/export_elections.py` is `False`, so the
+`EXPORT_US_CHAMBER_FORECASTS` in `data/export/export_elections.py` is `False`, so the
 export drops the `us_house_model` / `us_senate_model` elections before any page is
 written: no `current-us-house` / `current-us-senate` ("2026 Prediction") manifest entries,
 no `us-house-forecast.json` / `us-senate-forecast.json` result files (the export never
@@ -61,14 +61,14 @@ final order and preserves a valid configured default.
 Dry-run:
 
 ```bash
-./election_data/bin/python scripts/export_elections.py --dry-run
+./election_data/bin/python export/export_elections.py --dry-run
 ```
 
 Scratch export (writes every page under `DIR/<page>/data`, seeding each from the
 repository's page data directory on first use; the repository is not touched):
 
 ```bash
-./election_data/bin/python scripts/export_elections.py --output-base /tmp/export-check
+./election_data/bin/python export/export_elections.py --output-base /tmp/export-check
 ```
 
 `--output-base` works with every mode. `--output-root DIR` applies only to
@@ -82,8 +82,8 @@ prints each as "Missing (a real export would fail): …" and carries on.
 ## Targeted exports
 
 ```bash
-./election_data/bin/python scripts/export_elections.py --election-name "2019 General Election" --output-file /tmp/2019.json
-./election_data/bin/python scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
+./election_data/bin/python export/export_elections.py --election-name "2019 General Election" --output-file /tmp/2019.json
+./election_data/bin/python export/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
 ```
 
 `--election-name` on a folded Senate special (a same-day special such as
@@ -93,7 +93,7 @@ election's payload, so export the parent instead.
 ## Metadata-only manifest refresh
 
 ```bash
-./election_data/bin/python scripts/export_elections.py --metadata-only
+./election_data/bin/python export/export_elections.py --metadata-only
 ```
 
 ## Manifest, results schema and Current Senate

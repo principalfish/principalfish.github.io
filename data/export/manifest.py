@@ -9,9 +9,9 @@ import math
 import re
 from typing import Any, Sequence
 
+from export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
+from export.naming import party_key_for_party
 from schema import Election, ElectionType, Party, Region
-from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
-from scripts.export.naming import party_key_for_party
 
 # Election types that compare with the election of the same type exactly N years earlier
 # rather than the preceding one. The US Senate's staggered classes contest a different

@@ -1,21 +1,15 @@
-"""Tests for scripts.export.naming — party-key resolution, slugs, and election naming.
+"""Tests for export.naming — party-key resolution, slugs, and election naming.
 
-Imports the helpers via ``export_elections`` (which re-exports the ``scripts.export``
-package), mirroring ``test_export_elections.py``. Pure functions; no DB needed.
+Pure functions; no DB needed.
 """
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+from typing import Any, cast
 
 import pytest
 
-from schema import ElectionType
-from export_elections import (
+from export.naming import (
     file_stem_for_election,
     is_folded_senate_special,
     legacy_party_key_for_vote,
@@ -27,9 +21,10 @@ from export_elections import (
     party_key_for_party,
     slugify,
 )
+from schema import Election, ElectionType, Party, Vote
 
 
-class _Party:
+class _FakeParty:
     """Minimal stand-in for a Party row (only the fields the helpers read)."""
 
     def __init__(self, name: str, short_name: str | None = None) -> None:
@@ -37,14 +32,24 @@ class _Party:
         self.short_name = short_name
 
 
-class _Vote:
+def _party(*args: Any, **kwargs: Any) -> Party:
+    """Build the stand-in, typed as the real row the helpers are annotated to take."""
+    return cast(Party, _FakeParty(*args, **kwargs))
+
+
+class _FakeVote:
     """Minimal stand-in for a Vote row (only ``.party``)."""
 
-    def __init__(self, party: _Party | None) -> None:
+    def __init__(self, party: Party | None) -> None:
         self.party = party
 
 
-class _Election:
+def _vote(*args: Any, **kwargs: Any) -> Vote:
+    """Build the stand-in, typed as the real row the helpers are annotated to take."""
+    return cast(Vote, _FakeVote(*args, **kwargs))
+
+
+class _FakeElection:
     """Minimal stand-in for an Election row (type / name / year / parent)."""
 
     def __init__(
@@ -60,39 +65,44 @@ class _Election:
         self.parent_election_id = parent_election_id
 
 
+def _election(*args: Any, **kwargs: Any) -> Election:
+    """Build the stand-in, typed as the real row the helpers are annotated to take."""
+    return cast(Election, _FakeElection(*args, **kwargs))
+
+
 class TestLegacyPartyKeyForVote:
     """Resolves the legacy party key, with the Reform-UK / UKIP year split."""
 
     def test_no_party_is_others(self) -> None:
-        assert legacy_party_key_for_vote(_Vote(None)) == "others"
+        assert legacy_party_key_for_vote(_vote(None)) == "others"
 
     def test_reform_short_name_2024_plus_is_reform(self) -> None:
-        vote = _Vote(_Party("Reform UK", short_name="Reform UK"))
+        vote = _vote(_party("Reform UK", short_name="Reform UK"))
         assert legacy_party_key_for_vote(vote, election_year=2024) == "reform"
 
     def test_reform_short_name_pre_2024_is_ukip(self) -> None:
-        vote = _Vote(_Party("Reform UK", short_name="Reform UK"))
+        vote = _vote(_party("Reform UK", short_name="Reform UK"))
         assert legacy_party_key_for_vote(vote, election_year=2019) == "ukip"
 
     def test_reform_unknown_year_is_ukip(self) -> None:
-        vote = _Vote(_Party("Reform UK", short_name="Reform UK"))
+        vote = _vote(_party("Reform UK", short_name="Reform UK"))
         assert legacy_party_key_for_vote(vote, election_year=None) == "ukip"
 
     def test_reform_via_name_when_no_short_name(self) -> None:
-        vote = _Vote(_Party("Reform UK"))
+        vote = _vote(_party("Reform UK"))
         assert legacy_party_key_for_vote(vote, election_year=2024) == "reform"
 
     def test_short_name_takes_precedence_and_is_mapped(self) -> None:
         # short_name normalises to a mapped key, so the name is never consulted.
-        vote = _Vote(_Party("Scottish National Party", short_name="SNP"))
+        vote = _vote(_party("Scottish National Party", short_name="SNP"))
         assert legacy_party_key_for_vote(vote, election_year=2024) == "snp"
 
     def test_falls_back_to_name_mapping(self) -> None:
-        vote = _Vote(_Party("Liberal Democrats"))
+        vote = _vote(_party("Liberal Democrats"))
         assert legacy_party_key_for_vote(vote, election_year=2024) == "libdems"
 
     def test_unmapped_name_passes_through_normalised(self) -> None:
-        vote = _Vote(_Party("Monster Raving Loony"))
+        vote = _vote(_party("Monster Raving Loony"))
         assert legacy_party_key_for_vote(vote, election_year=2024) == "monsterravingloony"
 
 
@@ -100,34 +110,34 @@ class TestPartyKeyForParty:
     """Canonical party key from a Party row (no year context)."""
 
     def test_reform_short_name(self) -> None:
-        assert party_key_for_party(_Party("Reform UK", short_name="Reform UK")) == "reform"
+        assert party_key_for_party(_party("Reform UK", short_name="Reform UK")) == "reform"
 
     def test_ukip_short_name(self) -> None:
-        assert party_key_for_party(_Party("UK Independence Party", short_name="UKIP")) == "ukip"
+        assert party_key_for_party(_party("UK Independence Party", short_name="UKIP")) == "ukip"
 
     def test_ukip_via_name(self) -> None:
-        assert party_key_for_party(_Party("UK Independence Party")) == "ukip"
+        assert party_key_for_party(_party("UK Independence Party")) == "ukip"
 
     def test_reform_via_name(self) -> None:
-        assert party_key_for_party(_Party("Reform UK")) == "reform"
+        assert party_key_for_party(_party("Reform UK")) == "reform"
 
     def test_mapped_name(self) -> None:
-        assert party_key_for_party(_Party("Scottish National Party")) == "snp"
+        assert party_key_for_party(_party("Scottish National Party")) == "snp"
 
     def test_us_democratic_maps_to_democrat(self) -> None:
-        assert party_key_for_party(_Party("Democratic", short_name="democratic")) == "democrat"
+        assert party_key_for_party(_party("Democratic", short_name="democratic")) == "democrat"
 
     def test_us_democratic_via_name(self) -> None:
-        assert party_key_for_party(_Party("Democratic")) == "democrat"
+        assert party_key_for_party(_party("Democratic")) == "democrat"
 
     def test_us_republican(self) -> None:
-        assert party_key_for_party(_Party("Republican", short_name="republican")) == "republican"
+        assert party_key_for_party(_party("Republican", short_name="republican")) == "republican"
 
     def test_us_green_maps_to_usgreen(self) -> None:
-        assert party_key_for_party(_Party("US Green", short_name="usgreen")) == "usgreen"
+        assert party_key_for_party(_party("US Green", short_name="usgreen")) == "usgreen"
 
     def test_unmapped_name_passes_through(self) -> None:
-        assert party_key_for_party(_Party("Foo Bar")) == "foobar"
+        assert party_key_for_party(_party("Foo Bar")) == "foobar"
 
 
 class TestSlugAndTokenHelpers:
@@ -184,47 +194,47 @@ class TestFileStemForElection:
     """Output JSON filename stem per election type/name."""
 
     def test_model_uns_is_prediction_simulation(self) -> None:
-        assert file_stem_for_election(_Election("anything", ElectionType.model_uns)) == "prediction-simulation"
+        assert file_stem_for_election(_election("anything", ElectionType.model_uns)) == "prediction-simulation"
 
     def test_uk_general(self) -> None:
-        assert file_stem_for_election(_Election("2024 General Election", ElectionType.uk_general)) == "uk-general-2024"
+        assert file_stem_for_election(_election("2024 General Election", ElectionType.uk_general)) == "uk-general-2024"
 
     def test_holyrood_general(self) -> None:
-        election = _Election("2021 Scottish Parliament Election", ElectionType.holyrood_general)
+        election = _election("2021 Scottish Parliament Election", ElectionType.holyrood_general)
         assert file_stem_for_election(election) == "holyrood-general-2021"
 
     def test_holyrood_general_changed_boundaries(self) -> None:
-        election = _Election(
+        election = _election(
             "2021 Scottish Parliament Election (2026 Boundaries)", ElectionType.holyrood_general
         )
         assert file_stem_for_election(election) == "holyrood-general-2021-changed-boundaries"
 
     def test_us_house(self) -> None:
-        election = _Election("2024 US House Election", ElectionType.us_house, year=2024)
+        election = _election("2024 US House Election", ElectionType.us_house, year=2024)
         assert file_stem_for_election(election) == "us-house-2024"
 
     def test_us_president(self) -> None:
-        election = _Election("2024 US Presidential Election", ElectionType.us_presidential, year=2024)
+        election = _election("2024 US Presidential Election", ElectionType.us_presidential, year=2024)
         assert file_stem_for_election(election) == "us-president-2024"
 
     def test_us_senate(self) -> None:
-        election = _Election("2024 US Senate Election", ElectionType.us_senate, year=2024)
+        election = _election("2024 US Senate Election", ElectionType.us_senate, year=2024)
         assert file_stem_for_election(election) == "us-senate-2024"
 
     def test_us_house_model_is_fixed_forecast_stem(self) -> None:
-        election = _Election("US House UNS 2026-06-01", ElectionType.us_house_model, year=2026)
+        election = _election("US House UNS 2026-06-01", ElectionType.us_house_model, year=2026)
         assert file_stem_for_election(election) == "us-house-forecast"
 
     def test_us_presidential_model_is_fixed_forecast_stem(self) -> None:
-        election = _Election("US President UNS 2028-06-01", ElectionType.us_presidential_model, year=2028)
+        election = _election("US President UNS 2028-06-01", ElectionType.us_presidential_model, year=2028)
         assert file_stem_for_election(election) == "us-president-forecast"
 
     def test_us_senate_model_is_fixed_forecast_stem(self) -> None:
-        election = _Election("US Senate UNS 2026-06-01", ElectionType.us_senate_model, year=2026)
+        election = _election("US Senate UNS 2026-06-01", ElectionType.us_senate_model, year=2026)
         assert file_stem_for_election(election) == "us-senate-forecast"
 
     def test_fallback_slugifies_type_year_name(self) -> None:
-        election = _Election("Some By-Election", ElectionType.by_election, year=2025)
+        election = _election("Some By-Election", ElectionType.by_election, year=2025)
         assert file_stem_for_election(election) == "by-election-2025-some-by-election"
 
 
@@ -232,49 +242,49 @@ class TestManifestIdForElection:
     """Stable manifest id per election type/name."""
 
     def test_model_uns_is_current_prediction(self) -> None:
-        assert manifest_id_for_election(_Election("anything", ElectionType.model_uns)) == "current-prediction"
+        assert manifest_id_for_election(_election("anything", ElectionType.model_uns)) == "current-prediction"
 
     def test_uk_general(self) -> None:
-        assert manifest_id_for_election(_Election("2024 General Election", ElectionType.uk_general)) == "2024-general"
+        assert manifest_id_for_election(_election("2024 General Election", ElectionType.uk_general)) == "2024-general"
 
     def test_holyrood_general(self) -> None:
-        election = _Election("2021 Scottish Parliament Election", ElectionType.holyrood_general)
+        election = _election("2021 Scottish Parliament Election", ElectionType.holyrood_general)
         assert manifest_id_for_election(election) == "2021-holyrood"
 
     def test_us_house(self) -> None:
-        election = _Election("2024 US House Election", ElectionType.us_house, year=2024)
+        election = _election("2024 US House Election", ElectionType.us_house, year=2024)
         assert manifest_id_for_election(election) == "2024-us-house"
 
     def test_us_president(self) -> None:
-        election = _Election("2024 US Presidential Election", ElectionType.us_presidential, year=2024)
+        election = _election("2024 US Presidential Election", ElectionType.us_presidential, year=2024)
         assert manifest_id_for_election(election) == "2024-us-president"
 
     def test_us_senate(self) -> None:
-        election = _Election("2024 US Senate Election", ElectionType.us_senate, year=2024)
+        election = _election("2024 US Senate Election", ElectionType.us_senate, year=2024)
         assert manifest_id_for_election(election) == "2024-us-senate"
 
     def test_us_house_model_is_current_anchor(self) -> None:
-        election = _Election("US House UNS 2026-06-01", ElectionType.us_house_model, year=2026)
+        election = _election("US House UNS 2026-06-01", ElectionType.us_house_model, year=2026)
         assert manifest_id_for_election(election) == "current-us-house"
 
     def test_us_presidential_model_is_current_anchor(self) -> None:
-        election = _Election("US President UNS 2028-06-01", ElectionType.us_presidential_model, year=2028)
+        election = _election("US President UNS 2028-06-01", ElectionType.us_presidential_model, year=2028)
         assert manifest_id_for_election(election) == "current-us-president"
 
     def test_us_senate_model_is_current_anchor(self) -> None:
-        election = _Election("US Senate UNS 2026-06-01", ElectionType.us_senate_model, year=2026)
+        election = _election("US Senate UNS 2026-06-01", ElectionType.us_senate_model, year=2026)
         assert manifest_id_for_election(election) == "current-us-senate"
 
     def test_fallback_slugifies_year_name(self) -> None:
-        election = _Election("Some By-Election", ElectionType.by_election, year=2025)
+        election = _election("Some By-Election", ElectionType.by_election, year=2025)
         assert manifest_id_for_election(election) == "2025-some-by-election"
 
 
 class TestFoldedSenateSpecial:
     """A same-day Senate special (a child us_senate election) never shares its parent's names."""
 
-    _PARENT = _Election("2020 US Senate Election", ElectionType.us_senate, year=2020)
-    _SPECIAL = _Election(
+    _PARENT = _election("2020 US Senate Election", ElectionType.us_senate, year=2020)
+    _SPECIAL = _election(
         "2020 US Senate Special Election", ElectionType.us_senate, year=2020, parent_election_id=1
     )
 
@@ -282,7 +292,7 @@ class TestFoldedSenateSpecial:
         assert is_folded_senate_special(self._SPECIAL)
         assert not is_folded_senate_special(self._PARENT)
         # A by-election also has a parent, but is folded by a different path.
-        by_election = _Election("Some By-Election", ElectionType.by_election, parent_election_id=1)
+        by_election = _election("Some By-Election", ElectionType.by_election, parent_election_id=1)
         assert not is_folded_senate_special(by_election)
 
     def test_special_stem_differs_from_parent(self) -> None:
@@ -298,17 +308,17 @@ class TestManifestNameForElection:
     """Human-readable manifest display names, including the US forecast anchors."""
 
     def test_us_house_model(self) -> None:
-        election = _Election("US House UNS 2026-06-01", ElectionType.us_house_model, year=2026)
+        election = _election("US House UNS 2026-06-01", ElectionType.us_house_model, year=2026)
         assert manifest_name_for_election(election) == "2026 Prediction"
 
     def test_us_presidential_model(self) -> None:
-        election = _Election("US President UNS 2028-06-01", ElectionType.us_presidential_model, year=2028)
+        election = _election("US President UNS 2028-06-01", ElectionType.us_presidential_model, year=2028)
         assert manifest_name_for_election(election) == "2028 Prediction"
 
     def test_us_senate_model(self) -> None:
-        election = _Election("US Senate UNS 2026-06-01", ElectionType.us_senate_model, year=2026)
+        election = _election("US Senate UNS 2026-06-01", ElectionType.us_senate_model, year=2026)
         assert manifest_name_for_election(election) == "2026 Prediction"
 
     def test_us_house_result_is_year_election(self) -> None:
-        election = _Election("2024 US House Election", ElectionType.us_house, year=2024)
+        election = _election("2024 US House Election", ElectionType.us_house, year=2024)
         assert manifest_name_for_election(election) == "2024 Election"

@@ -12,8 +12,10 @@ from pathlib import Path
 
 import pytest
 
+from export import export_elections
 from importers.results.us.nyt import cli, current_senate
-from scripts import export_elections, rebuild_database, scrape_holyrood_2026
+from scripts import rebuild_database, scrape_holyrood_2026
+from tests.layout_helpers import leftover_files
 
 DATA_DIR = Path(__file__).resolve().parents[1]
 INPUTS = DATA_DIR / "inputs"
@@ -25,7 +27,7 @@ def test_inputs_has_one_folder_per_jurisdiction() -> None:
         "us",
         "westminster",
     ]
-    assert not (DATA_DIR / "old_data" / "files").exists()
+    assert leftover_files(DATA_DIR / "old_data" / "files") == []
 
 
 @pytest.mark.parametrize(

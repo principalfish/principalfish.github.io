@@ -6,11 +6,11 @@ from pathlib import Path
 import json
 from typing import Any
 
+from export.naming import map_filename_for_map_id, normalize_region_name
+from export.ordering import register_supplemental_entry
+from export.payload import convert_legacy_seatinfo_to_v4
+from export.serialize import write_json
 from schema import Election, ElectionType, Party, Region
-from scripts.export.naming import map_filename_for_map_id, normalize_region_name
-from scripts.export.ordering import register_supplemental_entry
-from scripts.export.payload import convert_legacy_seatinfo_to_v4
-from scripts.export.serialize import write_json
 
 
 SUPPLEMENTAL_LEGACY_ELECTIONS: list[dict[str, Any]] = [
@@ -40,7 +40,7 @@ SUPPLEMENTAL_LEGACY_ELECTIONS: list[dict[str, Any]] = [
         "multiMember": True,
         "upcomingElections": True,
         # No insertBeforeId: the export's newest-first sort for the US chambers pins this
-        # entry directly after the newest Senate result (scripts/export/ordering.py).
+        # entry directly after the newest Senate result (export/ordering.py).
         "noComparison": True,
     },
 ]

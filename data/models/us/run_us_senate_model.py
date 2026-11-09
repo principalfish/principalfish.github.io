@@ -42,17 +42,14 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from model_support.trends import default_trend_path
-from models.us._common import UsModelSpec, main_for_spec
-
-# The export's parser is the one rule for which shell specials count, so the model
-# reuses it rather than a copy.
-from scripts.export.manifest import (
+from export.manifest import (
     senate_baseline_overrides,
     senate_class_up_in,
     senate_next_election_year,
     senate_specials_for_year,
 )
+from model_support.trends import default_trend_path
+from models.us._common import UsModelSpec, main_for_spec
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 US_DATA_DIR = REPO_ROOT / "uselectionmaps" / "data"
@@ -104,7 +101,7 @@ def next_senate_class(shell_path: Path = MAP_MODES_SHELL_JSON) -> int | None:
     """The Senate class the shell's next election contests, or ``None`` if unknowable.
 
     Resolves ``senateClassCycle`` against ``parliamentFeatures.us_senate.nextElectionYear``
-    through the export's own resolver (:func:`~scripts.export.manifest.senate_class_up_in`):
+    through the export's own resolver (:func:`~export.manifest.senate_class_up_in`):
     the class whose cycle lands exactly on that year. ``None`` when the shell, the cycle or
     the year is missing or malformed, or when no class lands on the year.
     """
@@ -162,7 +159,7 @@ def senate_special_elections(
     cycle's regular class field still projects, exactly as it did before specials existed.
     Malformed entries are skipped for the same reason — a half-written shell entry
     must not take the whole runner down at import time — by the export's own
-    :func:`~scripts.export.manifest.senate_specials_for_year`, so the model and the
+    :func:`~export.manifest.senate_specials_for_year`, so the model and the
     exported manifest always agree on the field.
 
     Args:
@@ -201,7 +198,7 @@ def senate_seat_baseline_overrides(
     (:func:`next_senate_class`): a state also holds seats of other classes, which swing from
     their own last contest. Otherwise it is not tied to a cycle (a seat keeps swinging from
     its last special until its class next votes there), so there is no year test. Entries are
-    parsed by the export's :func:`~scripts.export.manifest.senate_baseline_overrides`, so the
+    parsed by the export's :func:`~export.manifest.senate_baseline_overrides`, so the
     model and the exported manifest agree on them. A missing or unreadable shell, or an
     unknown contested class, means no overrides.
     """

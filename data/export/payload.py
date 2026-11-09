@@ -8,9 +8,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from db import SeatStatus
+from export.naming import legacy_party_key_for_vote, normalize_region_name, normalize_vote_total_value
 from model_support.public_uncertainty import SeatBand
 from schema import Vote
-from scripts.export.naming import legacy_party_key_for_vote, normalize_region_name, normalize_vote_total_value
 
 OTHERS_PARTY_ID: int = 0
 

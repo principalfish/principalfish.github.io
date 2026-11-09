@@ -216,8 +216,8 @@ sqlite3 -readonly "$EV_DB" \
   --database "$EV_DB" --model us-president --map-id <verified-map-id> --dry-run
 ./election_data/bin/python scripts/rebuild_model_trends.py \
   --database "$EV_DB" --model us-president --map-id <verified-map-id>
-./election_data/bin/python scripts/export_elections.py --dry-run
-./election_data/bin/python scripts/export_elections.py
+./election_data/bin/python export/export_elections.py --dry-run
+./election_data/bin/python export/export_elections.py
 ```
 
 Replace the map placeholder and repeat cache repair for each affected map before

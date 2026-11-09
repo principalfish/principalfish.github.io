@@ -18,13 +18,13 @@ scratch export that leaves the repository untouched; it works with every mode.
 ``--output-root DIR`` applies only to ``--current-simulation``.
 
 Usage:
-    python data/scripts/export_elections.py
-    python data/scripts/export_elections.py --dry-run
-    python data/scripts/export_elections.py --output-base /tmp/export-check
-    python data/scripts/export_elections.py --election-name "2019 General Election"
-    python data/scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
-    python data/scripts/export_elections.py --current-simulation --output-root /tmp/uk-data
-    python data/scripts/export_elections.py --metadata-only
+    python data/export/export_elections.py
+    python data/export/export_elections.py --dry-run
+    python data/export/export_elections.py --output-base /tmp/export-check
+    python data/export/export_elections.py --election-name "2019 General Election"
+    python data/export/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
+    python data/export/export_elections.py --current-simulation --output-root /tmp/uk-data
+    python data/export/export_elections.py --metadata-only
 """
 
 from __future__ import annotations
@@ -33,77 +33,58 @@ import argparse
 import json
 import re
 import shutil
-import sys
 from collections import defaultdict
-from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any, Mapping, Sequence
-
-SCRIPT_DIR = Path(__file__).resolve().parent
-DATA_DIR = SCRIPT_DIR.parent
-if str(DATA_DIR) not in sys.path:
-    sys.path.insert(0, str(DATA_DIR))
 
 from sqlalchemy import inspect, select
 from sqlalchemy.orm import joinedload, Session
 
 from db import Database, SeatStatus
 from electoral_votes import allocation_year, get_electoral_votes
-from model_support.persistence import load_uncertainty
-from schema import Election, ElectionSeatStatus, ElectionType, Map, Party, Region, Seat, Vote
-from scripts.export.naming import (
-    PARTY_NAME_TO_KEY,
-    normalize_token,
-    slugify,
-    legacy_party_key_for_vote,
-    normalize_region_name,
-    normalize_vote_total_value,
-    choose_map_template_filename,
-    map_filename_for_map_id,
-    file_stem_for_election,
-    is_folded_senate_special,
-    manifest_id_for_election,
-    manifest_name_for_election,
-    party_key_for_party,
+from export.legacy import (
+    SUPPLEMENTAL_LEGACY_ELECTIONS,
+    SUPPLEMENTAL_LEGACY_ELECTION_NAMES,
+    apply_supplemental_legacy_elections,
 )
-from scripts.export.payload import (
-    SenateResults,
-    SeatRow,
-    add_previous_senate_results,
-    build_result_payload,
-    build_special_entries,
-    choose_winner,
-    compact_votes_to_dict,
-    convert_legacy_seatinfo_to_v4,
-    party_id_for_vote,
-    senate_class_by_name,
-    senate_results_by_class,
-    set_others_party_id,
-)
-from scripts.export.seat_overrides import apply_seat_overrides, load_seat_overrides
-from scripts.export.serialize import (
-    write_json,
-    write_manifest,
-)
-from scripts.export.manifest import (
+from export.manifest import (
     build_manifest_party_settings,
     build_manifest_regions_by_map_id,
     build_map_modes_with_regions,
     assign_comparison_elections,
     remove_comparison_for_supplemental_entries,
 )
-from scripts.export.legacy import (
-    SUPPLEMENTAL_LEGACY_ELECTIONS,
-    SUPPLEMENTAL_LEGACY_ELECTION_NAMES,
-    apply_supplemental_legacy_elections,
+from export.naming import (
+    choose_map_template_filename,
+    map_filename_for_map_id,
+    file_stem_for_election,
+    is_folded_senate_special,
+    manifest_id_for_election,
+    manifest_name_for_election,
 )
-from scripts.export.ordering import (
+from export.ordering import (
     finalize_manifest_order,
     insert_current_parliament_entry,
     insert_preserved_entry,
 )
-from scripts.export.uncertainty import (
+from export.payload import (
+    SenateResults,
+    SeatRow,
+    add_previous_senate_results,
+    build_result_payload,
+    build_special_entries,
+    compact_votes_to_dict,
+    senate_class_by_name,
+    senate_results_by_class,
+    set_others_party_id,
+)
+from export.seat_overrides import apply_seat_overrides, load_seat_overrides
+from export.serialize import (
+    write_json,
+    write_manifest,
+)
+from export.uncertainty import (
     ModelUncertaintyExport,
     latest_model_run,
     link_uncertainty_payload,
@@ -111,10 +92,13 @@ from scripts.export.uncertainty import (
     party_names,
     sync_uncertainty_file,
 )
+from model_support.persistence import load_uncertainty
+from schema import Election, ElectionSeatStatus, ElectionType, Party, Region, Seat, Vote
 
 DEM_PARTY_ID = 20   # Democratic — see uselectionmaps/data/map-modes.json parties[]
 REP_PARTY_ID = 21   # Republican
 
+DATA_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = DATA_DIR.parent
 LEGACY_FILES_DIR_DEFAULT = DATA_DIR / "inputs" / "westminster"
 
@@ -183,7 +167,7 @@ def refresh_manifest_modes(
     Args:
         manifest: Parsed ``map-modes.json`` for one page. Its ``mapModes`` values are mutated.
         rebuilt_modes: Modes as built by
-            :func:`scripts.export.manifest.build_map_modes_with_regions` from the page shell,
+            :func:`export.manifest.build_map_modes_with_regions` from the page shell,
             keyed by string map id.
         regions_by_map_id: Raw DB region lists keyed by string map id, used as the fallback
             when a mapMode has no rebuilt counterpart.
@@ -280,7 +264,7 @@ def senate_special_entries(
     """Build the ``specials`` list for a regular Senate election from its child specials.
 
     Children are the ``us_senate`` elections whose ``parent_election_id`` is
-    ``election`` (see :func:`scripts.export.naming.is_folded_senate_special`). They
+    ``election`` (see :func:`export.naming.is_folded_senate_special`). They
     share the parent's map, so ``seats`` (the parent's) serve both.
 
     Raises:
@@ -329,7 +313,7 @@ def earlier_senate_results(
     dated with its parent, so a parent without a date and a child with one cannot
     order each other. Among elections on the same date the regular one sorts last
     (so it is preferred), then the lower id. Each election's results are keyed by
-    ``(state, senate_class)`` (see :func:`scripts.export.payload.senate_results_by_class`);
+    ``(state, senate_class)`` (see :func:`export.payload.senate_results_by_class`);
     ``cache`` memoises them by election id across calls.
     """
     all_rows = {
@@ -743,7 +727,7 @@ def missing_export_inputs(
     """List every input the page exports need on disk but cannot find.
 
     Mirrors the checks :func:`_export_page` and
-    :func:`scripts.export.legacy.apply_supplemental_legacy_elections` make as they go,
+    :func:`export.legacy.apply_supplemental_legacy_elections` make as they go,
     so a missing input is reported before anything is written rather than after one
     page and part of another are already out:
 
@@ -893,7 +877,7 @@ def _export_page(
     exports at most one): its seat bands add ``u`` rows to that run's result file, and
     its document is written to ``results/prediction-uncertainty.json`` beside it. When
     it has no document, a stale uncertainty file is removed instead (see
-    :func:`scripts.export.uncertainty.sync_uncertainty_file`). None leaves the model
+    :func:`export.uncertainty.sync_uncertainty_file`). None leaves the model
     run's file without ``u`` and removes a stale uncertainty file.
     """
     maps_dir = output_root / "maps"

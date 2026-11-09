@@ -36,10 +36,6 @@ from model_support.persistence import (
 from model_support.trends import publish_trends
 from tests.uk_fixtures import WestminsterWorld, seed_westminster_world
 
-SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
-
 GOLDEN_PATH = (
     Path(__file__).resolve().parent
     / "fixtures"
@@ -126,9 +122,10 @@ def run_export(
         ``{"files": {relpath: text}, "stdout": text}``, with ``root`` in the
         printed paths replaced by ``<root>``.
     """
-    # Imported here, not at the top: the scripts directory joins sys.path
-    # only after the imports, and this module also runs on older code.
-    import export_elections
+    # Imported here, not at the top, so this module still imports on code from
+    # before the ``export`` package. To regenerate the goldens on such code, change
+    # this to ``import export_elections`` with its ``scripts/`` folder on sys.path.
+    from export import export_elections
 
     output_root = root / "out"
     legacy = root / "legacy"

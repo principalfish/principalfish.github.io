@@ -36,7 +36,7 @@ files for 2020-2024 it doubles as a check of the NYT data.
 Options: `--refresh` (update existing elections in place), `--dry-run` (no cache, file or
 database writes), `--offline` (`fetch` and `all`: use the newest cached file instead of
 downloading; `convert` always reads the cache), `--cache-dir`, `--out-dir`.
-Importing never exports: run `scripts/export_elections.py` afterwards. `scripts/rebuild_database.py`
+Importing never exports: run `export/export_elections.py` afterwards. `scripts/rebuild_database.py`
 replays the committed `house-*`/`senate-*` files (specials right after their regular year).
 
 The data console has the same flow at `/us/results` (the **Import US Results (NYT)** button on
@@ -119,7 +119,7 @@ and take them one at a time.
    `EXPECTED_SPECIALS_2026` in `importers/results/us/nyt/current_senate.py` is hard-coded to the
    Florida and Ohio Class-3 specials of 2026 and the build refuses without them: edit it at
    the next cycle that has Senate specials.
-5. **Export** — `scripts/export_elections.py --dry-run` to see the plan (the maps 24 and 25
+5. **Export** — `export/export_elections.py --dry-run` to see the plan (the maps 24 and 25
    must exist), then the real run. This regenerates `map-modes.json` from the shell (mapModes
    24 and 25, the 2028 predict rollover) and writes the result files, including the new
    per-seat status fields and `sourceNote`.
@@ -131,7 +131,7 @@ and take them one at a time.
 The predict views already roll over to 2028, but the models were not re-run. Before the first
 2028 House or Senate run:
 
-- Bump `US_MODEL_COMPARISON_IDS` in `scripts/export/manifest.py` to `2026-us-house` and
+- Bump `US_MODEL_COMPARISON_IDS` in `export/manifest.py` to `2026-us-house` and
   `2022-us-senate`. It is keyed by election type, not by cycle, so it still points at 2024 and
   2020 and the new forecasts would compare against the wrong results. The bump also moves the
   baselines of the archived 2026 forecasts, so archive them first (last item).
@@ -141,10 +141,10 @@ The predict views already roll over to 2028, but the models were not re-run. Bef
 - House district polls are stored on map-21 seats, so on map 24 the House model sees no
   district polls (the national generic ballot is unaffected). Repoint the poll importers to
   the new map before the 2028 House run.
-- Set `EXPORT_US_CHAMBER_FORECASTS = True` in `scripts/export_elections.py`. It is off, so the
+- Set `EXPORT_US_CHAMBER_FORECASTS = True` in `export/export_elections.py`. It is off, so the
   House and Senate forecasts are not exported at all until it is switched back on.
 - Every House and Senate forecast is exported as `current-us-house` / `current-us-senate` and
-  labelled "2026 Prediction" (`scripts/export/naming.py`, `manifest_name_for_election`), so a
+  labelled "2026 Prediction" (`export/naming.py`, `manifest_name_for_election`), so a
   2028 run would collide with the 2026 one; bump the label with the cycle. Archive the 2026 forecast under its own id first; the
   archived forecast also needs its own Florida/Ohio baselines and chamber (currently it shows
   "Comparison unavailable" in Seats up, and its Full Senate merges into the current chamber).

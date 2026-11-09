@@ -74,8 +74,8 @@ and a local web console, all on one SQLite database. Details:
 ```bash
 cd data
 ./election_data/bin/python server.py                               # console: imports, models, backups
-./election_data/bin/python scripts/export_elections.py --dry-run   # show the export plan
-./election_data/bin/python scripts/export_elections.py             # write the site's data files
+./election_data/bin/python export/export_elections.py --dry-run    # show the export plan
+./election_data/bin/python export/export_elections.py              # write the site's data files
 ./election_data/bin/python scripts/rebuild_database.py --dry-run   # list the rebuild steps
 ./election_data/bin/python scripts/backup_db.py                    # back up the database
 ```

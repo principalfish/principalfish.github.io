@@ -37,7 +37,7 @@ WESTMINSTER_FILES = DATA_DIR / "inputs" / "westminster"
 BY_ELECTIONS_FILE = WESTMINSTER_FILES / "by_elections.txt"
 REGION_POPULATIONS_CSV = WESTMINSTER_FILES / "region_populations.csv"
 REGION_POPULATIONS_MAP = "UK Constituencies post 2022"
-EXPORT_SCRIPT = DATA_DIR / "scripts" / "export_elections.py"
+EXPORT_SCRIPT = DATA_DIR / "export" / "export_elections.py"
 BY_ELECTION_IMPORT = IMPORTERS_DIR / "results" / "westminster" / "by_election_import.py"
 
 # Boundary downloads + a full reseed are slow; give each step plenty of room.

@@ -4,7 +4,7 @@ Both maps pages use this contract: the [UK manifest](map-modes.json) and the
 [US manifest](../../uselectionmaps/data/map-modes.json). Edit their hand-authored
 [UK shell](map-modes-shell.json) or
 [US shell](../../uselectionmaps/data/map-modes-shell.json), then regenerate the
-manifests with the [exporter](../../data/scripts/export_elections.py). See the
+manifests with the [exporter](../../data/export/export_elections.py). See the
 [export runbook](../../data/docs/export.md).
 
 The shells supply page branding, parliament features, map options, party aliases,
@@ -82,7 +82,7 @@ Current category values are:
 | US | `us_house`, `us_house_model`, `us_presidential`, `us_presidential_model`, `us_senate`, `us_senate_model` |
 
 The US House and Senate model types (`us_house_model`, `us_senate_model`) are valid but
-currently not exported (`EXPORT_US_CHAMBER_FORECASTS` in `data/scripts/export_elections.py`);
+currently not exported (`EXPORT_US_CHAMBER_FORECASTS` in `data/export/export_elections.py`);
 the presidential forecast is. Election order is not set by the shell: the export keeps the
 previous manifest's order, except that the `us_house` and `us_senate` result elections are
 listed newest first (Senate: `current-senate` directly after the newest) and forecasts lead.

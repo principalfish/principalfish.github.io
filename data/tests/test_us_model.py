@@ -23,7 +23,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Literal, cast
 
-
 import pytest
 from sqlalchemy import event, text
 
@@ -34,9 +33,9 @@ from importers.polls.us.us_polls_common import CandidateColumn, matchup_label
 from models.support.io import OutputPublicationError
 from models.us import _common
 from models.us._common import (
-    LatestPollUsage,
     MATERIAL_CANDIDATE_SHARE,
     PARTY_ID_ALIASES,
+    LatestPollUsage,
     SeatPollAverage,
     SeatRef,
     TrackedMatchupMissing,
@@ -2462,7 +2461,10 @@ class TestSenateSpecialElections:
         assert senate_special_elections(_shell_copy(tmp_path), current_year=2026) == ()
 
     def test_a_2026_cycle_shell_holds_florida_and_ohio_from_2022(self, tmp_path: Path) -> None:
-        from models.us.run_us_senate_model import SenateSpecial, senate_special_elections
+        from models.us.run_us_senate_model import (
+            SenateSpecial,
+            senate_special_elections,
+        )
 
         specials = senate_special_elections(_shell_2026_cycle(tmp_path), current_year=2026)
 
@@ -2546,7 +2548,6 @@ class TestSenateSpecialElections:
         # the same payload, must name the same seats — including when the cycle
         # has passed and neither should keep anything.
         from export.manifest import _live_senate_specials, senate_next_election_year
-
         from models.us.run_us_senate_model import senate_special_elections
 
         path = _shell_2026_cycle(tmp_path)
@@ -2765,7 +2766,6 @@ class TestSenateBaselineOverrides:
 
     def test_the_model_and_the_export_agree_on_one_shell(self, tmp_path: Path) -> None:
         from export.manifest import build_map_modes_with_regions
-
         from models.us.run_us_senate_model import senate_seat_baseline_overrides
 
         path = _shell_copy(tmp_path)
@@ -3455,7 +3455,7 @@ class TestRebuildHistoryFlag:
         "runner", ["run_us_house_model", "run_us_presidential_model", "run_us_senate_model"]
     )
     def test_every_runner_accepts_the_flag(self, runner: str) -> None:
-        # The console appends exactly this spelling (console.services.us_models).
+        # The console appends exactly this spelling (console.us.models).
         module = importlib.import_module(f"models.us.{runner}")
         parser = build_arg_parser(module.SPEC)
 

@@ -1,10 +1,10 @@
 """The reviewed Wikipedia catch-up queue for US polls.
 
 The US counterpart of the Westminster catch-up routes in
-:mod:`console.blueprints.poll_import`, with the same shape: a start form
+:mod:`console.westminster.poll_import`, with the same shape: a start form
 scrapes Wikipedia and builds the queue, a step page shows one poll at a time
 for approval, and a finish page reports on the run. Every decision is made in
-:mod:`console.services.us_poll_queue`; this module owns only the routes, the
+:mod:`console.us.poll_queue`; this module owns only the routes, the
 preview-cache token and the templates.
 
 What the US flow adds:
@@ -49,9 +49,20 @@ from pydantic_core import ErrorDetails
 
 from console.db import get_db
 from console.forms import UsQueueStartForm
-from console.services.preview import get_preview, store_preview
-from console.services.runner import run_python_script
-from console.services.us_poll_queue import (
+from console.shared.preview import get_preview, store_preview
+from console.shared.runner import run_python_script
+from console.shared.wikipedia_queue import (
+    QueueState,
+    advance,
+    apply_skip_or_retry,
+    current_item,
+    cursor_matches,
+    cutoff_label,
+    pending_in_group,
+    progress,
+    summarise,
+)
+from console.us.poll_queue import (
     AUTO_TRACKING_ERROR_KEY,
     AUTO_TRACKING_KEY,
     INDEX_KEY,
@@ -68,17 +79,6 @@ from console.services.us_poll_queue import (
     narrow_us_row,
     prepare_us_item,
     tracking_changed,
-)
-from console.services.wikipedia_queue import (
-    QueueState,
-    advance,
-    apply_skip_or_retry,
-    current_item,
-    cursor_matches,
-    cutoff_label,
-    pending_in_group,
-    progress,
-    summarise,
 )
 from core.db import Database
 from importers.polls.us.us_wikipedia_polls import (

@@ -34,7 +34,7 @@ from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 @pytest.fixture(autouse=True)
 def _use_temp_db(db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
     """Route every test's ``get_db`` to the shared temp-DB fixture."""
-    monkeypatch.setattr("console.blueprints.polls.get_db", lambda: db)
+    monkeypatch.setattr("console.polls.views.get_db", lambda: db)
 
 
 @pytest.fixture(autouse=True)

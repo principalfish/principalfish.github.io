@@ -47,7 +47,7 @@ class TestRebuildDatabaseGuard:
         # Point the route at a non-existent script so the guard fires and the
         # orchestrator is never launched against the live database.
         monkeypatch.setattr(
-            "console.blueprints.site.REBUILD_DB_SCRIPT", Path("/no/such/rebuild_database.py")
+            "console.admin.site.REBUILD_DB_SCRIPT", Path("/no/such/rebuild_database.py")
         )
         response = app.test_client().post("/site/rebuild-database")
         assert response.status_code == 302

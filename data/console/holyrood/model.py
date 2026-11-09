@@ -2,7 +2,7 @@
 
 Mirrors the Westminster flow but for Holyrood. The model-output list/detail and
 delete routes reuse the shared, election-type-parameterised service in
-``console.services.model_outputs`` and the same templates as Westminster (the
+``console.shared.model_outputs`` and the same templates as Westminster (the
 templates take the endpoint names as context variables).
 """
 
@@ -24,13 +24,14 @@ from console.paths import (
     HOLYROOD_MODEL_SCRIPT,
     HOLYROOD_TREND_CACHE_JSON,
 )
-from console.services.model_outputs import (
+from console.sections import SECTIONS_BY_SLUG, Capability
+from console.shared.model_outputs import (
     build_output_detail_context,
     build_outputs_context,
     delete_model_output as delete_one_output,
     delete_selected_model_outputs as delete_selected_outputs,
 )
-from console.services.runner import (
+from console.shared.runner import (
     render_command_result,
     run_command,
     run_python_script,
@@ -329,6 +330,7 @@ def holyrood_output_detail(election_id: int) -> ResponseReturnValue:
     return render_template(
         "model_output_detail.html",
         **context,
+        show_uncertainty_links=SECTIONS_BY_SLUG["holyrood"].has(Capability.UNCERTAINTY),
         outputs_endpoint="holyrood.holyrood_outputs",
         detail_endpoint="holyrood.holyrood_output_detail",
     )

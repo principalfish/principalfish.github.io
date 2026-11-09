@@ -26,13 +26,14 @@ from console.paths import (
     UNS_MODEL_SCRIPT,
     UNS_TREND_CACHE_JSON,
 )
-from console.services.model_outputs import (
+from console.sections import SECTIONS_BY_SLUG, WESTMINSTER_MAP_NAME, Capability
+from console.shared.model_outputs import (
     build_output_detail_context,
     build_outputs_context,
     delete_model_output as delete_one_output,
     delete_selected_model_outputs as delete_selected_outputs,
 )
-from console.services.runner import run_command
+from console.shared.runner import run_command
 from core.db import Database
 from core.schema import Election, ElectionType, Map
 
@@ -135,7 +136,7 @@ def model_run_form() -> str:
         choices=_choices_for_model_form(db),
         explanations=_model_arg_explanations(),
         form_values={
-            "map_name": "UK Constituencies post 2022",
+            "map_name": WESTMINSTER_MAP_NAME,
             "baseline_election_name": "2024 General Election",
             "as_of_days_back": "0",
             "since_days_back": "60",
@@ -311,6 +312,9 @@ def model_output_detail(election_id: int) -> ResponseReturnValue:
         **context,
         outputs_endpoint="westminster.model_outputs",
         detail_endpoint="westminster.model_output_detail",
+        show_uncertainty_links=SECTIONS_BY_SLUG["westminster"].has(
+            Capability.UNCERTAINTY
+        ),
     )
 
 

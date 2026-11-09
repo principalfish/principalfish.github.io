@@ -25,10 +25,10 @@ from flask import Flask, Response
 from flask.testing import FlaskClient
 from sqlalchemy.exc import OperationalError
 
-from console.blueprints import us_results
 from console.paths import EXPORT_ELECTION_SCRIPT
-from console.services.preview import PREVIEW_CACHE, store_preview
-from console.services.us_models import MODEL_RUN_LOCK, model_run_slot
+from console.shared.preview import PREVIEW_CACHE, store_preview
+from console.us import results as us_results
+from console.us.models import MODEL_RUN_LOCK, model_run_slot
 from core.db import Database
 from core.schema import Election, ElectionType, Party
 from importers.results.us.import_senate_elections import import_senate

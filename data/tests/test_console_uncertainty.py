@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 from flask import Flask
 
-from console.blueprints.uncertainty import (
+from console.westminster.uncertainty.hub import (
     exclusion_pivot,
     fmt,
     party_lambda_pivot,
@@ -52,7 +52,7 @@ def paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
 @pytest.fixture(autouse=True)
 def console_db(db: Database, monkeypatch: pytest.MonkeyPatch) -> Database:
     """Serve every page from the temp-DB fixture."""
-    monkeypatch.setattr("console.blueprints.uncertainty.get_db", lambda: db)
+    monkeypatch.setattr("console.westminster.uncertainty.hub.get_db", lambda: db)
     return db
 
 

@@ -5,7 +5,7 @@ Used by ``test_console_westminster.py`` and ``test_console_holyrood.py``.
 
 Each console blueprint test file still defines its own trend-cache-isolation
 autouse fixture locally, since it patches a specific blueprint module's names
-(``console.blueprints.westminster.get_db``, etc.) and doesn't generalise
+(``console.westminster.model.get_db``, etc.) and doesn't generalise
 cleanly into one shared fixture across different constant names per blueprint.
 """
 
@@ -33,7 +33,7 @@ def app() -> Flask:
 
 
 class RecordingRunner:
-    """Stand-in for ``console.services.runner.run_command`` that records calls."""
+    """Stand-in for ``console.shared.runner.run_command`` that records calls."""
 
     def __init__(self, return_codes: dict[str, int] | None = None) -> None:
         self.calls: list[tuple[str, ...]] = []
@@ -113,7 +113,7 @@ def forbid_call(monkeypatch: pytest.MonkeyPatch, target: str, hint: str) -> None
     """Patch the dotted ``target`` to raise if called, until a test overrides it.
 
     A tripwire for a blueprint's subprocess runner(s): call this from an
-    autouse fixture with each ``console.blueprints.<bp>.run_command``-style
+    autouse fixture with each ``console.<package>.<module>.run_command``-style
     dotted name a route can call, so a test that forgets to opt in to a
     recording stand-in fails loudly here instead of reaching a real
     subprocess. ``hint`` names the fixture a test should request instead.

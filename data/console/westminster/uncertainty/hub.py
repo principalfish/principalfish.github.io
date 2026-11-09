@@ -22,9 +22,9 @@ from typing import Any
 from flask import Blueprint, render_template
 from sqlalchemy import select
 
-from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
 from console.db import get_db
-from console.services.uncertainty_export import ExportPreview, export_preview
+from console.sections import WESTMINSTER_MAP_NAME
+from console.westminster.uncertainty.export_preview import ExportPreview, export_preview
 from core.db import Database
 from core.schema import Map
 from models.support import calibration as calibration_module

@@ -35,13 +35,13 @@ from flask import Flask, Response
 from flask.testing import FlaskClient
 from openpyxl import Workbook
 
-from console.blueprints.poll_import import _run_model_and_export
 from console.paths import (
     EXPORT_ELECTION_SCRIPT,
     PREDICTION_SIMULATION_OUTPUT,
     UNS_MODEL_SCRIPT,
 )
-from console.services.preview import PREVIEW_CACHE, store_preview
+from console.shared.preview import PREVIEW_CACHE, store_preview
+from console.westminster.poll_import import _run_model_and_export
 from core.db import Database
 from importers.polls.types import PollImportResult
 from importers.polls.westminster import survation_import
@@ -87,14 +87,14 @@ _OPTION_RE = re.compile(r'<option value="([^"]*)">([^<]*)</option>')
 def _use_temp_db(db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
     """Route every test's ``get_db`` to the shared temp-DB fixture.
 
-    Also patches ``console.blueprints.polls.get_db``: a successful confirm
+    Also patches ``console.polls.views.get_db``: a successful confirm
     redirects to ``polls.poll_detail``, and ``_flashes`` follows that
     redirect to read the rendered flash messages, so that route's own
     ``get_db`` must resolve to the same temp database too, or it 500s
     against the unrelated (schema-less) default-guard database instead.
     """
-    monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
-    monkeypatch.setattr("console.blueprints.polls.get_db", lambda: db)
+    monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
+    monkeypatch.setattr("console.polls.views.get_db", lambda: db)
 
 
 @pytest.fixture(autouse=True)
@@ -106,7 +106,7 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     itself) fails here instead of running the real UNS model / export.
     """
     forbid_call(
-        monkeypatch, "console.blueprints.poll_import.run_command", "recording_runner"
+        monkeypatch, "console.westminster.poll_import.run_command", "recording_runner"
     )
 
 
@@ -114,7 +114,7 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
 def recording_runner(monkeypatch: pytest.MonkeyPatch) -> RecordingRunner:
     """Replace the poll_import blueprint's subprocess runner with a recorder."""
     runner = RecordingRunner()
-    monkeypatch.setattr("console.blueprints.poll_import.run_command", runner)
+    monkeypatch.setattr("console.westminster.poll_import.run_command", runner)
     return runner
 
 
@@ -683,7 +683,7 @@ class TestImportPollConfirm:
         )
         cmd = list(expected_commands[-1])
         runner = RecordingRunner(return_codes={failed_script.name: 1})
-        monkeypatch.setattr("console.blueprints.poll_import.run_command", runner)
+        monkeypatch.setattr("console.westminster.poll_import.run_command", runner)
 
         # Derive the exact warning text from a real CalledProcessError built
         # the same way check_returncode() would, rather than hand-formatting
@@ -778,9 +778,9 @@ class TestRunModelAndExport:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         runner = RecordingRunner()
-        monkeypatch.setattr("console.blueprints.poll_import.run_command", runner)
+        monkeypatch.setattr("console.westminster.poll_import.run_command", runner)
         monkeypatch.setattr(
-            "console.blueprints.poll_import.EXPORT_ELECTION_SCRIPT",
+            "console.westminster.poll_import.EXPORT_ELECTION_SCRIPT",
             Path("/nonexistent/export_elections.py"),
         )
 

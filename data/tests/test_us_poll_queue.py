@@ -1,4 +1,4 @@
-"""Tests for the US poll review queue service (``console.services.us_poll_queue``).
+"""Tests for the US poll review queue service (``console.us.poll_queue``).
 
 Rows are built directly as ``UsPollRow``s (and once through ``rows_for_page``
 on fixture HTML), polls are seeded through the real commit path, and the model
@@ -23,12 +23,18 @@ from flask.testing import FlaskClient
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from console import create_app
-from console.blueprints import us_poll_import
 from console.paths import EXPORT_ELECTION_SCRIPT
-from console.services import us_poll_queue
-from console.services.preview import PREVIEW_CACHE, store_preview
-from console.services.us_models import MODEL_RUN_LOCK, UsModelRun
-from console.services.us_poll_queue import (
+from console.shared.preview import PREVIEW_CACHE, store_preview
+from console.shared.wikipedia_queue import (
+    NO_CUTOFF,
+    QueueItem,
+    QueueState,
+    advance,
+    current_item,
+)
+from console.us import poll_import as us_poll_import, poll_queue as us_poll_queue
+from console.us.models import MODEL_RUN_LOCK, UsModelRun
+from console.us.poll_queue import (
     AUTO_TRACKING_ERROR_KEY,
     AUTO_TRACKING_KEY,
     INDEX_KEY,
@@ -46,13 +52,6 @@ from console.services.us_poll_queue import (
     group_key,
     prepare_us_item,
     tracking_changed,
-)
-from console.services.wikipedia_queue import (
-    NO_CUTOFF,
-    QueueItem,
-    QueueState,
-    advance,
-    current_item,
 )
 from core.db import Database
 from importers.polls.us.us_polls_common import CandidateReading, pollster_identifier
@@ -1278,9 +1277,9 @@ class TestTrackingChanged:
         assert tracking_changed(counts) is changed
 
 
-# ── Routes (console.blueprints.us_poll_import) ────────────────────────────────
+# ── Routes (console.us.poll_import) ────────────────────────────────
 
-BLUEPRINT = "console.blueprints.us_poll_import"
+BLUEPRINT = "console.us.poll_import"
 
 ALL_CONTESTS = [contest.slug for contest in US_CONTESTS]
 

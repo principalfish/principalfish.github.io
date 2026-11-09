@@ -33,8 +33,8 @@ from flask.typing import ResponseReturnValue
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
 from console.db import get_db
+from console.sections import WESTMINSTER_MAP_NAME
 from core.schema import Map, Party, Poll, PollBase, PollRow, Pollster, Region, Seat
 from models.support.poll_bases import PollNIndex, ResolvedN, poll_base_coverage
 from models.support.uncertainty import (

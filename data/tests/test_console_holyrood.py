@@ -33,7 +33,7 @@ from typing import cast
 import pytest
 from flask import Flask
 
-from console.blueprints.holyrood import (
+from console.holyrood.model import (
     _choices_for_holyrood_model_form,
     _holyrood_model_arg_explanations,
 )
@@ -64,9 +64,9 @@ def holyrood_trend_json(
     for why an opt-in fixture is unsafe here (the ``_flashes`` redirect helper
     reaches ``/holyrood/outputs`` from delete/not-found tests too).
     """
-    monkeypatch.setattr("console.blueprints.holyrood.get_db", lambda: db)
+    monkeypatch.setattr("console.holyrood.model.get_db", lambda: db)
     path = tmp_path / "holyrood_trends.json"
-    monkeypatch.setattr("console.blueprints.holyrood.HOLYROOD_TREND_CACHE_JSON", path)
+    monkeypatch.setattr("console.holyrood.model.HOLYROOD_TREND_CACHE_JSON", path)
     return path
 
 
@@ -82,11 +82,11 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     export, or poll import.
     """
     forbid_call(
-        monkeypatch, "console.blueprints.holyrood.run_command", "recording_runner"
+        monkeypatch, "console.holyrood.model.run_command", "recording_runner"
     )
     forbid_call(
         monkeypatch,
-        "console.blueprints.holyrood.run_python_script",
+        "console.holyrood.model.run_python_script",
         "a locally constructed _RecordingScriptRunner",
     )
 
@@ -95,12 +95,12 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
 def recording_runner(monkeypatch: pytest.MonkeyPatch) -> _RecordingRunner:
     """Replace the Holyrood blueprint's model/export subprocess runner."""
     runner = _RecordingRunner()
-    monkeypatch.setattr("console.blueprints.holyrood.run_command", runner)
+    monkeypatch.setattr("console.holyrood.model.run_command", runner)
     return runner
 
 
 class _RecordingScriptRunner:
-    """Stand-in for ``console.services.runner.run_python_script`` matching its
+    """Stand-in for ``console.shared.runner.run_python_script`` matching its
     exact ``(script, *args, cwd=None, timeout)`` signature.
 
     Each call pops the next queued result off ``results`` (defaulting to a
@@ -206,7 +206,7 @@ def _patch_import_script(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Pat
     """
     script = tmp_path / "holyrood_wikipedia_import.py"
     script.write_text("# stub for test", encoding="utf-8")
-    monkeypatch.setattr("console.blueprints.holyrood.HOLYROOD_IMPORT_SCRIPT", script)
+    monkeypatch.setattr("console.holyrood.model.HOLYROOD_IMPORT_SCRIPT", script)
     return script
 
 
@@ -222,7 +222,7 @@ class TestHolyroodImportPolls:
     ) -> None:
         missing_script = tmp_path / "does-not-exist.py"
         monkeypatch.setattr(
-            "console.blueprints.holyrood.HOLYROOD_IMPORT_SCRIPT", missing_script
+            "console.holyrood.model.HOLYROOD_IMPORT_SCRIPT", missing_script
         )
         client = app.test_client()
 
@@ -250,7 +250,7 @@ class TestHolyroodImportPolls:
                 ),
             ]
         )
-        monkeypatch.setattr("console.blueprints.holyrood.run_python_script", runner)
+        monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
 
         response = app.test_client().post("/holyrood/import-polls")
 
@@ -301,7 +301,7 @@ class TestHolyroodImportPolls:
                 ),
             ]
         )
-        monkeypatch.setattr("console.blueprints.holyrood.run_python_script", runner)
+        monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
 
         response = app.test_client().post("/holyrood/import-polls")
 
@@ -328,7 +328,7 @@ class TestHolyroodImportPolls:
                 ),
             ]
         )
-        monkeypatch.setattr("console.blueprints.holyrood.run_python_script", runner)
+        monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
 
         response = app.test_client().post("/holyrood/import-polls")
 
@@ -611,7 +611,7 @@ class TestRunHolyroodModelExecute:
         export_script = tmp_path / "export_elections.py"
         export_script.write_text("# stub for test", encoding="utf-8")
         monkeypatch.setattr(
-            "console.blueprints.holyrood.EXPORT_ELECTION_SCRIPT", export_script
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", export_script
         )
         form = _valid_form(world, dry_run="false")
 
@@ -654,10 +654,10 @@ class TestRunHolyroodModelExecute:
         export_script = tmp_path / "export_elections.py"
         export_script.write_text("# stub for test", encoding="utf-8")
         monkeypatch.setattr(
-            "console.blueprints.holyrood.EXPORT_ELECTION_SCRIPT", export_script
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", export_script
         )
         runner = _RecordingRunner(return_codes={"run_holyrood_uns_model.py": 3})
-        monkeypatch.setattr("console.blueprints.holyrood.run_command", runner)
+        monkeypatch.setattr("console.holyrood.model.run_command", runner)
         form = _valid_form(world, dry_run="false")
 
         response = app.test_client().post("/holyrood/run-model", data=form)
@@ -681,10 +681,10 @@ class TestRunHolyroodModelExecute:
         export_script = tmp_path / "export_elections.py"
         export_script.write_text("# stub for test", encoding="utf-8")
         monkeypatch.setattr(
-            "console.blueprints.holyrood.EXPORT_ELECTION_SCRIPT", export_script
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", export_script
         )
         runner = _RecordingRunner(return_codes={"export_elections.py": 4})
-        monkeypatch.setattr("console.blueprints.holyrood.run_command", runner)
+        monkeypatch.setattr("console.holyrood.model.run_command", runner)
         form = _valid_form(world, dry_run="false")
 
         response = app.test_client().post("/holyrood/run-model", data=form)
@@ -711,7 +711,7 @@ class TestRunHolyroodModelExecute:
         world = seed_holyrood_world(db)
         missing_script = tmp_path / "does-not-exist.py"
         monkeypatch.setattr(
-            "console.blueprints.holyrood.EXPORT_ELECTION_SCRIPT", missing_script
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", missing_script
         )
         form = _valid_form(world, dry_run="false")
 

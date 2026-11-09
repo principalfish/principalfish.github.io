@@ -26,7 +26,7 @@ EXPORT_DIR = DATA_DIR / "export"
 
 # Modules elsewhere that import the export package; a cycle with it would only show cold.
 EXPORT_USERS = [
-    "console.services.uncertainty_export",
+    "console.westminster.uncertainty.export_preview",
     "models.us._common",
     "models.us.run_us_senate_model",
 ]

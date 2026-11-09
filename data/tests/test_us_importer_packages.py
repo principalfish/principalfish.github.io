@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from console import create_app
 from tests.layout_helpers import leftover_files
 
 DATA_DIR = Path(__file__).resolve().parent.parent
@@ -28,9 +29,7 @@ CONVERTERS = [
     "convert_senate_current",
 ]
 BLUEPRINTS = sorted(
-    f"console.blueprints.{path.stem}"
-    for path in (DATA_DIR / "console" / "blueprints").glob("*.py")
-    if path.stem != "__init__"
+    {blueprint.import_name for blueprint in create_app().blueprints.values()}
 )
 LIVE_SOURCES = sorted(
     path
@@ -74,10 +73,10 @@ def test_each_blueprint_imports_first_in_a_fresh_interpreter(module: str) -> Non
 
 def test_the_us_results_blueprint_works_in_either_import_order() -> None:
     forward = _run_isolated(
-        "import console.blueprints.us_results\nimport console.blueprints.us\n"
+        "import console.us.results\nimport console.us.views\n"
     )
     backward = _run_isolated(
-        "import console.blueprints.us\nimport console.blueprints.us_results\n"
+        "import console.us.views\nimport console.us.results\n"
     )
     assert forward.returncode == 0, forward.stderr
     assert backward.returncode == 0, backward.stderr

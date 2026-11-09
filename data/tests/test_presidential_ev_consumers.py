@@ -17,7 +17,7 @@ import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.orm import joinedload
 
-from console.services.model_outputs import build_output_detail_context
+from console.shared.model_outputs import build_output_detail_context
 from core.db import Database
 from core.electoral_votes import (
     ElectoralVoteError,

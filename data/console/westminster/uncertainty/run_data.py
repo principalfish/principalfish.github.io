@@ -9,6 +9,7 @@ from typing import Any
 
 from sqlalchemy import func, select
 
+from console.sections import WESTMINSTER_MAP_NAME
 from core.db import Database
 from core.schema import Election, ElectionType, Map, Party, Region, Seat, Vote
 from models.support.persistence import (
@@ -16,8 +17,6 @@ from models.support.persistence import (
     load_uncertainty,
     westminster_uns_scope,
 )
-
-WESTMINSTER_MAP = "UK Constituencies post 2022"
 
 
 def mapping(value: object) -> dict[str, Any]:
@@ -64,7 +63,10 @@ def stored_runs(db: Database) -> list[RunRecord]:
         elections = session.execute(
             select(Election.id, Election.name, Election.map_id)
             .join(Map)
-            .where(Map.name == WESTMINSTER_MAP, Election.type == ElectionType.model_uns)
+            .where(
+                Map.name == WESTMINSTER_MAP_NAME,
+                Election.type == ElectionType.model_uns,
+            )
         ).all()
     runs = []
     for election_id, name, map_id in elections:

@@ -18,9 +18,9 @@ import pytest
 from flask import Flask, Response
 from flask.testing import FlaskClient
 
-from console.blueprints import by_elections
 from console.paths import EXPORT_ELECTION_SCRIPT
-from console.services.preview import PREVIEW_CACHE, store_preview
+from console.shared.preview import PREVIEW_CACHE, store_preview
+from console.westminster import by_elections
 from core.db import Database
 from core.schema import ElectionType
 from importers.results.westminster import by_election_import
@@ -34,7 +34,6 @@ from tests.console_fixtures import (
     select_block,
 )
 from tests.uk_fixtures import WestminsterWorld
-
 
 _SOURCE_URL = "https://example.test/2025_Hexham_by-election"
 _ELECTION_NAME = "2025 Hexham by-election"

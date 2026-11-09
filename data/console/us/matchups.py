@@ -12,7 +12,7 @@ Both only ever accept a label that some stored poll already carries, so a typo
 or a stale form cannot point a race at a matchup with no polls. Refusals are
 raised as :class:`MatchupChoiceError` for the routes to flash. Clearing or
 resetting a choice that is not there is not a refusal: both pages say there
-was nothing to do. The module is Flask-free, like the other console services.
+was nothing to do. The module is Flask-free, like the other console helpers.
 """
 
 from __future__ import annotations

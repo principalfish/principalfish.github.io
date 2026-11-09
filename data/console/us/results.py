@@ -31,7 +31,7 @@ from :data:`SNAPSHOT_CONFIG`, defaulting to the committed snapshot. Tests point
 all three at a temporary folder.
 
 Import, export and the Current Senate rebuild all hold the console's one US model-run slot
-(:func:`~console.services.us_models.model_run_slot`): the export publishes
+(:func:`~console.us.models.model_run_slot`): the export publishes
 every US chamber's trend history, which a running history rebuild may have
 half-cleared, and a double-submitted confirm must not import twice at once.
 """
@@ -59,14 +59,14 @@ from flask.typing import ResponseReturnValue
 
 from console.db import get_db
 from console.paths import EXPORT_ELECTION_SCRIPT
-from console.services.preview import (
+from console.shared.preview import (
     PREVIEW_CACHE,
     get_preview,
     pop_preview,
     store_preview,
 )
-from console.services.runner import render_command_result, run_python_script
-from console.services.us_models import busy_message, model_run_slot
+from console.shared.runner import render_command_result, run_python_script
+from console.us.models import busy_message, model_run_slot
 from core import config
 from core.db import Database
 from importers.results.us.nyt.adapters import AdapterError

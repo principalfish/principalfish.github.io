@@ -30,13 +30,6 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
 from pydantic import ValidationError
 
-from importers.polls.types import ScrapedPollRow
-from importers.polls.westminster.registry import IMPORTERS
-from importers.polls.westminster.wikipedia_index import (
-    WikipediaIndexError,
-    fetch_poll_index,
-)
-
 from console.db import get_db
 from console.forms import PollImportForm, WikipediaQueueStartForm
 from console.paths import (
@@ -45,9 +38,10 @@ from console.paths import (
     PREDICTION_SIMULATION_OUTPUT,
     UNS_MODEL_SCRIPT,
 )
-from console.services.preview import get_preview, pop_preview, store_preview
-from console.services.runner import run_command
-from console.services.wikipedia_queue import (
+from console.sections import WESTMINSTER_MAP_NAME
+from console.shared.preview import get_preview, pop_preview, store_preview
+from console.shared.runner import run_command
+from console.shared.wikipedia_queue import (
     QueueItem,
     QueueState,
     advance,
@@ -61,6 +55,12 @@ from console.services.wikipedia_queue import (
     progress,
     summarise,
 )
+from importers.polls.types import ScrapedPollRow
+from importers.polls.westminster.registry import IMPORTERS
+from importers.polls.westminster.wikipedia_index import (
+    WikipediaIndexError,
+    fetch_poll_index,
+)
 
 bp = Blueprint("poll_import", __name__)
 
@@ -68,10 +68,6 @@ bp = Blueprint("poll_import", __name__)
 # token minted by another flow cannot be redeemed here.
 PREVIEW_TYPE = "poll_preview"
 WIKIPEDIA_PREVIEW_TYPE = "wikipedia_queue"
-
-# Every Westminster importer targets this map; the catch-up queue scopes its
-# presence checks to it.
-WESTMINSTER_MAP_NAME = "UK Constituencies post 2022"
 
 # One UNS simulation date costs well under a second, and the model back-fills
 # every missing trend date in a single subprocess — a month-long catch-up is a

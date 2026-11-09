@@ -31,7 +31,7 @@ from console.paths import (
     US_SENATE_MODEL_SCRIPT,
     US_SENATE_TREND_CACHE_JSON,
 )
-from console.services.runner import run_python_script
+from console.shared.runner import run_python_script
 from core.db import Database
 from core.schema import ElectionType
 
@@ -62,7 +62,7 @@ NO_MATCHUP_NOTE = (
 class ScriptRunner(Protocol):
     """Callable that runs one Python script and captures its output.
 
-    Matches :func:`console.services.runner.run_python_script`; tests pass a
+    Matches :func:`console.shared.runner.run_python_script`; tests pass a
     recorder instead.
     """
 

@@ -9,8 +9,8 @@ import pytest
 from pydantic import ValidationError
 
 from console.forms import ModelRunForm
-from console.services.preview import get_preview, pop_preview, store_preview
-from console.services.trends import trend_entry_as_of_date
+from console.shared.preview import get_preview, pop_preview, store_preview
+from console.shared.trends import trend_entry_as_of_date
 
 
 class TestTrendEntryAsOfDate:

@@ -3,12 +3,12 @@
 Mirrors the Holyrood flow for the three US election types (House / President /
 Senate). One button runs all three forecast models and then the static export;
 poll import is the reviewed Wikipedia queue in
-:mod:`console.blueprints.us_poll_import`. Two matchup pages choose which stored
+:mod:`console.us.poll_import`. Two matchup pages choose which stored
 matchup the models follow: the national presidential one, and per-race
 overrides of the importer's automatic choice for Senate and House races (the
-decisions live in :mod:`console.services.us_matchups`). The model-output list/detail
+decisions live in :mod:`console.us.matchups`). The model-output list/detail
 and delete pages reuse the shared, election-type-parameterised service in
-``console.services.model_outputs`` and the same templates as Westminster and
+``console.shared.model_outputs`` and the same templates as Westminster and
 Holyrood — but because those templates build URLs from bare endpoint names
 (``url_for(detail_endpoint, election_id=…)``), each chamber gets its own set of
 endpoints, registered from :data:`US_CHAMBERS` by :func:`_register_chamber_routes`.
@@ -25,14 +25,15 @@ from flask.typing import ResponseReturnValue
 
 from console.db import get_db
 from console.paths import EXPORT_ELECTION_SCRIPT
-from console.services.model_outputs import (
+from console.sections import SECTIONS_BY_SLUG, Capability
+from console.shared.model_outputs import (
     build_output_detail_context,
     build_outputs_context,
     delete_model_output as delete_one_output,
     delete_selected_model_outputs as delete_selected_outputs,
 )
-from console.services.runner import render_command_result, run_python_script
-from console.services.us_matchups import (
+from console.shared.runner import render_command_result, run_python_script
+from console.us.matchups import (
     MatchupChoiceError,
     apply_race_matchup_action,
     build_race_matchups,
@@ -41,7 +42,7 @@ from console.services.us_matchups import (
     race_map_name,
     set_national_matchup,
 )
-from console.services.us_models import (
+from console.us.models import (
     EXPORT_STEP_LABEL,
     US_CHAMBERS,
     US_CHAMBERS_BY_SLUG,
@@ -95,14 +96,14 @@ def run_us_models() -> ResponseReturnValue:
     Runs the House, Senate, and Presidential forecast runners (each persists a
     ``us_*_model`` election and updates its trend JSON), then export_elections.py
     to rewrite the static data files (the export is the single manifest writer).
-    The sequence itself lives in ``console.services.us_models`` — a chamber
+    The sequence itself lives in ``console.us.models`` — a chamber
     whose tracked matchup is unset is skipped without stopping the others.
 
     With the form's ``rebuild_history`` box ticked, every chamber's runner
     recomputes its whole trend history (``--rebuild-history``, under the long
     rebuild timeout), one after another: a single request that can take hours.
     Either way the run holds the console's one model-run slot
-    (:func:`~console.services.us_models.model_run_slot`), so it is refused with
+    (:func:`~console.us.models.model_run_slot`), so it is refused with
     a flash while another run or rebuild is in progress.
 
     A step that times out or cannot be started renders a failed result saying
@@ -323,7 +324,7 @@ def _rebuild_history(
     failed result saying the history may be partial, instead of a 500.
 
     It holds the console's one model-run slot
-    (:func:`~console.services.us_models.model_run_slot`), so while another run
+    (:func:`~console.us.models.model_run_slot`), so while another run
     or rebuild is in progress it is refused with a flash and sent back.
 
     Args:
@@ -465,6 +466,9 @@ def _register_chamber_routes(chamber: UsChamber) -> None:
         return render_template(
             "model_output_detail.html",
             **context,
+            show_uncertainty_links=SECTIONS_BY_SLUG[chamber.slug].has(
+                Capability.UNCERTAINTY
+            ),
             outputs_endpoint=outputs_endpoint,
             detail_endpoint=detail_endpoint,
         )

@@ -16,14 +16,14 @@ import numpy as np
 import pytest
 from flask import Flask, template_rendered
 
-from console.blueprints import uncertainty_explorer as explorer_blueprint
-from console.services.uncertainty_explorer import (
+from console.westminster.uncertainty import explorer as explorer_blueprint
+from console.westminster.uncertainty.explorer_data import (
     filter_draws,
     outcome_tail,
     raw_run,
     seat_decomposition,
 )
-from console.services.uncertainty_runs import stored_runs
+from console.westminster.uncertainty.run_data import stored_runs
 from core.db import Database
 from models.support.monte_carlo import (
     SimulationFileError,
@@ -51,8 +51,10 @@ def saved(
     monkeypatch.setattr(db.config, "simulations_path", str(path))
     monkeypatch.setattr(runner, "TREND_CACHE_JSON", tmp_path / "trend.json")
     monkeypatch.setattr(runner, "TREND_CACHE_META_JSON", tmp_path / "meta.json")
-    for module in ("uncertainty_runs", "uncertainty_explorer"):
-        monkeypatch.setattr(f"console.blueprints.{module}.get_db", lambda: db)
+    for module in ("runs", "explorer"):
+        monkeypatch.setattr(
+            f"console.westminster.uncertainty.{module}.get_db", lambda: db
+        )
     _poll(db, westminster_world)
     cfg = _cfg(westminster_world)
     cfg = replace(
@@ -560,7 +562,7 @@ def test_history_keeps_pruned_runs_and_filters(
 def test_unknown_ids_and_empty_database(
     db: Database, app: Flask, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("console.blueprints.uncertainty_runs.get_db", lambda: db)
+    monkeypatch.setattr("console.westminster.uncertainty.runs.get_db", lambda: db)
     for suffix in ("results", "budget", "history", "sims", "results/999999"):
         response = app.test_client().get("/westminster/uncertainty/" + suffix)
         assert response.status_code == 200
@@ -580,7 +582,7 @@ def test_hub_previews_the_published_export(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("console.blueprints.uncertainty.get_db", lambda: db)
+    monkeypatch.setattr("console.westminster.uncertainty.hub.get_db", lambda: db)
     body = _hub(app)
     # The sizes are those of the files a real export writes.
     files = run_export(db, tmp_path / "export", [], monkeypatch)["files"]
@@ -615,7 +617,7 @@ def test_hub_preview_without_detail_and_with_a_bad_summary(
     db: Database,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("console.blueprints.uncertainty.get_db", lambda: db)
+    monkeypatch.setattr("console.westminster.uncertainty.hub.get_db", lambda: db)
     election_id = saved["record"].election_id
     with closing(sqlite3.connect(db.config.database_path)) as conn:
         conn.execute(
@@ -646,7 +648,7 @@ def test_hub_preview_ships_the_latest_date_after_an_older_rerun(
     db: Database,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("console.blueprints.uncertainty.get_db", lambda: db)
+    monkeypatch.setattr("console.westminster.uncertainty.hub.get_db", lambda: db)
     world = saved["world"]
     older = DAY - timedelta(days=1)
     replace_output(

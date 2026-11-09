@@ -19,11 +19,11 @@ from typing import cast
 import pytest
 from flask import Flask
 
-from console.blueprints.westminster import (
+from console.paths import PREDICTION_SIMULATION_OUTPUT, UNS_MODEL_SCRIPT
+from console.westminster.model import (
     _choices_for_model_form,
     _model_arg_explanations,
 )
-from console.paths import PREDICTION_SIMULATION_OUTPUT, UNS_MODEL_SCRIPT
 from core.db import Database
 from core.schema import ElectionType
 from tests.console_fixtures import (
@@ -53,9 +53,9 @@ def uns_trend_json(
     removes that hazard for the whole file, and the per-test
     ``monkeypatch.setattr(..., "get_db", ...)`` lines it used to require.
     """
-    monkeypatch.setattr("console.blueprints.westminster.get_db", lambda: db)
+    monkeypatch.setattr("console.westminster.model.get_db", lambda: db)
     path = tmp_path / "model_output_trends.json"
-    monkeypatch.setattr("console.blueprints.westminster.UNS_TREND_CACHE_JSON", path)
+    monkeypatch.setattr("console.westminster.model.UNS_TREND_CACHE_JSON", path)
     return path
 
 
@@ -68,7 +68,7 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     run or export.
     """
     forbid_call(
-        monkeypatch, "console.blueprints.westminster.run_command", "recording_runner"
+        monkeypatch, "console.westminster.model.run_command", "recording_runner"
     )
 
 
@@ -76,7 +76,7 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
 def recording_runner(monkeypatch: pytest.MonkeyPatch) -> _RecordingRunner:
     """Replace the Westminster blueprint's subprocess runner with a recorder."""
     runner = _RecordingRunner()
-    monkeypatch.setattr("console.blueprints.westminster.run_command", runner)
+    monkeypatch.setattr("console.westminster.model.run_command", runner)
     return runner
 
 
@@ -197,7 +197,7 @@ class TestChoicesForModelForm:
     def test_output_csv_option_uses_todays_date(
         self, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("console.blueprints.westminster.date", _FixedDate)
+        monkeypatch.setattr("console.westminster.model.date", _FixedDate)
 
         choices = _choices_for_model_form(db)
 
@@ -381,7 +381,7 @@ class TestModelRunExecute:
         export_script = tmp_path / "export_elections.py"
         export_script.write_text("# stub for test", encoding="utf-8")
         monkeypatch.setattr(
-            "console.blueprints.westminster.EXPORT_ELECTION_SCRIPT", export_script
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", export_script
         )
         form = _valid_form(westminster_world, dry_run="false")
 
@@ -429,10 +429,10 @@ class TestModelRunExecute:
         export_script = tmp_path / "export_elections.py"
         export_script.write_text("# stub for test", encoding="utf-8")
         monkeypatch.setattr(
-            "console.blueprints.westminster.EXPORT_ELECTION_SCRIPT", export_script
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", export_script
         )
         runner = _RecordingRunner(return_codes={"run_uns_model.py": 3})
-        monkeypatch.setattr("console.blueprints.westminster.run_command", runner)
+        monkeypatch.setattr("console.westminster.model.run_command", runner)
         form = _valid_form(westminster_world, dry_run="false")
 
         response = app.test_client().post("/models/run", data=form)
@@ -456,7 +456,7 @@ class TestModelRunExecute:
     ) -> None:
         missing_script = tmp_path / "does-not-exist.py"
         monkeypatch.setattr(
-            "console.blueprints.westminster.EXPORT_ELECTION_SCRIPT", missing_script
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", missing_script
         )
         form = _valid_form(westminster_world, dry_run="false")
 

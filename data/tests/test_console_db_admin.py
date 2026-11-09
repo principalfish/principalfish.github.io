@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from flask import Flask
 
+import console.admin.db_admin as db_admin
 from console import create_app
-import console.blueprints.db_admin as db_admin
 from core import backup
 
 

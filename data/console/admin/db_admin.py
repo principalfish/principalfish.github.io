@@ -8,7 +8,7 @@ from flask import Blueprint
 from flask.typing import ResponseReturnValue
 
 from console.db import reset_db
-from console.services.runner import render_command_result
+from console.shared.runner import render_command_result
 from core import backup
 
 bp = Blueprint("db_admin", __name__)

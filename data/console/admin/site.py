@@ -6,7 +6,7 @@ from flask import Blueprint, flash, redirect, url_for
 from flask.typing import ResponseReturnValue
 
 from console.paths import EXPORT_ELECTION_SCRIPT, REBUILD_DB_SCRIPT
-from console.services.runner import render_command_result, run_python_script
+from console.shared.runner import render_command_result, run_python_script
 
 bp = Blueprint("site", __name__)
 

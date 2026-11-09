@@ -11,7 +11,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from console.services.uncertainty_runs import RunRecord, mapping
+from console.westminster.uncertainty.run_data import RunRecord, mapping
 from models.support.monte_carlo import (
     DrawsMeta,
     SimulationDraws,

@@ -17,9 +17,8 @@ import pytest
 from flask import Flask, Response
 from flask.testing import FlaskClient
 
-from console import create_app
-from console import paths as console_paths
-from console.services.us_models import (
+from console import create_app, paths as console_paths
+from console.us.models import (
     MODEL_RUN_LOCK,
     REBUILD_TIMEOUT_SECONDS,
     STEP_TIMEOUT_SECONDS,
@@ -167,7 +166,7 @@ class TestUsOutputsPages:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_us_house(db)
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
         response = app.test_client().get("/us/house/outputs")
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -179,7 +178,7 @@ class TestUsOutputsPages:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_us_house(db)
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
         response = app.test_client().get(f"/us/house/outputs/{seeded['model_id']}")
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -189,7 +188,7 @@ class TestUsOutputsPages:
     def test_house_output_detail_unknown_redirects(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
         response = app.test_client().get("/us/house/outputs/99999")
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/us/house/outputs")
@@ -198,11 +197,11 @@ class TestUsOutputsPages:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_us_house(db)
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
         response = app.test_client().post(f"/us/house/outputs/{seeded['model_id']}/delete")
         assert response.status_code == 302
 
-        from console.services.model_outputs import build_output_detail_context
+        from console.shared.model_outputs import build_output_detail_context
 
         context = build_output_detail_context(
             db,
@@ -218,7 +217,7 @@ class TestPresidentElectoralVotes:
     """The President output shows electoral votes; House/Senate show only seats."""
 
     def test_detail_context_reports_electoral_votes(self, db: Database) -> None:
-        from console.services.model_outputs import build_output_detail_context
+        from console.shared.model_outputs import build_output_detail_context
 
         seeded = _seed_us_president(db)
         context = build_output_detail_context(
@@ -241,7 +240,7 @@ class TestPresidentElectoralVotes:
         assert context["party_totals"][0]["party_name"] == "Democratic"
 
     def test_house_detail_context_hides_electoral_votes(self, db: Database) -> None:
-        from console.services.model_outputs import build_output_detail_context
+        from console.shared.model_outputs import build_output_detail_context
 
         seeded = _seed_us_house(db)
         context = build_output_detail_context(
@@ -259,7 +258,7 @@ class TestPresidentElectoralVotes:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_us_president(db)
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
         body = app.test_client().get(f"/us/president/outputs/{seeded['model_id']}").get_data(as_text=True)
         assert "Electoral Votes" in body
         assert "Electoral Votes by Party" in body
@@ -268,7 +267,7 @@ class TestPresidentElectoralVotes:
         # A president trend cache with an "e" value drives the list chart onto EV.
         import json
 
-        from console.services.model_outputs import build_outputs_context
+        from console.shared.model_outputs import build_outputs_context
 
         seeded = _seed_us_president(db)
         dem, rep = str(seeded["dem_id"]), str(seeded["rep_id"])
@@ -297,7 +296,7 @@ class TestPresidentElectoralVotes:
     def test_house_list_trend_plots_seats(self, db: Database, tmp_path: Path) -> None:
         import json
 
-        from console.services.model_outputs import build_outputs_context
+        from console.shared.model_outputs import build_outputs_context
 
         seeded = _seed_us_house(db)
         dem, rep = str(seeded["dem_id"]), str(seeded["rep_id"])
@@ -483,7 +482,7 @@ class TestRunUsModelsRoute:
     def test_route_renders_service_output(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
         captured: dict[str, object] = {}
 
         def fake_run(
@@ -501,7 +500,7 @@ class TestRunUsModelsRoute:
                 skipped=frozenset({"president"}),
             )
 
-        monkeypatch.setattr("console.blueprints.us.run_us_models_and_export", fake_run)
+        monkeypatch.setattr("console.us.views.run_us_models_and_export", fake_run)
 
         response = app.test_client().post("/us/run-models")
 
@@ -550,9 +549,9 @@ class TestRunUsModelsRoute:
         error_name: str,
         partial: str | None,
     ) -> None:
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
         runner = _TimeoutRecorder(fail=fail, error=error)
-        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         response = app.test_client().post("/us/run-models")
 
@@ -570,9 +569,9 @@ class TestRunUsModelsRoute:
     def test_a_run_whose_model_fails_leads_with_the_note(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
         runner = _RecordingRunner(return_codes={"run_us_house_model.py": 2})
-        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         body = html.unescape(
             app.test_client().post("/us/run-models").get_data(as_text=True)
@@ -588,7 +587,7 @@ class TestRunUsModelsRoute:
         monkeypatch: pytest.MonkeyPatch,
         recording_runner: _RecordingRunner,
     ) -> None:
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
 
         body = app.test_client().post("/us/run-models").get_data(as_text=True)
 
@@ -597,12 +596,12 @@ class TestRunUsModelsRoute:
     def test_an_interrupted_run_shows_the_chambers_that_finished(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
         runner = _TimeoutRecorder(
             fail="export_elections.py",
             error=subprocess.TimeoutExpired(["python", "export_elections.py"], 300),
         )
-        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         body = html.unescape(
             app.test_client().post("/us/run-models").get_data(as_text=True)
@@ -622,7 +621,7 @@ class TestRebuildAllHistory:
 
     @pytest.fixture(autouse=True)
     def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
 
     def test_ticked_rebuilds_every_chamber_then_exports(
         self, app: Flask, db: Database, recording_runner: _RecordingRunner
@@ -685,7 +684,7 @@ class TestRebuildAllHistory:
         # Exiting non-zero stops the sequence like a timeout does, after the
         # runner may have cleared that chamber's points.
         runner = _RecordingRunner(return_codes={"run_us_senate_model.py": 1})
-        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         response = app.test_client().post(
             "/us/run-models", data={"rebuild_history": "on"}
@@ -702,7 +701,7 @@ class TestRebuildAllHistory:
             fail="run_us_senate_model.py",
             error=subprocess.TimeoutExpired(["python", "run_us_senate_model.py"], 3600),
         )
-        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         response = app.test_client().post(
             "/us/run-models", data={"rebuild_history": "on"}
@@ -818,7 +817,7 @@ def _flashes(client: FlaskClient[Response], response: Response) -> list[str]:
 def recording_runner(monkeypatch: pytest.MonkeyPatch) -> _RecordingRunner:
     """Replace the US blueprint's subprocess runner with a recorder."""
     runner = _RecordingRunner()
-    monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+    monkeypatch.setattr("console.us.views.run_python_script", runner)
     return runner
 
 
@@ -850,7 +849,7 @@ class TestPresidentMatchupPage:
 
     @pytest.fixture(autouse=True)
     def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
 
     def test_lists_national_labels_with_counts_and_latest_date(
         self, app: Flask, db: Database
@@ -1000,7 +999,7 @@ class TestPollDetailShowsUsScope:
     def test_seat_matchup_and_candidates(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("console.blueprints.polls.get_db", lambda: db)
+        monkeypatch.setattr("console.polls.views.get_db", lambda: db)
         map_id = db.add_map("US Senate 2024").id
         alaska = db.add_seat(map_id, "Alaska")
         rep = db.add_party("Republican")
@@ -1037,7 +1036,7 @@ class TestPollDetailShowsUsScope:
     def test_party_only_poll_has_no_us_fields(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("console.blueprints.polls.get_db", lambda: db)
+        monkeypatch.setattr("console.polls.views.get_db", lambda: db)
         map_id = db.add_map("Westminster 2024").id
         lab = db.add_party("Labour")
         pollster = db.add_pollster("YouGov", "yougov")
@@ -1057,7 +1056,7 @@ class TestRaceMatchupsPage:
 
     @pytest.fixture(autouse=True)
     def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
 
     def test_lists_auto_manual_and_effective_values(self, app: Flask, db: Database) -> None:
         seeded = _seed_senate_races(db)
@@ -1467,7 +1466,7 @@ class TestRebuildRouteFailure:
 
     @pytest.fixture(autouse=True)
     def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
 
     @pytest.mark.parametrize(
         ("error", "error_name", "partial"),
@@ -1495,7 +1494,7 @@ class TestRebuildRouteFailure:
     ) -> None:
         _seed_president_matchups(db)
         runner = _TimeoutRecorder(fail="run_us_presidential_model.py", error=error)
-        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         response = app.test_client().post(
             "/us/president/matchup",
@@ -1522,7 +1521,7 @@ class TestRebuildRouteFailure:
             fail="run_us_senate_model.py",
             error=subprocess.TimeoutExpired(["python", "run_us_senate_model.py"], 3600),
         )
-        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         response = app.test_client().post(
             f"/us/matchups/{seeded['map_id']}/{seeded['texas']}",
@@ -1540,7 +1539,7 @@ class TestModelRunSlot:
 
     @pytest.fixture(autouse=True)
     def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
 
     def _post_texas_rebuild(
         self,
@@ -1581,7 +1580,7 @@ class TestModelRunSlot:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         runner = _RecordingRunner(return_codes={"run_us_senate_model.py": 1})
-        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         _, response = self._post_texas_rebuild(app, db)
 
@@ -1596,7 +1595,7 @@ class TestModelRunSlot:
             fail="run_us_senate_model.py",
             error=subprocess.TimeoutExpired(["python", "run_us_senate_model.py"], 3600),
         )
-        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         _, response = self._post_texas_rebuild(app, db)
 

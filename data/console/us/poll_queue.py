@@ -1,7 +1,7 @@
 """The reviewed catch-up queue for US polls scraped from Wikipedia.
 
 This is the US policy on top of the shared queue machinery in
-:mod:`console.services.wikipedia_queue`. It is Flask-free: the US blueprint
+:mod:`console.shared.wikipedia_queue`. It is Flask-free: the US blueprint
 owns the routes, the preview-cache token and the templates, and calls in here
 for every decision.
 
@@ -47,13 +47,7 @@ from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from console.services.us_models import (
-    ScriptRunner,
-    UsModelRunInterrupted,
-    model_run_slot,
-    run_us_models_and_export,
-)
-from console.services.wikipedia_queue import (
+from console.shared.wikipedia_queue import (
     NO_CUTOFF,
     QueueItem,
     QueueKey,
@@ -62,6 +56,12 @@ from console.services.wikipedia_queue import (
     build_queue_from_rows,
     describe_import_result,
     pending_in_group,
+)
+from console.us.models import (
+    ScriptRunner,
+    UsModelRunInterrupted,
+    model_run_slot,
+    run_us_models_and_export,
 )
 from core.db import Database
 from importers.polls.types import ScrapedPollRow

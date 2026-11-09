@@ -13,9 +13,9 @@ from pathlib import Path
 import pytest
 
 from db import Database
-from model_support import trends
-from model_support.persistence import OutputScope, OutputVote, replace_output
 from models.holyrood import run_holyrood_uns_model
+from models.support import trends
+from models.support.persistence import OutputScope, OutputVote, replace_output
 from models.us._common import main_for_spec
 from models.westminster import run_uns_model
 from scripts import rebuild_model_trends

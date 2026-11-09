@@ -156,22 +156,7 @@ from sqlalchemy import select as sa_select
 
 from config import DatabaseConfig
 from db import Database
-from model_support.history import HistoryRecomputationError
-from model_support.io import publish_json, validate_output_target
-from model_support.trends import (
-    default_trend_path,
-    publish_trends,
-    trend_batch,
-    validate_trend_scope,
-)
-from model_support.persistence import (
-    OutputScope,
-    OutputVote,
-    delete_outputs,
-    output_dates,
-    replace_output,
-)
-from model_support.cli import (
+from models.support.cli import (
     parse_manual_shares,
     single_date_window,
     validate_date_range,
@@ -181,7 +166,16 @@ from model_support.cli import (
     validate_manual_share,
     validate_run_arguments,
 )
-from model_support.polling import (
+from models.support.history import HistoryRecomputationError
+from models.support.io import publish_json, validate_output_target
+from models.support.persistence import (
+    OutputScope,
+    OutputVote,
+    delete_outputs,
+    output_dates,
+    replace_output,
+)
+from models.support.polling import (
     PollAggregation,
     PollContributor,
     PollSource,
@@ -189,7 +183,13 @@ from model_support.polling import (
     select_poll_endpoint,
     effective_pollster_weight,
 )
-from model_support.summaries import recorded_vote_rows, summarize_votes
+from models.support.summaries import recorded_vote_rows, summarize_votes
+from models.support.trends import (
+    default_trend_path,
+    publish_trends,
+    trend_batch,
+    validate_trend_scope,
+)
 from schema import Election, ElectionType, Pollster, Seat
 
 BASELINE_ELECTION_NAME = "2026 Scottish Parliament Election"

@@ -1,7 +1,7 @@
 """Recorded counts must preserve allocation and count each voter only once."""
 
 import pytest
-from model_support.summaries import (
+from models.support.summaries import (
     non_overlapping_seat_ids,
     recorded_vote_rows,
     summarize_votes,

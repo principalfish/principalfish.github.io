@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from model_support.public_uncertainty import (
+from models.support.public_uncertainty import (
     PUBLIC_SCHEMA,
     PublicUncertaintyError,
     SeatBand,

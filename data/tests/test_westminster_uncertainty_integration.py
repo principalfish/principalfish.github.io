@@ -18,8 +18,8 @@ from sqlalchemy import select
 
 from config import DatabaseConfig
 from db import Database
-from model_support.io import OutputPublicationError
-from model_support.monte_carlo import (
+from models.support.io import OutputPublicationError
+from models.support.monte_carlo import (
     ErrorStreams,
     SimulationInputs,
     SimulationRun,
@@ -28,8 +28,8 @@ from model_support.monte_carlo import (
     run_simulations,
     save_draws,
 )
-from model_support.persistence import UncertaintyStoreError, load_uncertainty
-from model_support.uncertainty import UncertaintyConfig, UncertaintyError
+from models.support.persistence import UncertaintyStoreError, load_uncertainty
+from models.support.uncertainty import UncertaintyConfig, UncertaintyError
 from models.westminster import run_uns_model as runner
 from schema import PollBase, PollRow, Region
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows

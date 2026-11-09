@@ -23,7 +23,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from model_support.trends import default_trend_path
+from models.support.trends import default_trend_path
 from models.us._common import UsModelSpec, main_for_spec
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

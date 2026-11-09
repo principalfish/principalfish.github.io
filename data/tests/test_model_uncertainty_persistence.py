@@ -21,14 +21,14 @@ from console.services.model_outputs import (
     delete_selected_model_outputs,
 )
 from db import Database
-from model_support.monte_carlo import (
+from models.support.monte_carlo import (
     NationalPartyOutcome,
     RegionPartyOutcome,
     SeatHistogram,
     SeatPartyOutcome,
     SimulationSummary,
 )
-from model_support.persistence import (
+from models.support.persistence import (
     UNCERTAINTY_SCHEMA,
     OutputScope,
     OutputVote,

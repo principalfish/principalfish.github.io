@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from model_support.monte_carlo import (
+from models.support.monte_carlo import (
     WESTMINSTER_KERNEL_VERSION,
     ErrorStreams,
     SimulationFileError,
@@ -21,9 +21,9 @@ from model_support.monte_carlo import (
     load_draws,
     project_seats_vectorised,
 )
-from model_support.simulation_replay import input_fingerprint
-from model_support.uncertainty import UncertaintyConfig
-from model_support.westminster_validation_inputs import load_validation_inputs
+from models.support.simulation_replay import input_fingerprint
+from models.support.uncertainty import UncertaintyConfig
+from models.westminster.westminster_validation_inputs import load_validation_inputs
 
 
 def _simulate(

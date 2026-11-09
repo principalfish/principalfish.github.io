@@ -20,7 +20,7 @@ from console.services.uncertainty_runs import (
     projected_seat_totals,
     stored_runs,
 )
-from model_support.persistence import UncertaintyStoreError
+from models.support.persistence import UncertaintyStoreError
 
 bp = Blueprint("uncertainty_runs", __name__)
 

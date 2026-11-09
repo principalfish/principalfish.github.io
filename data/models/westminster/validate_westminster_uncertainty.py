@@ -16,26 +16,37 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import numpy as np
 
 from config import DatabaseConfig
-from model_support.calibration import FINAL_POLL_ERRORS_PATH, load_final_poll_table
-from model_support.io import write_text_files
-from model_support.uncertainty import UNCERTAINTY_CONFIG_PATH, load_uncertainty_config
-from model_support.westminster_validation import (
+from models.support.calibration import FINAL_POLL_ERRORS_PATH, load_final_poll_table
+from models.support.io import write_text_files
+from models.support.uncertainty import UNCERTAINTY_CONFIG_PATH, load_uncertainty_config
+from models.westminster.calibrate_uncertainty import party_names
+from models.westminster.westminster_validation import (
     REPORT_PATH,
     build_report,
     fingerprint,
     read_only_database,
 )
-from model_support.westminster_validation_inputs import INPUTS_PATH
-from model_support.westminster_validation_replay import (
+from models.westminster.westminster_validation_inputs import INPUTS_PATH
+from models.westminster.westminster_validation_replay import (
     frozen_input_validation,
     replay_validation,
 )
-from scripts.calibrate_uncertainty import party_names
+
+DATA_DIR = Path(__file__).resolve().parents[2]
+# The files whose hashes identify the code that produced a report, relative to DATA_DIR.
+SOURCE_FILES = [
+    "models/westminster/westminster_validation.py",
+    "models/westminster/westminster_validation_replay.py",
+    "models/westminster/westminster_validation_inputs.py",
+    "models/support/monte_carlo.py",
+    "models/support/calibration.py",
+    "models/support/uncertainty.py",
+    "models/westminster/calibrate_uncertainty.py",
+    "models/westminster/validate_westminster_uncertainty.py",
+]
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -95,22 +106,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.inputs, config, count=args.replay_simulations
             )
         )
-        data_dir = Path(__file__).resolve().parents[1]
-        source_files = [
-            "model_support/westminster_validation.py",
-            "model_support/westminster_validation_replay.py",
-            "model_support/westminster_validation_inputs.py",
-            "model_support/monte_carlo.py",
-            "model_support/calibration.py",
-            "model_support/uncertainty.py",
-            "scripts/calibrate_uncertainty.py",
-            "scripts/validate_westminster_uncertainty.py",
-        ]
         report["identity"].update(
             {
                 "source_sha256": {
-                    name: hashlib.sha256((data_dir / name).read_bytes()).hexdigest()
-                    for name in source_files
+                    name: hashlib.sha256((DATA_DIR / name).read_bytes()).hexdigest()
+                    for name in SOURCE_FILES
                 },
                 "final_polls_sha256": hashlib.sha256(
                     args.final_polls.read_bytes()

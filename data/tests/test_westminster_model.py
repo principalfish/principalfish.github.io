@@ -27,9 +27,9 @@ from typing import Any, cast
 
 import pytest
 
-from model_support.io import OutputPublicationError
-from model_support.uncertainty import load_uncertainty_config
 from db import Database
+from models.support.io import OutputPublicationError
+from models.support.uncertainty import load_uncertainty_config
 from models.westminster import run_uns_model
 from models.westminster.run_uns_model import (
     LatestPollUsage,
@@ -3543,7 +3543,7 @@ def test_poll_metadata_failure_requires_model_rerun(
     def fail(source: Path, target: Path) -> None:
         raise OSError("disk failed")
 
-    monkeypatch.setattr("model_support.io.os.replace", fail)
+    monkeypatch.setattr("models.support.io.os.replace", fail)
     with pytest.raises(OutputPublicationError, match="Rerun this model") as error:
         write_trend_cache_meta(
             date(2026, 6, 1), date(2026, 5, 1), None, trend_cache_meta_json=destination

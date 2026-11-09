@@ -56,17 +56,13 @@ def test_pytest_run_is_limited_to_tests_folder() -> None:
 
 
 def test_scripts_folder_holds_only_the_live_scripts() -> None:
-    """Finished one-offs live in archive/; scripts/ keeps the rebuild tools and the
-    Westminster uncertainty tools that have not moved into models/ yet."""
+    """Finished one-offs live in archive/; scripts/ keeps the rebuild and backup."""
     scripts = sorted(path.name for path in (DATA_DIR / "scripts").glob("*.py"))
     assert scripts == [
         "__init__.py",
         "backup_db.py",
-        "build_final_poll_errors.py",
-        "calibrate_uncertainty.py",
         "rebuild_database.py",
         "rebuild_model_trends.py",
-        "validate_westminster_uncertainty.py",
     ]
 
 

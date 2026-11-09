@@ -58,18 +58,18 @@ from electoral_votes import (
     allocation_year,
     get_electoral_votes_sqlite,
 )
-from model_support.io import (
+from models.support.io import (
     OutputPublicationError,
     publish_json,
     validate_output_target,
 )
-from model_support.persistence import (
+from models.support.persistence import (
     OutputScope,
     UncertaintyStoreError,
     committed_dates,
     iter_national_blocks,
 )
-from model_support.public_uncertainty import (
+from models.support.public_uncertainty import (
     PublicUncertaintyError,
     TrendUncertainty,
     trend_uncertainty,
@@ -128,7 +128,7 @@ TREND_MODELS = {
 
 
 def default_trend_path(model: str) -> Path:
-    return Path(__file__).resolve().parents[2] / TREND_MODELS[model].relative_path
+    return Path(__file__).resolve().parents[3] / TREND_MODELS[model].relative_path
 
 
 def _validate_scope(conn: sqlite3.Connection, scope: OutputScope) -> None:

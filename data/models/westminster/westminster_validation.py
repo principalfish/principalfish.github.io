@@ -1,7 +1,7 @@
 """Offline Westminster diagnostics, conditional on actual regional vote shares.
 
 Historical checks deliberately reproduce the Gaussian model that
-``scripts/calibrate_uncertainty.py`` fits the seat and lambda scales with:
+``models/westminster/calibrate_uncertainty.py`` fits the seat and lambda scales with:
 shared election lambda, independent centred seat errors, and no polling error.
 These are conditional conversion checks, not a full forecast backtest. Runtime
 checks use saved inputs with the requested current config and the real kernel.
@@ -23,7 +23,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from model_support.calibration import (
+from models.support.calibration import (
     CalibrationError,
     ElectionVotes,
     FinalPollElection,
@@ -37,12 +37,12 @@ from model_support.calibration import (
     predicted_shares,
     seat_predictions,
 )
-from model_support.monte_carlo import centring_weights, config_hash, share_scale_array
-from model_support.uncertainty import UncertaintyConfig, share_scale
-from scripts import calibrate_uncertainty as calibration_inputs
+from models.support.monte_carlo import centring_weights, config_hash, share_scale_array
+from models.support.uncertainty import UncertaintyConfig, share_scale
+from models.westminster import calibrate_uncertainty as calibration_inputs
 
 REPORT_PATH = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[2]
     / "models/westminster/uncertainty_validation_report.json"
 )
 REPORT_SCHEMA = "westminster-validation-v1"

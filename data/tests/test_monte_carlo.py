@@ -1,4 +1,4 @@
-"""Tests for ``model_support.monte_carlo``: the simulation engine.
+"""Tests for ``models.support.monte_carlo``: the simulation engine.
 
 The anchor is :class:`TestExactReproduction`: with every error and λ at zero
 the vectorised projection must match ``run_uns_model.project_seat_votes`` bit
@@ -22,7 +22,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from model_support.monte_carlo import (
+from models.support.monte_carlo import (
     COMPACT_SHARE_FLOOR,
     SHARE_BINS_PER_POINT,
     WESTMINSTER_KERNEL_VERSION,
@@ -48,7 +48,7 @@ from model_support.monte_carlo import (
     seat_outcome_probabilities,
     share_scale_array,
 )
-from model_support.uncertainty import (
+from models.support.uncertainty import (
     UncertaintyConfig,
     UncertaintyError,
     share_scale,

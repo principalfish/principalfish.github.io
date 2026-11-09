@@ -1,7 +1,7 @@
 """The Westminster model run's published uncertainty, for the election export.
 
 A model run's stored summary (``persistence.load_uncertainty``) feeds two
-outputs, both through the :mod:`model_support.public_uncertainty` whitelist:
+outputs, both through the :mod:`models.support.public_uncertainty` whitelist:
 
 * the per-seat ``u`` rows of ``results/prediction-simulation.json`` (from the
   seat block), and
@@ -25,12 +25,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from export.serialize import write_json
-from model_support.persistence import (
+from models.support.persistence import (
     StoredUncertainty,
     latest_run,
     westminster_uns_scope,
 )
-from model_support.public_uncertainty import SeatBand, public_document, seat_bands
+from models.support.public_uncertainty import SeatBand, public_document, seat_bands
 from schema import Election, ElectionType, Party
 
 UNCERTAINTY_FILENAME = "prediction-uncertainty.json"
@@ -130,7 +130,7 @@ def model_uncertainty_export(
 def latest_model_run(session: Session) -> Election | None:
     """Return the ``model_uns`` run the export ships as the current prediction.
 
-    The latest dated run (:func:`model_support.persistence.latest_run`: as-of
+    The latest dated run (:func:`models.support.persistence.latest_run`: as-of
     date parsed from the name, then id), the same run that keeps the detailed
     summary. Runs whose name carries no date are never chosen. Re-running an
     older date therefore does not replace the current prediction.

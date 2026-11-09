@@ -30,7 +30,7 @@ from sqlalchemy import event, text
 from db import Database
 from importers.polls.us import us_polls_common
 from importers.polls.us.us_polls_common import CandidateColumn, matchup_label
-from model_support.io import OutputPublicationError
+from models.support.io import OutputPublicationError
 from models.us import _common
 from models.us._common import (
     LatestPollUsage,
@@ -5158,7 +5158,7 @@ def test_poll_metadata_failure_requires_model_rerun(
     def fail(source: Path, target: Path) -> None:
         raise OSError("disk failed")
 
-    monkeypatch.setattr("model_support.io.os.replace", fail)
+    monkeypatch.setattr("models.support.io.os.replace", fail)
     with pytest.raises(OutputPublicationError, match="Rerun this model") as error:
         _common.write_trend_cache_meta(spec, date(2026, 6, 1), date(2026, 5, 1), None)
     assert "rebuild_model_trends" not in str(error.value)

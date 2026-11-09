@@ -28,7 +28,7 @@ from export.payload import (
     senate_results_by_class,
     set_others_party_id,
 )
-from model_support.public_uncertainty import SeatBand
+from models.support.public_uncertainty import SeatBand
 from schema import Election, ElectionType, Party, Seat, Vote
 
 

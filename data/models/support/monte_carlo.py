@@ -10,7 +10,7 @@ own dictionaries) and calls :func:`run_simulations`.
 
 Units: shares are percentages (0-100), swings and errors percentage points,
 variances points squared; σ settings come from :class:`UncertaintyConfig` and
-are quoted at ``p_ref`` (:func:`model_support.uncertainty.share_scale`).
+are quoted at ``p_ref`` (:func:`models.support.uncertainty.share_scale`).
 
 Each simulated election j draws (:func:`draw_errors`):
 
@@ -85,11 +85,11 @@ from typing import TYPE_CHECKING, Any, Final, TypeVar
 import numpy as np
 from numpy.typing import NDArray
 
-from model_support.uncertainty import UncertaintyConfig, UncertaintyError
+from models.support.uncertainty import UncertaintyConfig, UncertaintyError
 
 if TYPE_CHECKING:
     # Type-only: simulation_replay imports this module at load time (import cycle).
-    from model_support.simulation_replay import ReplaySnapshot
+    from models.support.simulation_replay import ReplaySnapshot
 
 FloatArray = NDArray[np.float64]
 IndexArray = NDArray[np.intp]
@@ -481,7 +481,7 @@ def _proportional_swing(inputs: SimulationInputs) -> FloatArray:
 
 
 def share_scale_array(shares_pct: FloatArray, config: UncertaintyConfig) -> FloatArray:
-    """Vectorised :func:`model_support.uncertainty.share_scale`.
+    """Vectorised :func:`models.support.uncertainty.share_scale`.
 
     Args:
         shares_pct: Shares in percent; values a rounding error outside
@@ -1768,7 +1768,7 @@ def save_draws(path: Path, draws: SimulationDraws, meta: DrawsMeta) -> None:
         "as_of_date": meta.as_of_date.isoformat(),
     }
     # Local: simulation_replay imports this module at load time (import cycle).
-    from model_support.simulation_replay import snapshot_members
+    from models.support.simulation_replay import snapshot_members
 
     extra: dict[str, Any] = {}
     if draws.replay is not None:
@@ -1871,7 +1871,7 @@ def load_draws(path: Path) -> tuple[SimulationDraws, DrawsMeta]:
     except (SimulationFileError, ValueError) as err:
         raise SimulationFileError(f"{path}: {err}") from err
     # Local: simulation_replay imports this module at load time (import cycle).
-    from model_support.simulation_replay import read_snapshot
+    from models.support.simulation_replay import read_snapshot
 
     draws = replace(draws, replay=read_snapshot(header.get("replay"), arrays, draws))
     return draws, meta
@@ -1980,7 +1980,7 @@ def run_simulations(
     )
     if draws is not None:
         # Local: simulation_replay imports this module at load time (import cycle).
-        from model_support.simulation_replay import ReplaySnapshot
+        from models.support.simulation_replay import ReplaySnapshot
 
         draws = replace(draws, replay=ReplaySnapshot(inputs, config))
     for start in range(0, config.simulations, config.chunk_size):
@@ -1992,7 +1992,7 @@ def run_simulations(
             draws.record(start, errors, projection, tallies)
     summary = summarise(inputs, tallies, config, seed=seed)
     # Local: simulation_replay imports this module at load time (import cycle).
-    from model_support.simulation_replay import input_fingerprint
+    from models.support.simulation_replay import input_fingerprint
 
     summary = replace(summary, input_hash=input_fingerprint(inputs))
     return SimulationRun(summary=summary, scales=scales, draws=draws)

@@ -3,7 +3,7 @@
 Run the offline acceptance harness from `data/`:
 
 ```bash
-./election_data/bin/python scripts/validate_westminster_uncertainty.py
+./election_data/bin/python models/westminster/validate_westminster_uncertainty.py
 ```
 
 This reads the configured SQLite database with `mode=ro` and `query_only`,
@@ -15,7 +15,7 @@ Validation page displays this saved report and flags a changed config.
 For an explicit input set and scratch output:
 
 ```bash
-./election_data/bin/python scripts/validate_westminster_uncertainty.py \
+./election_data/bin/python models/westminster/validate_westminster_uncertainty.py \
   --database /path/to/elections.db \
   --replay /path/to/westminster-latest.npz \
   --output /tmp/westminster-validation.json
@@ -45,7 +45,8 @@ moved on.
 
 Historical seat-total and favourite-reliability checks condition on **actual
 regional votes**. They reproduce the Gaussian calibration experiment that fits
-the seat and lambda scales (`data/scripts/calibrate_uncertainty.py`), with
+the seat and lambda scales
+(`data/models/westminster/calibrate_uncertainty.py`), with
 leave-one-pair-out fitted scales; they are not an end-to-end forecast
 backtest. Only four transitions and nine national final-poll elections are
 available. Any new conversion-error component must also be added to this
@@ -82,7 +83,7 @@ first (`scripts/backup_db.py`). Each takes `--dry-run`, which writes nothing:
 Steps 3 to 5 re-fetch poll sources, and step 5's matching relies on the values
 steps 3 and 4 correct, so keep that order. All five are safe to re-run.
 
-`scripts/build_final_poll_errors.py PATH/TO/PollBase.xlsx` is separate and
-needs no database: it rebuilds `data/models/westminster/uk_final_poll_errors.json`
-from a new PollBase edition, and `scripts/calibrate_uncertainty.py` then reads
-that table.
+`models/westminster/build_final_poll_errors.py PATH/TO/PollBase.xlsx` is separate and
+needs no database: it rebuilds
+`data/models/westminster/uk_final_poll_errors.json` from a new PollBase edition, and
+`models/westminster/calibrate_uncertainty.py` then reads that table.

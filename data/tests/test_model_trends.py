@@ -12,9 +12,9 @@ from typing import Any
 
 import pytest
 from db import Database
-from model_support import trends
-from model_support.io import OutputPublicationError, publish_json
-from model_support.persistence import (
+from models.support import trends
+from models.support.io import OutputPublicationError, publish_json
+from models.support.persistence import (
     OutputScope,
     OutputVote,
     UncertaintyPayload,
@@ -22,7 +22,7 @@ from model_support.persistence import (
     output_dates,
     replace_output,
 )
-from model_support.trends import (
+from models.support.trends import (
     TREND_MODELS,
     publish_trends,
     reconstruct_trends,
@@ -220,7 +220,7 @@ def test_publication_failure_preserves_complete_old_file_and_repair(
         raise OSError("replace failed")
 
     with monkeypatch.context() as patch:
-        patch.setattr("model_support.io.os.replace", fail)
+        patch.setattr("models.support.io.os.replace", fail)
         with pytest.raises(
             OutputPublicationError, match=r"--model westminster.*--database"
         ):
@@ -288,7 +288,7 @@ def test_combined_failure_reports_both(
     def fail(source: Path, target: Path) -> None:
         raise OSError("disk")
 
-    monkeypatch.setattr("model_support.io.os.replace", fail)
+    monkeypatch.setattr("models.support.io.os.replace", fail)
     with (
         pytest.raises(
             OutputPublicationError, match="Original model failure: calculation"

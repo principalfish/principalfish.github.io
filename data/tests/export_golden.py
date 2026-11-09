@@ -27,13 +27,13 @@ import pytest
 
 from config import DatabaseConfig
 from db import Database
-from model_support.persistence import (
+from models.support.persistence import (
     OutputScope,
     OutputVote,
     replace_output,
     westminster_uns_scope,
 )
-from model_support.trends import publish_trends
+from models.support.trends import publish_trends
 from tests.uk_fixtures import WestminsterWorld, seed_westminster_world
 
 GOLDEN_PATH = (

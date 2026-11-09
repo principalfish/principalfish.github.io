@@ -355,12 +355,12 @@ class ModelUncertainty(Base):
     The Monte Carlo summary of one model run, keyed by that run's election.
     Each block is compact JSON (sorted keys, no whitespace), so the same
     summary always stores the same text. ``schema`` names the blocks' format
-    (``model_support.persistence.UNCERTAINTY_SCHEMA``), so a reader can tell a
+    (``models.support.persistence.UNCERTAINTY_SCHEMA``), so a reader can tell a
     row written in an older format from the current one.
 
     The national block is kept for every run. The region and seat blocks are
     kept only on the latest-dated run of a scope (model type, map and name
-    prefix): every ``model_support.persistence.replace_output`` sets every
+    prefix): every ``models.support.persistence.replace_output`` sets every
     other run's to NULL, whatever order the runs were saved in.
 
     Rows are deleted with their election (ORM cascade, and ``ON DELETE

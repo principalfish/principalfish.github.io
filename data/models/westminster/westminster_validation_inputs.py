@@ -16,10 +16,10 @@ from typing import Any
 
 import numpy as np
 
-from model_support.monte_carlo import SimulationFileError, SimulationInputs
+from models.support.monte_carlo import SimulationFileError, SimulationInputs
 
 INPUTS_PATH = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[2]
     / "models/westminster/validation-inputs-2026-10-22-v1.json"
 )
 INPUTS_SCHEMA = "westminster-validation-inputs-v1"

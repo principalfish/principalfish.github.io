@@ -200,7 +200,7 @@ class ResolvedN:
     """The n behind one poll's shares in one region, and where it came from.
 
     *origin*, *basis* and *weighted_only* are the structured description that
-    code reads (``model_support.uncertainty`` adjusts n by its basis);
+    code reads (``models.support.uncertainty`` adjusts n by its basis);
     :attr:`source` renders them as the label the console shows.
 
     Attributes:

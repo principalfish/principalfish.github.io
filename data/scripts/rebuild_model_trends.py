@@ -11,9 +11,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from config import DatabaseConfig
-from model_support.io import OutputPublicationError, publish_json
-from model_support.persistence import OutputScope
-from model_support.trends import TREND_MODELS, default_trend_path, reconstruct_trends
+from models.support.io import OutputPublicationError, publish_json
+from models.support.persistence import OutputScope
+from models.support.trends import TREND_MODELS, default_trend_path, reconstruct_trends
 
 
 def main(argv: Sequence[str] | None = None) -> int:

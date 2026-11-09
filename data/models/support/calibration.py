@@ -18,7 +18,7 @@ the three calibrated error sizes and the decided fraction:
   polls that print both (:func:`decided_fraction_fit`).
 
 **Engine units.** History shows *realised* errors, which already sum to zero
-across parties. The engine (``model_support.monte_carlo``) draws *raw*
+across parties. The engine (``models.support.monte_carlo``) draws *raw*
 errors ``N(0, (σ·s(share))²)`` per party and then centres them
 (``ẽ = e − q·Σe``), which shrinks a big party's error by a factor that
 depends on the shares (``monte_carlo.centring_sd_ratio``). So each realised
@@ -28,7 +28,7 @@ before the spread is taken: a moment match per cell, giving the raw σ
 written to the config. σ_λ needs no correction: λ is not centred.
 
 Shares are percentages and σs points at ``p_ref`` (``s`` is
-``model_support.uncertainty.share_scale``), as in the rest of the
+``models.support.uncertainty.share_scale``), as in the rest of the
 uncertainty code.
 """
 
@@ -45,15 +45,15 @@ from typing import Any
 
 import numpy as np
 
-from model_support.monte_carlo import (
+from models.support.monte_carlo import (
     FloatArray,
     centring_sd_ratio,
     centring_weights,
     share_scale_array,
 )
-from model_support.uncertainty import UncertaintyConfig, share_scale
+from models.support.uncertainty import UncertaintyConfig, share_scale
 
-WESTMINSTER_MODEL_DIR = Path(__file__).resolve().parents[1] / "models" / "westminster"
+WESTMINSTER_MODEL_DIR = Path(__file__).resolve().parents[1] / "westminster"
 FINAL_POLL_ERRORS_PATH = WESTMINSTER_MODEL_DIR / "uk_final_poll_errors.json"
 CALIBRATION_REPORT_PATH = WESTMINSTER_MODEL_DIR / "uncertainty_calibration_report.json"
 
@@ -82,7 +82,8 @@ class ParameterNote:
 
     Attributes:
         unit: The value's unit.
-        source: "calibrated" (fitted by ``scripts/calibrate_uncertainty.py``),
+        source: "calibrated" (fitted by
+            ``models/westminster/calibrate_uncertainty.py``),
             "literature", "guess" or "setting" (a choice, not an estimate).
         meaning: What the setting does.
     """
@@ -1435,7 +1436,7 @@ REPORT_SECTIONS: Mapping[str, type] = {
 
 
 def load_calibration_report(path: Path | None = None) -> dict[str, Any]:
-    """Read the calibration report written by ``scripts/calibrate_uncertainty.py``.
+    """Read the calibration report that ``models/westminster/calibrate_uncertainty.py`` writes.
 
     Args:
         path: The report file; :data:`CALIBRATION_REPORT_PATH` (read at call

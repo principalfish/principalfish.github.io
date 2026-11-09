@@ -10,13 +10,13 @@ import pytest
 from console.services.model_outputs import build_outputs_context
 from db import Database
 from export.payload import SeatRow, build_result_payload
-from model_support.persistence import (
+from models.support.persistence import (
     OutputScope,
     OutputVote,
     output_dates,
     replace_output,
 )
-from model_support.trends import TREND_MODELS
+from models.support.trends import TREND_MODELS
 from schema import ElectionType, Vote
 from scripts.rebuild_model_trends import main
 from sqlalchemy import select

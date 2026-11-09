@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass, field, replace
 
 import numpy as np
 
-from model_support.monte_carlo import (
+from models.support.monte_carlo import (
     FloatArray,
     SimulationInputs,
     SimulationRun,
@@ -16,10 +16,10 @@ from model_support.monte_carlo import (
     deterministic_projection,
     share_scale_array,
 )
-from model_support.persistence import UncertaintyPayload
-from model_support.poll_bases import ResolvedN
-from model_support.polling import PollAggregation
-from model_support.uncertainty import (
+from models.support.persistence import UncertaintyPayload
+from models.support.poll_bases import ResolvedN
+from models.support.polling import PollAggregation
+from models.support.uncertainty import (
     AverageVariance,
     UncertaintyConfig,
     UncertaintyError,

@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from model_support.monte_carlo import (
+from models.support.monte_carlo import (
     ErrorDraws,
     ErrorScales,
     ErrorStreams,
@@ -23,7 +23,7 @@ from model_support.monte_carlo import (
     error_scales,
     project_seats_vectorised,
 )
-from model_support.uncertainty import UncertaintyConfig, UncertaintyError
+from models.support.uncertainty import UncertaintyConfig, UncertaintyError
 
 REPLAY_VERSION = "pf-replay-v1"
 _ID_FIELDS = {"party_ids", "region_ids", "seat_ids"}

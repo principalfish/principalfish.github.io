@@ -20,9 +20,9 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 | `archive/` | Finished one-offs and retired setup files (not maintained, not type-checked; see its README) |
 | `inputs/` | Committed source data files per jurisdiction (`westminster/`, `holyrood/`, `us/`) read by the importers |
 | `importers/` | `seed/` (parties, region populations), `results/` (Westminster, Holyrood and US elections, boundaries, by-elections; US has `nyt/` for the New York Times fetch-and-convert pipeline and `geometry/` for the TopoJSON builders) and `polls/` (Wikipedia-driven poll importers, `registry.py` lists the Westminster pollsters) |
-| `models/` | Election models — `westminster/`, `holyrood/` (UNS retrospective), `us/` (House, President, Senate forecasts) |
+| `models/` | Election models — `westminster/` (runner, uncertainty calibration and validation, with their JSON artefacts), `holyrood/` (UNS retrospective), `us/` (House, President, Senate forecasts) and `support/` (the simulation, persistence, trends and uncertainty code they share) |
 | `export/` | The static export: `export_elections.py` partitions elections by parliament into the per-page data dirs (`electionmaps/data`, `uselectionmaps/data`), with its helpers beside it |
-| `scripts/` | Database rebuild, model-trend rebuild and backup, plus the Westminster uncertainty calibration and validation scripts (they move into `models/` in a later step) |
+| `scripts/` | Database rebuild, model-trend rebuild and backup |
 | `tests/` | Pytest suite — run with `./run_tests.sh` (strict mypy, then pytest) |
 
 ## Prerequisites

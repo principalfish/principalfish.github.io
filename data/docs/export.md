@@ -1,6 +1,6 @@
 # Static election-map export (manifest + files)
 
-Use scripts under `data/scripts/` to generate static files for `electionmaps/`
+Use the export under `data/export/` to generate static files for `electionmaps/`
 and `uselectionmaps/`.
 
 All commands on this page run from `data/`.

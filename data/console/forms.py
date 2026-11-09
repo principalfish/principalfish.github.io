@@ -8,7 +8,7 @@ from datetime import date
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from importers.polls.us.us_wikipedia_polls import US_CONTESTS, normalise_states
-from model_support.cli import validate_half_life
+from models.support.cli import validate_half_life
 
 
 class ModelRunForm(BaseModel):

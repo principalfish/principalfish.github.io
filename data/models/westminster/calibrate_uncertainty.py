@@ -4,17 +4,17 @@ Fits the calibrated settings of ``UncertaintyConfig`` and writes them, with
 every intermediate table, to two committed files:
 
 - ``data/models/westminster/uncertainty_config.json``: the settings the model
-  loads (``model_support.uncertainty.load_uncertainty_config``). Settings
+  loads (``models.support.uncertainty.load_uncertainty_config``). Settings
   that are not calibrated keep their current value (the existing file's, or
   the default).
 - ``data/models/westminster/uncertainty_calibration_report.json``: the
   derivation, shown by the console's Calibration view.
 
-What is fitted (``model_support.calibration`` has the formulas):
+What is fitted (``models.support.calibration`` has the formulas):
 
 - **σ_nat** from ``uk_final_poll_errors.json`` (final-poll averages and GB
   results, 1992-2024, from Mark Pack's PollBase; built by
-  ``scripts/build_final_poll_errors.py``), each election weighted equally.
+  ``models/westminster/build_final_poll_errors.py``), each election weighted equally.
 - **λ̂, σ_λ and σ_seat** from the four same-boundary pairs of general
   elections in the database: 2010→2015, 2015→2017 and 2017→2019 on the old
   map, and the 2019 notional result → 2024 on the new one. Regional shares
@@ -28,8 +28,8 @@ cross-checked against the database's GB shares and the differences
 reported.
 
 Usage:
-    python data/scripts/calibrate_uncertainty.py --dry-run
-    python data/scripts/calibrate_uncertainty.py
+    python data/models/westminster/calibrate_uncertainty.py --dry-run
+    python data/models/westminster/calibrate_uncertainty.py
 """
 
 from __future__ import annotations
@@ -39,20 +39,14 @@ import dataclasses
 import json
 import sqlite3
 import statistics
-import sys
 from collections.abc import Mapping, Sequence
 from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-DATA_DIR = SCRIPT_DIR.parent
-if str(DATA_DIR) not in sys.path:
-    sys.path.insert(0, str(DATA_DIR))
-
 from config import DatabaseConfig
 from core.migration_helpers import open_database
-from model_support.calibration import (
+from models.support.calibration import (
     CALIBRATION_REPORT_PATH,
     CALIBRATION_REPORT_SCHEMA,
     DECIDED_EXCLUSIONS,
@@ -81,8 +75,8 @@ from model_support.calibration import (
     ratio_summary,
     residual_summary,
 )
-from model_support.io import write_text_files
-from model_support.uncertainty import (
+from models.support.io import write_text_files
+from models.support.uncertainty import (
     UNCERTAINTY_CONFIG_PATH,
     UncertaintyConfig,
     UncertaintyConfigError,

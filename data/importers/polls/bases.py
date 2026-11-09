@@ -11,7 +11,7 @@ the importer's commit session alongside the poll rows.
 
 Base extraction is tolerant by design: a source that prints no usable base
 (or whose counts fail the importer's checks) gives no ``ParsedBase`` — the n
-resolver in ``model_support.poll_bases`` then falls back to
+resolver in ``models.support.poll_bases`` then falls back to
 ``polls.sample_size`` or a population estimate — and the shares import as
 before. Only an inconsistent result (a base naming a region the map lacks, or
 two bases for one column) raises, as a missing region in the shares would.

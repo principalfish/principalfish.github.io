@@ -2,11 +2,11 @@
 
 Each view is its own route and template, so one can be removed without
 touching the others. The hub states what the UNS model has stored
-(``model_support.persistence.uncertainty_status``), or that the table has not
+(``models.support.persistence.uncertainty_status``), or that the table has not
 been migrated yet. The calibration view reads the committed settings
-(``model_support.uncertainty.load_uncertainty_config``) and the report
-``scripts/calibrate_uncertainty.py`` writes
-(``model_support.calibration.load_calibration_report``); either being absent
+(``models.support.uncertainty.load_uncertainty_config``) and the report
+``models/westminster/calibrate_uncertainty.py`` writes
+(``models.support.calibration.load_calibration_report``); either being absent
 or malformed shows a message rather than failing the page.
 """
 
@@ -26,29 +26,29 @@ from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
 from console.db import get_db
 from console.services.uncertainty_export import ExportPreview, export_preview
 from db import Database
-from model_support import calibration as calibration_module
-from model_support import uncertainty as uncertainty_module
-from model_support import westminster_validation
-from model_support.calibration import (
+from models.support import calibration as calibration_module
+from models.support import uncertainty as uncertainty_module
+from models.support.calibration import (
     PARAMETER_NOTES,
     POLLBASE_CREDIT,
     POLLBASE_URL,
     CalibrationError,
     load_calibration_report,
 )
-from model_support.monte_carlo import config_hash
-from model_support.persistence import (
+from models.support.monte_carlo import config_hash
+from models.support.persistence import (
     UncertaintyStatus,
     UncertaintyStoreError,
     uncertainty_status,
     westminster_uns_scope,
 )
-from model_support.public_uncertainty import PublicUncertaintyError
-from model_support.uncertainty import (
+from models.support.public_uncertainty import PublicUncertaintyError
+from models.support.uncertainty import (
     UncertaintyConfig,
     UncertaintyConfigError,
     load_uncertainty_config,
 )
+from models.westminster import westminster_validation
 from schema import Map
 
 bp = Blueprint("uncertainty", __name__)

@@ -14,8 +14,8 @@ from typing import Any
 import pytest
 
 from db import Database
-from model_support.persistence import OutputScope, output_dates
 from models.holyrood import run_holyrood_uns_model as holyrood
+from models.support.persistence import OutputScope, output_dates
 from models.us import _common as us
 from models.westminster import run_uns_model as westminster
 from schema import ElectionType

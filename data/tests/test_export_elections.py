@@ -29,14 +29,14 @@ from export.manifest import assign_comparison_elections, build_map_modes_with_re
 from export.naming import manifest_name_for_election
 from export.ordering import float_model_entries_first, reorder_manifest_entries
 from export.uncertainty import party_names
-from model_support.persistence import (
+from models.support.persistence import (
     OutputVote,
     StoredUncertainty,
     load_uncertainty,
     replace_output,
     westminster_uns_scope,
 )
-from model_support.public_uncertainty import (
+from models.support.public_uncertainty import (
     PublicUncertaintyError,
     public_document,
     seat_bands,

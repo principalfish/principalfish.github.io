@@ -64,7 +64,7 @@ from importers.polls.us.us_polls_common import (
     matchup_candidates,
     matchup_stored_candidate_count,
 )
-from model_support.cli import (
+from models.support.cli import (
     single_date_window,
     validate_date_range,
     validate_date_window,
@@ -73,28 +73,28 @@ from model_support.cli import (
     validate_prior_weight,
     validate_run_arguments,
 )
-from model_support.history import HistoryRecomputationError
-from model_support.io import publish_json, validate_output_target
-from model_support.persistence import (
+from models.support.history import HistoryRecomputationError
+from models.support.io import publish_json, validate_output_target
+from models.support.persistence import (
     OutputScope,
     OutputVote,
     delete_outputs,
     output_dates,
     replace_output,
 )
-from model_support.polling import (
+from models.support.polling import (
     PollSource,
     candidate_since,
     effective_pollster_weight,
     latest_poll_key,
     select_poll_endpoint,
 )
-from model_support.summaries import (
+from models.support.summaries import (
     non_overlapping_seat_ids,
     recorded_vote_rows,
     summarize_votes,
 )
-from model_support.trends import (
+from models.support.trends import (
     default_trend_path,
     publish_trends,
     trend_batch,

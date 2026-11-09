@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from contextlib import closing
@@ -12,10 +13,11 @@ import numpy as np
 import pytest
 from flask import Flask
 
-from model_support.calibration import CalibrationError, load_final_poll_table
-from model_support.monte_carlo import DrawsMeta, run_simulations, save_draws
-from model_support.uncertainty import load_uncertainty_config
-from model_support.westminster_validation import (
+from models.support.calibration import CalibrationError, load_final_poll_table
+from models.support.monte_carlo import DrawsMeta, run_simulations, save_draws
+from models.support.uncertainty import load_uncertainty_config
+from models.westminster import calibrate_uncertainty, validate_westminster_uncertainty
+from models.westminster.westminster_validation import (
     build_report,
     load_pairs,
     national_validation,
@@ -23,8 +25,7 @@ from model_support.westminster_validation import (
     read_report,
     reliability_bins,
 )
-from model_support.westminster_validation_replay import replay_validation
-from scripts import calibrate_uncertainty, validate_westminster_uncertainty
+from models.westminster.westminster_validation_replay import replay_validation
 from tests.console_fixtures import app as app
 from tests.test_calibrate_uncertainty import SPEAKER, _seed_database
 from tests.test_monte_carlo import WORLD, world_config
@@ -171,8 +172,17 @@ def test_cli_report_and_console(
     )
     report = read_report(output)
     assert report["replay"]["status"] == "omitted"
+    hashed = report["identity"]["source_sha256"]
+    assert set(hashed) == set(validate_westminster_uncertainty.SOURCE_FILES)
+    for name, digest in hashed.items():
+        expected = hashlib.sha256(
+            (validate_westminster_uncertainty.DATA_DIR / name).read_bytes()
+        ).hexdigest()
+        assert digest == expected, name
     assert historical_database.read_bytes() == before
-    monkeypatch.setattr("model_support.westminster_validation.REPORT_PATH", output)
+    monkeypatch.setattr(
+        "models.westminster.westminster_validation.REPORT_PATH", output
+    )
     response = app.test_client().get("/westminster/uncertainty/validation")
     assert response.status_code == 200
     assert b"National leave-one-out coverage" in response.data
@@ -208,8 +218,10 @@ def test_malformed_config_keeps_a_valid_report_visible(
     )
     malformed = tmp_path / "uncertainty_config.json"
     malformed.write_text("{", encoding="utf-8")
-    monkeypatch.setattr("model_support.westminster_validation.REPORT_PATH", output)
-    monkeypatch.setattr("model_support.uncertainty.UNCERTAINTY_CONFIG_PATH", malformed)
+    monkeypatch.setattr(
+        "models.westminster.westminster_validation.REPORT_PATH", output
+    )
+    monkeypatch.setattr("models.support.uncertainty.UNCERTAINTY_CONFIG_PATH", malformed)
     response = app.test_client().get("/westminster/uncertainty/validation")
     assert response.status_code == 200
     assert b"National leave-one-out coverage" in response.data
@@ -237,7 +249,7 @@ def test_missing_report_is_explained(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, app: Flask
 ) -> None:
     monkeypatch.setattr(
-        "model_support.westminster_validation.REPORT_PATH", tmp_path / "missing.json"
+        "models.westminster.westminster_validation.REPORT_PATH", tmp_path / "missing.json"
     )
     response = app.test_client().get("/westminster/uncertainty/validation")
     assert response.status_code == 200

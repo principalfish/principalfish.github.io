@@ -92,7 +92,7 @@ from export.uncertainty import (
     party_names,
     sync_uncertainty_file,
 )
-from model_support.persistence import load_uncertainty
+from models.support.persistence import load_uncertainty
 from schema import Election, ElectionSeatStatus, ElectionType, Party, Region, Seat, Vote
 
 DEM_PARTY_ID = 20   # Democratic — see uselectionmaps/data/map-modes.json parties[]

@@ -19,8 +19,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 
-from model_support.io import OutputPublicationError
-from model_support.polling import PollAggregation
 from db import Database, ensure_elections_sqlite_schema
 from models.holyrood import run_holyrood_uns_model as hmod
 from models.holyrood.run_holyrood_uns_model import (
@@ -53,6 +51,8 @@ from models.holyrood.run_holyrood_uns_model import (
     update_trend_cache_json,
     write_result_json,
 )
+from models.support.io import OutputPublicationError
+from models.support.polling import PollAggregation
 from schema import Election, ElectionType, Party, Region
 from tests.uk_fixtures import HolyroodWorld, add_poll_with_rows, seed_holyrood_world
 
@@ -3507,7 +3507,7 @@ def test_prediction_failure_requires_output_rerun(
     def fail(source: Path, target: Path) -> None:
         raise OSError("disk failed")
 
-    monkeypatch.setattr("model_support.io.os.replace", fail)
+    monkeypatch.setattr("models.support.io.os.replace", fail)
     with pytest.raises(
         OutputPublicationError, match="Rerun the Holyrood model/output"
     ) as error:

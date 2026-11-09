@@ -11,7 +11,7 @@ from typing import Generic, TypeVar
 from sqlalchemy import select
 
 from db import Database
-from model_support.cli import validate_date_window
+from models.support.cli import validate_date_window
 from schema import Poll, PollRow, Pollster
 
 

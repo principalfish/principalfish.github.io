@@ -1,7 +1,7 @@
 """Tests for poll bases: parsing helpers, apportioning, and the n resolver.
 
 ``importers.polls.bases`` turns printed column bases into planned rows;
-``model_support.poll_bases`` resolves the n behind a poll's shares from them
+``models.support.poll_bases`` resolves the n behind a poll's shares from them
 (falling back to ``sample_size`` or a population estimate) and summarises
 coverage. Importer-specific parsing is tested in each importer's test file and
 commit persistence in ``test_westminster_importers_commit.py``.
@@ -28,7 +28,7 @@ from importers.polls.bases import (
     region_refs,
     weighted_value,
 )
-from model_support.poll_bases import (
+from models.support.poll_bases import (
     UNRESOLVED,
     CapturedBase,
     NBasis,

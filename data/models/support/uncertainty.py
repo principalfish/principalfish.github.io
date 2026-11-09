@@ -2,7 +2,7 @@
 
 This module turns the respondent count behind a poll's shares into sampling
 error, for single polls and for the model's weighted poll average. It knows
-nothing about the database: callers resolve n (``model_support.poll_bases``)
+nothing about the database: callers resolve n (``models.support.poll_bases``)
 and pass the results in.
 
 Units, throughout:
@@ -35,10 +35,10 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 from statistics import NormalDist
 
-from model_support.poll_bases import NBasis, ResolvedN
+from models.support.poll_bases import NBasis, ResolvedN
 
 UNCERTAINTY_CONFIG_PATH = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[2]
     / "models"
     / "westminster"
     / "uncertainty_config.json"

@@ -30,7 +30,6 @@ from flask import Flask
 
 from db import Database
 from schema import PollBase
-
 from tests.console_fixtures import app, flashes as _flashes
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 
@@ -49,7 +48,7 @@ def config_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     change; the expected margins here are computed from the defaults.
     """
     path = tmp_path / "uncertainty_config.json"
-    monkeypatch.setattr("model_support.uncertainty.UNCERTAINTY_CONFIG_PATH", path)
+    monkeypatch.setattr("models.support.uncertainty.UNCERTAINTY_CONFIG_PATH", path)
     return path
 
 

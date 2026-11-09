@@ -48,7 +48,7 @@ from export.manifest import (
     senate_next_election_year,
     senate_specials_for_year,
 )
-from model_support.trends import default_trend_path
+from models.support.trends import default_trend_path
 from models.us._common import UsModelSpec, main_for_spec
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

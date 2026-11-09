@@ -5,7 +5,8 @@ voting-intention poll since 1943, one sheet per parliament, each sheet ending
 in the general election's exit polls and a ``Result`` row (GB vote shares).
 This script picks each election's final polls, averages them and writes them
 beside the result to ``data/models/westminster/uk_final_poll_errors.json``,
-the input of ``scripts/calibrate_uncertainty.py``'s national polling error.
+the input of the national polling error in
+``models/westminster/calibrate_uncertainty.py``.
 
 **Final-poll rule** (applied uniformly to every election):
 
@@ -34,8 +35,9 @@ Shares are used as published. A few pollsters (e.g. Savanta and Survation in
 lower than a GB share; their ``geography`` is recorded on each poll.
 
 Usage:
-    python data/scripts/build_final_poll_errors.py PATH/TO/PollBase.xlsx
-    python data/scripts/build_final_poll_errors.py PATH/TO/PollBase.xlsx --dry-run
+    python data/models/westminster/build_final_poll_errors.py PATH/TO/PollBase.xlsx
+    python data/models/westminster/build_final_poll_errors.py PATH/TO/PollBase.xlsx \
+        --dry-run
 """
 
 from __future__ import annotations
@@ -44,7 +46,6 @@ import argparse
 import hashlib
 import json
 import re
-import sys
 import zipfile
 import zlib
 from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -57,18 +58,13 @@ from xml.etree.ElementTree import ParseError
 import openpyxl
 from openpyxl.utils.exceptions import InvalidFileException
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-DATA_DIR = SCRIPT_DIR.parent
-if str(DATA_DIR) not in sys.path:
-    sys.path.insert(0, str(DATA_DIR))
-
-from model_support.calibration import (
+from models.support.calibration import (
     FINAL_POLL_ERRORS_PATH,
     FINAL_POLL_SCHEMA,
     POLLBASE_CREDIT,
     POLLBASE_URL,
 )
-from model_support.io import write_text_files
+from models.support.io import write_text_files
 
 WINDOW_DAYS = 3
 

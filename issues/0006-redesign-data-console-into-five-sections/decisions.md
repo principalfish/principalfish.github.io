@@ -17,6 +17,10 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - Run log and background job records are files beside the database, one per run and pruned to a set number; no schema change (user, 2026-11-08)
 - No "run all US" action: House, Senate and President each run on their own (user, 2026-11-08)
 - Full stage-by-stage transparency for Holyrood and US (polls and weights, sample sizes, averaged shares, swings, each seat's calculation and history) is wanted, as its own issue after the console. No uncertainty models are added (user, 2026-11-08)
+- Section slugs are `westminster`, `holyrood`, `house`, `senate`, `president`; piece 4 builds the URLs from them (user, 2026-11-09, by starting piece 1 on that recommendation)
+- Piece 1 moves each route file whole; `westminster.py` and `holyrood.py` are split into model and outputs only when piece 3 rewrites the outputs routes (user, 2026-11-09, by starting piece 1 on that recommendation)
+- `home.py` goes to `console/home.py` and `site.py` to `console/admin/site.py` (user, 2026-11-09, by starting piece 1 on that recommendation)
+- `mypy.ini` gets one `type-var` section per new package holding routes, keeps the `arg-type` exception for the US routes, and the pin in `tests/test_project_layout.py` follows; no blanket `console.*` section (user, 2026-11-09, by starting piece 1 on that recommendation)
 
 ## Open
 

@@ -2284,10 +2284,12 @@ class TestTokenGuard:
     ) -> None:
         token = _open_queue(client, monkeypatch, _row(us_db))
 
-        response = client.open(f"/import/wikipedia/{token}{suffix}", method=method)
+        response = client.open(
+            f"/westminster/polls/import/wikipedia/{token}{suffix}", method=method
+        )
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
         assert _state(token).items[0].status == "pending"
 
     def test_a_payload_missing_its_index_is_rejected(

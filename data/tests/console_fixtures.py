@@ -20,6 +20,7 @@ from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, NoReturn
+from urllib.parse import urlparse
 
 import pytest
 from flask import Flask, Response
@@ -93,6 +94,7 @@ class RecordingRunner:
 
 
 ALERT = re.compile(r'<div class="alert">(.*?)</div>', re.DOTALL)
+_HREF = re.compile(r'href="([^"]*)"')
 
 
 @pytest.fixture()
@@ -127,6 +129,28 @@ def saved(
         "world": westminster_world,
         "config": cfg,
     }
+
+
+def crawl(client: FlaskClient[Response]) -> dict[str, str]:
+    """GET every page reachable from ``/`` by links; return path -> body."""
+    pages: dict[str, str] = {}
+    pending = ["/"]
+    while pending:
+        key = pending.pop()
+        if key in pages:
+            continue
+        response = client.get(key)
+        assert response.status_code == 200, f"{key} -> {response.status_code}"
+        body = response.get_data(as_text=True)
+        pages[key] = body
+        for href in _HREF.findall(body):
+            url = urlparse(html.unescape(href))
+            if url.scheme or url.netloc or not url.path.startswith("/"):
+                continue
+            if url.path.startswith("/static/") or url.path.endswith("/csv"):
+                continue
+            pending.append(url.path)
+    return pages
 
 
 def flashes(client: FlaskClient[Response], response: Response) -> list[str]:

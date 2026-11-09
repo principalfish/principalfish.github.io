@@ -756,7 +756,7 @@ class TestPollListN:
             "968",
             "±2.4",
         ]
-        assert 'href="/polls/coverage"' in body
+        assert 'href="/westminster/polls/coverage"' in body
 
     def test_error_columns_only_for_westminster_polls(
         self, app: Flask, db: Database, westminster_world: WestminsterWorld
@@ -917,7 +917,7 @@ class TestPollDetailN:
 
 
 class TestPollCoverage:
-    """GET /polls/coverage summarises captured bases per pollster."""
+    """GET /westminster/polls/coverage summarises captured bases per pollster."""
 
     def test_counts_per_pollster(
         self, app: Flask, db: Database, westminster_world: WestminsterWorld
@@ -939,7 +939,9 @@ class TestPollCoverage:
         _add_base(db, based.id, 2310)
         _add_base(db, based.id, 241, region_id=london)
 
-        body = app.test_client().get("/polls/coverage").get_data(as_text=True)
+        body = (
+            app.test_client().get("/westminster/polls/coverage").get_data(as_text=True)
+        )
 
         assert _table_headers(body) == [
             "Pollster", "Polls", "With national base", "National %", "Crossbreaks",
@@ -951,7 +953,9 @@ class TestPollCoverage:
     def test_no_westminster_map_shows_empty_message(
         self, app: Flask, db: Database
     ) -> None:
-        body = app.test_client().get("/polls/coverage").get_data(as_text=True)
+        body = (
+            app.test_client().get("/westminster/polls/coverage").get_data(as_text=True)
+        )
 
         assert "No polls on this map." in body
 

@@ -24,7 +24,7 @@ def outputs_spec(chamber: UsChamber) -> OutputsSpec:
         The spec, with endpoints named after the chamber's slug.
     """
     return OutputsSpec(
-        url_prefix=f"/us/{chamber.slug}",
+        url_prefix=f"/{chamber.slug}",
         list_endpoint=f"{chamber.slug}_outputs",
         detail_endpoint=f"{chamber.slug}_output_detail",
         delete_endpoint=f"delete_{chamber.slug}_output",

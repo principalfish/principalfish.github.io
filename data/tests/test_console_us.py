@@ -148,7 +148,7 @@ class TestLandingPages:
         assert "Import polls" in body
         assert "Run US Models" in body
         assert 'action="/us/run-models"' in body
-        assert f'href="/us/{path.lstrip("/")}/outputs"' in body
+        assert f'href="{path}/outputs"' in body
 
     @pytest.mark.parametrize("path", US_LANDING_PAGES)
     def test_import_polls_links_to_the_review_queue(
@@ -171,12 +171,12 @@ class TestUsOutputsPages:
         seeded = _seed_us_house(db)
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
         monkeypatch.setattr("console.us.outputs.get_db", lambda: db)
-        response = app.test_client().get("/us/house/outputs")
+        response = app.test_client().get("/house/outputs")
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         assert "US House Model Outputs" in body
         assert "US House UNS 2026-06-01" in body
-        assert f"/us/house/outputs/{seeded['model_id']}" in body
+        assert f"/house/outputs/{seeded['model_id']}" in body
 
     def test_house_output_detail_renders(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
@@ -184,7 +184,7 @@ class TestUsOutputsPages:
         seeded = _seed_us_house(db)
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
         monkeypatch.setattr("console.us.outputs.get_db", lambda: db)
-        response = app.test_client().get(f"/us/house/outputs/{seeded['model_id']}")
+        response = app.test_client().get(f"/house/outputs/{seeded['model_id']}")
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         assert "US House UNS 2026-06-01" in body
@@ -195,9 +195,9 @@ class TestUsOutputsPages:
     ) -> None:
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
         monkeypatch.setattr("console.us.outputs.get_db", lambda: db)
-        response = app.test_client().get("/us/house/outputs/99999")
+        response = app.test_client().get("/house/outputs/99999")
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/us/house/outputs")
+        assert response.headers["Location"].endswith("/house/outputs")
 
     def test_delete_house_output(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
@@ -205,7 +205,7 @@ class TestUsOutputsPages:
         seeded = _seed_us_house(db)
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
         monkeypatch.setattr("console.us.outputs.get_db", lambda: db)
-        response = app.test_client().post(f"/us/house/outputs/{seeded['model_id']}/delete")
+        response = app.test_client().post(f"/house/outputs/{seeded['model_id']}/delete")
         assert response.status_code == 302
 
         from console.shared.model_outputs import build_output_detail_context
@@ -267,7 +267,7 @@ class TestPresidentElectoralVotes:
         seeded = _seed_us_president(db)
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
         monkeypatch.setattr("console.us.outputs.get_db", lambda: db)
-        body = app.test_client().get(f"/us/president/outputs/{seeded['model_id']}").get_data(as_text=True)
+        body = app.test_client().get(f"/president/outputs/{seeded['model_id']}").get_data(as_text=True)
         assert "Electoral Votes" in body
         assert "Electoral Votes by Party" in body
 
@@ -839,27 +839,27 @@ class TestMatchupRoutesRegistered:
         methods = {
             str(rule): rule.methods or set() for rule in app.url_map.iter_rules()
         }
-        assert {"GET", "POST"} <= methods["/us/president/matchup"]
-        assert "GET" in methods["/us/matchups"]
+        assert {"GET", "POST"} <= methods["/president/matchup"]
+        assert "GET" in methods["/<any(house,senate):chamber>/matchups"]
         assert "POST" in methods["/us/matchups/<int:map_id>/<int:seat_id>"]
 
     def test_landing_pages_link_to_their_matchup_pages(self, app: Flask) -> None:
         client = app.test_client()
-        assert 'href="/us/president/matchup"' in client.get("/president").get_data(
+        assert 'href="/president/matchup"' in client.get("/president").get_data(
             as_text=True
         )
         for chamber in ("senate", "house"):
             body = client.get(f"/{chamber}").get_data(as_text=True)
-            assert f'href="/us/matchups?chamber={chamber}"' in body
+            assert f'href="/{chamber}/matchups"' in body
 
     def test_import_page_links_to_matchup_pages(self, app: Flask) -> None:
         body = app.test_client().get("/us/import").get_data(as_text=True)
-        assert 'href="/us/president/matchup"' in body
-        assert 'href="/us/matchups?chamber=senate"' in body
+        assert 'href="/president/matchup"' in body
+        assert 'href="/senate/matchups"' in body
 
 
 class TestPresidentMatchupPage:
-    """GET/POST /us/president/matchup."""
+    """GET/POST /president/matchup."""
 
     @pytest.fixture(autouse=True)
     def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -870,7 +870,7 @@ class TestPresidentMatchupPage:
     ) -> None:
         _seed_president_matchups(db)
 
-        body = app.test_client().get("/us/president/matchup").get_data(as_text=True)
+        body = app.test_client().get("/president/matchup").get_data(as_text=True)
 
         assert f'value="{VANCE_NEWSOM}"' in body
         assert "2 poll(s), latest ending" in body
@@ -887,17 +887,17 @@ class TestPresidentMatchupPage:
         map_id = _seed_president_matchups(db)
         client = app.test_client()
 
-        response = client.post("/us/president/matchup", data={"matchup": VANCE_SHAPIRO})
+        response = client.post("/president/matchup", data={"matchup": VANCE_SHAPIRO})
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/us/president/matchup")
+        assert response.headers["Location"].endswith("/president/matchup")
         tracked = db.get_tracked_matchup(map_id, None)
         assert tracked is not None
         assert (tracked.matchup, tracked.source) == (VANCE_SHAPIRO, "manual")
         assert _flashes(client, response) == [f"Now tracking {VANCE_SHAPIRO} nationally."]
         assert recording_runner.calls == []
 
-        body = client.get("/us/president/matchup").get_data(as_text=True)
+        body = client.get("/president/matchup").get_data(as_text=True)
         assert f"{VANCE_SHAPIRO} (manual)" in body
 
     def test_unknown_label_is_rejected_with_a_flash(self, app: Flask, db: Database) -> None:
@@ -907,7 +907,7 @@ class TestPresidentMatchupPage:
 
         # A statewide label is stored, but not nationally.
         for label in ("Vance (R) vs Harris (D)", "Vance (R) vs Buttigieg (D)"):
-            response = client.post("/us/president/matchup", data={"matchup": label})
+            response = client.post("/president/matchup", data={"matchup": label})
             assert response.status_code == 302
             assert _flashes(client, response) == [f"Not saved: {label!r} is not a stored national matchup."]
 
@@ -918,7 +918,7 @@ class TestPresidentMatchupPage:
         map_id = _seed_president_matchups(db)
         client = app.test_client()
 
-        response = client.post("/us/president/matchup", data={})
+        response = client.post("/president/matchup", data={})
 
         assert _flashes(client, response) == ["Choose a matchup, or None."]
         assert db.get_tracked_matchup(map_id, None) is None
@@ -930,7 +930,7 @@ class TestPresidentMatchupPage:
         db.set_tracked_matchup(map_id, None, VANCE_NEWSOM, source="manual")
         client = app.test_client()
 
-        response = client.post("/us/president/matchup", data={"matchup": ""})
+        response = client.post("/president/matchup", data={"matchup": ""})
 
         assert response.status_code == 302
         assert db.get_tracked_matchup(map_id, None) is None
@@ -942,7 +942,7 @@ class TestPresidentMatchupPage:
         _seed_president_matchups(db)
         client = app.test_client()
 
-        response = client.post("/us/president/matchup", data={"matchup": ""})
+        response = client.post("/president/matchup", data={"matchup": ""})
 
         assert response.status_code == 302
         assert _flashes(client, response) == [
@@ -955,7 +955,7 @@ class TestPresidentMatchupPage:
         _seed_president_matchups(db)
 
         response = app.test_client().post(
-            "/us/president/matchup",
+            "/president/matchup",
             data={"matchup": VANCE_NEWSOM, "rebuild_history": "on"},
         )
 
@@ -969,7 +969,7 @@ class TestPresidentMatchupPage:
         ]
         body = response.get_data(as_text=True)
         assert "Rebuild US President History" in body
-        assert 'href="/us/president/matchup"' in body
+        assert 'href="/president/matchup"' in body
 
     def test_rebuild_is_refused_when_none_is_chosen(
         self, app: Flask, db: Database, recording_runner: _RecordingRunner
@@ -978,7 +978,7 @@ class TestPresidentMatchupPage:
         client = app.test_client()
 
         response = client.post(
-            "/us/president/matchup", data={"matchup": "", "rebuild_history": "on"}
+            "/president/matchup", data={"matchup": "", "rebuild_history": "on"}
         )
 
         assert response.status_code == 302
@@ -991,7 +991,7 @@ class TestPresidentMatchupPage:
         _seed_president_matchups(db)
 
         app.test_client().post(
-            "/us/president/matchup",
+            "/president/matchup",
             data={"matchup": "Nobody (R) vs Nobody (D)", "rebuild_history": "on"},
         )
 
@@ -1000,7 +1000,7 @@ class TestPresidentMatchupPage:
     def test_missing_map_redirects_home(self, app: Flask) -> None:
         client = app.test_client()
 
-        response = client.get("/us/president/matchup")
+        response = client.get("/president/matchup")
 
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/")
@@ -1066,7 +1066,7 @@ class TestPollDetailShowsUsScope:
 
 
 class TestRaceMatchupsPage:
-    """GET /us/matchups and POST /us/matchups/<map_id>/<seat_id>."""
+    """GET /house|senate/matchups and POST /us/matchups/<map_id>/<seat_id>."""
 
     @pytest.fixture(autouse=True)
     def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1081,7 +1081,7 @@ class TestRaceMatchupsPage:
         # Georgia: automatic only.
         db.set_tracked_matchup(map_id, seeded["georgia"], OSSOFF_COLLINS, source="auto")
 
-        response = app.test_client().get("/us/matchups?chamber=senate")
+        response = app.test_client().get("/senate/matchups")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -1104,7 +1104,7 @@ class TestRaceMatchupsPage:
     def test_untracked_race_with_polls_is_listed(self, app: Flask, db: Database) -> None:
         _seed_senate_races(db)
 
-        body = app.test_client().get("/us/matchups?chamber=senate").get_data(as_text=True)
+        body = app.test_client().get("/senate/matchups").get_data(as_text=True)
 
         assert body.count("Not tracked (polls ignored)") == 2
 
@@ -1113,17 +1113,19 @@ class TestRaceMatchupsPage:
         seat = db.add_seat(map_id, "TX-07")
         db.set_tracked_matchup(map_id, seat.id, None, source="manual")
 
-        body = app.test_client().get("/us/matchups?chamber=house").get_data(as_text=True)
+        body = app.test_client().get("/house/matchups").get_data(as_text=True)
 
         assert "US House Race Matchups" in body
         assert '<th scope="row">TX-07</th>' in body
         assert "Ignored (manual)" in body
 
-    @pytest.mark.parametrize("query", ["?chamber=president", "?chamber=congress", ""])
-    def test_unknown_chamber_is_404(self, app: Flask, db: Database, query: str) -> None:
+    @pytest.mark.parametrize(
+        "path", ["/president/matchups", "/congress/matchups", "/matchups"]
+    )
+    def test_unknown_chamber_is_404(self, app: Flask, db: Database, path: str) -> None:
         _seed_senate_races(db)
 
-        assert app.test_client().get(f"/us/matchups{query}").status_code == 404
+        assert app.test_client().get(path).status_code == 404
 
     def test_set_is_kept_through_a_later_auto_update(
         self, app: Flask, db: Database, recording_runner: _RecordingRunner
@@ -1139,7 +1141,7 @@ class TestRaceMatchupsPage:
         )
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/us/matchups?chamber=senate")
+        assert response.headers["Location"].endswith("/senate/matchups")
         assert _flashes(client, response) == [f"Texas: The race now tracks {CORNYN_TALARICO}."]
         assert recording_runner.calls == []
 
@@ -1205,7 +1207,7 @@ class TestRaceMatchupsPage:
         (message,) = _flashes(client, response)
         assert message.startswith("Texas: The importer has not chosen a matchup")
         assert "now not tracked" in message
-        page = client.get("/us/matchups?chamber=senate").get_data(as_text=True)
+        page = client.get("/senate/matchups").get_data(as_text=True)
         texas_row = page[page.index('<th scope="row">Texas</th>'):]
         assert "Not tracked (polls ignored)" in texas_row[: texas_row.index("</tr>")]
 
@@ -1281,7 +1283,7 @@ class TestRaceMatchupsPage:
         )
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/us/matchups?chamber=senate")
+        assert response.headers["Location"].endswith("/senate/matchups")
         assert _flashes(client, response)[0].startswith("TX-07: not saved — ")
         assert db.get_tracked_matchups_for_map(seeded["map_id"]) == []
         assert db.get_tracked_matchups_for_map(house_map_id) == []
@@ -1329,7 +1331,7 @@ class TestRaceMatchupsPage:
         ]
         body = response.get_data(as_text=True)
         assert "Rebuild US Senate History" in body
-        assert 'href="/us/matchups?chamber=senate"' in body
+        assert 'href="/senate/matchups"' in body
 
     def test_house_rebuild_uses_the_house_model(
         self, app: Flask, db: Database, recording_runner: _RecordingRunner
@@ -1511,7 +1513,7 @@ class TestRebuildRouteFailure:
         monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         response = app.test_client().post(
-            "/us/president/matchup",
+            "/president/matchup",
             data={"matchup": VANCE_NEWSOM, "rebuild_history": "on"},
         )
 
@@ -1525,7 +1527,7 @@ class TestRebuildRouteFailure:
             assert partial in body
         # The export never runs over a half-rebuilt history.
         assert [name for name, _timeout in runner.timeouts] == ["run_us_presidential_model.py"]
-        assert 'href="/us/president/matchup"' in body
+        assert 'href="/president/matchup"' in body
 
     def test_a_race_rebuild_timeout_is_caught_too(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
@@ -1575,7 +1577,7 @@ class TestModelRunSlot:
             client, response = self._post_texas_rebuild(app, db)
 
         assert response.status_code == 302
-        assert response.headers["Location"] == "/us/matchups?chamber=senate"
+        assert response.headers["Location"] == "/senate/matchups"
         assert recording_runner.calls == []
         assert _flashes(client, response)[-1] == (
             "History not rebuilt: another US model run or history rebuild is in "
@@ -1627,7 +1629,7 @@ class TestModelRunSlot:
 
         with MODEL_RUN_LOCK:
             response = app.test_client().post(
-                "/us/president/matchup",
+                "/president/matchup",
                 data={"matchup": VANCE_NEWSOM, "rebuild_history": "on"},
             )
 

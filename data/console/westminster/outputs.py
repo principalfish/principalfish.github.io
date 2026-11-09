@@ -12,7 +12,7 @@ from core.schema import ElectionType
 WESTMINSTER_BASELINE_TYPES = (ElectionType.uk_general, ElectionType.by_election)
 
 WESTMINSTER_OUTPUTS = OutputsSpec(
-    url_prefix="/models",
+    url_prefix="/westminster",
     list_endpoint="model_outputs",
     detail_endpoint="model_output_detail",
     delete_endpoint="delete_model_output",

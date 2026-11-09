@@ -1029,11 +1029,11 @@ class TestWikipediaRoutesRegistered:
         methods = {
             str(rule): rule.methods or set() for rule in app.url_map.iter_rules()
         }
-        assert "POST" in methods["/import/wikipedia/start"]
-        assert "GET" in methods["/import/wikipedia/<token>"]
-        assert "POST" in methods["/import/wikipedia/<token>/confirm"]
-        assert "POST" in methods["/import/wikipedia/<token>/skip"]
-        finish = methods["/import/wikipedia/<token>/finish"]
+        assert "POST" in methods["/westminster/polls/import/wikipedia/start"]
+        assert "GET" in methods["/westminster/polls/import/wikipedia/<token>"]
+        assert "POST" in methods["/westminster/polls/import/wikipedia/<token>/confirm"]
+        assert "POST" in methods["/westminster/polls/import/wikipedia/<token>/skip"]
+        finish = methods["/westminster/polls/import/wikipedia/<token>/finish"]
         assert {"GET", "POST"} <= finish
 
     def test_endpoints_exist(self, app: Flask) -> None:
@@ -1051,10 +1051,10 @@ class TestTokenGuard:
         self, app: Flask, method: str, suffix: str
     ) -> None:
         client = app.test_client()
-        path = f"/import/wikipedia/deadbeef{suffix}"
+        path = f"/westminster/polls/import/wikipedia/deadbeef{suffix}"
         response = client.open(path, method=method)
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
 
         body = client.open(path, method=method, follow_redirects=True).get_data(
             as_text=True
@@ -1067,10 +1067,10 @@ class TestTokenGuard:
     ) -> None:
         token = store_preview({"type": "by_election", "plan": object()})
         client = app.test_client()
-        path = f"/import/wikipedia/{token}{suffix}"
+        path = f"/westminster/polls/import/wikipedia/{token}{suffix}"
         response = client.open(path, method=method)
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
 
         body = client.open(path, method=method, follow_redirects=True).get_data(
             as_text=True
@@ -1091,8 +1091,10 @@ class TestQueueStep:
         state = _queue_state()
         token = _store(state)
 
-        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
         )
 
         assert stub.build_calls == 1
@@ -1108,12 +1110,15 @@ class TestQueueStep:
         _mark(state.items[0], "failed", detail="404 Not Found")
         token = _store(state)
 
-        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
         )
 
         assert re.search(
-            rf'<form method="post" action="/import/wikipedia/{token}/skip"'
+            rf'<form method="post" '
+            rf'action="/westminster/polls/import/wikipedia/{token}/skip"'
             r' class="inline-form">\s*'
             r'<input type="hidden" name="expected_index" value="0" />\s*'
             r'<button type="submit" class="button">Skip this poll</button>\s*'
@@ -1121,7 +1126,8 @@ class TestQueueStep:
             body,
         )
         assert re.search(
-            rf'<form method="post" action="/import/wikipedia/{token}/finish"'
+            rf'<form method="post" '
+            rf'action="/westminster/polls/import/wikipedia/{token}/finish"'
             r' class="inline-form">\s*'
             r'<input type="hidden" name="abandon" value="on" />\s*'
             r'<button type="submit" class="button button-danger">Abandon queue'
@@ -1146,8 +1152,10 @@ class TestQueueStep:
         _install_stub_importer(monkeypatch, stub)
         token = _store(_queue_state())
 
-        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
         )
 
         assert (
@@ -1164,8 +1172,10 @@ class TestQueueStep:
         _install_stub_importer(monkeypatch, stub)
         token = _store(_queue_state(sample_size_label="2,113"))
 
-        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
         )
 
         assert "Sample size differs: document 2205 vs Wikipedia 2113." in body
@@ -1180,8 +1190,10 @@ class TestQueueStep:
         _install_stub_importer(monkeypatch, _StubImporter(_stub_plan(seeded["map_id"])))
         token = _store(_queue_state())
 
-        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
         )
 
         assert 'name="replace_rows"' not in body
@@ -1199,8 +1211,10 @@ class TestQueueStep:
         )
         token = _store(_queue_state())
 
-        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
         )
 
         assert 'name="replace_rows"' in body
@@ -1217,7 +1231,7 @@ class TestQueueStep:
         state = _queue_state()
         token = _store(state)
 
-        response = app.test_client().get(f"/import/wikipedia/{token}")
+        response = app.test_client().get(f"/westminster/polls/import/wikipedia/{token}")
         body = response.get_data(as_text=True)
 
         assert response.status_code == 200
@@ -1231,10 +1245,10 @@ class TestQueueStep:
         _mark(state.items[0], "skipped")
         state.index = 1
         token = _store(state)
-        response = app.test_client().get(f"/import/wikipedia/{token}")
+        response = app.test_client().get(f"/westminster/polls/import/wikipedia/{token}")
         assert response.status_code == 302
         assert response.headers["Location"].endswith(
-            f"/import/wikipedia/{token}/finish"
+            f"/westminster/polls/import/wikipedia/{token}/finish"
         )
 
 
@@ -1253,7 +1267,8 @@ class TestConfirm:
         token = _store(state)
 
         response = app.test_client().post(
-            f"/import/wikipedia/{token}/confirm", data={"expected_index": "0"}
+            f"/westminster/polls/import/wikipedia/{token}/confirm",
+            data={"expected_index": "0"},
         )
 
         assert response.status_code == 302
@@ -1282,7 +1297,8 @@ class TestConfirm:
 
         client = app.test_client()
         response = client.post(
-            f"/import/wikipedia/{token}/confirm", data={"expected_index": "1"}
+            f"/westminster/polls/import/wikipedia/{token}/confirm",
+            data={"expected_index": "1"},
         )
 
         assert response.status_code == 302
@@ -1290,7 +1306,9 @@ class TestConfirm:
         assert state.index == 0
         assert state.items[0].status == "pending"
 
-        body = client.get(f"/import/wikipedia/{token}").get_data(as_text=True)
+        body = client.get(f"/westminster/polls/import/wikipedia/{token}").get_data(
+            as_text=True
+        )
         assert "That step has already been actioned." in body
 
     def test_non_numeric_expected_index_is_rejected(
@@ -1305,7 +1323,8 @@ class TestConfirm:
         token = _store(state)
 
         response = app.test_client().post(
-            f"/import/wikipedia/{token}/confirm", data={"expected_index": "first"}
+            f"/westminster/polls/import/wikipedia/{token}/confirm",
+            data={"expected_index": "first"},
         )
 
         assert response.status_code == 302
@@ -1334,7 +1353,8 @@ class TestConfirm:
         )
 
         app.test_client().post(
-            f"/import/wikipedia/{token}/confirm", data={"expected_index": "0"}
+            f"/westminster/polls/import/wikipedia/{token}/confirm",
+            data={"expected_index": "0"},
         )
 
         assert stub.commit_calls == 0
@@ -1359,7 +1379,8 @@ class TestConfirm:
         token = _store(state)
 
         app.test_client().post(
-            f"/import/wikipedia/{token}/confirm", data={"expected_index": "0"}
+            f"/westminster/polls/import/wikipedia/{token}/confirm",
+            data={"expected_index": "0"},
         )
 
         assert state.items[0].status == "failed"
@@ -1374,7 +1395,8 @@ class TestSkipAndRetry:
         state = _queue_state()
         token = _store(state)
         app.test_client().post(
-            f"/import/wikipedia/{token}/skip", data={"expected_index": "0"}
+            f"/westminster/polls/import/wikipedia/{token}/skip",
+            data={"expected_index": "0"},
         )
         assert state.items[0].status == "skipped"
         assert state.items[0].detail == "Skipped"
@@ -1385,7 +1407,8 @@ class TestSkipAndRetry:
         _mark(state.items[0], "failed", detail="404 Not Found")
         token = _store(state)
         app.test_client().post(
-            f"/import/wikipedia/{token}/skip", data={"expected_index": "0"}
+            f"/westminster/polls/import/wikipedia/{token}/skip",
+            data={"expected_index": "0"},
         )
         assert state.items[0].detail == "Skipped after failure: 404 Not Found"
 
@@ -1401,7 +1424,7 @@ class TestSkipAndRetry:
         token = _store(state)
 
         app.test_client().post(
-            f"/import/wikipedia/{token}/skip",
+            f"/westminster/polls/import/wikipedia/{token}/skip",
             data={"expected_index": "0", "action": "retry"},
         )
 
@@ -1439,9 +1462,11 @@ class TestFinish:
         token = _store(self._imported_state())
         client = app.test_client()
 
-        first = client.get(f"/import/wikipedia/{token}/finish").get_data(as_text=True)
-        client.get(f"/import/wikipedia/{token}/finish")
-        client.get(f"/import/wikipedia/{token}/finish")
+        first = client.get(
+            f"/westminster/polls/import/wikipedia/{token}/finish"
+        ).get_data(as_text=True)
+        client.get(f"/westminster/polls/import/wikipedia/{token}/finish")
+        client.get(f"/westminster/polls/import/wikipedia/{token}/finish")
 
         assert len(calls) == 1
         assert "UNS model updated." in first
@@ -1463,7 +1488,8 @@ class TestFinish:
         token = _store(state)
 
         response = app.test_client().post(
-            f"/import/wikipedia/{token}/finish", data={"abandon": "on"}
+            f"/westminster/polls/import/wikipedia/{token}/finish",
+            data={"abandon": "on"},
         )
 
         assert response.status_code == 200
@@ -1487,8 +1513,10 @@ class TestFinish:
         state.index = 1
         token = _store(state)
 
-        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
         )
 
         assert calls == []
@@ -1509,8 +1537,10 @@ class TestFinish:
         token = _store(self._imported_state())
         client = app.test_client()
 
-        body = client.get(f"/import/wikipedia/{token}/finish").get_data(as_text=True)
-        client.get(f"/import/wikipedia/{token}/finish")
+        body = client.get(
+            f"/westminster/polls/import/wikipedia/{token}/finish"
+        ).get_data(as_text=True)
+        client.get(f"/westminster/polls/import/wikipedia/{token}/finish")
 
         assert len(calls) == 1
         assert "UNS model run failed: model exited 1" in body
@@ -1522,8 +1552,10 @@ class TestFinish:
         state.unrecognised_areas = {"Area": 3, "TBA": 1}
         token = _store(state)
 
-        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
         )
 
         assert "3 row(s) in the window were already in the database" in body
@@ -1563,8 +1595,10 @@ class TestFinish:
     ) -> None:
         token = _store(self._all_outcomes_state())
 
-        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
         )
 
         for heading in (
@@ -1587,7 +1621,10 @@ class TestFinish:
             '<a href="https://example.test/doc.xlsx" target="_blank"'
             ' rel="noopener">Source</a>'
         ) in body
-        assert '<a class="button" href="/import">Back to import</a>' in body
+        assert (
+            '<a class="button" href="/westminster/polls/import">Back to import</a>'
+            in body
+        )
         for empty_message in (
             "Nothing was imported.",
             "No poll failed to import.",
@@ -1606,8 +1643,10 @@ class TestFinish:
         )
         token = _store(state)
 
-        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
         )
         failed_section = body.split("<h3>Failed (1)</h3>")[1].split("</section>")[0]
 
@@ -1624,8 +1663,10 @@ class TestFinish:
         state.index = 1
         token = _store(state)
 
-        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
         )
 
         assert "<h3>Imported (1)</h3>" in body
@@ -1648,8 +1689,10 @@ class TestFinish:
         state.run_model_at_end = False
         token = _store(state)
 
-        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
         )
 
         assert "all polls" in body
@@ -1670,7 +1713,7 @@ class TestStart:
         )
 
         response = app.test_client().post(
-            "/import/wikipedia/start",
+            "/westminster/polls/import/wikipedia/start",
             data={"cutoff_date": "2026-01-01", "run_model_at_end": "on"},
         )
 
@@ -1710,7 +1753,9 @@ class TestStart:
             lambda: fetch_poll_index(html=_INDEX_HTML),
         )
 
-        response = app.test_client().post("/import/wikipedia/start", data={})
+        response = app.test_client().post(
+            "/westminster/polls/import/wikipedia/start", data={}
+        )
 
         token = response.headers["Location"].rsplit("/", 1)[-1]
         state: QueueState = PREVIEW_CACHE[token]["state"]
@@ -1727,7 +1772,7 @@ class TestStart:
             "console.westminster.poll_import.fetch_poll_index", _never_called
         )
         body = app.test_client().post(
-            "/import/wikipedia/start",
+            "/westminster/polls/import/wikipedia/start",
             data={"cutoff_date": "31/08/2026"},
             follow_redirects=True,
         ).get_data(as_text=True)
@@ -1742,7 +1787,7 @@ class TestStart:
 
         monkeypatch.setattr("console.westminster.poll_import.fetch_poll_index", _raise)
         body = app.test_client().post(
-            "/import/wikipedia/start", data={}, follow_redirects=True
+            "/westminster/polls/import/wikipedia/start", data={}, follow_redirects=True
         ).get_data(as_text=True)
 
         assert "Wikipedia page could not be read: layout changed" in body

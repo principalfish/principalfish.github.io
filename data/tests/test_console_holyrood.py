@@ -133,7 +133,7 @@ class _RecordingScriptRunner:
 
 
 def _valid_form(world: HolyroodWorld, **overrides: str) -> dict[str, str]:
-    """Build a POST /holyrood/run-model form that validates against ``world``."""
+    """Build a POST /holyrood/model form that validates against ``world``."""
     form = {
         "election_name": world.constituency_election_name,
         "as_of_days_back": "0",
@@ -212,7 +212,7 @@ def _patch_import_script(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Pat
 
 
 class TestHolyroodImportPolls:
-    """POST /holyrood/import-polls runs both the constituency and list imports."""
+    """POST /holyrood/polls/import runs both the constituency and list imports."""
 
     def test_script_missing_redirects_with_flash(
         self,
@@ -227,7 +227,7 @@ class TestHolyroodImportPolls:
         )
         client = app.test_client()
 
-        response = client.post("/holyrood/import-polls")
+        response = client.post("/holyrood/polls/import")
 
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/")
@@ -253,7 +253,7 @@ class TestHolyroodImportPolls:
         )
         monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
 
-        response = app.test_client().post("/holyrood/import-polls")
+        response = app.test_client().post("/holyrood/polls/import")
 
         assert response.status_code == 200
         assert runner.calls == [
@@ -304,7 +304,7 @@ class TestHolyroodImportPolls:
         )
         monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
 
-        response = app.test_client().post("/holyrood/import-polls")
+        response = app.test_client().post("/holyrood/polls/import")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -331,7 +331,7 @@ class TestHolyroodImportPolls:
         )
         monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
 
-        response = app.test_client().post("/holyrood/import-polls")
+        response = app.test_client().post("/holyrood/polls/import")
 
         assert response.status_code == 200
         # Only the constituency import ran; the list import never fired.
@@ -444,7 +444,7 @@ class TestHolyroodModelArgExplanations:
 
 
 class TestRunHolyroodModelFormRoute:
-    """GET /holyrood/run-model picks a default election from the current DB."""
+    """GET /holyrood/model picks a default election from the current DB."""
 
     def test_with_elections_defaults_to_the_first_option(
         self, app: Flask, db: Database
@@ -458,7 +458,7 @@ class TestRunHolyroodModelFormRoute:
             world.map_id, 2031, "Witness Election", ElectionType.holyrood_general
         )
 
-        response = app.test_client().get("/holyrood/run-model")
+        response = app.test_client().get("/holyrood/model")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -468,7 +468,7 @@ class TestRunHolyroodModelFormRoute:
     def test_without_elections_renders_empty_dropdown(
         self, app: Flask, db: Database
     ) -> None:
-        response = app.test_client().get("/holyrood/run-model")
+        response = app.test_client().get("/holyrood/model")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -481,7 +481,7 @@ class TestRunHolyroodModelFormRoute:
         ``HolyroodModelRunForm.dry_run``'s own default of ``False``) must
         preview rather than silently write to the DB and run the export.
         """
-        response = app.test_client().get("/holyrood/run-model")
+        response = app.test_client().get("/holyrood/model")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -496,7 +496,7 @@ class TestRunHolyroodModelFormRoute:
 
 
 class TestRunHolyroodModelExecute:
-    """POST /holyrood/run-model validates the form, runs the model, and exports."""
+    """POST /holyrood/model validates the form, runs the model, and exports."""
 
     def test_invalid_form_flashes_the_exact_validation_message(
         self,
@@ -510,7 +510,7 @@ class TestRunHolyroodModelExecute:
         # that validator is wired up.
         form = _valid_form(world, as_of_days_back="30", since_days_back="7")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post("/holyrood/model", data=form)
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -540,7 +540,7 @@ class TestRunHolyroodModelExecute:
         world = seed_holyrood_world(db)
         form = _valid_form(world, dry_run="true")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post("/holyrood/model", data=form)
 
         assert response.status_code == 200
         assert recording_runner.scripts == ["run_holyrood_uns_model.py"]
@@ -577,7 +577,7 @@ class TestRunHolyroodModelExecute:
             dry_run="true",
         )
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post("/holyrood/model", data=form)
 
         expected_command = (
             sys.executable,
@@ -616,7 +616,7 @@ class TestRunHolyroodModelExecute:
         )
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post("/holyrood/model", data=form)
 
         assert response.status_code == 200
         assert recording_runner.scripts == [
@@ -661,7 +661,7 @@ class TestRunHolyroodModelExecute:
         monkeypatch.setattr("console.holyrood.model.run_command", runner)
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post("/holyrood/model", data=form)
 
         assert response.status_code == 200
         assert len(runner.calls) == 1
@@ -688,7 +688,7 @@ class TestRunHolyroodModelExecute:
         monkeypatch.setattr("console.holyrood.model.run_command", runner)
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post("/holyrood/model", data=form)
 
         assert response.status_code == 200
         assert runner.scripts == ["run_holyrood_uns_model.py", "export_elections.py"]
@@ -716,7 +716,7 @@ class TestRunHolyroodModelExecute:
         )
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post("/holyrood/model", data=form)
 
         assert response.status_code == 200
         # run_command is never called for the missing export step.

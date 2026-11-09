@@ -186,11 +186,16 @@ HOLYROOD_FIELDS = [
 @pytest.mark.parametrize(
     ("path", "title", "action", "fields"),
     [
-        ("/models/run", "Run UNS Model", "/models/run", WESTMINSTER_FIELDS),
         (
-            "/holyrood/run-model",
+            "/westminster/model",
+            "Run UNS Model",
+            "/westminster/model",
+            WESTMINSTER_FIELDS,
+        ),
+        (
+            "/holyrood/model",
             "Run Holyrood Model",
-            "/holyrood/run-model",
+            "/holyrood/model",
             HOLYROOD_FIELDS,
         ),
     ],
@@ -217,7 +222,7 @@ def test_the_shared_run_form_renders_each_parliaments_fields(
 def test_the_run_form_marks_the_default_option_selected(
     seeded_app: Flask,  # noqa: F811
 ) -> None:
-    body = seeded_app.test_client().get("/models/run").get_data(as_text=True)
+    body = seeded_app.test_client().get("/westminster/model").get_data(as_text=True)
     assert '<option value="0" selected>0</option>' in body
     assert '<option value="60" selected>60</option>' in body
     assert '<option value="15.0" selected>15.0</option>' in body
@@ -227,6 +232,6 @@ def test_the_run_form_marks_the_default_option_selected(
 def test_the_optional_csv_select_offers_none_for_the_empty_value(
     seeded_app: Flask,  # noqa: F811
 ) -> None:
-    body = seeded_app.test_client().get("/models/run").get_data(as_text=True)
+    body = seeded_app.test_client().get("/westminster/model").get_data(as_text=True)
     select = select_block(body, "output_csv")
     assert re.search(r'<option value=""[^>]*>\s*None\s*</option>', select)

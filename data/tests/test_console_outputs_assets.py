@@ -13,11 +13,11 @@ from tests.console_fixtures import app, seeded_app  # noqa: F401  (pytest fixtur
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "console" / "static"
 OUTPUTS_PAGES = [
-    ("/models/outputs", "Seats"),
+    ("/westminster/outputs", "Seats"),
     ("/holyrood/outputs", "Seats"),
-    ("/us/house/outputs", "Seats"),
-    ("/us/senate/outputs", "Seats"),
-    ("/us/president/outputs", "Electoral Votes"),
+    ("/house/outputs", "Seats"),
+    ("/senate/outputs", "Seats"),
+    ("/president/outputs", "Electoral Votes"),
 ]
 
 

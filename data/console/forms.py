@@ -12,7 +12,7 @@ from models.support.cli import validate_half_life
 
 
 class ModelRunForm(BaseModel):
-    """Validated form data for POST /models/run."""
+    """Validated form data for POST /westminster/model."""
 
     map_name: str
     baseline_election_name: str
@@ -44,7 +44,7 @@ class ModelRunForm(BaseModel):
 
 
 class HolyroodModelRunForm(BaseModel):
-    """Validated form data for POST /holyrood/run-model."""
+    """Validated form data for POST /holyrood/model."""
 
     election_name: str
     as_of_days_back: int = Field(ge=0)
@@ -74,14 +74,14 @@ class HolyroodModelRunForm(BaseModel):
 
 
 class PollImportForm(BaseModel):
-    """Validated form data for POST /import/preview."""
+    """Validated form data for POST /westminster/polls/import/preview."""
 
     pollster_identifier: str
     source_url: str
 
 
 class WikipediaQueueStartForm(BaseModel):
-    """Validated form data for POST /import/wikipedia/start."""
+    """Validated form data for POST /westminster/polls/import/wikipedia/start."""
 
     # ISO date; blank derives the cutoff from the latest poll already stored.
     cutoff_date: str = ""
@@ -164,7 +164,7 @@ class UsQueueStartForm(BaseModel):
 
 
 class ByElectionPreviewForm(BaseModel):
-    """Validated form data for POST /by-elections/preview."""
+    """Validated form data for POST /westminster/by-elections/preview."""
 
     source_url: str
     parent_election: str = ""

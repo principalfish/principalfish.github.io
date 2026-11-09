@@ -77,14 +77,14 @@ def test_the_westminster_map_name_matches_the_database_map() -> None:
 @pytest.mark.parametrize(
     ("section", "election_type", "path", "has_links"),
     [
-        ("westminster", ElectionType.model_uns, "/models/outputs", True),
+        ("westminster", ElectionType.model_uns, "/westminster/outputs", True),
         ("holyrood", ElectionType.holyrood_uns, "/holyrood/outputs", False),
-        ("house", ElectionType.us_house_model, "/us/house/outputs", False),
-        ("senate", ElectionType.us_senate_model, "/us/senate/outputs", False),
+        ("house", ElectionType.us_house_model, "/house/outputs", False),
+        ("senate", ElectionType.us_senate_model, "/senate/outputs", False),
         (
             "president",
             ElectionType.us_presidential_model,
-            "/us/president/outputs",
+            "/president/outputs",
             False,
         ),
     ],

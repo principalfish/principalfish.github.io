@@ -42,9 +42,9 @@ bp = Blueprint("holyrood", __name__)
 register_outputs(bp)
 
 
-@bp.route("/holyrood/import-polls", methods=["POST"])
+@bp.route("/holyrood/polls/import", methods=["POST"])
 def holyrood_import_polls() -> ResponseReturnValue:
-    """POST /holyrood/import-polls — Import new Scottish Parliament polls from Wikipedia.
+    """POST /holyrood/polls/import — Import new Scottish Parliament polls from Wikipedia.
 
     Imports both the constituency and regional-list ballots. Idempotent — the
     importer skips polls already in the database. Running the projection model
@@ -175,9 +175,9 @@ def _holyrood_run_form(choices: dict[str, object]) -> RunForm:
     )
 
 
-@bp.route("/holyrood/run-model", methods=["GET"])
+@bp.route("/holyrood/model", methods=["GET"])
 def run_holyrood_model_form() -> str:
-    """GET /holyrood/run-model — Render the Holyrood model run form with default values."""
+    """GET /holyrood/model — Render the Holyrood model run form with default values."""
     db = get_db()
     choices = _choices_for_holyrood_model_form(db)
     elections = choices["election_options"]
@@ -200,9 +200,9 @@ def run_holyrood_model_form() -> str:
     )
 
 
-@bp.route("/holyrood/run-model", methods=["POST"])
+@bp.route("/holyrood/model", methods=["POST"])
 def run_holyrood_model() -> ResponseReturnValue:
-    """POST /holyrood/run-model — Validate the form, run the Holyrood model, and export on success.
+    """POST /holyrood/model — Validate the form, run the Holyrood model, and export on success.
 
     Form parameters:
         election_name (str): Baseline holyrood_general election providing seat-level votes.

@@ -160,9 +160,9 @@ def run_us_models() -> ResponseReturnValue:
         )
 
 
-@bp.route("/us/president/matchup", methods=["GET", "POST"])
+@bp.route("/president/matchup", methods=["GET", "POST"])
 def president_matchup() -> ResponseReturnValue:
-    """GET/POST /us/president/matchup — Choose the national presidential matchup.
+    """GET/POST /president/matchup — Choose the national presidential matchup.
 
     GET lists the presidential map's stored national matchups (poll count and
     latest fieldwork date each) as a choice, plus "None". POST saves the choice
@@ -212,22 +212,25 @@ def president_matchup() -> ResponseReturnValue:
     return _rebuild_history(db, chamber, back_endpoint="us.president_matchup")
 
 
-@bp.route("/us/matchups", methods=["GET"])
-def race_matchups() -> ResponseReturnValue:
-    """GET /us/matchups?chamber=senate|house — Review each race's tracked matchup.
+@bp.route("/<any(house,senate):chamber>/matchups", methods=["GET"])
+def race_matchups(chamber: str) -> ResponseReturnValue:
+    """GET /house/matchups, /senate/matchups — Review each race's tracked matchup.
 
     Lists every race of the chamber's map that has stored matchup polls or a
     tracked row: the matchup the models follow and who chose it, the
     importer's automatic choice, and every stored matchup with its poll count
     and latest fieldwork date — each with a form to override, ignore or reset.
 
+    Args:
+        chamber: The chamber slug from the path (``house`` or ``senate``).
+
     Returns:
         The race matchups page; 404 for a chamber with no per-race matchups.
     """
-    chamber_slug = (request.args.get("chamber") or "").strip().lower()
-    map_name = race_map_name(chamber_slug)
+    map_name = race_map_name(chamber)
     if map_name is None:
-        abort(404, description=f"No per-race matchups for chamber {chamber_slug!r}.")
+        # The route only matches house and senate; this narrows the type for mypy.
+        abort(404, description=f"No per-race matchups for chamber {chamber!r}.")
 
     db = get_db()
     poll_map = db.get_map_by_name(map_name)
@@ -235,10 +238,9 @@ def race_matchups() -> ResponseReturnValue:
         flash(f"No map named {map_name!r}; import the US maps first.")
         return redirect(url_for("home.home"))
 
-    chamber = US_CHAMBERS_BY_SLUG[chamber_slug]
     return render_template(
         "us_race_matchups.html",
-        chamber=chamber,
+        chamber=US_CHAMBERS_BY_SLUG[chamber],
         map_id=poll_map.id,
         map_name=poll_map.name,
         races=build_race_matchups(db, poll_map.id),

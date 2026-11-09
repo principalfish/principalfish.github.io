@@ -7,7 +7,7 @@ It is the primary model run after importing new Scottish polls from Wikipedia,
 and its output drives the "Current prediction" display on the election maps
 front-end.
 
-Typically invoked by the data pipeline server (server.py /holyrood/import-polls)
+Typically invoked by the data pipeline server (server.py /holyrood/polls/import)
 immediately after poll import, or directly from the command line.
 
 

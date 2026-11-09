@@ -18,9 +18,9 @@ from importers.results.westminster import by_election_import
 bp = Blueprint("by_elections", __name__)
 
 
-@bp.route("/by-elections", methods=["GET"])
+@bp.route("/westminster/by-elections", methods=["GET"])
 def by_election_form() -> str:
-    """GET /by-elections — Render the by-election import form with available parent elections."""
+    """GET /westminster/by-elections — Render the by-election import form with available parent elections."""
     db = get_db()
     with db.session() as session:
         elections = (
@@ -39,9 +39,9 @@ def by_election_form() -> str:
     )
 
 
-@bp.route("/by-elections/preview", methods=["POST"])
+@bp.route("/westminster/by-elections/preview", methods=["POST"])
 def by_election_preview() -> ResponseReturnValue:
-    """POST /by-elections/preview — Fetch and parse a by-election results URL and cache an import plan.
+    """POST /westminster/by-elections/preview — Fetch and parse a by-election results URL and cache an import plan.
 
     Form parameters:
         source_url (str): URL pointing to the by-election results page.
@@ -79,9 +79,9 @@ def by_election_preview() -> ResponseReturnValue:
     )
 
 
-@bp.route("/by-elections/confirm/<token>", methods=["POST"])
+@bp.route("/westminster/by-elections/confirm/<token>", methods=["POST"])
 def by_election_confirm(token: str) -> ResponseReturnValue:
-    """POST /by-elections/confirm/<token> — Commit a previewed by-election import to the database.
+    """POST /westminster/by-elections/confirm/<token> — Commit a previewed by-election import to the database.
 
     Args:
         token: One-time hex token identifying the cached by-election import plan.

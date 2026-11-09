@@ -115,14 +115,14 @@ class Nav:
 
 
 def current_area(
-    endpoint: str | None, args: Mapping[str, str] | None = None
+    endpoint: str | None, view_args: Mapping[str, object] | None = None
 ) -> str | None:
     """The part of the console an endpoint belongs to.
 
     Args:
         endpoint: The endpoint, or None for a request that matched no route.
-        args: The query string, which names the chamber on the race-matchup
-            page.
+        view_args: The matched route's URL arguments, which name the chamber on
+            the race-matchup page.
 
     Returns:
         A section slug, ``"admin"``, ``"polls"``, or None for a page that
@@ -133,8 +133,10 @@ def current_area(
     if endpoint in _ENDPOINT_AREAS:
         return _ENDPOINT_AREAS[endpoint]
     if endpoint == "us.race_matchups":
-        chamber = ((args or {}).get("chamber") or "").strip().lower()
-        return chamber if chamber in _RACE_CHAMBERS else None
+        chamber = (view_args or {}).get("chamber")
+        if isinstance(chamber, str) and chamber in _RACE_CHAMBERS:
+            return chamber
+        return None
     if endpoint in UNSECTIONED_ENDPOINTS:
         return None
     return _BLUEPRINT_AREAS.get(endpoint.partition(".")[0])
@@ -300,7 +302,7 @@ def _breadcrumbs(
 def build_nav() -> Nav:
     """The navigation for the current request."""
     endpoint = request.endpoint
-    area = current_area(endpoint, request.args)
+    area = current_area(endpoint, request.view_args)
     section = SECTIONS_BY_SLUG.get(area) if area else None
     items = section_items(section, endpoint) if section else ()
     return Nav(

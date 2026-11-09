@@ -3,8 +3,8 @@
 The list and detail views also show the respondent count (n) behind each
 column of shares, resolved by ``models.support.poll_bases`` (captured base,
 else sample size, else a population estimate) and labelled with its source;
-``/polls/coverage`` summarises how many polls and crossbreaks have captured
-bases, per pollster.
+``/westminster/polls/coverage`` summarises how many polls and crossbreaks have
+captured bases, per pollster.
 
 For Westminster polls they also show sampling error, from
 ``models.support.uncertainty`` with the settings loaded once per request: each
@@ -249,9 +249,9 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
     )
 
 
-@bp.route("/polls/coverage", methods=["GET"])
+@bp.route("/westminster/polls/coverage", methods=["GET"])
 def poll_coverage() -> str:
-    """GET /polls/coverage — Per-pollster coverage of captured respondent bases.
+    """GET /westminster/polls/coverage — Per-pollster captured respondent base coverage.
 
     Counts, for the Westminster map, each pollster's polls with a national
     base and its reported crossbreaks (poll x region with a non-zero share)

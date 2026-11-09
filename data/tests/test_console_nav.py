@@ -7,13 +7,8 @@ follows a redirect.
 
 from __future__ import annotations
 
-import html
-import re
-from urllib.parse import parse_qs, urlparse
-
 import pytest
-from flask import Flask, Response
-from flask.testing import FlaskClient
+from flask import Flask
 
 from console.nav import (
     ADMIN,
@@ -27,36 +22,15 @@ from console.nav import (
     section_links,
 )
 from console.sections import SECTIONS, SECTIONS_BY_SLUG, Section
-from tests.console_fixtures import app, seeded_app  # noqa: F401  (pytest fixtures)
-
-HREF = re.compile(r'href="([^"]*)"')
-
-
-def _crawl(client: FlaskClient[Response]) -> dict[str, str]:
-    """GET every page reachable from ``/`` by links; return path -> body."""
-    pages: dict[str, str] = {}
-    pending = ["/"]
-    while pending:
-        key = pending.pop()
-        if key in pages:
-            continue
-        response = client.get(key)
-        assert response.status_code == 200, f"{key} -> {response.status_code}"
-        body = response.get_data(as_text=True)
-        pages[key] = body
-        for href in HREF.findall(body):
-            url = urlparse(html.unescape(href))
-            if url.scheme or url.netloc or not url.path.startswith("/"):
-                continue
-            if url.path.startswith("/static/") or url.path.endswith("/csv"):
-                continue
-            chamber = parse_qs(url.query).get("chamber")
-            pending.append(url.path + (f"?chamber={chamber[0]}" if chamber else ""))
-    return pages
+from tests.console_fixtures import (  # noqa: F401  (pytest fixtures)
+    app,
+    crawl,
+    seeded_app,
+)
 
 
 def test_the_crawl_from_home_finds_no_error_pages(seeded_app: Flask) -> None:
-    pages = _crawl(seeded_app.test_client())
+    pages = crawl(seeded_app.test_client())
 
     assert len(pages) > 20
     # A dropped link must not silently shrink the crawl.
@@ -68,8 +42,8 @@ def test_the_crawl_from_home_finds_no_error_pages(seeded_app: Flask) -> None:
         "/president",
         "/admin",
         "/polls",
-        "/us/matchups?chamber=house",
-        "/us/matchups?chamber=senate",
+        "/house/matchups",
+        "/senate/matchups",
         "/westminster/uncertainty/results",
     ):
         assert expected in pages, expected
@@ -78,7 +52,7 @@ def test_the_crawl_from_home_finds_no_error_pages(seeded_app: Flask) -> None:
 def test_every_parameterless_get_page_is_reachable_from_home(
     seeded_app: Flask,
 ) -> None:
-    reached = {key.partition("?")[0] for key in _crawl(seeded_app.test_client())}
+    reached = {key.partition("?")[0] for key in crawl(seeded_app.test_client())}
     parameterless = {
         rule.rule
         for rule in seeded_app.url_map.iter_rules()
@@ -91,7 +65,7 @@ def test_every_parameterless_get_page_is_reachable_from_home(
 
 
 def test_every_page_has_navigation(seeded_app: Flask) -> None:
-    for key, body in _crawl(seeded_app.test_client()).items():
+    for key, body in crawl(seeded_app.test_client()).items():
         assert 'class="topnav"' in body, key
         for section in SECTIONS:
             assert f'href="/{section.slug}"' in body, key
@@ -126,7 +100,7 @@ def test_the_holyrood_landing_page_holds_the_one_click_import(
 ) -> None:
     body = app.test_client().get("/holyrood").get_data(as_text=True)
 
-    assert 'action="/holyrood/import-polls"' in body
+    assert 'action="/holyrood/polls/import"' in body
     assert "Import Scottish Polls" in body
 
 
@@ -189,7 +163,7 @@ def test_the_sectionless_lists_match_the_pinned_ones() -> None:
 
 
 @pytest.mark.parametrize(
-    ("endpoint", "args", "area"),
+    ("endpoint", "view_args", "area"),
     [
         ("westminster.model_outputs", {}, "westminster"),
         ("uncertainty_runs.results", {}, "westminster"),
@@ -201,7 +175,8 @@ def test_the_sectionless_lists_match_the_pinned_ones() -> None:
         ("us.delete_selected_house_outputs", {}, "house"),
         ("us.president_matchup", {}, "president"),
         ("us.race_matchups", {"chamber": "senate"}, "senate"),
-        ("us.race_matchups", {"chamber": "House"}, "house"),
+        ("us.race_matchups", {"chamber": "house"}, "house"),
+        ("us.race_matchups", {"chamber": "House"}, None),
         ("us.race_matchups", {"chamber": "nope"}, None),
         ("us.race_matchups", {}, None),
         ("us.run_us_models", {}, None),
@@ -212,15 +187,15 @@ def test_the_sectionless_lists_match_the_pinned_ones() -> None:
     ],
 )
 def test_current_area(
-    endpoint: str | None, args: dict[str, str], area: str | None
+    endpoint: str | None, view_args: dict[str, str], area: str | None
 ) -> None:
-    assert current_area(endpoint, args) == area
+    assert current_area(endpoint, view_args) == area
 
 
 def test_a_section_page_shows_its_nav_and_breadcrumbs(
     seeded_app: Flask,
 ) -> None:
-    body = seeded_app.test_client().get("/models/outputs").get_data(as_text=True)
+    body = seeded_app.test_client().get("/westminster/outputs").get_data(as_text=True)
 
     assert 'class="subnav"' in body
     assert 'class="topnav"' in body
@@ -267,15 +242,15 @@ def _active(items: tuple[NavItem, ...]) -> list[str]:
         ("/polls", [("Home", "/"), ("All polls", None)]),
         ("/holyrood", [("Home", "/"), ("Holyrood", None)]),
         (
-            "/models/outputs",
+            "/westminster/outputs",
             [("Home", "/"), ("Westminster", "/westminster"), ("Outputs", None)],
         ),
         (
-            "/us/president/outputs/3",
+            "/president/outputs/3",
             [("Home", "/"), ("US President", "/president"), ("Outputs", None)],
         ),
         (
-            "/us/matchups?chamber=senate",
+            "/senate/matchups",
             [("Home", "/"), ("US Senate", "/senate"), ("Matchups", None)],
         ),
     ],
@@ -299,8 +274,8 @@ def test_breadcrumbs(
         ("/admin", ["Admin"]),
         ("POST /db/backup", ["Admin"]),
         ("/polls", ["All polls"]),
-        ("/us/matchups?chamber=senate", ["US Senate"]),
-        ("/us/president/matchup", ["US President"]),
+        ("/senate/matchups", ["US Senate"]),
+        ("/president/matchup", ["US President"]),
         ("/westminster/uncertainty/sims", ["Westminster"]),
     ],
 )
@@ -316,23 +291,23 @@ def test_the_top_bar_marks_the_current_area(
     ("path", "label"),
     [
         ("/westminster", None),
-        ("/import", "Import poll"),
-        ("/by-elections", "By-elections"),
-        ("/polls/coverage", "Poll coverage"),
-        ("/models/run", "Run model"),
-        ("/models/outputs/4", "Outputs"),
-        ("POST /models/outputs/4/delete", "Outputs"),
+        ("/westminster/polls/import", "Import poll"),
+        ("/westminster/by-elections", "By-elections"),
+        ("/westminster/polls/coverage", "Poll coverage"),
+        ("/westminster/model", "Run model"),
+        ("/westminster/outputs/4", "Outputs"),
+        ("POST /westminster/outputs/4/delete", "Outputs"),
         ("/westminster/uncertainty", "Uncertainty"),
         ("/westminster/uncertainty/results/2", "Uncertainty"),
         ("/westminster/uncertainty/sims/3/seat/9", "Uncertainty"),
-        ("/holyrood/run-model", "Run model"),
+        ("/holyrood/model", "Run model"),
         ("/holyrood/outputs/7", "Outputs"),
-        ("/us/matchups?chamber=house", "Matchups"),
-        ("/us/president/matchup", "Matchup"),
-        ("/us/house/outputs", "Outputs"),
-        ("/us/senate/outputs/5", "Outputs"),
-        ("POST /us/president/outputs/delete-selected", "Outputs"),
-        ("POST /us/house/outputs/5/delete", "Outputs"),
+        ("/house/matchups", "Matchups"),
+        ("/president/matchup", "Matchup"),
+        ("/house/outputs", "Outputs"),
+        ("/senate/outputs/5", "Outputs"),
+        ("POST /president/outputs/delete-selected", "Outputs"),
+        ("POST /house/outputs/5/delete", "Outputs"),
     ],
 )
 def test_the_section_nav_marks_the_current_link(
@@ -349,11 +324,11 @@ def test_the_section_nav_marks_the_current_link(
 def test_the_matchups_link_belongs_to_its_own_chamber(
     app: Flask,  # noqa: F811
 ) -> None:
-    house = _nav(app, "/us/matchups?chamber=house").section_items
-    senate = _nav(app, "/us/matchups?chamber=senate").section_items
+    house = _nav(app, "/house/matchups").section_items
+    senate = _nav(app, "/senate/matchups").section_items
 
-    assert "/us/matchups?chamber=house" in [item.url for item in house]
-    assert "/us/matchups?chamber=senate" in [item.url for item in senate]
+    assert "/house/matchups" in [item.url for item in house]
+    assert "/senate/matchups" in [item.url for item in senate]
 
 
 def test_a_request_that_matches_no_route_still_gets_navigation(
@@ -373,11 +348,11 @@ def test_home_cards_link_to_each_sections_pages(app: Flask) -> None:  # noqa: F8
 
     for href in (
         "/westminster",
-        "/models/outputs",
-        "/import",
+        "/westminster/outputs",
+        "/westminster/polls/import",
         "/us/import",
-        "/us/matchups?chamber=senate",
-        "/us/president/matchup",
+        "/senate/matchups",
+        "/president/matchup",
         "/holyrood/outputs",
         "/polls",
         "/admin",

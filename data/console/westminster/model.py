@@ -160,9 +160,9 @@ def _model_run_form(choices: dict[str, object]) -> RunForm:
     )
 
 
-@bp.route("/models/run", methods=["GET"])
+@bp.route("/westminster/model", methods=["GET"])
 def model_run_form() -> str:
-    """GET /models/run — Render the UNS model run form with default values."""
+    """GET /westminster/model — Render the UNS model run form with default values."""
     db = get_db()
     choices = _choices_for_model_form(db)
     return render_template(
@@ -183,9 +183,9 @@ def model_run_form() -> str:
     )
 
 
-@bp.route("/models/run", methods=["POST"])
+@bp.route("/westminster/model", methods=["POST"])
 def model_run_execute() -> ResponseReturnValue:
-    """POST /models/run — Validate the model form, invoke run_uns_model.py, and auto-export on success.
+    """POST /westminster/model — Validate the model form, invoke run_uns_model.py, and auto-export on success.
 
     Form parameters (all required):
         map_name (str): Name of the constituency map.

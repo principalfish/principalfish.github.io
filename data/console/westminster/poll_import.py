@@ -115,18 +115,18 @@ def _run_model_and_export(*, timeout: int = MODEL_RUN_TIMEOUT) -> list[str]:
     )
 
 
-@bp.route("/import", methods=["GET"])
+@bp.route("/westminster/polls/import", methods=["GET"])
 def import_poll_form() -> str:
-    """GET /import — Render the poll import form with available pollster options."""
+    """GET /westminster/polls/import — Render the poll import form with pollsters."""
     return render_template(
         "import_form.html",
         pollsters=[{"identifier": key, "name": meta["label"]} for key, meta in IMPORTERS.items()],
     )
 
 
-@bp.route("/import/preview", methods=["POST"])
+@bp.route("/westminster/polls/import/preview", methods=["POST"])
 def import_poll_preview() -> ResponseReturnValue:
-    """POST /import/preview — Fetch and parse a poll source URL and cache an import plan.
+    """POST /westminster/polls/import/preview — Fetch and parse a poll source URL and cache an import plan.
 
     Form parameters:
         pollster_identifier (str): Key identifying the importer (e.g. 'yougov', 'ipsos').
@@ -183,9 +183,9 @@ def import_poll_preview() -> ResponseReturnValue:
     )
 
 
-@bp.route("/import/confirm/<token>", methods=["POST"])
+@bp.route("/westminster/polls/import/confirm/<token>", methods=["POST"])
 def import_poll_confirm(token: str) -> ResponseReturnValue:
-    """POST /import/confirm/<token> — Commit a previewed poll import to the database.
+    """POST /westminster/polls/import/confirm/<token> — Commit a previewed poll import.
 
     Args:
         token: One-time hex token identifying the cached import plan.
@@ -240,9 +240,9 @@ def import_poll_confirm(token: str) -> ResponseReturnValue:
     return redirect(url_for("polls.poll_detail", poll_id=result.poll_id))
 
 
-@bp.route("/import/wikipedia/start", methods=["POST"])
+@bp.route("/westminster/polls/import/wikipedia/start", methods=["POST"])
 def wikipedia_start() -> ResponseReturnValue:
-    """POST /import/wikipedia/start — Scrape Wikipedia and open a catch-up queue.
+    """POST /westminster/polls/import/wikipedia/start — Scrape Wikipedia, open a queue.
 
     Form parameters:
         cutoff_date (str, optional): ISO date. Only polls whose fieldwork ends
@@ -291,9 +291,9 @@ def wikipedia_start() -> ResponseReturnValue:
     return redirect(url_for("poll_import.wikipedia_queue", token=token))
 
 
-@bp.route("/import/wikipedia/<token>", methods=["GET"])
+@bp.route("/westminster/polls/import/wikipedia/<token>", methods=["GET"])
 def wikipedia_queue(token: str) -> ResponseReturnValue:
-    """GET /import/wikipedia/<token> — Show the queue's current poll for approval.
+    """GET /westminster/polls/import/wikipedia/<token> — Show the queue's current poll.
 
     The importer's plan is built lazily here, so each poll's document is
     downloaded once, at the moment it is presented, and exactly what the user
@@ -331,9 +331,9 @@ def wikipedia_queue(token: str) -> ResponseReturnValue:
     )
 
 
-@bp.route("/import/wikipedia/<token>/confirm", methods=["POST"])
+@bp.route("/westminster/polls/import/wikipedia/<token>/confirm", methods=["POST"])
 def wikipedia_confirm(token: str) -> ResponseReturnValue:
-    """POST /import/wikipedia/<token>/confirm — Import the queue's current poll.
+    """POST /westminster/polls/import/wikipedia/<token>/confirm — Import current poll.
 
     Presence is re-checked against the database first, so a poll imported
     elsewhere since the plan was built is skipped rather than duplicated. A
@@ -395,9 +395,9 @@ def wikipedia_confirm(token: str) -> ResponseReturnValue:
     return redirect(url_for("poll_import.wikipedia_queue", token=token))
 
 
-@bp.route("/import/wikipedia/<token>/skip", methods=["POST"])
+@bp.route("/westminster/polls/import/wikipedia/<token>/skip", methods=["POST"])
 def wikipedia_skip(token: str) -> ResponseReturnValue:
-    """POST /import/wikipedia/<token>/skip — Skip or retry the queue's current poll.
+    """POST /westminster/polls/import/wikipedia/<token>/skip — Skip or retry the poll.
 
     Args:
         token: Token identifying the cached catch-up queue.
@@ -427,9 +427,9 @@ def wikipedia_skip(token: str) -> ResponseReturnValue:
     return redirect(url_for("poll_import.wikipedia_queue", token=token))
 
 
-@bp.route("/import/wikipedia/<token>/finish", methods=["GET", "POST"])
+@bp.route("/westminster/polls/import/wikipedia/<token>/finish", methods=["GET", "POST"])
 def wikipedia_finish(token: str) -> ResponseReturnValue:
-    """GET,POST /import/wikipedia/<token>/finish — Report on a finished catch-up run.
+    """GET,POST /westminster/polls/import/wikipedia/<token>/finish — Report the run.
 
     Runs the UNS model and export once, if the run was started with that option
     and anything was actually imported. The run is recorded on the cached

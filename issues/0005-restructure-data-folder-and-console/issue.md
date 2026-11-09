@@ -33,3 +33,4 @@ _2026-11-09 · 10 of 10 pieces done · now: all done, in review, waiting on a de
 - [x] **10/10 Path hacks gone, docs updated** · `413f28eb`
   Remove the remaining path adjustments and update the README and docs.
 - [x] **Review fixes (round 1)** · `4acadf28`
+- [x] **Review fixes (round 2)** · `c34e8c76`

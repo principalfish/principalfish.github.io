@@ -24,6 +24,7 @@ Full sweep reports, read-only at master `35e5326c`: `findings/us-importers.md`, 
 - Shared root modules move to `data/core/` as the folder issue's last piece, with a test pinning `.env` to the repo root; `models.py` becomes `schema.py` (user, 2026-11-08)
 - `data/` becomes an editable install (`editable_mode=compat`, confirmed in isolation), replacing the `sys.path` adjustments; scripts keep running by path (user, 2026-11-08)
 - `backfill_poll_bases`, `repair_poll_records`, `repair_regional_poll_rows`, `reset_us_poll_matchups` and `scrape_holyrood_2026` also go to `archive/`, with their tests retired (user, 2026-11-08)
+- The five archived US converters go to `archive/` unchanged, with the archive README saying why; they keep their old imports and aren't kept running (user, 2026-11-09, by starting piece 5 on that recommendation)
 
 ## Open
 

@@ -3,13 +3,13 @@
   "slug": "redesign-data-console-into-five-sections",
   "title": "Redesign the data console into five uniform sections",
   "mode": "build",
-  "state": "planned",
-  "branch": "redesign-data-console-into-five-sections",
+  "state": "building",
+  "branch": "claude/redesign-data-console-into-five-sections-e76f9c",
   "base": "master",
   "gh_issue": 83,
   "build_model": null,
   "created": "2026-11-08 15:51",
-  "updated": "2026-11-09 14:56",
+  "updated": "2026-11-09 15:18",
   "done": null,
   "local": [
     {
@@ -17,6 +17,16 @@
       "name": "local_25f43011-ef61-46dc-9023-7e1b5918b096",
       "added": "2026-11-09 14:56",
       "note": "builder: redesign-data-console-into-five-sections"
+    },
+    {
+      "kind": "worktree",
+      "name": "/home/philiph/workspace/principalfish.github.io/.claude/worktrees/redesign-data-console-into-five-sections-e76f9c",
+      "added": "2026-11-09 15:18"
+    },
+    {
+      "kind": "branch",
+      "name": "claude/redesign-data-console-into-five-sections-e76f9c",
+      "added": "2026-11-09 15:18"
     }
   ]
 }

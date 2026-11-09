@@ -26,6 +26,7 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - Queue pages merge one at a time, stopping short of anything that changes the rendered HTML (user, 2026-11-09, by starting piece 3 on that recommendation)
 - The uncertainty template reformat is proven by comparing rendered HTML with whitespace collapsed (user, 2026-11-09, by starting piece 3 on that recommendation)
 - Piece 3 gets a short manual review of the charts (user, 2026-11-09, by starting piece 3 on that recommendation)
+- The console gets a favicon, as the plan's final piece (user, 2026-11-09)
 - The nav finds the current section from a table of endpoints, plus the `chamber` value for the shared US endpoints, not from the URL (user, 2026-11-09, by starting piece 2 on that recommendation)
 - `/polls` and poll detail sit under a top-level "All polls" link with no current section; `/polls/coverage` sits under Westminster (user, 2026-11-09, by starting piece 2 on that recommendation)
 - New pages are `/westminster`, `/holyrood`, `/house`, `/senate`, `/president`, `/admin`; the 75 existing rules stay unchanged (user, 2026-11-09, by starting piece 2 on that recommendation)

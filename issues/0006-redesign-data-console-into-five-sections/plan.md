@@ -188,6 +188,14 @@ Rejected:
     - Tests: none worth writing; docs only.
     - Model: claude-sonnet-5-5
 
+12. **Favicon**
+   - Files: new icon under `console/static/`, `templates/base.html`, a test in `tests/test_console_nav.py`.
+   - What: give the console its own favicon, linked from `base.html` so every page has it. It's a small self-contained file served from `static/`, with no external request. The design is settled in this piece's briefing.
+   - Depends on: 11.
+   - Acceptance: every page's HTML links the icon, and the icon is served.
+   - Tests: a rendered page links the icon, and requesting the linked URL returns 200 with an image content type.
+   - Manual review: `cd data && ./election_data/bin/python server.py` from the worktree, with nothing else on port 5055. Check the icon in the browser tab, in light and dark browser themes.
+
 ## Checkpoints
 
 - [x] 1: Section registry and internal layout
@@ -201,6 +209,7 @@ Rejected:
 - [ ] 9: Run log
 - [ ] 10: Background runs with live progress
 - [ ] 11: Docs
+- [ ] 12: Favicon
 
 ## Verification
 

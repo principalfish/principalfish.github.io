@@ -10,27 +10,29 @@ Every existing diagnostic number stays visible, along with the safeguards around
 
 ## Plan
 
-_2026-11-09 · 2 of 11 pieces done · now: piece 3 in progress_
+_2026-11-09 · 2 of 12 pieces done · now: piece 3 in progress_
 
-- [x] **1/11 Section registry and internal layout** · `0b98a7b1`
+- [x] **1/12 Section registry and internal layout** · `0b98a7b1`
   Define the five sections in one place and reorganise the console's code, with no visible change.
-- [x] **2/11 Navigation and section pages** · `2178b777`
+- [x] **2/12 Navigation and section pages** · `2178b777`
   Add navigation everywhere and a landing page per section; home becomes links only.
-- [ ] **3/11 Template and route consolidation** · in progress
+- [ ] **3/12 Template and route consolidation** · in progress
   Merge near-duplicate pages and routes.
-- [ ] **4/11 One URL shape** · not started
+- [ ] **4/12 One URL shape** · not started
   Give every section the same URLs, with redirects for old pages.
-- [ ] **5/11 Section parity** · not started
+- [ ] **5/12 Section parity** · not started
   Filtered polls, per-chamber US runs and imports, and export-when-done on each run form.
-- [ ] **6/11 Global export page** · not started
+- [ ] **6/12 Global export page** · not started
   One page to tick sections and what to write, with dry run on by default.
-- [ ] **7/11 Admin page, confirms and small fixes** · not started
+- [ ] **7/12 Admin page, confirms and small fixes** · not started
   Gather rebuild, backup and restore, and add confirm steps to destructive actions.
-- [ ] **8/11 Looks and readability** · not started
+- [ ] **8/12 Looks and readability** · not started
   Consistent styling, tables and spacing, in light and dark.
-- [ ] **9/11 Run log** · not started
+- [ ] **9/12 Run log** · not started
   Keep every run's output, viewable afterwards.
-- [ ] **10/11 Background runs with live progress** · not started
+- [ ] **10/12 Background runs with live progress** · not started
   Runs stop blocking the page and show progress as they go.
-- [ ] **11/11 Docs** · not started
+- [ ] **11/12 Docs** · not started
   Document the new layout, export page and run log.
+- [ ] **12/12 Favicon** · not started, added 2026-11-09: the user asked for it as a final step
+  Give the console its own icon in the browser tab.

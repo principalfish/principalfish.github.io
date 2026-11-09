@@ -10,7 +10,7 @@ Every existing diagnostic number stays visible, along with the safeguards around
 
 ## Plan
 
-_2026-11-09 · 3 of 12 pieces done · now: waiting on a decision_
+_2026-11-09 · 3 of 12 pieces done · now: piece 4 in progress_
 
 - [x] **1/12 Section registry and internal layout** · `0b98a7b1`
   Define the five sections in one place and reorganise the console's code, with no visible change.
@@ -18,7 +18,7 @@ _2026-11-09 · 3 of 12 pieces done · now: waiting on a decision_
   Add navigation everywhere and a landing page per section; home becomes links only.
 - [x] **3/12 Template and route consolidation** · `4a7a8b9e`
   Merge near-duplicate pages and routes.
-- [ ] **4/12 One URL shape** · not started
+- [ ] **4/12 One URL shape** · in progress
   Give every section the same URLs, with redirects for old pages.
 - [ ] **5/12 Section parity** · not started
   Filtered polls, per-chamber US runs and imports, and export-when-done on each run form.

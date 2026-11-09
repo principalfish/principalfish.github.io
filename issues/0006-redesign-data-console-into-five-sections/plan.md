@@ -119,10 +119,10 @@ Rejected:
 
 4. **One URL shape**
    - Files: all section routes, new redirect table, tests with URL literals (about 240 per the findings).
-   - What: rename to the settled shape, keeping endpoint names. Add 302 redirects for old GET pages only. Old POST URLs return 404 and run nothing. Rule-set checks at `test_console_us.py:106-141,834` and `test_console_csrf.py` update with them.
+   - What: rename to the settled shape, keeping endpoint names. Add 302 redirects for old GET pages only. Old POST URLs return 404 and run nothing. New URLs: `/import` and its Wikipedia queue become `/westminster/polls/import` and paths beneath it; `/polls/coverage` becomes `/westminster/polls/coverage`; `/by-elections` becomes `/westminster/by-elections`; `/models/run` becomes `/westminster/model`; `/models/outputs` becomes `/westminster/outputs`; `/holyrood/run-model` becomes `/holyrood/model`; `/holyrood/import-polls` becomes `/holyrood/polls/import`; `/us/<chamber>/outputs` becomes `/<chamber>/outputs`; the matchup pages become `/house/matchups`, `/senate/matchups`, `/president/matchup`. Redirects sit in one table and keep query strings and tokens. The old queue `/finish` URLs get no redirect, because GET there runs the model and export once: they return 404 and run nothing. Left for piece 5: `/us/import…`, `/us/results…`, `/us/run-models` and the matchup save action `/us/matchups/<map>/<seat>`. Left alone: `/site/*`, `/db/*`, `/polls`, `/polls/<id>`. Rule-set checks at `test_console_us.py:106-141,834` and `test_console_csrf.py` update with them.
    - Depends on: 2, 3.
-   - Acceptance: every section follows the shape; no old POST route exists.
-   - Tests: old GET URLs redirect to their new homes; old POST URLs 404 and run nothing; every `<form method=post action=…>` resolves to a POST rule.
+   - Acceptance: every section page moved here follows the shape; no old POST route for them exists; the pages render the same apart from their URLs.
+   - Tests: old GET URLs redirect to their new homes; old POST URLs and old queue `/finish` URLs 404 and run nothing; every `<form method=post action=…>` resolves to a POST rule.
 
 5. **Section parity**
    - Files: `console/us/*`, `console/polls/*`, `console/holyrood/*`, `shared/runner.py`, the run form, `console/forms.py`.
@@ -131,6 +131,7 @@ Rejected:
      - House, Senate and President each get a run form with the US runners' parameters and a dry run default. Remove `/us/run-models`. The "Rebuild all history" option and its confirm move to each form, keeping the tested confirm text.
      - Add "export when done" to all five run forms.
      - Auto import opens the existing US queue limited to that section's contests. Queue finish runs only that section's model; automatic matchup tracking is unchanged.
+     - `/us/import…`, `/us/results…`, `/us/run-models` and the matchup save action `/us/matchups/<map>/<seat>` move to the section shape here, with redirects for old GET pages, and old POST and `/finish` URLs returning 404, as in piece 4.
      - Matchups, NYT results and Current Senate move into their sections. Delete for polls and runs is available in every section.
    - Functions: `run_us_chamber_and_export`, `UsQueueStartForm`, queue `finish`.
    - Depends on: 4.

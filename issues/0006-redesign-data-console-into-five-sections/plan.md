@@ -188,7 +188,7 @@ Rejected:
 
 ## Checkpoints
 
-- [ ] 1: Section registry and internal layout
+- [x] 1: Section registry and internal layout
 - [ ] 2: Navigation and section pages
 - [ ] 3: Template and route consolidation
 - [ ] 4: One URL shape

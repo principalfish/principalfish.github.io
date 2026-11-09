@@ -9,7 +9,7 @@
   "gh_issue": 83,
   "build_model": null,
   "created": "2026-11-08 15:51",
-  "updated": "2026-11-09 15:18",
+  "updated": "2026-11-09 15:25",
   "done": null,
   "local": [
     {
@@ -28,5 +28,6 @@
       "name": "claude/redesign-data-console-into-five-sections-e76f9c",
       "added": "2026-11-09 15:18"
     }
-  ]
+  ],
+  "pr": 85
 }

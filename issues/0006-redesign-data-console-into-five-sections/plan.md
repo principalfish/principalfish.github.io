@@ -113,7 +113,9 @@ Rejected:
    - What: one data-driven run form; one run-result macro with the label as a parameter so tested strings survive; shared queue macros; generalise `_register_chamber_routes` to all five sections' outputs, keeping endpoint names; add `run_model_then_export`. Move Chart.js and the inline script to `static/`, with Chart.js pinned or vendored so charts don't vanish offline. Reformat the long uncertainty templates only. Calibration and Validation join the uncertainty sub-nav.
    - Depends on: 1.
    - Acceptance: HTML for each consolidated page contains every field and number it had; existing assertions pass unchanged.
+   - Choices: vendor one pinned Chart.js into `console/static/`, replacing the unpinned CDN tag at `model_outputs.html:88`. Merge the run form and result macro first, then the queue macros one at a time under the existing assertions, and stop short of anything that would change the rendered HTML. Check the uncertainty reformat by comparing rendered HTML with whitespace collapsed.
    - Tests: existing suite; a new test that every uncertainty page shows the sub-nav; a new test that the run-result macro renders command, exit code, stdout and stderr.
+   - Manual review: `cd data && ./election_data/bin/python server.py` from the worktree, with nothing else on port 5055. Check the charts draw on Westminster Outputs and one other section's outputs page.
 
 4. **One URL shape**
    - Files: all section routes, new redirect table, tests with URL literals (about 240 per the findings).

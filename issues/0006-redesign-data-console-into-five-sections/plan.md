@@ -189,7 +189,7 @@ Rejected:
 ## Checkpoints
 
 - [x] 1: Section registry and internal layout
-- [ ] 2: Navigation and section pages
+- [x] 2: Navigation and section pages
 - [ ] 3: Template and route consolidation
 - [ ] 4: One URL shape
 - [ ] 5: Section parity
@@ -227,3 +227,4 @@ Rules for tests and walks:
 - 2026-11-09 piece 2 (built on Sonnet, experiment): 2 analysis-loop rounds. Frontier correctness and security came back clean; the fixes were from style (stale "home page" wording in `us/poll_queue.py`'s user-facing message, with its test, and in two comments), coverage (more nav tests) and common-mistakes (dropped the unused `view_args` parameter, reworded two build-process comments, pinned literal test oracles). The fresh verifier confirmed them and found two leftover comments, now fixed. `url_map`: the 75 existing rules unchanged, six GET rules added (`/westminster`, `/holyrood`, `/house`, `/senate`, `/president`, `/admin`).
 - Piece 2 deliberately left the doc references to the old home page (`data/docs/us-polls-and-forecasts.md:34-35,79,87`, `data/docs/us-results.md:42-43`, `data/docs/database.md:34`, `data/README.md:84`) for piece 11, which already lists those files. Piece 11 should also name the Admin page for Backup now / Restore.
 - Piece 2 choices: the registry gained `Capability.POLL_COVERAGE` and `Capability.QUEUE_IMPORT`; `nav.current_area` returns None for the US import queue, US results, `us.run_us_models` and `us.set_race_matchup`, which serve several chambers and stay sectionless until piece 5; the landing pages for the three US sections list Import polls, Matchup(s), Results and Outputs plus the shared Run US Models form.
+- 2026-11-09 piece 2 follow-up: after the manual review the US section titles became "US House", "US Senate" and "US President" (slugs unchanged).

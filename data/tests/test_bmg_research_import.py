@@ -18,7 +18,7 @@ from urllib.request import Request
 import pytest
 from openpyxl import Workbook
 
-from db import Database
+from core.db import Database
 from importers.polls.westminster import bmg_research_import as bmg
 from tests.uk_fixtures import (
     FakeUrlResponse,

@@ -14,7 +14,8 @@ from openpyxl import load_workbook
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from db import Database
+from core.db import Database
+from core.schema import Poll, PollRow, Pollster
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -25,7 +26,6 @@ from importers.polls.bases import (
     replace_poll_bases,
 )
 from importers.polls.types import PollImportResult
-from schema import Poll, PollRow, Pollster
 
 DEFAULT_XLSX_URL = "https://cms.findoutnow.co.uk/app/uploads/2026/02/11th-February-VI-Find-Out-Now.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

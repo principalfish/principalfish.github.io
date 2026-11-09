@@ -13,12 +13,12 @@ from typing import Any
 
 import pytest
 
-from db import Database
+from core.db import Database
+from core.schema import ElectionType
 from models.holyrood import run_holyrood_uns_model as holyrood
 from models.support.persistence import OutputScope, output_dates
 from models.us import _common as us
 from models.westminster import run_uns_model as westminster
-from schema import ElectionType
 from tests.uk_fixtures import seed_holyrood_world, seed_westminster_world
 from tests.us_ev_fixtures import seed_allocations
 

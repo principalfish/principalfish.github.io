@@ -23,7 +23,7 @@ from sqlalchemy import text
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from db import Database
+from core.db import Database
 
 
 def enum_value_exists(connection, enum_name: str, value: str) -> bool:
@@ -46,7 +46,7 @@ def main() -> None:
     parser.add_argument("--local", action="store_true", help="Run against local Docker DB instead of Supabase")
     args = parser.parse_args()
 
-    from config import DatabaseConfig
+    from core.config import DatabaseConfig
     db = Database(DatabaseConfig.local() if args.local else None)
 
     with db.engine.begin() as conn:

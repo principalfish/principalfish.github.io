@@ -30,8 +30,8 @@ import statistics
 from collections.abc import Mapping
 from typing import Any, cast
 
+from core.schema import Party, Vote
 from export.payload import SeatRow, build_result_payload, choose_winner
-from schema import Party, Vote
 
 # ── Stand-ins ─────────────────────────────────────────────────────────────────
 

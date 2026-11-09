@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from db import Database
+from core.db import Database
 from models.support import trends
 from models.support.io import OutputPublicationError, publish_json
 from models.support.persistence import (

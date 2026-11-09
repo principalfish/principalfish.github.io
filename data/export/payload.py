@@ -7,10 +7,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from db import SeatStatus
+from core.db import SeatStatus
+from core.schema import Vote
 from export.naming import legacy_party_key_for_vote, normalize_region_name, normalize_vote_total_value
 from models.support.public_uncertainty import SeatBand
-from schema import Vote
 
 OTHERS_PARTY_ID: int = 0
 

@@ -13,7 +13,8 @@ from pydantic import BaseModel, Field
 from pypdf import PdfReader, PdfWriter
 from sqlalchemy import select
 
-from db import Database
+from core.db import Database
+from core.schema import Poll, PollRow, Pollster
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -23,7 +24,6 @@ from importers.polls.bases import (
     replace_poll_bases,
 )
 from importers.polls.types import PollImportResult
-from schema import Poll, PollRow, Pollster
 
 DEFAULT_PDF_URL = "https://www.ipsos.com/sites/default/files/ct/news/documents/2026-01/politmkp_w1jan2026web1.pdf"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

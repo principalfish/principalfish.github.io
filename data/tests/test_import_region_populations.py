@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from db import Database
+from core.db import Database
 from importers.seed import import_region_populations as populations
 
 

@@ -27,7 +27,7 @@ from console.blueprints.uncertainty import (
     party_lambda_pivot,
     status_line,
 )
-from db import Database
+from core.db import Database
 from models.support.calibration import CALIBRATION_REPORT_SCHEMA, POLLBASE_URL
 from models.support.persistence import (
     OutputScope,

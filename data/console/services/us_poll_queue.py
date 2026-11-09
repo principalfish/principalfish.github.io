@@ -47,23 +47,6 @@ from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from db import Database
-from importers.polls.types import ScrapedPollRow
-from importers.polls.us.us_polls_common import surname
-from importers.polls.us.us_wikipedia_polls import (
-    US_CONTESTS,
-    US_CONTESTS_BY_SLUG,
-    UsImportError,
-    UsImportPlan,
-    UsPollIndex,
-    UsPollRow,
-    apply_auto_tracked_matchups,
-    apply_relabelled_polls,
-    build_us_import_plan,
-    commit_us_import_plan,
-    find_relabelled_polls,
-)
-
 from console.services.us_models import (
     ScriptRunner,
     UsModelRunInterrupted,
@@ -79,6 +62,22 @@ from console.services.wikipedia_queue import (
     build_queue_from_rows,
     describe_import_result,
     pending_in_group,
+)
+from core.db import Database
+from importers.polls.types import ScrapedPollRow
+from importers.polls.us.us_polls_common import surname
+from importers.polls.us.us_wikipedia_polls import (
+    US_CONTESTS,
+    US_CONTESTS_BY_SLUG,
+    UsImportError,
+    UsImportPlan,
+    UsPollIndex,
+    UsPollRow,
+    apply_auto_tracked_matchups,
+    apply_relabelled_polls,
+    build_us_import_plan,
+    commit_us_import_plan,
+    find_relabelled_polls,
 )
 
 logger = logging.getLogger(__name__)

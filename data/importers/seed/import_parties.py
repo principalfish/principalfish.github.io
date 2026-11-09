@@ -22,8 +22,8 @@ import unicodedata
 
 from sqlalchemy import text
 
-from db import Database
-from schema import Party
+from core.db import Database
+from core.schema import Party
 
 
 PARTY_DEFINITIONS = (

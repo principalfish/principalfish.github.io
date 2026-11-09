@@ -28,8 +28,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from db import Database
-from schema import ElectionType, Map, Party, Seat
+from core.db import Database
+from core.schema import ElectionType, Map, Party, Seat
 
 
 POST_2022_MAP_NAME_CANDIDATES = (

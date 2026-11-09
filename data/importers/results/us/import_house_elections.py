@@ -25,7 +25,8 @@ import json
 import re
 from pathlib import Path
 
-from db import Database
+from core.db import Database
+from core.schema import ElectionType
 from importers.results.us.us_import import (
     STATE_NAMES,
     check_election_map,
@@ -34,7 +35,6 @@ from importers.results.us.us_import import (
     map_from_meta,
     plan_us_election,
 )
-from schema import ElectionType
 
 # Fixed map id for US House files without a ``meta`` block (convention: 1-9 westminster,
 # 11-19 holyrood, 21+ US).

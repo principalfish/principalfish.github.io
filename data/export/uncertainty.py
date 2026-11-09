@@ -24,6 +24,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from core.schema import Election, ElectionType, Party
 from export.serialize import write_json
 from models.support.persistence import (
     StoredUncertainty,
@@ -31,7 +32,6 @@ from models.support.persistence import (
     westminster_uns_scope,
 )
 from models.support.public_uncertainty import SeatBand, public_document, seat_bands
-from schema import Election, ElectionType, Party
 
 UNCERTAINTY_FILENAME = "prediction-uncertainty.json"
 

@@ -19,7 +19,7 @@ from urllib.error import HTTPError
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from db import Database
+from core.db import Database
 import importers.polls.us.us_poll_cli as us_poll_cli
 from importers.polls.us.us_poll_cli import run_importer
 from importers.polls.us.us_polls_common import (

@@ -7,9 +7,9 @@ import sqlite3
 from flask import Blueprint
 from flask.typing import ResponseReturnValue
 
-import backup
 from console.db import reset_db
 from console.services.runner import render_command_result
+from core import backup
 
 bp = Blueprint("db_admin", __name__)
 
@@ -41,7 +41,7 @@ def backup_database() -> ResponseReturnValue:
 
     return render_command_result(
         title="Backup Database",
-        command="backup.backup_database()",
+        command="core.backup.backup_database()",
         stdout=stdout,
         stderr=stderr,
         return_code=code,
@@ -75,7 +75,7 @@ def restore_database() -> ResponseReturnValue:
 
     return render_command_result(
         title="Restore Database",
-        command="backup.restore_latest()",
+        command="core.backup.restore_latest()",
         stdout=stdout,
         stderr=stderr,
         return_code=code,

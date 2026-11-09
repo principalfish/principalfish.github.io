@@ -12,16 +12,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from db import Database
-from electoral_votes import (
+from core.db import Database
+from core.electoral_votes import (
     ElectoralVoteError,
     allocation_year,
     get_electoral_votes,
     get_electoral_votes_sqlite,
     positive_integer,
 )
+from core.schema import ElectionType
 from importers.seed.migrate_us_electoral_votes import migrate
-from schema import ElectionType
 
 
 @pytest.fixture()

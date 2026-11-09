@@ -22,7 +22,8 @@ from pydantic import BaseModel, Field
 from pypdf import PdfReader
 from sqlalchemy import select
 
-from db import Database
+from core.db import Database
+from core.schema import Poll, PollRow, Pollster
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -33,7 +34,6 @@ from importers.polls.bases import (
 )
 from importers.polls.sanity import regional_alignment_problem
 from importers.polls.types import PollImportResult
-from schema import Poll, PollRow, Pollster
 
 DEFAULT_PDF_URL = (
     "https://d3nkl3psvxxpe9.cloudfront.net/documents/"

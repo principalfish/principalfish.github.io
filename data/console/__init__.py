@@ -10,8 +10,8 @@ import os
 
 from flask import Flask, Response, request
 
-import backup
 from console.csrf import same_origin_only
+from core import backup
 
 
 def create_app() -> Flask:

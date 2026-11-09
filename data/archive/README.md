@@ -37,7 +37,7 @@ run as they stand.
 ## Retired migrations and repair scripts
 
 Idempotent one-offs that upgraded an existing database to a schema or data change that
-`schema.py` and the importers now build from scratch, so a rebuild never needs them.
+`core/schema.py` and the importers now build from scratch, so a rebuild never needs them.
 
 - `migrate_add_poll_bases.py`, `migrate_add_model_uncertainty.py`,
   `migrate_add_us_poll_scope.py`, `migrate_add_us_result_status.py`,

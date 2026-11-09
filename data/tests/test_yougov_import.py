@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from db import Database
+from core.db import Database
 from importers.polls.westminster import yougov_import
 from importers.polls.westminster.yougov_import import (
     DEFAULT_MAP_NAME,

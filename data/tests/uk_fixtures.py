@@ -31,8 +31,8 @@ from types import MappingProxyType, TracebackType
 from openpyxl import Workbook
 from sqlalchemy import update
 
-from db import Database
-from schema import ElectionType, Poll, Pollster
+from core.db import Database
+from core.schema import ElectionType, Poll, Pollster
 
 # ── Westminster ───────────────────────────────────────────────────────────────
 

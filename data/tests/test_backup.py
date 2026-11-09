@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-import backup
+from core import backup
 
 # conftest stubs request_backup for every test; the worker tests need the real
 # one, captured at import, before any fixture runs.
@@ -441,7 +441,7 @@ def test_a_failing_backup_leaves_the_worker_running(
             raise RuntimeError("the copy didn't come out intact")
 
     monkeypatch.setattr(backup, "backup_database", flaky)
-    with caplog.at_level(logging.ERROR, logger="backup"):
+    with caplog.at_level(logging.ERROR, logger="core.backup"):
         backup.request_backup()
         assert wait_for(lambda: len(attempts) == 1)
         assert wait_for(lambda: "backup failed" in caplog.text)

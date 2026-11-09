@@ -16,7 +16,7 @@ import argparse
 from collections import Counter
 from collections.abc import Sequence
 
-from db import Database
+from core.db import Database
 from importers.polls.us.us_polls_common import fetch_html
 from importers.polls.us.us_wikipedia_polls import (
     AUTO_TRACKING_OUTCOMES,

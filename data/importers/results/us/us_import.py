@@ -15,9 +15,9 @@ from typing import Any, Callable
 
 from sqlalchemy import delete
 
-from db import Database, SeatStatus
+from core.db import Database, SeatStatus
+from core.schema import Election, ElectionSeatStatus, ElectionType, Map, Vote
 from importers.results.us.regions import STATE_NAMES, division_for_state
-from schema import Election, ElectionSeatStatus, ElectionType, Map, Vote
 
 # Re-exported so importers can import STATE_NAMES from this module alongside the load
 # helpers; the canonical table lives in ``importers/results/us/regions.py``.

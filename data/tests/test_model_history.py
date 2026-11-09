@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from db import Database
+from core.db import Database
 from models.holyrood import run_holyrood_uns_model
 from models.support import trends
 from models.support.history import HistoryRecomputationError

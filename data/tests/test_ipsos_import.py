@@ -25,7 +25,7 @@ from urllib.request import Request
 
 import pytest
 
-from db import Database
+from core.db import Database
 from importers.polls.westminster import ipsos_import
 from importers.polls.westminster.ipsos_import import (
     MACRO_REGION_TO_INTERNAL,

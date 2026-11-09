@@ -10,7 +10,8 @@ from typing import Any
 
 import pytest
 
-from db import Database
+from core.db import Database
+from core.schema import ElectionType
 from importers.results.us import import_house_elections as import_house_mod
 from importers.results.us import import_senate_elections as import_senate_mod
 from importers.results.us.nyt import convert
@@ -34,7 +35,6 @@ from importers.results.us.nyt.fetch import FetchResult, source_updated_at
 from importers.results.us.nyt.races import Candidate, Race
 from importers.results.us.nyt.sources import Chamber, SourceStatus, source_for
 from importers.results.us.us_import import import_us_election
-from schema import ElectionType
 
 FIXTURES = Path(__file__).parent / "fixtures" / "nyt"
 RETRIEVED = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)

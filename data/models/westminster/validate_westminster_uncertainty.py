@@ -18,7 +18,7 @@ from pathlib import Path
 
 import numpy as np
 
-from config import DatabaseConfig
+from core.config import DatabaseConfig
 from models.support.calibration import FINAL_POLL_ERRORS_PATH, load_final_poll_table
 from models.support.io import write_text_files
 from models.support.uncertainty import UNCERTAINTY_CONFIG_PATH, load_uncertainty_config

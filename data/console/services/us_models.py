@@ -22,9 +22,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from db import Database
-from schema import ElectionType
-
 from console.paths import (
     EXPORT_ELECTION_SCRIPT,
     US_HOUSE_MODEL_SCRIPT,
@@ -35,6 +32,8 @@ from console.paths import (
     US_SENATE_TREND_CACHE_JSON,
 )
 from console.services.runner import run_python_script
+from core.db import Database
+from core.schema import ElectionType
 
 STEP_TIMEOUT_SECONDS = 300
 

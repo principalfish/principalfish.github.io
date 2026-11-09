@@ -2,7 +2,7 @@
 
 import pytest
 
-from db import Database
+from core.db import Database
 
 
 class TestAddMap:

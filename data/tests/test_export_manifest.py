@@ -19,7 +19,8 @@ import pytest
 from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload
 
-from db import Database, SeatStatus
+from core.db import Database, SeatStatus
+from core.schema import Election, ElectionType, Party
 from export import export_elections
 from export.export_elections import DEM_PARTY_ID, REP_PARTY_ID, export_pages, missing_export_inputs
 from export.manifest import (
@@ -28,7 +29,6 @@ from export.manifest import (
     build_map_modes_with_regions,
 )
 from export.uncertainty import UNCERTAINTY_FILENAME
-from schema import Election, ElectionType, Party
 
 
 class TestSenateClassNextElection:

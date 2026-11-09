@@ -19,8 +19,9 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
 
-from config import DatabaseConfig
-from db import Database
+from core.config import DatabaseConfig
+from core.db import Database
+from core.schema import Base, ElectionType, Party
 from importers.polls.holyrood import holyrood_wikipedia_import
 from importers.polls.westminster import (
     find_out_now_import,
@@ -28,8 +29,6 @@ from importers.polls.westminster import (
     survation_import,
 )
 from importers.polls.westminster.registry import IMPORTERS
-from schema import Base, ElectionType, Party
-
 from models.holyrood.run_holyrood_uns_model import (
     BASELINE_ELECTION_NAME as HOLYROOD_BASELINE_ELECTION_NAME,
     HolyroodSimulationConfig,

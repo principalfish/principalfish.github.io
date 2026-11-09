@@ -42,12 +42,12 @@ def test_each_runner_imports_as_a_package_module(module_name: str, relative_path
     assert Path(str(module.__file__)).resolve() == DATA_DIR / "models" / relative_path
 
 
-def test_models_is_a_package_and_the_schema_lives_in_schema_py() -> None:
+def test_models_is_a_package_and_the_schema_lives_in_core_schema() -> None:
     import models
-    import schema
+    from core import schema
 
     assert Path(str(models.__file__)).resolve() == DATA_DIR / "models" / "__init__.py"
-    assert Path(str(schema.__file__)).resolve() == DATA_DIR / "schema.py"
+    assert Path(str(schema.__file__)).resolve() == DATA_DIR / "core" / "schema.py"
     assert not hasattr(models, "Base"), "models/__init__.py must not re-export the schema"
 
 

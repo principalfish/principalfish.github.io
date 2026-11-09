@@ -12,8 +12,8 @@ from typing import Protocol, cast
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from db import Database
-from schema import ElectionType
+from core.db import Database
+from core.schema import ElectionType
 
 
 class TopojsonImporter(Protocol):

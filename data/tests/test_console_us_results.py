@@ -29,7 +29,8 @@ from console.blueprints import us_results
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services.preview import PREVIEW_CACHE, store_preview
 from console.services.us_models import MODEL_RUN_LOCK, model_run_slot
-from db import Database
+from core.db import Database
+from core.schema import Election, ElectionType, Party
 from importers.results.us.import_senate_elections import import_senate
 from importers.results.us.nyt import cli
 from importers.results.us.nyt import fetch as fetch_module
@@ -37,7 +38,6 @@ from importers.results.us.nyt.convert import ConversionResult
 from importers.results.us.nyt.current_senate import DEFAULT_SNAPSHOT, render
 from importers.results.us.nyt.sources import source_for, supported_years
 from importers.results.us.us_import import PARTY_KEY_TO_NAME
-from schema import Election, ElectionType, Party
 from tests.console_fixtures import (
     RecordingRunner,
     app,

@@ -31,7 +31,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from schema import PollBase, PollBaseKind, Region
+from core.schema import PollBase, PollBaseKind, Region
 
 # A printed count cell: digits, optionally with thousands separators.
 _COUNT_TEXT = re.compile(r"^\d{1,3}(?:,\d{3})*$|^\d+$")

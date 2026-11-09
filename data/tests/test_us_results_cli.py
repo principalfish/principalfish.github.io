@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from db import Database
+from core.db import Database
 from importers.results.us.nyt import cli
 from importers.results.us.nyt import fetch as fetch_module
 from importers.results.us.nyt.cli import SeatResult, diff_against_existing, main
@@ -527,7 +527,7 @@ def test_house_all_ignores_a_senate_special(
 ) -> None:
     _seed_us_parties(db)
     senate_map = db.add_map("US Senate 2024", parliament="us_senate")
-    from schema import ElectionType
+    from core.schema import ElectionType
 
     db.add_election(
         senate_map.id, 2026, "2026 US Senate Special Election", ElectionType.us_senate,

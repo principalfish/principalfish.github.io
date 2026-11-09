@@ -1,6 +1,6 @@
 """Tests for the seat-status helpers and the elections-table schema bootstrap.
 
-These cover live ``db.py`` code: ``Database.set_seat_statuses`` / ``get_seat_statuses``
+These cover live ``core/db.py`` code: ``Database.set_seat_statuses`` / ``get_seat_statuses``
 with their cascades, and ``ensure_elections_sqlite_schema``. They were split out of the
 tests of the migration that first added the table, which is now archived.
 """
@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from db import Database, SeatStatus, ensure_elections_sqlite_schema
-from schema import Election, ElectionType, Seat
+from core.db import Database, SeatStatus, ensure_elections_sqlite_schema
+from core.schema import Election, ElectionType, Seat
 
 STATUS_TABLE = "election_seat_status"
 
@@ -79,7 +79,7 @@ def race(db: Database) -> tuple[int, int, int]:
 
 
 class TestEnsureElectionsSqliteSchema:
-    """ensure_elections_sqlite_schema(): its hand-copied DDL tracks schema.py."""
+    """ensure_elections_sqlite_schema(): its hand-copied DDL tracks core/schema.py."""
 
     def test_fresh_database_gets_source_note(self, tmp_path: Path) -> None:
         with closing(sqlite3.connect(tmp_path / "fresh.db")) as conn:

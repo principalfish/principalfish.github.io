@@ -24,16 +24,13 @@ from datetime import date
 from bs4 import BeautifulSoup, Tag
 from sqlalchemy import select
 
-from db import Database
-# `parse_date_range` is re-exported from this module, its historic home, for
-# callers that still import it from here. The redundant alias is what marks a
-# re-export as explicit under strict mypy (``no_implicit_reexport``).
+from core.db import Database
+from core.schema import Poll, PollRow, Pollster
 from importers.polls.wikipedia_common import (
     clean_text as _clean,
     fetch_html as _fetch_html,
     parse_date_range as parse_date_range,
 )
-from schema import Poll, PollRow, Pollster
 
 WIKI_URL = (
     "https://en.wikipedia.org/wiki/"

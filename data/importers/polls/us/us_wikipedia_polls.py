@@ -43,9 +43,8 @@ from urllib.error import HTTPError
 
 from bs4 import BeautifulSoup, Tag
 
-from db import Database, StoredPollReadings
-from schema import Poll, PollRow, Pollster, Seat
-from importers.polls.types import PollImportResult, ScrapedPollRow
+from core.db import Database, StoredPollReadings
+from core.schema import Poll, PollRow, Pollster, Seat
 from core.us_geography import (
     AT_LARGE_STATES,
     HOUSE_DISTRICT_COUNTS,
@@ -55,6 +54,7 @@ from core.us_geography import (
     president_seat_for_heading,
     state_from_page_slug,
 )
+from importers.polls.types import PollImportResult, ScrapedPollRow
 from importers.polls.us.us_polls_common import (
     MAX_PAGE_GRID_CELLS,
     CandidateReading,

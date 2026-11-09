@@ -11,8 +11,8 @@ from typing import Protocol, cast
 
 import pytest
 
-from db import Database
-from schema import ElectionType, Map, Party, Seat
+from core.db import Database
+from core.schema import ElectionType, Map, Party, Seat
 
 
 class Spec(Protocol):

@@ -44,7 +44,7 @@ from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 
-from config import DatabaseConfig
+from core.config import DatabaseConfig
 from core.migration_helpers import open_database
 from models.support.calibration import (
     CALIBRATION_REPORT_PATH,

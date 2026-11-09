@@ -20,7 +20,7 @@ from urllib.request import HTTPRedirectHandler, Request
 
 import pytest
 
-import config
+from core import config
 from importers.results.us.nyt import fetch as fetch_module
 from importers.results.us.nyt.fetch import (
     CachedSnapshot,
@@ -203,7 +203,8 @@ def test_available_source_requires_url() -> None:
 
 
 def test_cache_dir_default_is_outside_repo() -> None:
-    repo = Path(config.__file__).resolve().parent.parent
+    repo = Path(__file__).resolve().parents[2]
+    assert (repo / "server.sh").is_file(), "parents[2] of this file is no longer the repo root"
     assert repo not in config.NYT_CACHE_DIR.resolve().parents
 
 

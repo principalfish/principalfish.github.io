@@ -7,7 +7,7 @@ import sys
 import pytest
 from sqlalchemy import text
 
-from db import Database
+from core.db import Database
 from importers.seed import import_parties as parties
 
 

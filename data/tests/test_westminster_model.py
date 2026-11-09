@@ -27,7 +27,8 @@ from typing import Any, cast
 
 import pytest
 
-from db import Database
+from core.db import Database
+from core.schema import ElectionType, Poll
 from models.support.io import OutputPublicationError
 from models.support.uncertainty import load_uncertainty_config
 from models.westminster import run_uns_model
@@ -57,7 +58,6 @@ from models.westminster.run_uns_model import (
     write_output_csvs,
     write_trend_cache_meta,
 )
-from schema import ElectionType, Poll
 from tests.uk_fixtures import (
     WESTMINSTER_BASELINE_VOTES,
     WestminsterWorld,

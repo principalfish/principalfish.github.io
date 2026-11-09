@@ -14,7 +14,8 @@ from openpyxl import load_workbook
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from db import Database
+from core.db import Database
+from core.schema import Poll, PollRow, Pollster
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -26,7 +27,6 @@ from importers.polls.bases import (
     weighted_value,
 )
 from importers.polls.types import PollImportResult
-from schema import Poll, PollRow, Pollster
 
 DEFAULT_XLSX_URL = "https://www.opinium.com/wp-content/uploads/2026/02/Observer-VI-2026-02-04-Web-Data-Tables-1152.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

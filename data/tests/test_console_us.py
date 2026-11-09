@@ -20,10 +20,6 @@ import pytest
 from flask import Flask, Response
 from flask.testing import FlaskClient
 
-from db import Database
-from schema import ElectionType
-from tests.us_ev_fixtures import seed_allocations, set_model_target
-
 from console import create_app
 from console import paths as console_paths
 from console.services.us_models import (
@@ -37,6 +33,9 @@ from console.services.us_models import (
     run_us_chamber_and_export,
     run_us_models_and_export,
 )
+from core.db import Database
+from core.schema import ElectionType
+from tests.us_ev_fixtures import seed_allocations, set_model_target
 
 
 @pytest.fixture()

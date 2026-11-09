@@ -16,7 +16,8 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from db import Database
+from core.db import Database
+from core.schema import Region, Seat, Vote
 from export.payload import SeatRow, build_result_payload
 from export.serialize import compact_json
 from export.uncertainty import (
@@ -42,7 +43,6 @@ from models.support.public_uncertainty import (
     run_size,
     trend_uncertainty,
 )
-from schema import Region, Seat, Vote
 
 
 @dataclass(frozen=True, slots=True)

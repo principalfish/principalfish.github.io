@@ -20,10 +20,10 @@ def test_data_dir_is_importable_from_outside_it(tmp_path: Path) -> None:
     """The editable install puts data/ on the path for any working directory.
 
     ``-I`` drops the working directory and PYTHONPATH, so only the install's .pth
-    entry can make ``db`` importable here.
+    entry can make ``core.db`` importable here.
     """
     result = subprocess.run(
-        [sys.executable, "-I", "-c", "import db"],
+        [sys.executable, "-I", "-c", "import core.db"],
         cwd=tmp_path,
         capture_output=True,
         text=True,

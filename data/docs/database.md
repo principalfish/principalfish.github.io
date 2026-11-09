@@ -18,7 +18,7 @@ importers below, or restored from a backup (below).
 ## Backups
 
 The live database stays on local disk — SQLite must not run off a network or
-synced mount. `data/backup.py` backs it up with SQLite's own backup API (safe mid-write) and
+synced mount. `data/core/backup.py` backs it up with SQLite's own backup API (safe mid-write) and
 integrity-checks the copy:
 
 - **Local archives** (`ELECTIONS_ARCHIVE_DIR`, default `~/dbs/elections`): a dated
@@ -130,7 +130,7 @@ commands from `data/`, stopping on failure between stages:
 
 ```bash
 EV_DB=$(./election_data/bin/python -c \
-  'from config import DatabaseConfig; print(DatabaseConfig.from_env().database_path)')
+  'from core.config import DatabaseConfig; print(DatabaseConfig.from_env().database_path)')
 printf '%s\n' "$EV_DB"
 ./election_data/bin/python scripts/backup_db.py
 ./election_data/bin/python importers/seed/migrate_us_electoral_votes.py --dry-run

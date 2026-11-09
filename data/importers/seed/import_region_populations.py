@@ -21,8 +21,8 @@ import csv
 import json
 from pathlib import Path
 
-from db import Database
-from schema import Region
+from core.db import Database
+from core.schema import Region
 
 
 Record = dict[str, str | int]

@@ -6,11 +6,11 @@ from pathlib import Path
 import json
 from typing import Any
 
+from core.schema import Election, ElectionType, Party, Region
 from export.naming import map_filename_for_map_id, normalize_region_name
 from export.ordering import register_supplemental_entry
 from export.payload import convert_legacy_seatinfo_to_v4
 from export.serialize import write_json
-from schema import Election, ElectionType, Party, Region
 
 
 SUPPLEMENTAL_LEGACY_ELECTIONS: list[dict[str, Any]] = [

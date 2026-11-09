@@ -63,7 +63,7 @@ DATA_DIR = SCRIPT_DIR.parent
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
-from config import DatabaseConfig
+from core.config import DatabaseConfig
 from importers.polls.bases import PlannedPollBase, RegionRef, plan_poll_bases
 from importers.polls.westminster.registry import IMPORTERS
 from model_support.poll_bases import (

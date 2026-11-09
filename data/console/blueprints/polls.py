@@ -35,6 +35,7 @@ from sqlalchemy.orm import Session
 
 from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
 from console.db import get_db
+from core.schema import Map, Party, Poll, PollBase, PollRow, Pollster, Region, Seat
 from models.support.poll_bases import PollNIndex, ResolvedN, poll_base_coverage
 from models.support.uncertainty import (
     EffectiveN,
@@ -44,7 +45,6 @@ from models.support.uncertainty import (
     load_uncertainty_config,
     poll_moe,
 )
-from schema import Map, Party, Poll, PollBase, PollRow, Pollster, Region, Seat
 
 bp = Blueprint("polls", __name__)
 

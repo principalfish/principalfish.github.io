@@ -15,7 +15,8 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from db import Database
+from core.db import Database
+from core.schema import Poll, PollBase, PollRow, Region
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -40,7 +41,6 @@ from models.support.poll_bases import (
     poll_base_coverage,
     resolve_poll_n,
 )
-from schema import Poll, PollBase, PollRow, Region
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 
 # ── Cell readers ──────────────────────────────────────────────────────────────

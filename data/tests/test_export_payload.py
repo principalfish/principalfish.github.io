@@ -13,7 +13,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from db import Database, SeatStatus
+from core.db import Database, SeatStatus
+from core.schema import Election, ElectionType, Party, Seat, Vote
 from export.export_elections import earlier_senate_results, seat_statuses_for_election, senate_special_entries
 from export.payload import (
     SeatRow,
@@ -29,7 +30,6 @@ from export.payload import (
     set_others_party_id,
 )
 from models.support.public_uncertainty import SeatBand
-from schema import Election, ElectionType, Party, Seat, Vote
 
 
 class _FakeParty:

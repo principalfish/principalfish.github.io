@@ -570,7 +570,7 @@ def _reject_inverted_fieldwork(
 ) -> None:
     """Refuse to flush a poll whose fieldwork starts after it ends.
 
-    Covers every ORM write path (importers, the console, ``db.py``). Core
+    Covers every ORM write path (importers, the console, ``core/db.py``). Core
     ``update()``/``insert()`` statements and raw ``sqlite3`` bypass mapper
     events, so they are not covered.
 

@@ -15,7 +15,8 @@ from openpyxl import load_workbook
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from db import Database
+from core.db import Database
+from core.schema import Poll, PollRow, Pollster
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -26,7 +27,6 @@ from importers.polls.bases import (
     replace_poll_bases,
 )
 from importers.polls.types import PollImportResult
-from schema import Poll, PollRow, Pollster
 
 DEFAULT_XLSX_URL = "https://3959436.fs1.hubspotusercontent-na1.net/hubfs/3959436/Marketing%20content/Focaldata_January%20VI%20tables%2c%2016-19%20Jan%202026.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

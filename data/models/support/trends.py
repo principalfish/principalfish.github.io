@@ -52,12 +52,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NotRequired, TypedDict
 
-from core.us_geography import parent_seat_name
-from electoral_votes import (
+from core.electoral_votes import (
     ElectoralVoteError,
     allocation_year,
     get_electoral_votes_sqlite,
 )
+from core.us_geography import parent_seat_name
 from models.support.io import (
     OutputPublicationError,
     publish_json,

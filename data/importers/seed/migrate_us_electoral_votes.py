@@ -13,18 +13,18 @@ from collections.abc import Iterable
 from contextlib import closing
 from dataclasses import dataclass
 
-from config import DatabaseConfig
-from core.migration_helpers import (
-    column_exists,
-    open_database as open_database,
-    schema_object_exists,
-)
-from electoral_votes import (
+from core.config import DatabaseConfig
+from core.electoral_votes import (
     ElectoralVoteEra,
     ElectoralVoteError,
     positive_integer,
     select_era,
     validate_eras,
+)
+from core.migration_helpers import (
+    column_exists,
+    open_database as open_database,
+    schema_object_exists,
 )
 from importers.seed.us_electoral_votes import ELECTION_YEAR_INTERVALS, EV_BY_ERA, ev_map_for_year
 

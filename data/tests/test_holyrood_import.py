@@ -16,7 +16,7 @@ from urllib.request import Request
 
 import pytest
 
-from db import Database
+from core.db import Database
 from importers.polls import wikipedia_common
 from importers.polls.holyrood import holyrood_wikipedia_import as hw_import
 from importers.polls.holyrood.holyrood_wikipedia_import import (

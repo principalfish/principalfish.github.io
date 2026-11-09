@@ -17,7 +17,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from db import Database
+from core.db import Database
+from core.schema import Election, ElectionType, Party, Seat
 from export import export_elections
 from export.export_elections import (
     DEM_PARTY_ID,
@@ -42,7 +43,6 @@ from models.support.public_uncertainty import (
     seat_bands,
 )
 from models.westminster import run_uns_model as runner
-from schema import Election, ElectionType, Party, Seat
 from tests.export_golden import (
     GOLDEN_PATH,
     SHELL,

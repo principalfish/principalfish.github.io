@@ -37,10 +37,6 @@ from flask import Flask, Response
 from flask.testing import FlaskClient
 from openpyxl import Workbook
 
-from db import Database
-from importers.polls.types import PollImportResult
-from importers.polls.westminster import survation_import
-
 from console.blueprints.poll_import import _run_model_and_export
 from console.paths import (
     EXPORT_ELECTION_SCRIPT,
@@ -48,7 +44,9 @@ from console.paths import (
     UNS_MODEL_SCRIPT,
 )
 from console.services.preview import PREVIEW_CACHE, store_preview
-
+from core.db import Database
+from importers.polls.types import PollImportResult
+from importers.polls.westminster import survation_import
 from tests.console_fixtures import (
     RecordingRunner,
     app,

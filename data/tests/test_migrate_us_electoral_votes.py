@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from db import Database, ensure_elections_sqlite_schema
-from electoral_votes import ElectoralVoteError
+from core.db import Database, ensure_elections_sqlite_schema
+from core.electoral_votes import ElectoralVoteError
 from importers.seed.migrate_us_electoral_votes import (
     ALLOCATIONS_DDL,
     ERAS_DDL,

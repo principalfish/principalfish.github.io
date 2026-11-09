@@ -10,9 +10,9 @@ from typing import Generic, TypeVar
 
 from sqlalchemy import select
 
-from db import Database
+from core.db import Database
+from core.schema import Poll, PollRow, Pollster
 from models.support.cli import validate_date_window
-from schema import Poll, PollRow, Pollster
 
 
 def effective_pollster_weight(weight: float | None) -> float:

@@ -38,7 +38,7 @@ from typing import Literal
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from schema import Poll, PollBase, PollBaseKind, PollRow, Region
+from core.schema import Poll, PollBase, PollBaseKind, PollRow, Region
 
 # A poll_rows row (alias ``r``) that makes its region "reported": a regional
 # row with a share above zero. The SQL twin of :func:`reported_region_id`.

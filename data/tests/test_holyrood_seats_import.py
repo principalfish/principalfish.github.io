@@ -10,8 +10,8 @@ from typing import Protocol, cast
 
 import pytest
 
-from db import Database
-from schema import Map
+from core.db import Database
+from core.schema import Map
 
 
 class HolyroodSeatsImporter(Protocol):

@@ -12,7 +12,7 @@ import pytest
 from pydantic import ValidationError
 
 from console.forms import HolyroodModelRunForm, ModelRunForm
-from db import Database
+from core.db import Database
 from models.holyrood import run_holyrood_uns_model as holyrood
 from models.support.cli import parse_manual_shares
 from models.support.polling import select_poll_endpoint

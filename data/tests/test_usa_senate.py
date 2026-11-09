@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from db import Database
+from core.db import Database
+from core.schema import ElectionType
 from importers.results.us import import_senate_elections as import_senate_mod
-from schema import ElectionType
 
 
 def _seed_us_parties(db: Database) -> None:

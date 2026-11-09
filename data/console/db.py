@@ -7,7 +7,7 @@ safely during a restore; the next ``get_db`` call reconnects to the new file.
 
 from __future__ import annotations
 
-from db import Database
+from core.db import Database
 
 _DB: Database | None = None
 

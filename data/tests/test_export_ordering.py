@@ -11,7 +11,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from db import Database
+from core.db import Database
+from core.schema import Election, ElectionType, Map
 from export import export_elections
 from export.export_elections import _export_page
 from export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
@@ -24,7 +25,6 @@ from export.ordering import (
     reposition_supplemental_entries,
     sort_us_chamber_entries,
 )
-from schema import Election, ElectionType, Map
 from tests.us_ev_fixtures import seed_canonical_allocations, set_model_target
 
 

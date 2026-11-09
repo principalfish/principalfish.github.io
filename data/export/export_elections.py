@@ -41,8 +41,9 @@ from typing import Any, Mapping, Sequence
 from sqlalchemy import inspect, select
 from sqlalchemy.orm import joinedload, Session
 
-from db import Database, SeatStatus
-from electoral_votes import allocation_year, get_electoral_votes
+from core.db import Database, SeatStatus
+from core.electoral_votes import allocation_year, get_electoral_votes
+from core.schema import Election, ElectionSeatStatus, ElectionType, Party, Region, Seat, Vote
 from export.legacy import (
     SUPPLEMENTAL_LEGACY_ELECTIONS,
     SUPPLEMENTAL_LEGACY_ELECTION_NAMES,
@@ -93,7 +94,6 @@ from export.uncertainty import (
     sync_uncertainty_file,
 )
 from models.support.persistence import load_uncertainty
-from schema import Election, ElectionSeatStatus, ElectionType, Party, Region, Seat, Vote
 
 DEM_PARTY_ID = 20   # Democratic — see uselectionmaps/data/map-modes.json parties[]
 REP_PARTY_ID = 21   # Republican

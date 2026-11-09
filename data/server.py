@@ -16,8 +16,8 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 
-import backup
 from console import create_app
+from core import backup
 
 app = create_app()
 

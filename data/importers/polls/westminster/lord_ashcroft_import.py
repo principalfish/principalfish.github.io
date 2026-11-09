@@ -20,7 +20,8 @@ from openpyxl import load_workbook
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from db import Database
+from core.db import Database
+from core.schema import Poll, PollRow, Pollster
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -32,7 +33,6 @@ from importers.polls.bases import (
 )
 from importers.polls.sanity import regional_basis_problem
 from importers.polls.types import PollImportResult
-from schema import Poll, PollRow, Pollster
 
 DEFAULT_SOURCE_URL = "https://lordashcroftpolls.com/2026/01/kemis-been-tough-and-jenricks-a-bit-of-a-bounder-say-tory-voters-but-plenty-agree-with-him-that-britain-is-broken/"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

@@ -142,7 +142,7 @@ the configured path and inspect map/baseline identities without writes:
 
 ```bash
 MODEL_DB=$(./election_data/bin/python -c \
-  'from config import DatabaseConfig; print(DatabaseConfig.from_env().database_path)')
+  'from core.config import DatabaseConfig; print(DatabaseConfig.from_env().database_path)')
 sqlite3 -readonly "$MODEL_DB" \
   'SELECT id, name, parliament FROM maps ORDER BY id;
    SELECT map_id, name, type FROM elections ORDER BY map_id, election_date;'

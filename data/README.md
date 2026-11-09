@@ -13,8 +13,7 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 
 | Path | What it is |
 |-|-|
-| `schema.py`, `db.py`, `config.py` | SQLAlchemy schema, DB access, configuration |
-| `core/` | Shared modules (US geography names and the SQLite migration helpers so far; the root modules above join it in a later step) |
+| `core/` | Shared modules: `schema.py` (SQLAlchemy tables), `db.py` (database access), `config.py` (settings; loads the repo-root `.env`), `backup.py`, `electoral_votes.py`, plus the US geography names and the SQLite migration helpers |
 | `console/` | Local web console for the data (`create_app`) |
 | `server.py` | Local data preview server (`:5055`) |
 | `archive/` | Finished one-offs and retired setup files (not maintained, not type-checked; see its README) |

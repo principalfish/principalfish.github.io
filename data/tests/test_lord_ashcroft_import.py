@@ -35,7 +35,7 @@ import pytest
 import xlrd
 from openpyxl import Workbook
 
-from db import Database
+from core.db import Database
 from importers.polls.westminster import lord_ashcroft_import
 from importers.polls.westminster.lord_ashcroft_import import (
     PARTY_NAME_MAP,

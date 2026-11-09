@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from db import Database
+from core.db import Database
 from models.holyrood import run_holyrood_uns_model
 from models.support import trends
 from models.support.persistence import OutputScope, OutputVote, replace_output

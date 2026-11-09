@@ -23,8 +23,8 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from db import ensure_elections_sqlite_schema
-from electoral_votes import allocation_year
+from core.db import ensure_elections_sqlite_schema
+from core.electoral_votes import allocation_year
 
 _COMMITTED: ContextVar[tuple[tuple[Path, OutputScope, list[date]], ...]] = ContextVar(
     "committed_model_dates", default=()

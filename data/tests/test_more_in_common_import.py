@@ -33,7 +33,7 @@ from types import MappingProxyType
 import pytest
 from openpyxl import Workbook
 
-from db import Database
+from core.db import Database
 from importers.polls.westminster import more_in_common_import as mic
 from tests.uk_fixtures import (
     FakeUrlResponse,

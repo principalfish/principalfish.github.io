@@ -4,11 +4,13 @@ from dotenv import load_dotenv
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Load .env from repo root (parent of this file's directory).
+# Load .env from the repo root: two levels above this file's directory
+# (core/ -> data/ -> repo).
 # python-dotenv expands variable references (e.g. $DB_PASSWORD) so
 # composite values like DATABASE_URL=$USER:$PASSWORD@... work correctly.
 # override=True means .env values take precedence over already-exported shell variables.
-load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(ENV_FILE, override=True)
 
 
 class DatabaseConfig(BaseSettings):
@@ -16,7 +18,7 @@ class DatabaseConfig(BaseSettings):
 
     The application uses a single local SQLite database. Set ``DATABASE_PATH``
     to point at the database file (defaults to ``/home/philiph/dbs/elections.db``).
-    The live database is kept on local disk and archived by ``backup.py``; an
+    The live database is kept on local disk and archived by ``core/backup.py``; an
     hourly restic job outside the repo carries the newest copy to B2.
     """
 

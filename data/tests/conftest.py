@@ -17,8 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pytest
 from sqlalchemy import event
 
-from config import DatabaseConfig
-from db import Database
+from core.config import DatabaseConfig
+from core.db import Database
 from tests.uk_fixtures import WestminsterWorld, copy_database, seed_westminster_world
 
 
@@ -28,14 +28,14 @@ def _never_open_the_live_database(
 ) -> Generator[None, None, None]:
     """Point every default ``Database()`` at a throwaway file for each test.
 
-    ``config.py`` loads ``.env`` with ``override=True`` at import, so the live
+    ``core/config.py`` loads ``.env`` with ``override=True`` at import, so the live
     ``DATABASE_PATH`` is in the environment for the whole run. Any code path
     that builds a default ``Database()`` — the console's ``get_db`` singleton,
     a script's ``main()`` — would otherwise open the live database. Setting the
     variable per test wins, because ``DatabaseConfig.from_env`` reads the
     environment at call time rather than at import.
     """
-    import backup
+    from core import backup
     import console.db
 
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "default-guard.db"))

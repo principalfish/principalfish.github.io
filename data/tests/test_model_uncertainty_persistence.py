@@ -20,7 +20,8 @@ from console.services.model_outputs import (
     delete_model_output,
     delete_selected_model_outputs,
 )
-from db import Database
+from core.db import Database
+from core.schema import ElectionType
 from models.support.monte_carlo import (
     NationalPartyOutcome,
     RegionPartyOutcome,
@@ -46,7 +47,6 @@ from models.support.persistence import (
     uncertainty_status,
     westminster_uns_scope,
 )
-from schema import ElectionType
 
 Row = tuple[str, str, str | None, str | None]
 

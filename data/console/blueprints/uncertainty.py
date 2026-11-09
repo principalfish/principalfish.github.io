@@ -25,7 +25,8 @@ from sqlalchemy import select
 from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
 from console.db import get_db
 from console.services.uncertainty_export import ExportPreview, export_preview
-from db import Database
+from core.db import Database
+from core.schema import Map
 from models.support import calibration as calibration_module
 from models.support import uncertainty as uncertainty_module
 from models.support.calibration import (
@@ -49,7 +50,6 @@ from models.support.uncertainty import (
     load_uncertainty_config,
 )
 from models.westminster import westminster_validation
-from schema import Map
 
 bp = Blueprint("uncertainty", __name__)
 

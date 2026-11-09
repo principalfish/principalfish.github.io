@@ -24,7 +24,7 @@ from console.services.uncertainty_explorer import (
     seat_decomposition,
 )
 from console.services.uncertainty_runs import stored_runs
-from db import Database
+from core.db import Database
 from models.support.monte_carlo import (
     SimulationFileError,
     load_draws,

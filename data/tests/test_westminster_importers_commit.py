@@ -28,7 +28,8 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
-from db import Database
+from core.db import Database
+from core.schema import Poll, PollBase, Pollster
 from importers.polls.bases import PlannedPollBase
 from importers.polls.types import PollImportResult
 from importers.polls.westminster import (
@@ -44,7 +45,6 @@ from importers.polls.westminster import (
     techne_import,
     yougov_import,
 )
-from schema import Poll, PollBase, Pollster
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 
 # ── The importers and their commit variants ───────────────────────────────────

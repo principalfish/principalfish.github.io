@@ -16,8 +16,9 @@ import numpy as np
 import pytest
 from sqlalchemy import select
 
-from config import DatabaseConfig
-from db import Database
+from core.config import DatabaseConfig
+from core.db import Database
+from core.schema import PollBase, PollRow, Region
 from models.support.io import OutputPublicationError
 from models.support.monte_carlo import (
     ErrorStreams,
@@ -31,7 +32,6 @@ from models.support.monte_carlo import (
 from models.support.persistence import UncertaintyStoreError, load_uncertainty
 from models.support.uncertainty import UncertaintyConfig, UncertaintyError
 from models.westminster import run_uns_model as runner
-from schema import PollBase, PollRow, Region
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 
 DAY = date(2026, 6, 10)

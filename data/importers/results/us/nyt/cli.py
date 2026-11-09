@@ -51,8 +51,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import config
-from db import Database
+from core import config
+from core.db import Database
 from importers.results.us.import_house_elections import district_state, import_house
 from importers.results.us.import_senate_elections import import_senate
 from importers.results.us.nyt.adapters import AdapterError, apply_runoffs, parse

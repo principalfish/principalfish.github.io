@@ -18,9 +18,6 @@ from flask.typing import ResponseReturnValue
 from pydantic import ValidationError
 from sqlalchemy import select
 
-from db import Database
-from schema import Election, ElectionType, Map
-
 from console.db import get_db
 from console.forms import ModelRunForm
 from console.paths import (
@@ -36,6 +33,8 @@ from console.services.model_outputs import (
     delete_selected_model_outputs as delete_selected_outputs,
 )
 from console.services.runner import run_command
+from core.db import Database
+from core.schema import Election, ElectionType, Map
 
 bp = Blueprint("westminster", __name__)
 

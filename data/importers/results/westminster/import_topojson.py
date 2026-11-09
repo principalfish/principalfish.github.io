@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from db import Database
+from core.db import Database
 
 
 REGION_DISPLAY_NAMES = {

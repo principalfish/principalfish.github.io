@@ -25,8 +25,8 @@ from typing import Any
 
 import pytest
 
-from config import DatabaseConfig
-from db import Database
+from core.config import DatabaseConfig
+from core.db import Database
 from models.support.persistence import (
     OutputScope,
     OutputVote,

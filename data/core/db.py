@@ -24,8 +24,8 @@ from sqlalchemy import (
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session, sessionmaker
 
-from config import DatabaseConfig
-from schema import (
+from core.config import DatabaseConfig
+from core.schema import (
     Base,
     Election,
     ElectionSeatStatus,
@@ -119,7 +119,7 @@ class SeatStatus:
 def ensure_elections_sqlite_schema(conn: sqlite3.Connection) -> None:
     """Ensure the unified elections/votes tables exist (no-op on the main DB).
 
-    Mirrors the schema in ``schema.py``. On the live ``elections.db`` these
+    Mirrors the schema in ``core/schema.py``. On the live ``elections.db`` these
     tables already exist, so this is a no-op; it only materialises them for a
     fresh database (e.g. in tests). Columns added to an existing table later
     (``target_election_year``, ``source_note``) come from that column's

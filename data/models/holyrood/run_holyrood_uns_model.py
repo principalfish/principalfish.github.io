@@ -154,8 +154,9 @@ from typing import Any
 
 from sqlalchemy import select as sa_select
 
-from config import DatabaseConfig
-from db import Database
+from core.config import DatabaseConfig
+from core.db import Database
+from core.schema import Election, ElectionType, Pollster, Seat
 from models.support.cli import (
     parse_manual_shares,
     single_date_window,
@@ -190,7 +191,6 @@ from models.support.trends import (
     trend_batch,
     validate_trend_scope,
 )
-from schema import Election, ElectionType, Pollster, Seat
 
 BASELINE_ELECTION_NAME = "2026 Scottish Parliament Election"
 LIST_SEATS_PER_REGION = 7

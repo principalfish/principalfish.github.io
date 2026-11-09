@@ -11,12 +11,12 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+from core.schema import Election
 from export.export_elections import (
     PAGE_OUTPUT_ROOTS,
     PAGE_PARLIAMENTS,
     partition_elections_by_page,
 )
-from schema import Election
 
 
 class _Map:

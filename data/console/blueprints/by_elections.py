@@ -7,14 +7,13 @@ from flask.typing import ResponseReturnValue
 from pydantic import ValidationError
 from sqlalchemy import select
 
-from importers.results.westminster import by_election_import
-from schema import Election, ElectionType
-
 from console.db import get_db
 from console.forms import ByElectionPreviewForm
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services.preview import get_preview, pop_preview, store_preview
 from console.services.runner import render_command_result, run_python_script
+from core.schema import Election, ElectionType
+from importers.results.westminster import by_election_import
 
 bp = Blueprint("by_elections", __name__)
 

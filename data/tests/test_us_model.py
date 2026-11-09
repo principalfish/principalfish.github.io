@@ -27,7 +27,8 @@ from typing import Any, Literal, cast
 import pytest
 from sqlalchemy import event, text
 
-from db import Database
+from core.db import Database
+from core.schema import ElectionType, Map, Party, Pollster, Seat
 from importers.polls.us import us_polls_common
 from importers.polls.us.us_polls_common import CandidateColumn, matchup_label
 from models.support.io import OutputPublicationError
@@ -73,7 +74,6 @@ from models.us._common import (
     weighted_average,
     write_trend_cache_meta,
 )
-from schema import ElectionType, Map, Party, Pollster, Seat
 from tests.us_ev_fixtures import seed_canonical_allocations
 
 DEMOCRAT = 20

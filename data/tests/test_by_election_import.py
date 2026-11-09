@@ -27,7 +27,8 @@ from urllib.request import Request
 import pytest
 from bs4 import BeautifulSoup, Tag
 
-from db import Database
+from core.db import Database
+from core.schema import ElectionType
 from importers.results.westminster import by_election_import
 from importers.results.westminster.by_election_import import (
     ByElectionImportPlan,
@@ -48,7 +49,6 @@ from importers.results.westminster.by_election_import import (
     parse_election_name_from_title,
     parse_results_table,
 )
-from schema import ElectionType
 from tests.uk_fixtures import FakeUrlResponse, WestminsterWorld
 
 # ── Synthetic HTML helpers ────────────────────────────────────────────────────

@@ -36,7 +36,7 @@ DATA_DIR = SCRIPT_DIR.parent
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
-from config import DatabaseConfig
+from core.config import DatabaseConfig
 from scripts.migrate_add_us_poll_scope import STEPS, is_applied, open_database
 
 LEGACY_MAP_NAMES: tuple[str, ...] = ("US Presidential 2024", "US Senate 2024")

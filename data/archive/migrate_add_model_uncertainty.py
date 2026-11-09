@@ -31,7 +31,7 @@ DATA_DIR = SCRIPT_DIR.parent
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
-from config import DatabaseConfig
+from core.config import DatabaseConfig
 from scripts.migrate_add_us_poll_scope import Step, is_applied, open_database
 
 MODEL_UNCERTAINTY_DDL = """\

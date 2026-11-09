@@ -8,7 +8,8 @@ from typing import Any, cast
 
 import pytest
 
-from db import SeatStatus
+from core.db import SeatStatus
+from core.schema import Party, Vote
 from export.payload import SeatRow, build_result_payload
 from export.seat_overrides import (
     OVERRIDES_PATH,
@@ -16,7 +17,6 @@ from export.seat_overrides import (
     apply_seat_overrides,
     load_seat_overrides,
 )
-from schema import Party, Vote
 
 ELECTION = "2026 US Senate Election"
 IDS = {"democrat": 20, "republican": 21, "others": 15}

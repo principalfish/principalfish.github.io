@@ -23,8 +23,8 @@ from typing import Any
 from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel, Field
 
-from db import Database
-from schema import ElectionType
+from core.db import Database
+from core.schema import ElectionType
 
 DEFAULT_PARENT_ELECTION_NAME = "2024 General Election"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

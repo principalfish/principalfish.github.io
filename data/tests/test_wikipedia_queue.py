@@ -31,16 +31,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import pytest
 from flask import Flask
 
-from db import Database
-from importers.polls.types import PollImportResult, ScrapedPollRow
-from importers.polls.westminster.wikipedia_index import (
-    PollIndex,
-    WikipediaIndexError,
-    WikipediaPollRow,
-    fetch_poll_index,
-    normalize_pollster_name,
-)
-
 from console import create_app
 from console.blueprints.poll_import import (
     WESTMINSTER_MAP_NAME,
@@ -65,7 +55,16 @@ from console.services.wikipedia_queue import (
     progress,
     summarise,
 )
+from core.db import Database
+from importers.polls.types import PollImportResult, ScrapedPollRow
 from importers.polls.westminster.registry import IMPORTERS, ImporterMeta
+from importers.polls.westminster.wikipedia_index import (
+    PollIndex,
+    WikipediaIndexError,
+    WikipediaPollRow,
+    fetch_poll_index,
+    normalize_pollster_name,
+)
 
 # ── HTML fixture ──────────────────────────────────────────────────────────────
 # Mirrors the live page's shape: <section> per heading level, the heading itself

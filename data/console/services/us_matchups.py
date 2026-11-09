@@ -21,9 +21,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-from db import Database, MatchupSummary
+from core.db import Database, MatchupSummary
+from core.schema import TrackedMatchupSource
 from importers.polls.us.us_wikipedia_polls import US_CONTESTS_BY_SLUG
-from schema import TrackedMatchupSource
 
 # Chamber slug → the contest whose seat-level polls and automatic lead-table
 # tracking the per-race page reviews. The President is absent: its statewide

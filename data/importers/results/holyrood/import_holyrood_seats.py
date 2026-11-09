@@ -26,8 +26,8 @@ import argparse
 import json
 from pathlib import Path
 
-from db import Database
-from schema import Map
+from core.db import Database
+from core.schema import Map
 
 SOURCE_FILE = (
     Path(__file__).resolve().parents[3]

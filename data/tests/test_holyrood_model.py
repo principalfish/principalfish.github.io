@@ -19,7 +19,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 
-from db import Database, ensure_elections_sqlite_schema
+from core.db import Database, ensure_elections_sqlite_schema
+from core.schema import Election, ElectionType, Party, Region
 from models.holyrood import run_holyrood_uns_model as hmod
 from models.holyrood.run_holyrood_uns_model import (
     _DEFAULT_HALF_LIFE_DAYS,
@@ -53,7 +54,6 @@ from models.holyrood.run_holyrood_uns_model import (
 )
 from models.support.io import OutputPublicationError
 from models.support.polling import PollAggregation
-from schema import Election, ElectionType, Party, Region
 from tests.uk_fixtures import HolyroodWorld, add_poll_with_rows, seed_holyrood_world
 
 

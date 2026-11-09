@@ -23,10 +23,10 @@ import argparse
 import json
 from pathlib import Path
 
-from db import Database
-from electoral_votes import get_electoral_votes
+from core.db import Database
+from core.electoral_votes import get_electoral_votes
+from core.schema import ElectionType
 from importers.results.us.us_import import ensure_us_map, import_us_election
-from schema import ElectionType
 
 # Fixed map id for US Presidential (convention: 21 house, 22 president, 23 senate).
 MAP_ID = 22

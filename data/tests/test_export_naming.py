@@ -9,6 +9,7 @@ from typing import Any, cast
 
 import pytest
 
+from core.schema import Election, ElectionType, Party, Vote
 from export.naming import (
     file_stem_for_election,
     is_folded_senate_special,
@@ -21,7 +22,6 @@ from export.naming import (
     party_key_for_party,
     slugify,
 )
-from schema import Election, ElectionType, Party, Vote
 
 
 class _FakeParty:

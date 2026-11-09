@@ -57,8 +57,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from db import Database
-from schema import Election, ElectionType, Map, Party, Seat
+from core.db import Database
+from core.schema import Election, ElectionType, Map, Party, Seat
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 

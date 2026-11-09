@@ -10,11 +10,8 @@ import html
 import pickle
 import re
 import subprocess
-import sys
 from datetime import date, timedelta
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 from flask import Flask, Response

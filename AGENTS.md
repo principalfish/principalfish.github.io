@@ -8,7 +8,9 @@ the data runbook.
 ## Testing
 
 The Python data pipeline and console are tested under `data/`. The test commands
-use the `data/election_data` virtualenv (falling back to `data/.venv`).
+use the `data/election_data` virtualenv (falling back to `data/.venv`), which needs the
+one-time editable install from [data/README.md](data/README.md#python-environment): no
+code or test adds to `sys.path`, so scripts run by path fail without it.
 
 Run the full check suite — strict `mypy` first (it gates the run), then `pytest`:
 

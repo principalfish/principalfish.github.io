@@ -30,8 +30,6 @@ from collections.abc import Generator
 from datetime import date
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import pytest
 from flask import Flask, Response
 from flask.testing import FlaskClient

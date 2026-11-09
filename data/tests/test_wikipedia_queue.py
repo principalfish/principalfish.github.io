@@ -19,14 +19,10 @@ script, so pointing the path somewhere harmless would still launch python).
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
 from datetime import date
-from pathlib import Path
 from typing import Any
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 from flask import Flask

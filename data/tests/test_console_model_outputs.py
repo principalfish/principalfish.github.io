@@ -6,11 +6,6 @@ shared ``db`` fixture (a fresh SQLite database per test).
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from console.services.model_outputs import (
     build_output_detail_context,
     build_outputs_context,

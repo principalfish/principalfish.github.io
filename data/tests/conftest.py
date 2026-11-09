@@ -6,13 +6,9 @@ are completely isolated from each other.
 """
 
 import sqlite3
-import sys
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
-
-# Ensure the parent data/ package is importable from tests/
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 from sqlalchemy import event

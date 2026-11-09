@@ -61,7 +61,7 @@ config reliability uses the deployed scales, rounded to 2 dp (σ_seat 4.90,
 `swing.pooled.sigma_seat_raw` and `swing.pooled.sigma_lambda` in
 `data/models/westminster/uncertainty_calibration_report.json`).
 
-## One-off upgrade and evidence scripts
+## Archived upgrade scripts and the evidence builder
 
 `SIMULATIONS_PATH` (see `.env_example`; default
 `/home/philiph/dbs/simulations/westminster-latest.npz`) is where each
@@ -69,19 +69,19 @@ Westminster model run saves its raw Monte Carlo draws, unless run with
 `--no-raw-sims`. The console's Explore simulations pages read that file. It is
 reproducible and not part of the database backups.
 
-An existing database needs these once, in this order, from `data/`. Back up
-first (`scripts/backup_db.py`). Each takes `--dry-run`, which writes nothing:
+An existing database once needed five one-off scripts, run in this order. They now
+live in `archive/`, are not maintained, and **may no longer run**; a fresh setup uses
+`scripts/rebuild_database.py` instead, which builds the current schema and data.
+The record, for reference:
 
-```bash
-./election_data/bin/python archive/migrate_add_poll_bases.py          # 1. create poll_bases
-./election_data/bin/python archive/migrate_add_model_uncertainty.py   # 2. create model_uncertainty
-./election_data/bin/python archive/repair_poll_records.py             # 3. fix wrong sample sizes and dates
-./election_data/bin/python archive/repair_regional_poll_rows.py       # 4. fix wrong regional shares
-./election_data/bin/python archive/backfill_poll_bases.py             # 5. fill poll_bases from the sources
-```
+1. `archive/migrate_add_poll_bases.py` created `poll_bases`.
+2. `archive/migrate_add_model_uncertainty.py` created `model_uncertainty`.
+3. `archive/repair_poll_records.py` fixed wrong sample sizes and dates.
+4. `archive/repair_regional_poll_rows.py` fixed wrong regional shares.
+5. `archive/backfill_poll_bases.py` filled `poll_bases` from the sources.
 
-Steps 3 to 5 re-fetch poll sources, and step 5's matching relies on the values
-steps 3 and 4 correct, so keep that order. All five are safe to re-run.
+Steps 3 to 5 re-fetched poll sources, and step 5's matching relied on the values steps 3
+and 4 corrected, which fixed the order.
 
 `models/westminster/build_final_poll_errors.py PATH/TO/PollBase.xlsx` is separate and
 needs no database: it rebuilds

@@ -149,31 +149,27 @@ The same scrape without the review step. **The default is a dry-run listing**;
 Options: `--contest SLUG` (repeatable), `--state STATE` (repeatable; name or postal
 code), `--include-collapsed-for-uncovered`, `--commit`.
 
-## One-off upgrade (existing database)
+## One-off upgrade (existing database, archived)
 
-Run once, in order, on a database from before seat and matchup polls. Stop the
-console first. Until step 2 the console, models and export cannot read polls from
-that database.
+This is the record of the upgrade that was run once on a database from before seat
+and matchup polls. Its two scripts now live in `archive/` and **may no longer run**
+(they are not maintained or type-checked). A fresh setup does not need any of it:
+`scripts/rebuild_database.py` builds the current schema. Steps 4 to 6 are the normal
+first import and model run on a new database.
 
 1. **Back up** — `sqlite3 "$DATABASE_PATH" ".backup /home/philiph/dbs/elections.pre-us-seat-polls-<date>.db"`,
    plus the console's **Backup now**.
-2. **Migrate** — adds `polls.matchup`, `polls.seat_id`, `poll_rows.candidate_name`
-   and the `tracked_matchups` table. Idempotent, one transaction.
-   ```bash
-   ./election_data/bin/python archive/migrate_add_us_poll_scope.py --dry-run
-   ./election_data/bin/python archive/migrate_add_us_poll_scope.py
-   sqlite3 "$DATABASE_PATH" "PRAGMA table_info(polls);"   # matchup, seat_id listed
-   ```
-3. **Reset the legacy polls** — deletes the old matchup-averaged presidential polls
-   and the Senate map's copy of the generic ballot (polls with no seat and no
-   matchup on those two maps, with their rows), then the `*_us_senate` pollsters
-   left without polls. House, UK and new-style polls are never touched. It refuses
-   to run before step 2. Dry run by default (read-only); expect 22 presidential
-   polls, 12 Senate polls and 6 pollsters. A second `--apply` finds nothing.
-   ```bash
-   ./election_data/bin/python archive/reset_us_poll_matchups.py
-   ./election_data/bin/python archive/reset_us_poll_matchups.py --apply
-   ```
+2. **Migrate** (archived: `archive/migrate_add_us_poll_scope.py`) — added
+   `polls.matchup`, `polls.seat_id`, `poll_rows.candidate_name` and the
+   `tracked_matchups` table, idempotently in one transaction. A database built by the
+   rebuild already has them: `sqlite3 "$DATABASE_PATH" "PRAGMA table_info(polls);"`
+   lists `matchup` and `seat_id`.
+3. **Reset the legacy polls** (archived: `archive/reset_us_poll_matchups.py`) — deleted
+   the old matchup-averaged presidential polls and the Senate map's copy of the generic
+   ballot (polls with no seat and no matchup on those two maps, with their rows), then
+   the `*_us_senate` pollsters left without polls: 22 presidential polls, 12 Senate
+   polls and 6 pollsters. House, UK and new-style polls were never touched. Nothing
+   in a rebuilt database needs it.
 4. **First import** — `/us/import` with all contests and a blank cutoff (about 530
    rows across 130 races); bulk-approve race by race. Leave "Run US models" unticked.
 5. **Set the president matchup** at `/us/president/matchup` (e.g.

@@ -8,8 +8,6 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from core.config import DatabaseConfig
 from models.support.io import OutputPublicationError, publish_json
 from models.support.persistence import OutputScope

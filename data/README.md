@@ -42,11 +42,14 @@ pip install -r requirements.txt
 pip install --no-deps -e . --config-settings editable_mode=compat
 ```
 
-The last line is an editable install of `data/` itself (see `pyproject.toml`). It
-puts `data/` on the import path from any working directory; nothing is built or
-copied. New top-level folders under `data/` need no reinstall. Scripts are being
-moved over to rely on it instead of their own `sys.path` adjustments, so install
-it even where a script still works without.
+The last line is an editable install of `data/` itself (see `pyproject.toml`). **It
+is required once per virtualenv:** nothing in `data/` adjusts `sys.path` any more, so
+a script run by path (`python export/export_elections.py`, `scripts/backup_db.py`, and the
+scripts the console launches as subprocesses) fails with `ModuleNotFoundError: core`
+without it. The console and the tests started from `data/` happen to import without it,
+because the working directory or pytest's rootdir is on the path, but don't rely on
+that. It is a one-time step and survives later pulls; nothing is built or copied, and
+new top-level folders under `data/` need no reinstall.
 
 If `election_data` already exists, activate it. A venv created before the editable
 install was added needs the install once:
@@ -55,6 +58,26 @@ install was added needs the install once:
 source election_data/bin/activate
 pip install --no-deps -e . --config-settings editable_mode=compat
 ```
+
+The hourly restic job (`~/.config/restic/backup.sh`) runs `data/scripts/backup_db.py` with
+the main checkout's `data/election_data` interpreter, so that venv needs the install too.
+
+## How imports work
+
+Every module is imported by its package path (`core.db`, `importers.polls...`,
+`models.support...`, `export.payload`), never by a bare file name. The editable
+install puts `data/` on the import path for any working directory, which gives two
+equivalent ways to run a script. Both examples below run from `data/`; with the
+install, the by-path form also works from any other directory (give the interpreter
+and script paths in full):
+
+```bash
+./election_data/bin/python export/export_elections.py --dry-run       # by path
+./election_data/bin/python -m export.export_elections --dry-run       # as a module
+```
+
+Code and tests must not add to `sys.path`; a test fails if they do (`archive/` is exempt,
+and its scripts are not maintained).
 
 ## Import polls (Wikipedia-driven)
 

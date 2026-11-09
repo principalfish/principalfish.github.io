@@ -88,18 +88,16 @@ before the first import.
 
 ## Live runbook (existing database)
 
-Run in this order. Each step writes to the live database or the site data, so back up first
-and take them one at a time.
+Run in this order. Each current step writes to the live database or the site data, so back up
+first and take them one at a time. Step 2 is history: its script is archived.
 
 1. **Back up** — `./election_data/bin/python scripts/backup_db.py` (and the console's
    **Backup now**). Stop the console and any server that holds the database.
-2. **Migrate** — adds `election_seat_status` and `elections.source_note`. Idempotent, one
-   transaction. Until it has run, the console, export and importers on this code fail on any
-   `elections` query.
-   ```bash
-   ./election_data/bin/python archive/migrate_add_us_result_status.py --dry-run
-   ./election_data/bin/python archive/migrate_add_us_result_status.py
-   ```
+2. **Migrate** (archived: `archive/migrate_add_us_result_status.py`, which **may no longer
+   run**) — added `election_seat_status` and `elections.source_note`, idempotently in one
+   transaction. Until they exist, the console, export and importers fail on any
+   `elections` query. A database from `scripts/rebuild_database.py` already has them; an
+   old live one that lacks them should be rebuilt rather than patched.
 3. **Import**, dry run first, for 2018, 2020, 2022, 2024 and 2026 and both chambers. Read the
    diff for House 2022-24 and Senate 2020-24 against the 538 data: no winner should change (known differences: NYT
    has Alaska's 2022 Senate RCV final round and Osborn as an independent in Nebraska 2024).

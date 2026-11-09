@@ -15,8 +15,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import pytest
 
 from core.db import Database, ensure_elections_sqlite_schema

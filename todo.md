@@ -27,3 +27,7 @@ not on master: it was added in `eaa73607` and removed in `39610fb9`. It survives
 only on issue 0003's branch `refine-westminster-and-us-poll-error-models` (cut
 at `44dd8336`, not yet pushed), so don't delete that branch without saving the
 fixture first.
+
+## Remove poll helpers only the archive uses
+
+After the `data/` restructure (issue 0005), `ParsedPollWithBases` and `HasRegionalShares` in `data/importers/polls/bases.py`, and YouGov's `regional_shares()`, are used only by scripts in `data/archive/`. They were left in place because removing live code was outside a no-behaviour-change refactor.

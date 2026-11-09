@@ -25,6 +25,10 @@ Full sweep reports, read-only at master `35e5326c`: `findings/us-importers.md`, 
 - `data/` becomes an editable install (`editable_mode=compat`, confirmed in isolation), replacing the `sys.path` adjustments; scripts keep running by path (user, 2026-11-08)
 - `backfill_poll_bases`, `repair_poll_records`, `repair_regional_poll_rows`, `reset_us_poll_matchups` and `scrape_holyrood_2026` also go to `archive/`, with their tests retired (user, 2026-11-08)
 - The five archived US converters go to `archive/` unchanged, with the archive README saying why; they keep their old imports and aren't kept running (user, 2026-11-09, by starting piece 5 on that recommendation)
+- `core/migration_helpers.py` keeps the helpers' names and signatures unchanged, and the archived `migrate_add_us_poll_scope.py` stays whole with its own copy of them, because four other archived scripts import them from it (user, 2026-11-09, by starting piece 7 on those recommendations)
+- String references to the root modules move in the same pass as the imports in piece 9, with a test that fails on any leftover bare import of `db`, `schema` or `config` (user, 2026-11-09, by starting piece 9 on that recommendation)
+- The archived scripts keep the one-line import edits made in piece 9 (`from db import X` to `from core.db import X`), so `scrape_holyrood_2026.py`, which a live error message names, still runs (user, 2026-11-09, by approving piece 9 on that recommendation)
+- `archive/` is left alone beyond the piece 9 import edits, and `data/README.md` gains a short section on how imports work (user, 2026-11-09, by starting piece 10 on those recommendations)
 
 ## Open
 

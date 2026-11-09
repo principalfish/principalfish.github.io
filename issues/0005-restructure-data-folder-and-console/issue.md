@@ -10,7 +10,7 @@ The console's pages don't change here, only its imports. Its redesign is a separ
 
 ## Plan
 
-_2026-11-08 · 4 of 10 pieces done · now: piece 5 in progress_
+_2026-11-09 · 10 of 10 pieces done · now: all done, in review_
 
 - [x] **1/10 Editable install, archive folder, dead files** · `4b0f4475`
   Make `data/` installable so scripts can import normally, and create the archive folder.
@@ -20,15 +20,15 @@ _2026-11-08 · 4 of 10 pieces done · now: piece 5 in progress_
   Move the source data files out of `old_data/files`.
 - [x] **4/10 UK and poll importers** · `2e2111c0`
   Bring UK results, seed and poll importers together under `importers/`.
-- [ ] **5/10 US importers** · in progress
+- [x] **5/10 US importers** · `23263912`
   Move the US importers, and archive the 538 and Wikipedia converters.
-- [ ] **6/10 `export/`** · not started
+- [x] **6/10 `export/`** · `0190c24e`
   Give the export code its own package.
-- [ ] **7/10 `scripts/` cleared, `old_data/` removed** · not started
+- [x] **7/10 `scripts/` cleared, `old_data/` removed** · `9f7c03c5`
   Archive finished migrations and repairs, leaving only regular tools.
-- [ ] **8/10 `models/support/`** · not started
+- [x] **8/10 `models/support/`** · `b48be9c0`
   Move the model library, and regenerate the validation report with go-ahead.
-- [ ] **9/10 `core/`** · not started
+- [x] **9/10 `core/`** · `71bb7672`
   Move the shared root modules, with a test pinning `.env` loading.
-- [ ] **10/10 Path hacks gone, docs updated** · not started
+- [x] **10/10 Path hacks gone, docs updated** · `413f28eb`
   Remove the remaining path adjustments and update the README and docs.

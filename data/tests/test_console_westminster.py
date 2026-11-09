@@ -54,8 +54,9 @@ def uns_trend_json(
     ``monkeypatch.setattr(..., "get_db", ...)`` lines it used to require.
     """
     monkeypatch.setattr("console.westminster.model.get_db", lambda: db)
+    monkeypatch.setattr("console.westminster.outputs.get_db", lambda: db)
     path = tmp_path / "model_output_trends.json"
-    monkeypatch.setattr("console.westminster.model.UNS_TREND_CACHE_JSON", path)
+    monkeypatch.setattr("console.westminster.outputs.UNS_TREND_CACHE_JSON", path)
     return path
 
 

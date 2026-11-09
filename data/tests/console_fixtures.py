@@ -5,8 +5,9 @@ Used by ``test_console_westminster.py`` and ``test_console_holyrood.py``.
 
 Each console blueprint test file still defines its own trend-cache-isolation
 autouse fixture locally, since it patches a specific blueprint module's names
-(``console.westminster.model.get_db``, etc.) and doesn't generalise
-cleanly into one shared fixture across different constant names per blueprint.
+(``console.westminster.model.get_db``, ``console.westminster.outputs.get_db``,
+etc.) and doesn't generalise cleanly into one shared fixture across different
+constant names per blueprint.
 """
 
 from __future__ import annotations
@@ -14,15 +15,26 @@ from __future__ import annotations
 import html
 import re
 import subprocess
+import sys
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
-from typing import NoReturn
+from typing import Any, NoReturn
 
 import pytest
 from flask import Flask, Response
 from flask.testing import FlaskClient
 
 from console import create_app
+from console import db as console_db
+from console.sections import SECTIONS_BY_SLUG
+from console.us.matchups import race_map_name
+from console.westminster.uncertainty.run_data import stored_runs
+from core.db import Database
+from models.support.monte_carlo import load_draws
+from models.westminster import run_uns_model as runner
+from tests.test_westminster_uncertainty_integration import _cfg, _poll
+from tests.uk_fixtures import WestminsterWorld
 
 
 @pytest.fixture()
@@ -30,6 +42,26 @@ def app() -> Flask:
     application = create_app()
     application.config["TESTING"] = True
     return application
+
+
+@pytest.fixture()
+def seeded_app(
+    app: Flask,
+    db: Database,
+    westminster_world: WestminsterWorld,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Flask:
+    """The app with every route module reading the seeded temporary database."""
+    for slug in ("house", "senate"):
+        name = race_map_name(slug)
+        assert name is not None
+        db.add_map(name, parliament=SECTIONS_BY_SLUG[slug].parliament)
+    db.add_map("US Presidential 2024", parliament="us_presidential")
+    for name, module in list(sys.modules.items()):
+        if name.startswith("console.") and hasattr(module, "get_db"):
+            monkeypatch.setattr(module, "get_db", lambda: db)
+    monkeypatch.setattr(console_db, "get_db", lambda: db)
+    return app
 
 
 class RecordingRunner:
@@ -61,6 +93,40 @@ class RecordingRunner:
 
 
 ALERT = re.compile(r'<div class="alert">(.*?)</div>', re.DOTALL)
+
+
+@pytest.fixture()
+def saved(
+    db: Database,
+    westminster_world: WestminsterWorld,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> dict[str, Any]:
+    path = tmp_path / "draws.npz"
+    monkeypatch.setenv("SIMULATIONS_PATH", str(path))
+    monkeypatch.setattr(db.config, "simulations_path", str(path))
+    monkeypatch.setattr(runner, "TREND_CACHE_JSON", tmp_path / "trend.json")
+    monkeypatch.setattr(runner, "TREND_CACHE_META_JSON", tmp_path / "meta.json")
+    for module in ("runs", "explorer"):
+        monkeypatch.setattr(
+            f"console.westminster.uncertainty.{module}.get_db", lambda: db
+        )
+    _poll(db, westminster_world)
+    cfg = _cfg(westminster_world)
+    cfg = replace(
+        cfg, uncertainty=replace(cfg.uncertainty, simulations=50, chunk_size=7)
+    )
+    runner.run_simulation(db, cfg)
+    record = stored_runs(db)[0]
+    draws, meta = load_draws(path)
+    return {
+        "path": path,
+        "draws": draws,
+        "meta": meta,
+        "record": record,
+        "world": westminster_world,
+        "config": cfg,
+    }
 
 
 def flashes(client: FlaskClient[Response], response: Response) -> list[str]:

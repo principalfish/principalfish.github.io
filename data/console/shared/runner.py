@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 from flask import render_template
@@ -51,6 +51,52 @@ def run_python_script(
 ) -> subprocess.CompletedProcess[str]:
     """Run ``python <script> <args...>`` with the current interpreter."""
     return run_command([sys.executable, str(script), *args], cwd=cwd, timeout=timeout)
+
+
+def run_model_then_export(
+    *,
+    run: Callable[..., subprocess.CompletedProcess[str]],
+    model_command: Sequence[str],
+    model_timeout: int,
+    model_message: str,
+    export_command: Sequence[str] | None,
+    export_timeout: int,
+    export_cwd: Path,
+    export_message: str,
+) -> list[str]:
+    """Run a model command, then an optional export command.
+
+    Args:
+        run: Command runner, called as ``run(command, timeout=...)`` (plus
+            ``cwd=`` for the export). Callers pass their own module-level
+            ``run_command`` so it can be replaced in tests.
+        model_command: Argument vector of the model run.
+        model_timeout: Seconds allowed for the model run.
+        model_message: Progress message recorded once the model run succeeds.
+        export_command: Argument vector of the export, or None to skip it.
+        export_timeout: Seconds allowed for the export.
+        export_cwd: Working directory for the export.
+        export_message: Progress message recorded once the export succeeds.
+
+    Returns:
+        Progress messages, one per completed step.
+
+    Raises:
+        subprocess.CalledProcessError: If either step exits non-zero; a failed
+            model run stops before the export starts.
+        subprocess.TimeoutExpired: If either step outruns its timeout.
+    """
+    messages: list[str] = []
+
+    run(model_command, timeout=model_timeout).check_returncode()
+    messages.append(model_message)
+
+    if export_command is not None:
+        result = run(export_command, cwd=export_cwd, timeout=export_timeout)
+        result.check_returncode()
+        messages.append(export_message)
+
+    return messages
 
 
 def render_command_result(

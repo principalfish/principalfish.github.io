@@ -24,7 +24,6 @@ LOCAL_MYPY_SECTIONS = {
     "mypy-console.holyrood.*",
     "mypy-console.polls.*",
     "mypy-console.us.*",
-    "mypy-console.us.views",
     "mypy-console.westminster.*",
 }
 

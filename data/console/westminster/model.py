@@ -1,18 +1,17 @@
-"""Westminster routes: Wikipedia poll sync, UNS model run, and model outputs."""
+"""Westminster routes: Wikipedia poll sync and the UNS model run."""
 
 from __future__ import annotations
 
 import shlex
 import sys
 from datetime import date
+from typing import cast
 
 from flask import (
     Blueprint,
     flash,
-    redirect,
     render_template,
     request,
-    url_for,
 )
 from flask.typing import ResponseReturnValue
 from pydantic import ValidationError
@@ -24,22 +23,25 @@ from console.paths import (
     EXPORT_ELECTION_SCRIPT,
     PREDICTION_SIMULATION_OUTPUT,
     UNS_MODEL_SCRIPT,
-    UNS_TREND_CACHE_JSON,
 )
-from console.sections import SECTIONS_BY_SLUG, WESTMINSTER_MAP_NAME, Capability
-from console.shared.model_outputs import (
-    build_output_detail_context,
-    build_outputs_context,
-    delete_model_output as delete_one_output,
-    delete_selected_model_outputs as delete_selected_outputs,
+from console.sections import WESTMINSTER_MAP_NAME
+from console.shared.run_form import (
+    RunForm,
+    RunFormField,
+    days_field,
+    dry_run_field,
+    election_options,
+    half_life_field,
+    name_options,
+    output_csv_options,
 )
 from console.shared.runner import run_command
+from console.westminster.outputs import register_outputs
 from core.db import Database
-from core.schema import Election, ElectionType, Map
+from core.schema import Election, Map
 
 bp = Blueprint("westminster", __name__)
-
-WESTMINSTER_BASELINE_TYPES = [ElectionType.uk_general, ElectionType.by_election]
+register_outputs(bp)
 
 
 def _choices_for_model_form(db: Database) -> dict[str, object]:
@@ -127,13 +129,46 @@ def _model_arg_explanations() -> list[dict[str, str]]:
     ]
 
 
+def _model_run_form(choices: dict[str, object]) -> RunForm:
+    """Describe the UNS model run form's fields from the dropdown choices."""
+    return RunForm(
+        title="Run UNS Model",
+        action_endpoint="westminster.model_run_execute",
+        export_heading="Simulation JSON Export",
+        fields=[
+            RunFormField(
+                "map_name",
+                "--map-name",
+                name_options(cast("list[str]", choices["map_names"])),
+            ),
+            RunFormField(
+                "baseline_election_name",
+                "--baseline-election-name",
+                election_options(choices),
+            ),
+            days_field("as_of_days_back", "--as-of-days-back", choices),
+            days_field("since_days_back", "--since-days-back", choices),
+            half_life_field(choices),
+            RunFormField(
+                "output_csv",
+                "--output-csv",
+                output_csv_options(cast("list[str]", choices["output_csv_options"])),
+                required=False,
+            ),
+            dry_run_field(choices),
+        ],
+    )
+
+
 @bp.route("/models/run", methods=["GET"])
 def model_run_form() -> str:
     """GET /models/run — Render the UNS model run form with default values."""
     db = get_db()
+    choices = _choices_for_model_form(db)
     return render_template(
         "model_run.html",
-        choices=_choices_for_model_form(db),
+        run_form=_model_run_form(choices),
+        choices=choices,
         explanations=_model_arg_explanations(),
         form_values={
             "map_name": WESTMINSTER_MAP_NAME,
@@ -184,6 +219,7 @@ def model_run_execute() -> ResponseReturnValue:
         flash(f"Invalid model argument value: {exc.errors()[0]['msg']}")
         return render_template(
             "model_run.html",
+            run_form=_model_run_form(choices),
             choices=choices,
             explanations=_model_arg_explanations(),
             form_values=form_values,
@@ -246,125 +282,9 @@ def model_run_execute() -> ResponseReturnValue:
 
     return render_template(
         "model_run.html",
+        run_form=_model_run_form(choices),
         choices=choices,
         explanations=_model_arg_explanations(),
         form_values=form_values,
         run_result=run_result,
     )
-
-
-@bp.route("/models/outputs", methods=["GET"])
-def model_outputs() -> str:
-    """GET /models/outputs — List UNS model output elections with trend chart data.
-
-    Query parameters:
-        show (str, optional): Pass 'all' to show every model output; otherwise the 30 most recent.
-
-    Returns:
-        Rendered model_outputs.html with seat/vote trend datasets for Chart.js.
-    """
-    show_all = (request.args.get("show") or "").strip().lower() == "all"
-    db = get_db()
-    context = build_outputs_context(
-        db,
-        election_type=ElectionType.model_uns,
-        trend_cache_path=UNS_TREND_CACHE_JSON,
-        show_all=show_all,
-    )
-    return render_template(
-        "model_outputs.html",
-        **context,
-        heading="Westminster Model Outputs",
-        outputs_endpoint="westminster.model_outputs",
-        detail_endpoint="westminster.model_output_detail",
-        delete_endpoint="westminster.delete_model_output",
-        delete_selected_endpoint="westminster.delete_selected_model_outputs",
-    )
-
-
-@bp.route("/models/outputs/<int:election_id>", methods=["GET"])
-def model_output_detail(election_id: int) -> ResponseReturnValue:
-    """GET /models/outputs/<election_id> — Show detailed seat and vote breakdown for one UNS output.
-
-    Args:
-        election_id: Primary key of the ElectionType.model_uns election row.
-
-    Query parameters:
-        page (int, optional): Page number for paginated seat list (default 1, page size 50).
-
-    Returns:
-        Rendered model_output_detail.html, or redirect to model_outputs on invalid ID.
-    """
-    page = request.args.get("page", default=1, type=int) or 1
-    db = get_db()
-    context = build_output_detail_context(
-        db,
-        election_id=election_id,
-        election_type=ElectionType.model_uns,
-        baseline_types=WESTMINSTER_BASELINE_TYPES,
-        page=page,
-    )
-    if context is None:
-        flash(f"Model output #{election_id} not found.")
-        return redirect(url_for("westminster.model_outputs"))
-    return render_template(
-        "model_output_detail.html",
-        **context,
-        outputs_endpoint="westminster.model_outputs",
-        detail_endpoint="westminster.model_output_detail",
-        show_uncertainty_links=SECTIONS_BY_SLUG["westminster"].has(
-            Capability.UNCERTAINTY
-        ),
-    )
-
-
-@bp.route("/models/outputs/<int:election_id>/delete", methods=["POST"])
-def delete_model_output(election_id: int) -> ResponseReturnValue:
-    """POST /models/outputs/<election_id>/delete — Delete a UNS model output election and its votes.
-
-    Args:
-        election_id: Primary key of the ElectionType.model_uns election to delete.
-
-    Returns:
-        Redirect to model_outputs with a flash message indicating rows deleted.
-    """
-    db = get_db()
-    deleted_votes = delete_one_output(
-        db, election_id=election_id, election_type=ElectionType.model_uns
-    )
-    if deleted_votes is None:
-        flash(f"Model output #{election_id} not found.")
-        return redirect(url_for("westminster.model_outputs"))
-
-    flash(f"Deleted model output #{election_id} and {deleted_votes} vote rows.")
-    return redirect(url_for("westminster.model_outputs"))
-
-
-@bp.route("/models/outputs/delete-selected", methods=["POST"])
-def delete_selected_model_outputs() -> ResponseReturnValue:
-    """POST /models/outputs/delete-selected — Bulk-delete selected UNS model output elections.
-
-    Form parameters:
-        election_ids (list[str]): One or more election IDs to delete (multi-value form field).
-
-    Returns:
-        Redirect to model_outputs with a flash message. Flashes an error if no valid IDs provided.
-    """
-    raw_ids = request.form.getlist("election_ids")
-    election_ids: list[int] = []
-    for value in raw_ids:
-        try:
-            election_ids.append(int(value))
-        except ValueError:
-            continue
-
-    if not election_ids:
-        flash("No model outputs selected.")
-        return redirect(url_for("westminster.model_outputs"))
-
-    deleted_elections, deleted_votes = delete_selected_outputs(
-        db=get_db(), election_ids=election_ids, election_type=ElectionType.model_uns
-    )
-
-    flash(f"Deleted {deleted_elections} model outputs and {deleted_votes} vote rows.")
-    return redirect(url_for("westminster.model_outputs"))

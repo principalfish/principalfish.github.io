@@ -170,6 +170,7 @@ class TestUsOutputsPages:
     ) -> None:
         seeded = _seed_us_house(db)
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
+        monkeypatch.setattr("console.us.outputs.get_db", lambda: db)
         response = app.test_client().get("/us/house/outputs")
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -182,6 +183,7 @@ class TestUsOutputsPages:
     ) -> None:
         seeded = _seed_us_house(db)
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
+        monkeypatch.setattr("console.us.outputs.get_db", lambda: db)
         response = app.test_client().get(f"/us/house/outputs/{seeded['model_id']}")
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -192,6 +194,7 @@ class TestUsOutputsPages:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
+        monkeypatch.setattr("console.us.outputs.get_db", lambda: db)
         response = app.test_client().get("/us/house/outputs/99999")
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/us/house/outputs")
@@ -201,6 +204,7 @@ class TestUsOutputsPages:
     ) -> None:
         seeded = _seed_us_house(db)
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
+        monkeypatch.setattr("console.us.outputs.get_db", lambda: db)
         response = app.test_client().post(f"/us/house/outputs/{seeded['model_id']}/delete")
         assert response.status_code == 302
 
@@ -262,6 +266,7 @@ class TestPresidentElectoralVotes:
     ) -> None:
         seeded = _seed_us_president(db)
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
+        monkeypatch.setattr("console.us.outputs.get_db", lambda: db)
         body = app.test_client().get(f"/us/president/outputs/{seeded['model_id']}").get_data(as_text=True)
         assert "Electoral Votes" in body
         assert "Electoral Votes by Party" in body

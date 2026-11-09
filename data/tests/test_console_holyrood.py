@@ -65,8 +65,9 @@ def holyrood_trend_json(
     reaches ``/holyrood/outputs`` from delete/not-found tests too).
     """
     monkeypatch.setattr("console.holyrood.model.get_db", lambda: db)
+    monkeypatch.setattr("console.holyrood.outputs.get_db", lambda: db)
     path = tmp_path / "holyrood_trends.json"
-    monkeypatch.setattr("console.holyrood.model.HOLYROOD_TREND_CACHE_JSON", path)
+    monkeypatch.setattr("console.holyrood.outputs.HOLYROOD_TREND_CACHE_JSON", path)
     return path
 
 

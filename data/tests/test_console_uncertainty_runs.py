@@ -33,44 +33,9 @@ from models.support.monte_carlo import (
 from models.support.persistence import OutputVote, replace_output, westminster_uns_scope
 from models.support.simulation_replay import replay_simulation
 from models.westminster import run_uns_model as runner
-from tests.console_fixtures import app  # noqa: F401  (pytest fixture)
+from tests.console_fixtures import app, saved  # noqa: F401  (pytest fixtures)
 from tests.export_golden import run_export
-from tests.test_westminster_uncertainty_integration import DAY, _cfg, _poll
-from tests.uk_fixtures import WestminsterWorld
-
-
-@pytest.fixture()
-def saved(
-    db: Database,
-    westminster_world: WestminsterWorld,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> dict[str, Any]:
-    path = tmp_path / "draws.npz"
-    monkeypatch.setenv("SIMULATIONS_PATH", str(path))
-    monkeypatch.setattr(db.config, "simulations_path", str(path))
-    monkeypatch.setattr(runner, "TREND_CACHE_JSON", tmp_path / "trend.json")
-    monkeypatch.setattr(runner, "TREND_CACHE_META_JSON", tmp_path / "meta.json")
-    for module in ("runs", "explorer"):
-        monkeypatch.setattr(
-            f"console.westminster.uncertainty.{module}.get_db", lambda: db
-        )
-    _poll(db, westminster_world)
-    cfg = _cfg(westminster_world)
-    cfg = replace(
-        cfg, uncertainty=replace(cfg.uncertainty, simulations=50, chunk_size=7)
-    )
-    runner.run_simulation(db, cfg)
-    record = stored_runs(db)[0]
-    draws, meta = load_draws(path)
-    return {
-        "path": path,
-        "draws": draws,
-        "meta": meta,
-        "record": record,
-        "world": westminster_world,
-        "config": cfg,
-    }
+from tests.test_westminster_uncertainty_integration import DAY, _poll
 
 
 @pytest.mark.parametrize("suffix", ["budget", "results", "history", "sims"])

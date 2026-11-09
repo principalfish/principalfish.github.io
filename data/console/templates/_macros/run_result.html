@@ -1,0 +1,26 @@
+{# Rendering of a finished command run: the command line and exit code, then
+   the captured output streams. Each piece is a macro so pages that lay the
+   parts out differently can reuse them. #}
+
+{% macro command_line(command, return_code) %}
+<p><strong>Command:</strong> {{ command }}</p>
+<p><strong>Exit code:</strong> {{ return_code }}</p>
+{% endmacro %}
+
+{# One captured stream: a heading (`tag`) naming it, then the text in a
+   terminal block with a "(no <label>)" fallback when it is empty. #}
+{% macro stream(label, text, tag="h4") %}
+<{{ tag }}>{{ label }}</{{ tag }}>
+<pre class="terminal-output">{{ text or "(no " ~ label | lower ~ ")" }}</pre>
+{% endmacro %}
+
+{# A whole run result. `heading` is optional; `level` is the heading level
+   of the streams (the heading itself sits one level above). #}
+{% macro run_result(result, heading=none, level=4) %}
+{% if heading %}
+<h{{ level - 1 }}>{{ heading }}</h{{ level - 1 }}>
+{% endif %}
+{{ command_line(result.command, result.return_code) }}
+{{ stream("Stdout", result.stdout, "h" ~ level) }}
+{{ stream("Stderr", result.stderr, "h" ~ level) }}
+{% endmacro %}

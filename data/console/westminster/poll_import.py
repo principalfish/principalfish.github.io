@@ -40,7 +40,7 @@ from console.paths import (
 )
 from console.sections import WESTMINSTER_MAP_NAME
 from console.shared.preview import get_preview, pop_preview, store_preview
-from console.shared.runner import run_command
+from console.shared.runner import run_command, run_model_then_export
 from console.shared.wikipedia_queue import (
     QueueItem,
     QueueState,
@@ -92,28 +92,27 @@ def _run_model_and_export(*, timeout: int = MODEL_RUN_TIMEOUT) -> list[str]:
         subprocess.CalledProcessError: If either step exits non-zero.
         subprocess.TimeoutExpired: If either step outruns its timeout.
     """
-    messages: list[str] = []
-
-    run_command(
-        [sys.executable, str(UNS_MODEL_SCRIPT)], timeout=timeout
-    ).check_returncode()
-    messages.append("UNS model updated.")
-
-    if EXPORT_ELECTION_SCRIPT.exists():
-        run_command(
-            [
-                sys.executable,
-                str(EXPORT_ELECTION_SCRIPT),
-                "--current-simulation",
-                "--output-file",
-                str(PREDICTION_SIMULATION_OUTPUT),
-            ],
-            cwd=DATA_DIR,
-            timeout=EXPORT_TIMEOUT,
-        ).check_returncode()
-        messages.append("Prediction simulation exported.")
-
-    return messages
+    export_command = (
+        [
+            sys.executable,
+            str(EXPORT_ELECTION_SCRIPT),
+            "--current-simulation",
+            "--output-file",
+            str(PREDICTION_SIMULATION_OUTPUT),
+        ]
+        if EXPORT_ELECTION_SCRIPT.exists()
+        else None
+    )
+    return run_model_then_export(
+        run=run_command,
+        model_command=[sys.executable, str(UNS_MODEL_SCRIPT)],
+        model_timeout=timeout,
+        model_message="UNS model updated.",
+        export_command=export_command,
+        export_timeout=EXPORT_TIMEOUT,
+        export_cwd=DATA_DIR,
+        export_message="Prediction simulation exported.",
+    )
 
 
 @bp.route("/import", methods=["GET"])

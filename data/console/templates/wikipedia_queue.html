@@ -1,49 +1,31 @@
 {% extends "base.html" %}
 {% from "_poll_rows_table.html" import
   plan_base_columns, plan_row_columns, poll_rows_table %}
+{% from "_macros/queue.html" import
+  abandon_form, failed_card, progress_line, skip_form, source_link,
+  warning_alerts %}
 {% block content %}
   <section class="card">
     <h2>Wikipedia Catch-Up</h2>
-    <p>
-      Poll {{ progress.position }} of {{ progress.total }}
-      · {{ progress.imported }} imported
-      · {{ progress.failed }} failed
-      · {{ progress.skipped }} skipped
-      · {{ progress.no_importer }} no importer
-    </p>
+    {{ progress_line("Poll %s of %s"|format(progress.position, progress.total), progress, true) }}
     <p><strong>Pollster:</strong> {{ item.row.pollster_label }} ({{ item.row.pollster_identifier }})</p>
     <p><strong>Dates on Wikipedia:</strong> {{ item.row.date_label }} ({{ item.row.fieldwork_start }} to {{ item.row.fieldwork_end }})</p>
     <p><strong>Client:</strong> {{ item.row.client or "-" }}</p>
     <p><strong>Sample size on Wikipedia:</strong> {{ item.row.sample_size_label or "-" }}</p>
     <p>
       <strong>Source document:</strong>
-      {% if item.row.source_url %}
-        <a href="{{ item.row.source_url }}" target="_blank" rel="noopener">{{ item.row.source_url }}</a>
-      {% else %}
-        -
-      {% endif %}
+      {{ source_link(item.row.source_url) }}
     </p>
   </section>
 
-  {% if item.warnings %}
-    <div class="alerts">
-      {% for warning in item.warnings %}
-        <div class="alert">{{ warning }}</div>
-      {% endfor %}
-    </div>
-  {% endif %}
+  {{ warning_alerts(item.warnings) }}
 
   {% if item.status == "failed" %}
-    <section class="card">
-      <h3>This poll could not be imported</h3>
-      <pre class="terminal-output">{{ item.detail }}</pre>
-      <p>Retry fetches the document again; skip it below to move on.</p>
-      <form method="post" action="{{ url_for('poll_import.wikipedia_skip', token=token) }}" class="inline-form">
-        <input type="hidden" name="expected_index" value="{{ expected_index }}" />
-        <input type="hidden" name="action" value="retry" />
-        <button type="submit" class="button primary">Retry</button>
-      </form>
-    </section>
+    {{ failed_card(
+      item,
+      "Retry fetches the document again; skip it below to move on.",
+      url_for('poll_import.wikipedia_skip', token=token),
+      expected_index) }}
   {% elif plan %}
     <section class="card">
       <h3>Parsed Document</h3>
@@ -74,14 +56,8 @@
   <section class="card">
     <h3>Skip or Leave</h3>
     <div class="actions">
-      <form method="post" action="{{ url_for('poll_import.wikipedia_skip', token=token) }}" class="inline-form">
-        <input type="hidden" name="expected_index" value="{{ expected_index }}" />
-        <button type="submit" class="button">Skip this poll</button>
-      </form>
-      <form method="post" action="{{ url_for('poll_import.wikipedia_finish', token=token) }}" class="inline-form">
-        <input type="hidden" name="abandon" value="on" />
-        <button type="submit" class="button button-danger">Abandon queue</button>
-      </form>
+      {{ skip_form(url_for('poll_import.wikipedia_skip', token=token), expected_index) }}
+      {{ abandon_form(url_for('poll_import.wikipedia_finish', token=token)) }}
     </div>
     <p>Abandoning stops the run without importing anything further and without running the model.</p>
   </section>

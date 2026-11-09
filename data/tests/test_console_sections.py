@@ -100,8 +100,11 @@ def test_only_the_westminster_output_page_links_to_uncertainty(
 ) -> None:
     for module in (
         "console.westminster.model",
+        "console.westminster.outputs",
         "console.holyrood.model",
+        "console.holyrood.outputs",
         "console.us.views",
+        "console.us.outputs",
     ):
         monkeypatch.setattr(f"{module}.get_db", lambda: db)
     parliament = SECTIONS_BY_SLUG[section].parliament

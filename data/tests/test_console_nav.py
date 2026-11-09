@@ -9,14 +9,12 @@ from __future__ import annotations
 
 import html
 import re
-import sys
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from flask import Flask, Response
 from flask.testing import FlaskClient
 
-from console import db as console_db
 from console.nav import (
     ADMIN,
     ALL_POLLS,
@@ -29,32 +27,9 @@ from console.nav import (
     section_links,
 )
 from console.sections import SECTIONS, SECTIONS_BY_SLUG, Section
-from console.us.matchups import race_map_name
-from core.db import Database
-from tests.console_fixtures import app  # noqa: F401  (pytest fixture)
-from tests.uk_fixtures import WestminsterWorld
+from tests.console_fixtures import app, seeded_app  # noqa: F401  (pytest fixtures)
 
 HREF = re.compile(r'href="([^"]*)"')
-
-
-@pytest.fixture()
-def seeded_app(
-    app: Flask,  # noqa: F811
-    db: Database,
-    westminster_world: WestminsterWorld,
-    monkeypatch: pytest.MonkeyPatch,
-) -> Flask:
-    """The app with every route module reading the seeded temporary database."""
-    for slug in ("house", "senate"):
-        name = race_map_name(slug)
-        assert name is not None
-        db.add_map(name, parliament=SECTIONS_BY_SLUG[slug].parliament)
-    db.add_map("US Presidential 2024", parliament="us_presidential")
-    for name, module in list(sys.modules.items()):
-        if name.startswith("console.") and hasattr(module, "get_db"):
-            monkeypatch.setattr(module, "get_db", lambda: db)
-    monkeypatch.setattr(console_db, "get_db", lambda: db)
-    return app
 
 
 def _crawl(client: FlaskClient[Response]) -> dict[str, str]:

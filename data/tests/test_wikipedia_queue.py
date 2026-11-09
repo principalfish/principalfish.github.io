@@ -19,6 +19,7 @@ script, so pointing the path somewhere harmless would still launch python).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
 from datetime import date
@@ -1100,6 +1101,34 @@ class TestQueueStep:
         assert "Labour" in body
         assert state.items[0].plan is not None
 
+    def test_the_skip_and_abandon_forms_post_to_their_routes(
+        self, app: Flask
+    ) -> None:
+        state = _queue_state()
+        _mark(state.items[0], "failed", detail="404 Not Found")
+        token = _store(state)
+
+        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
+            as_text=True
+        )
+
+        assert re.search(
+            rf'<form method="post" action="/import/wikipedia/{token}/skip"'
+            r' class="inline-form">\s*'
+            r'<input type="hidden" name="expected_index" value="0" />\s*'
+            r'<button type="submit" class="button">Skip this poll</button>\s*'
+            r"</form>",
+            body,
+        )
+        assert re.search(
+            rf'<form method="post" action="/import/wikipedia/{token}/finish"'
+            r' class="inline-form">\s*'
+            r'<input type="hidden" name="abandon" value="on" />\s*'
+            r'<button type="submit" class="button button-danger">Abandon queue'
+            r"</button>\s*</form>",
+            body,
+        )
+
     def test_date_disagreement_raises_a_warning(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -1500,6 +1529,118 @@ class TestFinish:
         assert "3 row(s) in the window were already in the database" in body
         assert "2 Wikipedia row(s) could not be read" in body
         assert "TBA" in body
+
+    def _all_outcomes_state(self) -> QueueState:
+        """One item per status, each from a different pollster."""
+        rows = [
+            _row("yougov", date(2026, 8, 1), date(2026, 8, 2), label="YouGov"),
+            _row("opinium", date(2026, 8, 3), date(2026, 8, 4), label="Opinium"),
+            _row(
+                "survation",
+                date(2026, 8, 5),
+                date(2026, 8, 6),
+                label="Survation",
+                source_url="",
+            ),
+            _row("techne", date(2026, 8, 7), date(2026, 8, 8), label="Techne"),
+            _row("freshpoll", date(2026, 8, 9), date(2026, 8, 10), label="Fresh"),
+        ]
+        state = QueueState(
+            items=[QueueItem(row=row) for row in rows],
+            cutoff=date(2026, 7, 31),
+            run_model_at_end=False,
+        )
+        _mark(state.items[0], "imported", detail="Poll #4242, 104 rows inserted")
+        state.items[0].poll_id = 4242
+        _mark(state.items[1], "failed", detail="404 Not Found")
+        _mark(state.items[2], "skipped", detail="Skipped")
+        _mark(state.items[3], "no_importer", detail="No importer for Techne")
+        state.index = 4
+        return state
+
+    def test_summary_lists_every_outcome_with_its_count_and_links(
+        self, app: Flask
+    ) -> None:
+        token = _store(self._all_outcomes_state())
+
+        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
+            as_text=True
+        )
+
+        for heading in (
+            "Imported (1)",
+            "Failed (1)",
+            "Skipped (1)",
+            "No Importer Available (1)",
+            "Not Reviewed (1)",
+        ):
+            assert f"<h3>{heading}</h3>" in body
+        assert 'href="/polls/4242"' in body
+        assert ">#4242</a>" in body
+        assert "Poll #4242, 104 rows inserted" in body
+        assert "404 Not Found" in body
+        assert "Techne (techne)" in body
+        assert (
+            "The queue was abandoned before these polls were reached." in body
+        )
+        assert (
+            '<a href="https://example.test/doc.xlsx" target="_blank"'
+            ' rel="noopener">Source</a>'
+        ) in body
+        assert '<a class="button" href="/import">Back to import</a>' in body
+        for empty_message in (
+            "Nothing was imported.",
+            "No poll failed to import.",
+            "No poll was skipped.",
+            "Every queued poll had an importer.",
+        ):
+            assert empty_message not in body
+
+    def test_summary_shows_a_dash_for_a_poll_without_a_source_url(
+        self, app: Flask
+    ) -> None:
+        state = self._all_outcomes_state()
+        _mark(state.items[1], "failed", detail="404 Not Found")
+        state.items[1].row = _row(
+            "opinium", date(2026, 8, 3), date(2026, 8, 4), source_url=""
+        )
+        token = _store(state)
+
+        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
+            as_text=True
+        )
+        failed_section = body.split("<h3>Failed (1)</h3>")[1].split("</section>")[0]
+
+        assert "<a " not in failed_section
+        assert re.search(r"<td>\s*-\s*</td>", failed_section)
+
+    def test_summary_shows_the_fallback_message_for_each_empty_section(
+        self, app: Flask
+    ) -> None:
+        state = _queue_state()
+        _mark(state.items[0], "imported", detail="Poll #4242, 104 rows inserted")
+        state.items[0].poll_id = 4242
+        state.run_model_at_end = False
+        state.index = 1
+        token = _store(state)
+
+        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
+            as_text=True
+        )
+
+        assert "<h3>Imported (1)</h3>" in body
+        for heading, message in (
+            ("Failed (0)", "No poll failed to import."),
+            ("Skipped (0)", "No poll was skipped."),
+            (
+                "No Importer Available (0)",
+                "Every queued poll had an importer.",
+            ),
+        ):
+            assert f"<h3>{heading}</h3>" in body
+            assert f"<p>{message}</p>" in body
+        assert "Nothing was imported." not in body
+        assert "Not Reviewed" not in body
 
     def test_no_cutoff_renders_as_all_polls(self, app: Flask) -> None:
         state = self._imported_state()

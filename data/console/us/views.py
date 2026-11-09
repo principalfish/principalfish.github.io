@@ -7,11 +7,7 @@ poll import is the reviewed Wikipedia queue in
 matchup the models follow: the national presidential one, and per-race
 overrides of the importer's automatic choice for Senate and House races (the
 decisions live in :mod:`console.us.matchups`). The model-output list/detail
-and delete pages reuse the shared, election-type-parameterised service in
-``console.shared.model_outputs`` and the same templates as Westminster and
-Holyrood — but because those templates build URLs from bare endpoint names
-(``url_for(detail_endpoint, election_id=…)``), each chamber gets its own set of
-endpoints, registered from :data:`US_CHAMBERS` by :func:`_register_chamber_routes`.
+and delete pages are registered per chamber from :mod:`console.us.outputs`.
 """
 
 from __future__ import annotations
@@ -25,13 +21,6 @@ from flask.typing import ResponseReturnValue
 
 from console.db import get_db
 from console.paths import EXPORT_ELECTION_SCRIPT
-from console.sections import SECTIONS_BY_SLUG, Capability
-from console.shared.model_outputs import (
-    build_output_detail_context,
-    build_outputs_context,
-    delete_model_output as delete_one_output,
-    delete_selected_model_outputs as delete_selected_outputs,
-)
 from console.shared.runner import render_command_result, run_python_script
 from console.us.matchups import (
     MatchupChoiceError,
@@ -54,6 +43,7 @@ from console.us.models import (
     run_us_chamber_and_export,
     run_us_models_and_export,
 )
+from console.us.outputs import register_outputs
 from core.db import Database
 
 __all__ = ["US_CHAMBERS", "UsChamber", "bp"]
@@ -87,6 +77,7 @@ RUN_INTERRUPTED_NOTE = (
 )
 
 bp = Blueprint("us", __name__)
+register_outputs(bp)
 
 
 @bp.route("/us/run-models", methods=["POST"])
@@ -415,125 +406,3 @@ def _guarded_run(
         stderr=outcome.stderr,
         return_code=outcome.return_code,
     )
-
-
-def _register_chamber_routes(chamber: UsChamber) -> None:
-    """Register the outputs / detail / delete routes for one chamber.
-
-    The shared templates resolve URLs from endpoint names alone, so each chamber
-    needs distinct endpoints — ``us.house_outputs``, ``us.house_output_detail``,
-    ``us.delete_house_output``, ``us.delete_selected_house_outputs``, etc.
-    """
-    outputs_endpoint = f"us.{chamber.slug}_outputs"
-    detail_endpoint = f"us.{chamber.slug}_output_detail"
-    delete_endpoint = f"us.delete_{chamber.slug}_output"
-    delete_selected_endpoint = f"us.delete_selected_{chamber.slug}_outputs"
-
-    def outputs() -> str:
-        """GET /us/<chamber>/outputs — List this chamber's forecast outputs."""
-        show_all = (request.args.get("show") or "").strip().lower() == "all"
-        db = get_db()
-        context = build_outputs_context(
-            db,
-            election_type=chamber.model_type,
-            trend_cache_path=chamber.trend_cache_path,
-            show_all=show_all,
-        )
-        return render_template(
-            "model_outputs.html",
-            **context,
-            heading=f"{chamber.label} Model Outputs",
-            outputs_endpoint=outputs_endpoint,
-            detail_endpoint=detail_endpoint,
-            delete_endpoint=delete_endpoint,
-            delete_selected_endpoint=delete_selected_endpoint,
-        )
-
-    def output_detail(election_id: int) -> ResponseReturnValue:
-        """GET /us/<chamber>/outputs/<election_id> — One output's seat breakdown."""
-        page = request.args.get("page", default=1, type=int) or 1
-        db = get_db()
-        context = build_output_detail_context(
-            db,
-            election_id=election_id,
-            election_type=chamber.model_type,
-            baseline_types=[chamber.baseline_type],
-            page=page,
-        )
-        if context is None:
-            flash(f"{chamber.label} model output #{election_id} not found.")
-            return redirect(url_for(outputs_endpoint))
-        return render_template(
-            "model_output_detail.html",
-            **context,
-            show_uncertainty_links=SECTIONS_BY_SLUG[chamber.slug].has(
-                Capability.UNCERTAINTY
-            ),
-            outputs_endpoint=outputs_endpoint,
-            detail_endpoint=detail_endpoint,
-        )
-
-    def delete_output(election_id: int) -> ResponseReturnValue:
-        """POST /us/<chamber>/outputs/<election_id>/delete — Delete one output."""
-        deleted_votes = delete_one_output(
-            get_db(), election_id=election_id, election_type=chamber.model_type
-        )
-        if deleted_votes is None:
-            flash(f"{chamber.label} model output #{election_id} not found.")
-            return redirect(url_for(outputs_endpoint))
-
-        flash(f"Deleted {chamber.label} model output #{election_id} and {deleted_votes} vote rows.")
-        return redirect(url_for(outputs_endpoint))
-
-    def delete_selected() -> ResponseReturnValue:
-        """POST /us/<chamber>/outputs/delete-selected — Bulk-delete selected outputs."""
-        raw_ids = request.form.getlist("election_ids")
-        election_ids: list[int] = []
-        for value in raw_ids:
-            try:
-                election_ids.append(int(value))
-            except ValueError:
-                continue
-
-        if not election_ids:
-            flash("No model outputs selected.")
-            return redirect(url_for(outputs_endpoint))
-
-        deleted_elections, deleted_votes = delete_selected_outputs(
-            db=get_db(), election_ids=election_ids, election_type=chamber.model_type
-        )
-
-        flash(f"Deleted {deleted_elections} model outputs and {deleted_votes} vote rows.")
-        return redirect(url_for(outputs_endpoint))
-
-    # ResponseReturnValue-annotated view callables trip the same Flask +
-    # mypy-strict stub artifact on add_url_rule that @bp.route views hit on
-    # decoration; mypy.ini disables the spurious codes for this module.
-    bp.add_url_rule(
-        f"/us/{chamber.slug}/outputs",
-        endpoint=f"{chamber.slug}_outputs",
-        view_func=outputs,
-        methods=["GET"],
-    )
-    bp.add_url_rule(
-        f"/us/{chamber.slug}/outputs/<int:election_id>",
-        endpoint=f"{chamber.slug}_output_detail",
-        view_func=output_detail,
-        methods=["GET"],
-    )
-    bp.add_url_rule(
-        f"/us/{chamber.slug}/outputs/<int:election_id>/delete",
-        endpoint=f"delete_{chamber.slug}_output",
-        view_func=delete_output,
-        methods=["POST"],
-    )
-    bp.add_url_rule(
-        f"/us/{chamber.slug}/outputs/delete-selected",
-        endpoint=f"delete_selected_{chamber.slug}_outputs",
-        view_func=delete_selected,
-        methods=["POST"],
-    )
-
-
-for _chamber in US_CHAMBERS:
-    _register_chamber_routes(_chamber)

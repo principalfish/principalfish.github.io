@@ -1,9 +1,7 @@
-"""Holyrood (Scottish Parliament) routes: import, model run, and outputs.
+"""Holyrood (Scottish Parliament) routes: poll import and the model run.
 
-Mirrors the Westminster flow but for Holyrood. The model-output list/detail and
-delete routes reuse the shared, election-type-parameterised service in
-``console.shared.model_outputs`` and the same templates as Westminster (the
-templates take the endpoint names as context variables).
+Mirrors the Westminster flow but for Holyrood. The model-output pages are
+registered from :mod:`console.holyrood.outputs`.
 """
 
 from __future__ import annotations
@@ -18,18 +16,19 @@ from sqlalchemy import select
 
 from console.db import get_db
 from console.forms import HolyroodModelRunForm
+from console.holyrood.outputs import register_outputs
 from console.paths import (
     EXPORT_ELECTION_SCRIPT,
     HOLYROOD_IMPORT_SCRIPT,
     HOLYROOD_MODEL_SCRIPT,
-    HOLYROOD_TREND_CACHE_JSON,
 )
-from console.sections import SECTIONS_BY_SLUG, Capability
-from console.shared.model_outputs import (
-    build_output_detail_context,
-    build_outputs_context,
-    delete_model_output as delete_one_output,
-    delete_selected_model_outputs as delete_selected_outputs,
+from console.shared.run_form import (
+    RunForm,
+    RunFormField,
+    days_field,
+    dry_run_field,
+    election_options,
+    half_life_field,
 )
 from console.shared.runner import (
     render_command_result,
@@ -40,8 +39,7 @@ from core.db import Database
 from core.schema import Election, ElectionType, Map
 
 bp = Blueprint("holyrood", __name__)
-
-HOLYROOD_BASELINE_TYPES = [ElectionType.holyrood_general]
+register_outputs(bp)
 
 
 @bp.route("/holyrood/import-polls", methods=["POST"])
@@ -161,17 +159,34 @@ def _holyrood_model_arg_explanations() -> list[dict[str, str]]:
     ]
 
 
+def _holyrood_run_form(choices: dict[str, object]) -> RunForm:
+    """Describe the Holyrood model run form's fields from the dropdown choices."""
+    return RunForm(
+        title="Run Holyrood Model",
+        action_endpoint="holyrood.run_holyrood_model",
+        export_heading="Static Data Export",
+        fields=[
+            RunFormField("election_name", "--election-name", election_options(choices)),
+            days_field("as_of_days_back", "--as-of-days-back", choices),
+            days_field("since_days_back", "--since-days-back", choices),
+            half_life_field(choices),
+            dry_run_field(choices),
+        ],
+    )
+
+
 @bp.route("/holyrood/run-model", methods=["GET"])
 def run_holyrood_model_form() -> str:
     """GET /holyrood/run-model — Render the Holyrood model run form with default values."""
     db = get_db()
     choices = _choices_for_holyrood_model_form(db)
-    election_options = choices["election_options"]
+    elections = choices["election_options"]
     default_election = HOLYROOD_DEFAULT_BASELINE_ELECTION
-    if isinstance(election_options, list) and election_options:
-        default_election = election_options[0]["name"]
+    if isinstance(elections, list) and elections:
+        default_election = elections[0]["name"]
     return render_template(
-        "holyrood_model_run.html",
+        "model_run.html",
+        run_form=_holyrood_run_form(choices),
         choices=choices,
         explanations=_holyrood_model_arg_explanations(),
         form_values={
@@ -197,7 +212,7 @@ def run_holyrood_model() -> ResponseReturnValue:
         dry_run (str): 'true' to preview without writing; 'false' to commit and export.
 
     Returns:
-        Rendered holyrood_model_run.html with run output.
+        Rendered model_run.html with run output.
     """
     raw_form = {key: (val or "").strip() for key, val in request.form.items()}
     form_values = {
@@ -216,7 +231,8 @@ def run_holyrood_model() -> ResponseReturnValue:
     except ValidationError as exc:
         flash(f"Invalid model argument value: {exc.errors()[0]['msg']}")
         return render_template(
-            "holyrood_model_run.html",
+            "model_run.html",
+            run_form=_holyrood_run_form(choices),
             choices=choices,
             explanations=_holyrood_model_arg_explanations(),
             form_values=form_values,
@@ -271,103 +287,10 @@ def run_holyrood_model() -> ResponseReturnValue:
     }
 
     return render_template(
-        "holyrood_model_run.html",
+        "model_run.html",
+        run_form=_holyrood_run_form(choices),
         choices=choices,
         explanations=_holyrood_model_arg_explanations(),
         form_values=form_values,
         run_result=run_result,
     )
-
-
-@bp.route("/holyrood/outputs", methods=["GET"])
-def holyrood_outputs() -> str:
-    """GET /holyrood/outputs — List Holyrood UNS model outputs with trend charts.
-
-    Query parameters:
-        show (str, optional): Pass 'all' to show every output; otherwise the 30 most recent.
-    """
-    show_all = (request.args.get("show") or "").strip().lower() == "all"
-    db = get_db()
-    context = build_outputs_context(
-        db,
-        election_type=ElectionType.holyrood_uns,
-        trend_cache_path=HOLYROOD_TREND_CACHE_JSON,
-        show_all=show_all,
-    )
-    return render_template(
-        "model_outputs.html",
-        **context,
-        heading="Holyrood Model Outputs",
-        outputs_endpoint="holyrood.holyrood_outputs",
-        detail_endpoint="holyrood.holyrood_output_detail",
-        delete_endpoint="holyrood.delete_holyrood_output",
-        delete_selected_endpoint="holyrood.delete_selected_holyrood_outputs",
-    )
-
-
-@bp.route("/holyrood/outputs/<int:election_id>", methods=["GET"])
-def holyrood_output_detail(election_id: int) -> ResponseReturnValue:
-    """GET /holyrood/outputs/<election_id> — Seat and vote breakdown for one Holyrood output.
-
-    Args:
-        election_id: Primary key of the ElectionType.holyrood_uns election row.
-
-    Query parameters:
-        page (int, optional): Page number for paginated seat list (default 1, page size 50).
-    """
-    page = request.args.get("page", default=1, type=int) or 1
-    db = get_db()
-    context = build_output_detail_context(
-        db,
-        election_id=election_id,
-        election_type=ElectionType.holyrood_uns,
-        baseline_types=HOLYROOD_BASELINE_TYPES,
-        page=page,
-    )
-    if context is None:
-        flash(f"Holyrood model output #{election_id} not found.")
-        return redirect(url_for("holyrood.holyrood_outputs"))
-    return render_template(
-        "model_output_detail.html",
-        **context,
-        show_uncertainty_links=SECTIONS_BY_SLUG["holyrood"].has(Capability.UNCERTAINTY),
-        outputs_endpoint="holyrood.holyrood_outputs",
-        detail_endpoint="holyrood.holyrood_output_detail",
-    )
-
-
-@bp.route("/holyrood/outputs/<int:election_id>/delete", methods=["POST"])
-def delete_holyrood_output(election_id: int) -> ResponseReturnValue:
-    """POST /holyrood/outputs/<election_id>/delete — Delete a Holyrood output and its votes."""
-    deleted_votes = delete_one_output(
-        get_db(), election_id=election_id, election_type=ElectionType.holyrood_uns
-    )
-    if deleted_votes is None:
-        flash(f"Holyrood model output #{election_id} not found.")
-        return redirect(url_for("holyrood.holyrood_outputs"))
-
-    flash(f"Deleted Holyrood model output #{election_id} and {deleted_votes} vote rows.")
-    return redirect(url_for("holyrood.holyrood_outputs"))
-
-
-@bp.route("/holyrood/outputs/delete-selected", methods=["POST"])
-def delete_selected_holyrood_outputs() -> ResponseReturnValue:
-    """POST /holyrood/outputs/delete-selected — Bulk-delete selected Holyrood outputs."""
-    raw_ids = request.form.getlist("election_ids")
-    election_ids: list[int] = []
-    for value in raw_ids:
-        try:
-            election_ids.append(int(value))
-        except ValueError:
-            continue
-
-    if not election_ids:
-        flash("No model outputs selected.")
-        return redirect(url_for("holyrood.holyrood_outputs"))
-
-    deleted_elections, deleted_votes = delete_selected_outputs(
-        db=get_db(), election_ids=election_ids, election_type=ElectionType.holyrood_uns
-    )
-
-    flash(f"Deleted {deleted_elections} model outputs and {deleted_votes} vote rows.")
-    return redirect(url_for("holyrood.holyrood_outputs"))

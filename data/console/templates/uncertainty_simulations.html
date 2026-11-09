@@ -25,9 +25,13 @@
       <summary>Seat range per party (all filters combine)</summary>
 {% for party in draws.party_ids %}
       <p>{{ labels.parties.get(party|string, party) }}
-        <input type="number" min="0" max="{{ draws.seat_ids|length }}" name="min_{{ party }}" aria-label="Minimum seats for {{ labels.parties.get(party|string, party) }}" value="{{ request.args.get('min_' ~ party, '') }}">
+        <input type="number" min="0" max="{{ draws.seat_ids|length }}" name="min_{{ party }}"
+          aria-label="Minimum seats for {{ labels.parties.get(party|string, party) }}"
+          value="{{ request.args.get('min_' ~ party, '') }}">
         to
-        <input type="number" min="0" max="{{ draws.seat_ids|length }}" name="max_{{ party }}" aria-label="Maximum seats for {{ labels.parties.get(party|string, party) }}" value="{{ request.args.get('max_' ~ party, '') }}">
+        <input type="number" min="0" max="{{ draws.seat_ids|length }}" name="max_{{ party }}"
+          aria-label="Maximum seats for {{ labels.parties.get(party|string, party) }}"
+          value="{{ request.args.get('max_' ~ party, '') }}">
       </p>
 {% endfor %}
     </details>

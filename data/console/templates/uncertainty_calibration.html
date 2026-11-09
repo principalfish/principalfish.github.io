@@ -13,6 +13,7 @@
 {% block content %}
   <section class="card">
     <h2>Uncertainty Calibration</h2>
+    {% include "_uncertainty_nav.html" %}
     <p>
       The settings of the Westminster polling-error model, and how the
       calibrated ones were fitted (<code>models/westminster/calibrate_uncertainty.py</code>).
@@ -107,7 +108,12 @@
                 <tr>
                   {% if loop.first %}
                     <th scope="row" rowspan="{{ election.parties | length }}">
-                      {%- if election.source_url is string and election.source_url.startswith("https://") %}<a href="{{ election.source_url }}">{{ election.year }}</a>{% else %}{{ election.year }}{% endif -%}
+                      {%- if election.source_url is string
+                          and election.source_url.startswith("https://") -%}
+                        <a href="{{ election.source_url }}">{{ election.year }}</a>
+                      {%- else -%}
+                        {{ election.year }}
+                      {%- endif -%}
                     </th>
                     <td rowspan="{{ election.parties | length }}">{{ election.final_polls }}</td>
                     <td rowspan="{{ election.parties | length }}">{{ fmt(election.rms_z) }}</td>

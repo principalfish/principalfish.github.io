@@ -1,21 +1,19 @@
 {% extends "base.html" %}
+{% from "_macros/run_result.html" import command_line, stream %}
 {% block content %}
   <section class="card">
     <h2>{{ title }}</h2>
-    <p><strong>Command:</strong> {{ command }}</p>
-    <p><strong>Exit code:</strong> {{ return_code }}</p>
+    {{ command_line(command, return_code) }}
     <p>
       <a class="button" href="{{ url_for(back_endpoint, **back_values) }}">{{ back_label }}</a>
     </p>
   </section>
 
   <section class="card">
-    <h3>Stdout</h3>
-    <pre class="terminal-output">{{ stdout or "(no stdout)" }}</pre>
+    {{ stream("Stdout", stdout, "h3") }}
   </section>
 
   <section class="card">
-    <h3>Stderr</h3>
-    <pre class="terminal-output">{{ stderr or "(no stderr)" }}</pre>
+    {{ stream("Stderr", stderr, "h3") }}
   </section>
 {% endblock %}

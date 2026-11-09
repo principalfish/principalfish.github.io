@@ -6,7 +6,7 @@ The fixtures use synthetic election JSON and the temporary database supplied by
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import json
 import sys
 from pathlib import Path
@@ -14,8 +14,8 @@ from typing import Protocol, cast
 
 import pytest
 
-from db import Database
-from models import ElectionType, Map, Party
+from core.db import Database
+from core.schema import ElectionType, Map, Party
 
 
 class GeneralElectionImporter(Protocol):
@@ -50,16 +50,7 @@ class GeneralElectionImporter(Protocol):
 
 
 def _load() -> GeneralElectionImporter:
-    path = (
-        Path(__file__).resolve().parents[1]
-        / "old_data/scripts/westminster/import_general_elections.py"
-    )
-    name = "test_westminster_general_elections_module"
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
+    module = importlib.import_module("importers.results.westminster.import_general_elections")
     return cast(GeneralElectionImporter, module)
 
 

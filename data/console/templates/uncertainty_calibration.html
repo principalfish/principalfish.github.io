@@ -15,7 +15,7 @@
     <h2>Uncertainty Calibration</h2>
     <p>
       The settings of the Westminster polling-error model, and how the
-      calibrated ones were fitted (<code>scripts/calibrate_uncertainty.py</code>).
+      calibrated ones were fitted (<code>models/westminster/calibrate_uncertainty.py</code>).
       σs are in points for a party on {{ "%g" | format(p_ref_pct) }}%.
     </p>
     <p>
@@ -28,7 +28,7 @@
       <div class="alert">No settings file at {{ config_path }}; the model uses the defaults shown.</div>
     {% endif %}
     {% if report_error %}
-      <div class="alert">{{ report_error }} Run <code>scripts/calibrate_uncertainty.py</code> to write it.</div>
+      <div class="alert">{{ report_error }} Run <code>models/westminster/calibrate_uncertainty.py</code> to write it.</div>
     {% endif %}
   </section>
 

@@ -12,7 +12,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from console.services.uncertainty_runs import RunRecord, mapping
-from model_support.monte_carlo import (
+from models.support.monte_carlo import (
     DrawsMeta,
     SimulationDraws,
     SimulationFileError,
@@ -20,7 +20,7 @@ from model_support.monte_carlo import (
     deterministic_projection,
     load_draws,
 )
-from model_support.simulation_replay import (
+from models.support.simulation_replay import (
     ReplayedSimulation,
     input_fingerprint,
     replay_simulation,

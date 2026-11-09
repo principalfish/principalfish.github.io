@@ -1,4 +1,4 @@
-"""Tests for ``model_support.calibration``: σ_nat, λ̂, σ_seat, decided_fraction.
+"""Tests for ``models.support.calibration``: σ_nat, λ̂, σ_seat, decided_fraction.
 
 Synthetic inputs carry a known injected value (a polling miss, a swing-type
 factor, a residual SD) that each fit must recover; small cases are worked by
@@ -18,7 +18,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from model_support.calibration import (
+from models.support.calibration import (
     CALIBRATION_REPORT_SCHEMA,
     FINAL_POLL_SCHEMA,
     MAD_TO_SD,
@@ -52,7 +52,7 @@ from model_support.calibration import (
     seat_predictions,
     seat_residuals,
 )
-from model_support.monte_carlo import (
+from models.support.monte_carlo import (
     ErrorScales,
     ErrorStreams,
     build_simulation_inputs,
@@ -63,7 +63,7 @@ from model_support.monte_carlo import (
     error_scales,
     share_scale_array,
 )
-from model_support.uncertainty import UncertaintyConfig, share_scale
+from models.support.uncertainty import UncertaintyConfig, share_scale
 
 CONFIG = UncertaintyConfig()
 
@@ -787,7 +787,7 @@ class TestFinalPollTable:
     ) -> None:
         path = tmp_path / "table.json"
         path.write_text(json.dumps(_table()), encoding="utf-8")
-        monkeypatch.setattr("model_support.calibration.FINAL_POLL_ERRORS_PATH", path)
+        monkeypatch.setattr("models.support.calibration.FINAL_POLL_ERRORS_PATH", path)
         assert load_final_poll_table().elections[0].year == 2019
 
     def test_rejects_an_integer_too_large_for_a_float(self) -> None:
@@ -832,7 +832,7 @@ class TestCalibrationReport:
     ) -> None:
         path = tmp_path / "report.json"
         path.write_text(json.dumps(minimal_report()), encoding="utf-8")
-        monkeypatch.setattr("model_support.calibration.CALIBRATION_REPORT_PATH", path)
+        monkeypatch.setattr("models.support.calibration.CALIBRATION_REPORT_PATH", path)
         assert load_calibration_report()["schema"] == CALIBRATION_REPORT_SCHEMA
 
     @pytest.mark.parametrize(

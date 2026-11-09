@@ -31,8 +31,8 @@ from types import MappingProxyType, TracebackType
 from openpyxl import Workbook
 from sqlalchemy import update
 
-from db import Database
-from models import ElectionType, Poll, Pollster
+from core.db import Database
+from core.schema import ElectionType, Poll, Pollster
 
 # ── Westminster ───────────────────────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ WESTMINSTER_REGION_NAMES: tuple[str, ...] = (
     "Yorkshire and The Humber",
 )
 
-# Region populations as the live map holds them (old_data region_populations.csv),
+# Region populations as the live map holds them (inputs/westminster/region_populations.csv),
 # so the poll-base apportioning and the n resolver's estimate have real weights.
 WESTMINSTER_REGION_POPULATIONS: Mapping[str, int] = MappingProxyType(
     {

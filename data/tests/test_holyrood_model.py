@@ -13,18 +13,14 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "holyrood"))
+from typing import Any
 
 import pytest
 
-import run_holyrood_uns_model as hmod
-from model_support.io import OutputPublicationError
-from db import Database, ensure_elections_sqlite_schema
-from models import Election, ElectionType, Party, Region
-from run_holyrood_uns_model import (
+from core.db import Database, ensure_elections_sqlite_schema
+from core.schema import Election, ElectionType, Party, Region
+from models.holyrood import run_holyrood_uns_model as hmod
+from models.holyrood.run_holyrood_uns_model import (
     _DEFAULT_HALF_LIFE_DAYS,
     HolyroodSimulationConfig,
     SeatRef,
@@ -54,6 +50,8 @@ from run_holyrood_uns_model import (
     update_trend_cache_json,
     write_result_json,
 )
+from models.support.io import OutputPublicationError
+from models.support.polling import PollAggregation
 from tests.uk_fixtures import HolyroodWorld, add_poll_with_rows, seed_holyrood_world
 
 
@@ -152,7 +150,7 @@ class TestProjectConstituencySeats:
 
     def test_zero_swing_preserves_winner(self) -> None:
         """Zero swing: original winner retained for each seat."""
-        seat_votes = {
+        seat_votes: dict[int, dict[int, float]] = {
             101: {1: 20000, 2: 15000, 3: 5000},  # party 1 wins
             102: {1: 10000, 2: 25000, 3: 8000},  # party 2 wins
         }
@@ -163,17 +161,17 @@ class TestProjectConstituencySeats:
 
     def test_swing_can_change_winner(self) -> None:
         """Applying sufficient swing flips the result."""
-        seat_votes = {101: {1: 100, 2: 90}}  # party 1 leads by 10 votes (5 pp)
+        seat_votes: dict[int, dict[int, float]] = {101: {1: 100, 2: 90}}  # party 1 leads by 10 votes (5 pp)
         # Give party 2 a +10 pp swing — should flip to party 2
         swing = {999: {2: 10.0}}  # region 999
-        region_by_seat_id = {101: 999}
+        region_by_seat_id: dict[int, int | None] = {101: 999}
         projected = project_constituency_seats(seat_votes, swing, region_by_seat_id)
         elected = {row["seat_id"]: row["party_id"] for row in projected if row["elected"]}
         assert elected[101] == 2
 
     def test_negative_swing_clamped_at_zero(self) -> None:
         """A party with a huge negative swing cannot go below zero share."""
-        seat_votes = {101: {1: 100, 2: 50}}
+        seat_votes: dict[int, dict[int, float]] = {101: {1: 100, 2: 50}}
         swing = {10: {1: -200.0}}  # far below zero
         projected = project_constituency_seats(seat_votes, swing, {101: 10})
         votes_for_1 = next(r["vote_total"] for r in projected if r["seat_id"] == 101 and r["party_id"] == 1)
@@ -183,7 +181,7 @@ class TestProjectConstituencySeats:
         assert project_constituency_seats({}, {}, {}) == []
 
     def test_seat_with_zero_total_skipped(self) -> None:
-        seat_votes = {101: {1: 0, 2: 0}}
+        seat_votes: dict[int, dict[int, float]] = {101: {1: 0, 2: 0}}
         assert project_constituency_seats(seat_votes, {}, {101: 1}) == []
 
 
@@ -200,7 +198,7 @@ class TestCollectConstituencyWins:
             {"seat_id": 3, "party_id": 20, "elected": True},
             {"seat_id": 1, "party_id": 20, "elected": False},
         ]
-        region_by_seat_id = {1: 100, 2: 100, 3: 200}
+        region_by_seat_id: dict[int, int | None] = {1: 100, 2: 100, 3: 200}
         wins = collect_constituency_wins(projected, region_by_seat_id)
         assert wins[100][10] == 2
         assert wins[200][20] == 1
@@ -1432,7 +1430,7 @@ class TestDeleteHolyroodUnsForAsOfDate:
 # ── run_retrospective validation ──────────────────────────────────────────────
 
 
-def _retro_args(**overrides: object) -> SimpleNamespace:
+def _retro_args(**overrides: object) -> argparse.Namespace:
     base = dict(
         start_date="2026-07-01",
         end_date="2026-07-05",
@@ -1445,7 +1443,7 @@ def _retro_args(**overrides: object) -> SimpleNamespace:
         election_name="2021 Test Holyrood Election",
     )
     base.update(overrides)
-    return SimpleNamespace(**base)
+    return argparse.Namespace(**base)
 
 
 class TestRunRetrospectiveValidation:
@@ -1590,7 +1588,7 @@ class _FixedDate(date):
 def _parse_args(monkeypatch: pytest.MonkeyPatch, *argv: str) -> argparse.Namespace:
     """Parse ``argv`` with the model's CLI parser."""
     monkeypatch.setattr(sys, "argv", ["run_holyrood_uns_model.py", *argv])
-    return cast(argparse.Namespace, hmod.parse_args())
+    return hmod.parse_args()
 
 
 class TestParseArgs:
@@ -3351,7 +3349,7 @@ class TestContributingEndpointCaps:
             manual_poll_shares: dict[int, float] | None = None,
             *,
             poll_aggregations: tuple[
-                hmod.PollAggregation[int], hmod.PollAggregation[int]
+                PollAggregation[int], PollAggregation[int]
             ]
             | None = None,
         ) -> hmod.HolyroodRunOutput:
@@ -3430,7 +3428,7 @@ class TestContributingEndpointCaps:
             manual_poll_shares: dict[int, float] | None = None,
             *,
             poll_aggregations: tuple[
-                hmod.PollAggregation[int], hmod.PollAggregation[int]
+                PollAggregation[int], PollAggregation[int]
             ]
             | None = None,
         ) -> hmod.HolyroodRunOutput:
@@ -3507,7 +3505,7 @@ def test_prediction_failure_requires_output_rerun(
     def fail(source: Path, target: Path) -> None:
         raise OSError("disk failed")
 
-    monkeypatch.setattr("model_support.io.os.replace", fail)
+    monkeypatch.setattr("models.support.io.os.replace", fail)
     with pytest.raises(
         OutputPublicationError, match="Rerun the Holyrood model/output"
     ) as error:

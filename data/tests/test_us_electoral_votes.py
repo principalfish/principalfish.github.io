@@ -1,28 +1,10 @@
-"""Tests for the per-era US electoral-vote table (data/old_data/scripts/usa)."""
+"""Tests for the per-era US electoral-vote table (``importers/seed/us_electoral_votes.py``)."""
 
 from __future__ import annotations
 
-import importlib.util
-import sys
-from pathlib import Path
-from types import ModuleType
-
 import pytest
 
-USA_DIR = Path(__file__).resolve().parents[1] / "old_data" / "scripts" / "usa"
-
-
-def _load(name: str) -> ModuleType:
-    """Load a usa/ script module by file path (they are run as scripts, not a package)."""
-    spec = importlib.util.spec_from_file_location(name, USA_DIR / f"{name}.py")
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-us_ev = _load("us_electoral_votes")
+from importers.seed import us_electoral_votes as us_ev
 
 
 class TestEraForYear:

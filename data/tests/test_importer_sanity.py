@@ -1,10 +1,10 @@
-"""Tests for polls/importers/sanity.py."""
+"""Tests for importers/polls/sanity.py."""
 
 from __future__ import annotations
 
 import pytest
 
-from polls.importers.sanity import regional_alignment_problem, regional_basis_problem
+from importers.polls.sanity import regional_alignment_problem, regional_basis_problem
 
 
 class TestRegionalAlignmentProblem:

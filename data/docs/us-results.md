@@ -1,6 +1,6 @@
 # US results from NYT (House and Senate, 2018-2026)
 
-One toolchain, `data/scripts/us_results/`, fetches the New York Times / AP results for
+One toolchain, `data/importers/results/us/nyt/`, fetches the New York Times / AP results for
 every US House and Senate general election from 2018 to 2026, converts them to the
 committed election JSON the importers already read, and loads them into the database.
 The House 2022-24 and Senate 2020-24 files replace the FiveThirtyEight data (election ids are
@@ -9,7 +9,7 @@ kept); House 2018 and 2020 and Senate 2018 are new.
 - **Source**: NYT's static results JSON on its public CDN only (never the HTML pages,
   which sit behind a captcha). The URL table, schema adapters (A: 2024-26, A2: 2022,
   B: 2020, C: 2018) and the runoff files (GA Senate 2021 and 2022, MS Senate 2018, LA-05 2020) are
-  in `scripts/us_results/sources.py` and `adapters.py`. LA-05 2026 has no runoff file yet
+  in `importers/results/us/nyt/sources.py` and `adapters.py`. LA-05 2026 has no runoff file yet
   (its December runoff); until then the seat stays uncalled on its November first round.
 - **Credit**: an election imported from NYT carries a source note ("Results: The New York
   Times / AP. Provisional until certified." while the newest cycle has uncalled or
@@ -21,22 +21,22 @@ kept); House 2018 and 2020 and Senate 2018 are new.
 ## Commands
 
 From `data/`, once per cycle and chamber. `fetch` downloads, `convert` writes
-`old_data/files/usa/{house,senate}-<year>.json` (plus `senate-<year>-special.json` when a
+`inputs/us/{house,senate}-<year>.json` (plus `senate-<year>-special.json` when a
 special shares a state with its regular race), `import` loads the committed files, `all`
 does the three. Every run prints a diff against the committed file and the database
 (winner changes, newly called seats, % counted, the largest vote changes); against the 538
 files for 2020-2024 it doubles as a check of the NYT data.
 
 ```bash
-./election_data/bin/python scripts/us_results/cli.py all --year 2026 --chamber house --dry-run   # writes nothing
-./election_data/bin/python scripts/us_results/cli.py all --year 2026 --chamber house --refresh   # update in place, ids kept
-./election_data/bin/python scripts/us_results/cli.py all --year 2026 --chamber senate --offline --refresh
+./election_data/bin/python importers/results/us/nyt/cli.py all --year 2026 --chamber house --dry-run   # writes nothing
+./election_data/bin/python importers/results/us/nyt/cli.py all --year 2026 --chamber house --refresh   # update in place, ids kept
+./election_data/bin/python importers/results/us/nyt/cli.py all --year 2026 --chamber senate --offline --refresh
 ```
 
 Options: `--refresh` (update existing elections in place), `--dry-run` (no cache, file or
 database writes), `--offline` (`fetch` and `all`: use the newest cached file instead of
 downloading; `convert` always reads the cache), `--cache-dir`, `--out-dir`.
-Importing never exports: run `scripts/export_elections.py` afterwards. `scripts/rebuild_database.py`
+Importing never exports: run `export/export_elections.py` afterwards. `scripts/rebuild_database.py`
 replays the committed `house-*`/`senate-*` files (specials right after their regular year).
 
 The data console has the same flow at `/us/results` (the **Import US Results (NYT)** button on
@@ -59,23 +59,23 @@ redrawn (AL, CA, FL, LA, NC, OH, TN, TX, UT) replaced by the Census 120th-Congre
 files; Missouri passed a new plan but 2026 ran on the 2024 one, so it is not replaced. Known
 inaccuracy: North Carolina's 2019 court plan (used in 2020) is in no Census file, so NC 2020 is
 drawn on the 2018 boundaries. The per-state source table is
-`old_data/scripts/usa/house_2026_sources.py`; when Census publishes cartographic 120th-Congress
+`importers/results/us/geometry/house_2026_sources.py`; when Census publishes cartographic 120th-Congress
 files, drop `REDRAWN_2026` there and rebuild.
 
 Rebuild a map (needs `ogr2ogr`/GDAL and `mapshaper` on the PATH; downloads about 100 MB of
 Census files into the scratch folder, once):
 
 ```bash
-./election_data/bin/python old_data/scripts/usa/build_house_topojson.py --map 24 --fetch /tmp/house-maps \
+./election_data/bin/python importers/results/us/geometry/build_house_topojson.py --map 24 --fetch /tmp/house-maps \
   --out ../uselectionmaps/data/maps/map-24.topo.json                 # --map 25 for the 2012-cycle set
 ```
 
-To check a map against an election, `old_data/scripts/usa/check_redistricting.py` scores it
+To check a map against an election, `importers/results/us/geometry/check_redistricting.py` scores it
 against NYT's county results; give it the old map too and it lists the states whose score
 drops, i.e. the redrawn ones:
 
 ```bash
-./election_data/bin/python old_data/scripts/usa/check_redistricting.py \
+./election_data/bin/python importers/results/us/geometry/check_redistricting.py \
   --nyt <nyt-cache>/2026/house-general-<timestamp>.json \
   --districts ../uselectionmaps/data/maps/map-24.topo.json \
   --old ../uselectionmaps/data/maps/map-21.topo.json \
@@ -88,24 +88,22 @@ before the first import.
 
 ## Live runbook (existing database)
 
-Run in this order. Each step writes to the live database or the site data, so back up first
-and take them one at a time.
+Run in this order. Each current step writes to the live database or the site data, so back up
+first and take them one at a time. Step 2 is history: its script is archived.
 
 1. **Back up** — `./election_data/bin/python scripts/backup_db.py` (and the console's
    **Backup now**). Stop the console and any server that holds the database.
-2. **Migrate** — adds `election_seat_status` and `elections.source_note`. Idempotent, one
-   transaction. Until it has run, the console, export and importers on this code fail on any
-   `elections` query.
-   ```bash
-   ./election_data/bin/python scripts/migrate_add_us_result_status.py --dry-run
-   ./election_data/bin/python scripts/migrate_add_us_result_status.py
-   ```
+2. **Migrate** (archived: `archive/migrate_add_us_result_status.py`, which **may no longer
+   run**) — added `election_seat_status` and `elections.source_note`, idempotently in one
+   transaction. Until they exist, the console, export and importers fail on any
+   `elections` query. A database from `scripts/rebuild_database.py` already has them; an
+   old live one that lacks them should be rebuilt rather than patched.
 3. **Import**, dry run first, for 2018, 2020, 2022, 2024 and 2026 and both chambers. Read the
    diff for House 2022-24 and Senate 2020-24 against the 538 data: no winner should change (known differences: NYT
    has Alaska's 2022 Senate RCV final round and Osborn as an independent in Nebraska 2024).
    ```bash
    for year in 2018 2020 2022 2024 2026; do for chamber in house senate; do
-     ./election_data/bin/python scripts/us_results/cli.py all --year $year --chamber $chamber --refresh --dry-run
+     ./election_data/bin/python importers/results/us/nyt/cli.py all --year $year --chamber $chamber --refresh --dry-run
    done; done
    # then without --dry-run, one cycle at a time
    ```
@@ -113,13 +111,13 @@ and take them one at a time.
    is one) from step 3; it reads the files, not the database. `current-senate --dry-run` prints the
    holdover, winner and uncalled counts; then write it.
    ```bash
-   ./election_data/bin/python scripts/us_results/cli.py current-senate --dry-run
-   ./election_data/bin/python scripts/us_results/cli.py current-senate
+   ./election_data/bin/python importers/results/us/nyt/cli.py current-senate --dry-run
+   ./election_data/bin/python importers/results/us/nyt/cli.py current-senate
    ```
-   `EXPECTED_SPECIALS_2026` in `scripts/us_results/current_senate.py` is hard-coded to the
+   `EXPECTED_SPECIALS_2026` in `importers/results/us/nyt/current_senate.py` is hard-coded to the
    Florida and Ohio Class-3 specials of 2026 and the build refuses without them: edit it at
    the next cycle that has Senate specials.
-5. **Export** — `scripts/export_elections.py --dry-run` to see the plan (the maps 24 and 25
+5. **Export** — `export/export_elections.py --dry-run` to see the plan (the maps 24 and 25
    must exist), then the real run. This regenerates `map-modes.json` from the shell (mapModes
    24 and 25, the 2028 predict rollover) and writes the result files, including the new
    per-seat status fields and `sourceNote`.
@@ -131,7 +129,7 @@ and take them one at a time.
 The predict views already roll over to 2028, but the models were not re-run. Before the first
 2028 House or Senate run:
 
-- Bump `US_MODEL_COMPARISON_IDS` in `scripts/export/manifest.py` to `2026-us-house` and
+- Bump `US_MODEL_COMPARISON_IDS` in `export/manifest.py` to `2026-us-house` and
   `2022-us-senate`. It is keyed by election type, not by cycle, so it still points at 2024 and
   2020 and the new forecasts would compare against the wrong results. The bump also moves the
   baselines of the archived 2026 forecasts, so archive them first (last item).
@@ -141,10 +139,10 @@ The predict views already roll over to 2028, but the models were not re-run. Bef
 - House district polls are stored on map-21 seats, so on map 24 the House model sees no
   district polls (the national generic ballot is unaffected). Repoint the poll importers to
   the new map before the 2028 House run.
-- Set `EXPORT_US_CHAMBER_FORECASTS = True` in `scripts/export_elections.py`. It is off, so the
+- Set `EXPORT_US_CHAMBER_FORECASTS = True` in `export/export_elections.py`. It is off, so the
   House and Senate forecasts are not exported at all until it is switched back on.
 - Every House and Senate forecast is exported as `current-us-house` / `current-us-senate` and
-  labelled "2026 Prediction" (`scripts/export/naming.py`, `manifest_name_for_election`), so a
+  labelled "2026 Prediction" (`export/naming.py`, `manifest_name_for_election`), so a
   2028 run would collide with the 2026 one; bump the label with the cycle. Archive the 2026 forecast under its own id first; the
   archived forecast also needs its own Florida/Ohio baselines and chamber (currently it shows
   "Comparison unavailable" in Seats up, and its Full Senate merges into the current chamber).

@@ -11,42 +11,38 @@ from contextlib import closing
 from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
-from typing import Any
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+from typing import Any, cast
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-import export_elections
-from db import Database
-from model_support.persistence import (
+from core.db import Database
+from core.schema import Election, ElectionType, Party, Seat
+from export import export_elections
+from export.export_elections import (
+    DEM_PARTY_ID,
+    REP_PARTY_ID,
+    _export_page,
+    refresh_manifest_modes,
+)
+from export.manifest import assign_comparison_elections, build_map_modes_with_regions
+from export.naming import manifest_name_for_election
+from export.ordering import float_model_entries_first, reorder_manifest_entries
+from export.uncertainty import party_names
+from models.support.persistence import (
     OutputVote,
     StoredUncertainty,
     load_uncertainty,
     replace_output,
     westminster_uns_scope,
 )
-from model_support.public_uncertainty import (
+from models.support.public_uncertainty import (
     PublicUncertaintyError,
     public_document,
     seat_bands,
 )
-from models import Election, ElectionType, Party, Seat
-import export_elections
-from export_elections import (
-    DEM_PARTY_ID,
-    REP_PARTY_ID,
-    _export_page,
-    assign_comparison_elections,
-    build_map_modes_with_regions,
-    manifest_name_for_election,
-    refresh_manifest_modes,
-)
-from scripts.export.ordering import float_model_entries_first, reorder_manifest_entries
-from scripts.export.uncertainty import party_names
+from models.westminster import run_uns_model as runner
 from tests.export_golden import (
     GOLDEN_PATH,
     SHELL,
@@ -57,15 +53,19 @@ from tests.export_golden import (
 from tests.test_westminster_uncertainty_integration import DAY, _cfg, _poll
 from tests.uk_fixtures import WestminsterWorld
 from tests.us_ev_fixtures import seed_canonical_allocations
-import run_uns_model as runner
 
 
-class _Election:
+class _FakeElection:
     """Minimal stand-in for an Election ORM row (only the fields the helper reads)."""
 
     def __init__(self, name: str, type: ElectionType) -> None:
         self.name = name
         self.type = type
+
+
+def _election(*args: Any, **kwargs: Any) -> Election:
+    """Build the stand-in, typed as the real row the helper is annotated to take."""
+    return cast(Election, _FakeElection(*args, **kwargs))
 
 
 class TestManifestNameForElection:
@@ -89,24 +89,24 @@ class TestManifestNameForElection:
     def test_shortens_standard_names(
         self, name: str, election_type: ElectionType, expected: str
     ) -> None:
-        assert manifest_name_for_election(_Election(name, election_type)) == expected
+        assert manifest_name_for_election(_election(name, election_type)) == expected
 
     def test_model_uns_is_current_prediction(self) -> None:
         assert (
-            manifest_name_for_election(_Election("anything", ElectionType.model_uns))
+            manifest_name_for_election(_election("anything", ElectionType.model_uns))
             == "Current prediction"
         )
 
     def test_general_pattern_only_applies_to_uk_general(self) -> None:
         """A by-election whose name happens to match the general pattern is left verbatim."""
         assert (
-            manifest_name_for_election(_Election("2021 General Election", ElectionType.by_election))
+            manifest_name_for_election(_election("2021 General Election", ElectionType.by_election))
             == "2021 General Election"
         )
 
     def test_unmatched_name_passes_through_verbatim(self) -> None:
         assert (
-            manifest_name_for_election(_Election("Some Odd Election", ElectionType.holyrood_general))
+            manifest_name_for_election(_election("Some Odd Election", ElectionType.holyrood_general))
             == "Some Odd Election"
         )
 
@@ -395,7 +395,7 @@ class TestRefreshManifestModes:
             {"seat": "Florida", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate"},
             {"seat": "Ohio", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate"},
         ]
-        shell = {
+        shell: dict[str, Any] = {
             "parliamentFeatures": {"us_senate": {"nextElectionYear": 2026}},
             "mapModes": {
                 "23": {

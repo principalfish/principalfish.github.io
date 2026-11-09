@@ -6,7 +6,7 @@ writing script run straight from a terminal (an import, a model run), or to
 restore. The hourly restic job (``~/.config/restic/backup.sh``) also runs it
 before sending the plain newest copy to Backblaze B2.
 
-Settings come from the environment / .env (see ``backup.py``):
+Settings come from the environment / .env (see ``core/backup.py``):
 ``DATABASE_PATH``, ``ELECTIONS_ARCHIVE_DIR``, ``ELECTIONS_BACKUP_KEEP``.
 
 Usage:
@@ -20,14 +20,8 @@ from __future__ import annotations
 import argparse
 import sqlite3
 import sys
-from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-DATA_DIR = SCRIPT_DIR.parent
-if str(DATA_DIR) not in sys.path:
-    sys.path.insert(0, str(DATA_DIR))
-
-import backup
+from core import backup
 
 
 def print_status() -> None:

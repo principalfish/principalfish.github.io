@@ -14,8 +14,8 @@ from typing import Any
 
 import pytest
 
-from db import Database
-from model_support.persistence import (
+from core.db import Database
+from models.support.persistence import (
     OutputVote,
     UncertaintyPayload,
     load_uncertainty,

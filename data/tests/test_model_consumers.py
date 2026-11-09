@@ -8,16 +8,16 @@ from pathlib import Path
 
 import pytest
 from console.services.model_outputs import build_outputs_context
-from db import Database
-from model_support.persistence import (
+from core.db import Database
+from core.schema import ElectionType, Vote
+from export.payload import SeatRow, build_result_payload
+from models.support.persistence import (
     OutputScope,
     OutputVote,
     output_dates,
     replace_output,
 )
-from model_support.trends import TREND_MODELS
-from models import ElectionType, Vote
-from scripts.export.payload import SeatRow, build_result_payload
+from models.support.trends import TREND_MODELS
 from scripts.rebuild_model_trends import main
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload

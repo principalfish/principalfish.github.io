@@ -27,9 +27,9 @@ from console.blueprints.uncertainty import (
     party_lambda_pivot,
     status_line,
 )
-from db import Database
-from model_support.calibration import CALIBRATION_REPORT_SCHEMA, POLLBASE_URL
-from model_support.persistence import (
+from core.db import Database
+from models.support.calibration import CALIBRATION_REPORT_SCHEMA, POLLBASE_URL
+from models.support.persistence import (
     OutputScope,
     UncertaintyPayload,
     UncertaintyRun,
@@ -44,8 +44,8 @@ def paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
     """Point the settings and the report at temp files (absent until written)."""
     config = tmp_path / "uncertainty_config.json"
     report = tmp_path / "uncertainty_calibration_report.json"
-    monkeypatch.setattr("model_support.uncertainty.UNCERTAINTY_CONFIG_PATH", config)
-    monkeypatch.setattr("model_support.calibration.CALIBRATION_REPORT_PATH", report)
+    monkeypatch.setattr("models.support.uncertainty.UNCERTAINTY_CONFIG_PATH", config)
+    monkeypatch.setattr("models.support.calibration.CALIBRATION_REPORT_PATH", report)
     return {"config": config, "report": report}
 
 
@@ -271,7 +271,8 @@ class TestHubStoredStatus:
 
         assert self.stored(app) == (
             "Stored uncertainty: table not migrated yet "
-            "(run scripts/migrate_add_model_uncertainty.py)."
+            "(rebuild the database; the retired migration is "
+            "archive/migrate_add_model_uncertainty.py)."
         )
 
     def test_no_westminster_map(self, app: Flask) -> None:

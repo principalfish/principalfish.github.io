@@ -16,11 +16,10 @@ from typing import Any
 
 from sqlalchemy import delete, func, select
 
-from db import Database
-from electoral_votes import allocation_year, get_electoral_votes
-from models import Election, ElectionType, Map, Party, Region, Seat, Vote
-
 from console.services.trends import load_trend_entries, trend_entry_as_of_date
+from core.db import Database
+from core.electoral_votes import allocation_year, get_electoral_votes
+from core.schema import Election, ElectionType, Map, Party, Region, Seat, Vote
 
 FALLBACK_COLOURS = [
     "#1d4ed8",

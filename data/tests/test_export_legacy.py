@@ -1,4 +1,4 @@
-"""Tests for scripts.export.legacy — registration, conversion and repositioning.
+"""Tests for export.legacy — registration, conversion and repositioning.
 
 ``reposition_supplemental_entries`` re-applies each supplemental's configured
 ``insertBeforeId`` / ``insertAfterId`` after ``reorder_manifest_entries`` (which sorts by the
@@ -9,21 +9,17 @@ so a page only repositions its own supplementals. Pure function operating on a l
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-
 import pytest
 
-from scripts.export import legacy
-from scripts.export.legacy import (
+from export import legacy
+from export.legacy import (
     SUPPLEMENTAL_LEGACY_ELECTIONS,
     apply_supplemental_legacy_elections,
 )
-from scripts.export.ordering import reposition_supplemental_entries
+from export.ordering import reposition_supplemental_entries
 
 
 def _supplemental(sid: str) -> dict[str, Any]:

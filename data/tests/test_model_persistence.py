@@ -4,26 +4,21 @@ from __future__ import annotations
 
 import json
 import sqlite3
-import sys
 from collections.abc import Callable
 from contextlib import closing
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import pytest
 
-for engine in ("westminster", "holyrood", "us"):
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / engine))
-
-import _common as us
-import run_holyrood_uns_model as holyrood
-import run_uns_model as westminster
-
-from db import Database
-from model_support.persistence import OutputScope, output_dates
-from models import ElectionType
+from core.db import Database
+from core.schema import ElectionType
+from models.holyrood import run_holyrood_uns_model as holyrood
+from models.support.persistence import OutputScope, output_dates
+from models.us import _common as us
+from models.westminster import run_uns_model as westminster
 from tests.uk_fixtures import seed_holyrood_world, seed_westminster_world
 from tests.us_ev_fixtures import seed_allocations
 
@@ -47,75 +42,48 @@ class Adapter:
         name = f"{self.scope.name_prefix} {AS_OF.isoformat()}"
         args = (self.scope.map_id, AS_OF, name, rows, {1: "A", 2: "B"}, self.path)
         if self.kind == "westminster":
-            return cast(tuple[str, int], westminster.persist_projection(*args))
+            return westminster.persist_projection(*args)
         if self.kind == "holyrood":
-            return cast(tuple[str, int], holyrood.persist_projection(*args))
+            return holyrood.persist_projection(*args)
         assert self.spec is not None
-        return cast(tuple[str, int], us.persist_projection(self.spec, *args))
+        return us.persist_projection(self.spec, *args)
 
     def dates(self) -> set[date]:
         if self.kind == "westminster":
-            return cast(
-                set[date],
-                westminster.existing_trend_dates(
-                    self.trend, self.path, map_id=self.scope.map_id
-                ),
+            return westminster.existing_trend_dates(
+                self.trend, self.path, map_id=self.scope.map_id
             )
         if self.kind == "holyrood":
-            return cast(
-                set[date],
-                holyrood.existing_trend_dates(
-                    self.trend, self.path, map_id=self.scope.map_id
-                ),
+            return holyrood.existing_trend_dates(
+                self.trend, self.path, map_id=self.scope.map_id
             )
         assert self.spec is not None
-        return cast(
-            set[date],
-            us.existing_trend_dates(self.spec, self.path, map_id=self.scope.map_id),
-        )
+        return us.existing_trend_dates(self.spec, self.path, map_id=self.scope.map_id)
 
     def delete(self, *, reset: bool) -> tuple[int, int]:
         if self.kind == "westminster":
             if reset:
-                return cast(
-                    tuple[int, int],
-                    westminster.reset_existing_model_outputs(
-                        AS_OF, AS_OF, self.path, self.trend, map_id=self.scope.map_id
-                    )[:2],
-                )
-            return cast(
-                tuple[int, int],
-                westminster.delete_model_uns_for_as_of_date(
-                    AS_OF, self.path, map_id=self.scope.map_id
-                ),
+                return westminster.reset_existing_model_outputs(
+                    AS_OF, AS_OF, self.path, self.trend, map_id=self.scope.map_id
+                )[:2]
+            return westminster.delete_model_uns_for_as_of_date(
+                AS_OF, self.path, map_id=self.scope.map_id
             )
         if self.kind == "holyrood":
             if reset:
-                return cast(
-                    tuple[int, int],
-                    holyrood.reset_existing_model_outputs(
-                        AS_OF, AS_OF, self.path, self.trend, map_id=self.scope.map_id
-                    )[:2],
-                )
-            return cast(
-                tuple[int, int],
-                holyrood.delete_holyrood_uns_for_as_of_date(
-                    AS_OF, self.path, map_id=self.scope.map_id
-                ),
+                return holyrood.reset_existing_model_outputs(
+                    AS_OF, AS_OF, self.path, self.trend, map_id=self.scope.map_id
+                )[:2]
+            return holyrood.delete_holyrood_uns_for_as_of_date(
+                AS_OF, self.path, map_id=self.scope.map_id
             )
         assert self.spec is not None
         if reset:
-            return cast(
-                tuple[int, int],
-                us.reset_existing_model_outputs(
-                    self.spec, AS_OF, AS_OF, self.path, map_id=self.scope.map_id
-                )[:2],
-            )
-        return cast(
-            tuple[int, int],
-            us.delete_model_for_as_of_date(
-                self.spec, AS_OF, self.path, map_id=self.scope.map_id
-            ),
+            return us.reset_existing_model_outputs(
+                self.spec, AS_OF, AS_OF, self.path, map_id=self.scope.map_id
+            )[:2]
+        return us.delete_model_for_as_of_date(
+            self.spec, AS_OF, self.path, map_id=self.scope.map_id
         )
 
 

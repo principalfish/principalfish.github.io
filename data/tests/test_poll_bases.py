@@ -1,7 +1,7 @@
 """Tests for poll bases: parsing helpers, apportioning, and the n resolver.
 
-``polls.importers.bases`` turns printed column bases into planned rows;
-``model_support.poll_bases`` resolves the n behind a poll's shares from them
+``importers.polls.bases`` turns printed column bases into planned rows;
+``models.support.poll_bases`` resolves the n behind a poll's shares from them
 (falling back to ``sample_size`` or a population estimate) and summarises
 coverage. Importer-specific parsing is tested in each importer's test file and
 commit persistence in ``test_westminster_importers_commit.py``.
@@ -15,21 +15,9 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from db import Database
-from model_support.poll_bases import (
-    UNRESOLVED,
-    CapturedBase,
-    NBasis,
-    NOrigin,
-    PollNIndex,
-    PollNInputs,
-    PollsterCoverage,
-    ResolvedN,
-    poll_base_coverage,
-    resolve_poll_n,
-)
-from models import Poll, PollBase, PollRow, Region
-from polls.importers.bases import (
+from core.db import Database
+from core.schema import Poll, PollBase, PollRow, Region
+from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
     RegionRef,
@@ -40,6 +28,18 @@ from polls.importers.bases import (
     plan_poll_bases,
     region_refs,
     weighted_value,
+)
+from models.support.poll_bases import (
+    UNRESOLVED,
+    CapturedBase,
+    NBasis,
+    NOrigin,
+    PollNIndex,
+    PollNInputs,
+    PollsterCoverage,
+    ResolvedN,
+    poll_base_coverage,
+    resolve_poll_n,
 )
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 

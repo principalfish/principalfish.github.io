@@ -13,13 +13,15 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 
 | Path | What it is |
 |-|-|
-| `models.py`, `db.py`, `config.py` | SQLAlchemy schema, DB access, configuration |
+| `core/` | Shared modules: `schema.py` (SQLAlchemy tables), `db.py` (database access), `config.py` (settings; loads the repo-root `.env`), `backup.py`, `electoral_votes.py`, plus the US geography names and the SQLite migration helpers |
 | `console/` | Local web console for the data (`create_app`) |
 | `server.py` | Local data preview server (`:5055`) |
-| `old_data/` | Base-data importers (TopoJSON maps, parties, general elections) |
-| `polls/` | Wikipedia-driven poll importers |
-| `models/` | Election models — `westminster/`, `holyrood/` (UNS retrospective), `us/` (House, President, Senate forecasts) |
-| `scripts/` | Static export scripts that partition elections by parliament into the per-page data dirs (`electionmaps/data`, `uselectionmaps/data`) |
+| `archive/` | Finished one-offs and retired setup files (not maintained, not type-checked; see its README) |
+| `inputs/` | Committed source data files per jurisdiction (`westminster/`, `holyrood/`, `us/`) read by the importers |
+| `importers/` | `seed/` (parties, region populations), `results/` (Westminster, Holyrood and US elections, boundaries, by-elections; US has `nyt/` for the New York Times fetch-and-convert pipeline and `geometry/` for the TopoJSON builders) and `polls/` (Wikipedia-driven poll importers, `registry.py` lists the Westminster pollsters) |
+| `models/` | Election models — `westminster/` (runner, uncertainty calibration and validation, with their JSON artefacts), `holyrood/` (UNS retrospective), `us/` (House, President, Senate forecasts) and `support/` (the simulation, persistence, trends and uncertainty code they share) |
+| `export/` | The static export: `export_elections.py` partitions elections by parliament into the per-page data dirs (`electionmaps/data`, `uselectionmaps/data`), with its helpers beside it |
+| `scripts/` | Database rebuild, model-trend rebuild and backup |
 | `tests/` | Pytest suite — run with `./run_tests.sh` (strict mypy, then pytest) |
 
 ## Prerequisites
@@ -37,13 +39,45 @@ From `data/`, where the data subsystem's commands below also run:
 python3 -m venv election_data
 source election_data/bin/activate
 pip install -r requirements.txt
+pip install --no-deps -e . --config-settings editable_mode=compat
 ```
 
-If `election_data` already exists, just activate it:
+The last line is an editable install of `data/` itself (see `pyproject.toml`). **It
+is required once per virtualenv:** nothing in `data/` adjusts `sys.path` any more, so
+a script run by path (`python export/export_elections.py`, `scripts/backup_db.py`, and the
+scripts the console launches as subprocesses) fails with `ModuleNotFoundError: core`
+without it. The console and the tests started from `data/` happen to import without it,
+because the working directory or pytest's rootdir is on the path, but don't rely on
+that. It is a one-time step and survives later pulls; nothing is built or copied, and
+new top-level folders under `data/` need no reinstall.
+
+If `election_data` already exists, activate it. A venv created before the editable
+install was added needs the install once:
 
 ```bash
 source election_data/bin/activate
+pip install --no-deps -e . --config-settings editable_mode=compat
 ```
+
+The hourly restic job (`~/.config/restic/backup.sh`) runs `data/scripts/backup_db.py` with
+the main checkout's `data/election_data` interpreter, so that venv needs the install too.
+
+## How imports work
+
+Every module is imported by its package path (`core.db`, `importers.polls...`,
+`models.support...`, `export.payload`), never by a bare file name. The editable
+install puts `data/` on the import path for any working directory, which gives two
+equivalent ways to run a script. Both examples below run from `data/`; with the
+install, the by-path form also works from any other directory (give the interpreter
+and script paths in full):
+
+```bash
+./election_data/bin/python export/export_elections.py --dry-run       # by path
+./election_data/bin/python -m export.export_elections --dry-run       # as a module
+```
+
+Code and tests must not add to `sys.path`; a test fails if they do (`archive/` is exempt,
+and its scripts are not maintained).
 
 ## Import polls (Wikipedia-driven)
 

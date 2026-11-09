@@ -21,9 +21,9 @@ from flask.testing import FlaskClient
 from console.blueprints import by_elections
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services.preview import PREVIEW_CACHE, store_preview
-from db import Database
-from models import ElectionType
-from scripts import by_election_import
+from core.db import Database
+from core.schema import ElectionType
+from importers.results.westminster import by_election_import
 from tests.console_fixtures import (
     RecordingRunner,
     app,

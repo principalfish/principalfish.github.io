@@ -2,29 +2,13 @@
 
 from __future__ import annotations
 
-import importlib.util
 import sys
-from pathlib import Path
-from types import ModuleType
 
 import pytest
 from sqlalchemy import text
 
-from db import Database
-
-OLD_SCRIPTS = Path(__file__).resolve().parents[1] / "old_data" / "scripts"
-
-
-def _load(name: str) -> ModuleType:
-    spec = importlib.util.spec_from_file_location(name, OLD_SCRIPTS / f"{name}.py")
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-parties = _load("import_parties")
+from core.db import Database
+from importers.seed import import_parties as parties
 
 
 @pytest.mark.parametrize(

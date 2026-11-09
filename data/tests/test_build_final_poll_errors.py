@@ -1,4 +1,4 @@
-"""Tests for ``scripts/build_final_poll_errors.py`` on a small synthetic workbook.
+"""Tests for ``models/westminster/build_final_poll_errors.py`` on a small synthetic workbook.
 
 The workbook copies PollBase's layout: a header naming ``Fieldwork`` (day
 text, with the start date in the unlabelled column after it), ``Published``,
@@ -16,9 +16,9 @@ from pathlib import Path
 
 import pytest
 
-from model_support.calibration import POLLBASE_URL, parse_final_poll_table
-from scripts import build_final_poll_errors as builder
-from scripts.build_final_poll_errors import (
+from models.support.calibration import POLLBASE_URL, parse_final_poll_table
+from models.westminster import build_final_poll_errors as builder
+from models.westminster.build_final_poll_errors import (
     PollBaseError,
     build_election,
     build_elections,

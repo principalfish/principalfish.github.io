@@ -15,9 +15,9 @@ from urllib.request import Request
 
 import pytest
 
-from db import Database
-from polls.importers.westminster import deltapoll_import
-from polls.importers.westminster.deltapoll_import import (
+from core.db import Database
+from importers.polls.westminster import deltapoll_import
+from importers.polls.westminster.deltapoll_import import (
     MACRO_TO_INTERNAL_REGIONS,
     NATIONAL_KEY,
     PARTY_LABEL_TO_CANONICAL,

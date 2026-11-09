@@ -12,17 +12,12 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "us"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westminster"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "holyrood"))
-
-import run_holyrood_uns_model
-import run_uns_model
-from _common import main_for_spec
-
-from db import Database
-from model_support import trends
-from model_support.persistence import OutputScope, OutputVote, replace_output
+from core.db import Database
+from models.holyrood import run_holyrood_uns_model
+from models.support import trends
+from models.support.persistence import OutputScope, OutputVote, replace_output
+from models.us._common import main_for_spec
+from models.westminster import run_uns_model
 from scripts import rebuild_model_trends
 from tests import test_holyrood_model as holy
 from tests import test_us_model as us

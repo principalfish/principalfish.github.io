@@ -4,7 +4,7 @@ Both maps pages use this contract: the [UK manifest](map-modes.json) and the
 [US manifest](../../uselectionmaps/data/map-modes.json). Edit their hand-authored
 [UK shell](map-modes-shell.json) or
 [US shell](../../uselectionmaps/data/map-modes-shell.json), then regenerate the
-manifests with the [exporter](../../data/scripts/export_elections.py). See the
+manifests with the [exporter](../../data/export/export_elections.py). See the
 [export runbook](../../data/docs/export.md).
 
 The shells supply page branding, parliament features, map options, party aliases,
@@ -71,7 +71,7 @@ omitted. Core fields are `id`, `name`, `type`, `mapId`, and `parliament`.
 | `byElectionSeats` | Optional array of seat names; marks by-election seats, changes the Gains filter's label to “By-elections”, and tags those seats with a BY-ELECTION marker in the seat popup and seat list. |
 | `model` | Optional boolean. Marks a prediction election for presentation, prediction metadata, and countdown eligibility. Raw vote counts are suppressed, while vote shares can still be displayed. |
 | `referendum` | Optional truthy flag or configuration object. Enables referendum presentation, hides per-seat comparison controls, and shows the data-info button. The object configures the referendum choropleth (below). |
-| `multiMember` | Optional boolean for chamber-composition snapshots such as Current Senate. Tallies individual members; hides vote count/share columns and vote/comparison-based map controls. A member with `c: false` (and no party or name) is an uncalled race: it is tallied as uncalled, never for a party or `others`, matches no party filter, and the state is coloured by its called members only: one called plus one uncalled member gives the called member's party (solid, with `w` and no state `c`), while two uncalled members give a neutral state (`c: false`, no `w`). Current Senate's source file is derived from the 2026 Senate results (`scripts/us_results/cli.py current-senate`; see the README's Current Senate snapshot). |
+| `multiMember` | Optional boolean for chamber-composition snapshots such as Current Senate. Tallies individual members; hides vote count/share columns and vote/comparison-based map controls. A member with `c: false` (and no party or name) is an uncalled race: it is tallied as uncalled, never for a party or `others`, matches no party filter, and the state is coloured by its called members only: one called plus one uncalled member gives the called member's party (solid, with `w` and no state `c`), while two uncalled members give a neutral state (`c: false`, no `w`). Current Senate's source file is derived from the 2026 Senate results (`importers/results/us/nyt/cli.py current-senate`; see the README's Current Senate snapshot). |
 | `upcomingElections` | Optional boolean enabling the next-election-year filter, populated from member data. Current Senate uses it alongside `multiMember`. |
 
 Current category values are:
@@ -82,7 +82,7 @@ Current category values are:
 | US | `us_house`, `us_house_model`, `us_presidential`, `us_presidential_model`, `us_senate`, `us_senate_model` |
 
 The US House and Senate model types (`us_house_model`, `us_senate_model`) are valid but
-currently not exported (`EXPORT_US_CHAMBER_FORECASTS` in `data/scripts/export_elections.py`);
+currently not exported (`EXPORT_US_CHAMBER_FORECASTS` in `data/export/export_elections.py`);
 the presidential forecast is. Election order is not set by the shell: the export keeps the
 previous manifest's order, except that the `us_house` and `us_senate` result elections are
 listed newest first (Senate: `current-senate` directly after the newest) and forecasts lead.

@@ -1,6 +1,6 @@
 """US House and Senate results from NYT: form -> preview -> confirm, then export.
 
-The console face of ``scripts/us_results/cli.py``, reusing its steps rather than
+The console face of ``importers/results/us/nyt/cli.py``, reusing its steps rather than
 repeating them:
 
 - **Form** (GET ``/us/results``): pick a cycle year and chamber, and whether to
@@ -21,12 +21,12 @@ repeating them:
   site export. Importing never exports.
 - **Rebuild Current Senate** (POST ``/us/results/current-senate``): a separate
   button that re-derives ``senate-current.json`` from the imported 2026 Senate
-  file (``scripts/us_results/current_senate.py``). It writes one file, never
+  file (``importers/results/us/nyt/current_senate.py``). It writes one file, never
   touches the database, and does not run during an import.
 
 The out-dir and the NYT cache come from the app config keys
 :data:`OUT_DIR_CONFIG` and :data:`CACHE_DIR_CONFIG`, defaulting to the CLI's
-``old_data/files/usa`` and ``config.NYT_CACHE_DIR``; the Current Senate file
+``inputs/us`` and ``core.config.NYT_CACHE_DIR``; the Current Senate file
 from :data:`SNAPSHOT_CONFIG`, defaulting to the committed snapshot. Tests point
 all three at a temporary folder.
 
@@ -57,10 +57,20 @@ from flask import (
 )
 from flask.typing import ResponseReturnValue
 
-import config
-from db import Database
-from scripts.us_results.adapters import AdapterError
-from scripts.us_results.cli import (
+from console.db import get_db
+from console.paths import EXPORT_ELECTION_SCRIPT
+from console.services.preview import (
+    PREVIEW_CACHE,
+    get_preview,
+    pop_preview,
+    store_preview,
+)
+from console.services.runner import render_command_result, run_python_script
+from console.services.us_models import busy_message, model_run_slot
+from core import config
+from core.db import Database
+from importers.results.us.nyt.adapters import AdapterError
+from importers.results.us.nyt.cli import (
     DEFAULT_OUT_DIR,
     CliError,
     DiffReport,
@@ -79,41 +89,27 @@ from scripts.us_results.cli import (
     validate_election_file,
     write_conversion,
 )
-from scripts.us_results.convert import (
+from importers.results.us.nyt.convert import (
     META_KEY,
     ConversionResult,
     ConvertError,
     output_name,
 )
-from scripts.us_results.current_senate import (
+from importers.results.us.nyt.current_senate import (
     DEFAULT_SNAPSHOT,
     CurrentSenateError,
     rebuild_current_senate,
 )
-from scripts.us_results.fetch import FetchError, cached_snapshot_info
-from scripts.us_results.races import Race
-from scripts.us_results.sources import (
+from importers.results.us.nyt.fetch import FetchError, cached_snapshot_info
+from importers.results.us.nyt.races import Race
+from importers.results.us.nyt.sources import (
     SOURCES,
     Chamber,
     SourceStatus,
     UnknownSourceError,
     supported_years,
 )
-
-# A bare-name import: importing scripts.us_results.cli above puts the US seed
-# scripts' folder on sys.path, as their own sibling imports expect.
-from us_import import PARTY_KEY_TO_NAME
-
-from console.db import get_db
-from console.paths import EXPORT_ELECTION_SCRIPT
-from console.services.preview import (
-    PREVIEW_CACHE,
-    get_preview,
-    pop_preview,
-    store_preview,
-)
-from console.services.runner import render_command_result, run_python_script
-from console.services.us_models import busy_message, model_run_slot
+from importers.results.us.us_import import PARTY_KEY_TO_NAME
 
 bp = Blueprint("us_results", __name__)
 

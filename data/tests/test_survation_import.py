@@ -16,9 +16,9 @@ from urllib.request import Request
 import pytest
 from openpyxl import Workbook
 
-from db import Database
-from polls.importers.westminster import survation_import
-from polls.importers.westminster.survation_import import (
+from core.db import Database
+from importers.polls.westminster import survation_import
+from importers.polls.westminster.survation_import import (
     NATIONAL_KEY,
     ImportPlan,
     ParsedPoll,

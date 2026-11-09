@@ -1,7 +1,7 @@
 """Tests for the get-or-create and vote-clearing helpers."""
 
-from db import Database
-from models import ElectionType
+from core.db import Database
+from core.schema import ElectionType
 
 
 class TestGetOrCreateRegion:

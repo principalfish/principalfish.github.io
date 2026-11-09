@@ -12,9 +12,9 @@ from types import SimpleNamespace
 import pytest
 from flask import Flask
 
-import backup
 from console import create_app
 from console.forms import UsQueueStartForm
+from core import backup
 
 CROSS_SITE = [
     {"Sec-Fetch-Site": "cross-site"},

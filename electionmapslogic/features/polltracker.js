@@ -155,7 +155,7 @@ export function parsePollTrackerData(data, { segmentBreaks = true } = {}) {
   // id (e.g. rows written before ids existed) continues the segment before it: unknown ->
   // unknown and known <-> unknown are continuous unless uncertainty presence also changes.
   // Comparing against the last *known* id means known A, unknown, known B still breaks at B.
-  // For Westminster (model_uns) only, data/model_support/trends.py keeps equal-central
+  // For Westminster (model_uns) only, data/models/support/trends.py keeps equal-central
   // duplicates wherever this rule would break, so the exported rows carry every break.
   // Central-only history has no uncertainty to separate, so it never breaks.
   if (segmentBreaks) {

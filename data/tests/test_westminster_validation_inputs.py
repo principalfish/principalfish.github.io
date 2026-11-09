@@ -11,13 +11,13 @@ from typing import Any
 
 import pytest
 
-from model_support.monte_carlo import SimulationFileError, config_hash
-from model_support.uncertainty import load_uncertainty_config
-from model_support.westminster_validation_inputs import (
+from models.support.monte_carlo import SimulationFileError, config_hash
+from models.support.uncertainty import load_uncertainty_config
+from models.westminster.westminster_validation_inputs import (
     INPUTS_PATH,
     load_validation_inputs,
 )
-from model_support.westminster_validation_replay import frozen_input_validation
+from models.westminster.westminster_validation_replay import frozen_input_validation
 
 
 def _reseal(raw: dict[str, object], path: Path) -> None:

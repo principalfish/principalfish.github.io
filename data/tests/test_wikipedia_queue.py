@@ -2,7 +2,7 @@
 
 Three layers are covered here, bottom-up:
 
-- ``polls/importers/westminster/wikipedia_index.py`` — parsed from the inline
+- ``importers/polls/westminster/wikipedia_index.py`` — parsed from the inline
   HTML fixture below, which replicates the page's current markup (per-year
   ``<section>`` elements, a ``<div class="mw-heading">`` wrapper around the
   heading, and a reference list carrying both numeric and *named* ids).
@@ -19,34 +19,19 @@ script, so pointing the path somewhere harmless would still launch python).
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
 from datetime import date
-from pathlib import Path
 from typing import Any
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 from flask import Flask
-
-from db import Database
-from polls.importers.types import PollImportResult, ScrapedPollRow
-from polls.importers.westminster.wikipedia_index import (
-    PollIndex,
-    WikipediaIndexError,
-    WikipediaPollRow,
-    fetch_poll_index,
-    normalize_pollster_name,
-)
 
 from console import create_app
 from console.blueprints.poll_import import (
     WESTMINSTER_MAP_NAME,
     WIKIPEDIA_PREVIEW_TYPE,
 )
-from console.importers_registry import IMPORTERS, ImporterMeta
 from console.services.preview import PREVIEW_CACHE, store_preview
 from console.services.wikipedia_queue import (
     NO_CUTOFF,
@@ -65,6 +50,16 @@ from console.services.wikipedia_queue import (
     pending_in_group,
     progress,
     summarise,
+)
+from core.db import Database
+from importers.polls.types import PollImportResult, ScrapedPollRow
+from importers.polls.westminster.registry import IMPORTERS, ImporterMeta
+from importers.polls.westminster.wikipedia_index import (
+    PollIndex,
+    WikipediaIndexError,
+    WikipediaPollRow,
+    fetch_poll_index,
+    normalize_pollster_name,
 )
 
 # ── HTML fixture ──────────────────────────────────────────────────────────────

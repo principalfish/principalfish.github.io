@@ -17,8 +17,8 @@ from types import MappingProxyType
 import pytest
 from openpyxl import Workbook
 
-from db import Database
-from polls.importers.westminster import find_out_now_import as fon
+from core.db import Database
+from importers.polls.westminster import find_out_now_import as fon
 from tests.uk_fixtures import (
     FakeUrlResponse,
     WestminsterWorld,

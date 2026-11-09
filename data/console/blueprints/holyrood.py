@@ -16,9 +16,6 @@ from flask.typing import ResponseReturnValue
 from pydantic import ValidationError
 from sqlalchemy import select
 
-from db import Database
-from models import Election, ElectionType, Map
-
 from console.db import get_db
 from console.forms import HolyroodModelRunForm
 from console.paths import (
@@ -38,6 +35,8 @@ from console.services.runner import (
     run_command,
     run_python_script,
 )
+from core.db import Database
+from core.schema import Election, ElectionType, Map
 
 bp = Blueprint("holyrood", __name__)
 

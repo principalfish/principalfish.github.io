@@ -4,24 +4,19 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 from typing import Any
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-import export_elections
-from db import Database
-from export_elections import _export_page
-from models import Election, ElectionType, Map
-from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
-from tests.us_ev_fixtures import seed_canonical_allocations, set_model_target
-from scripts.export.ordering import (
+from core.db import Database
+from core.schema import Election, ElectionType, Map
+from export import export_elections
+from export.export_elections import _export_page
+from export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
+from export.ordering import (
     finalize_manifest_order,
     float_model_entries_first,
     insert_preserved_entry,
@@ -30,6 +25,7 @@ from scripts.export.ordering import (
     reposition_supplemental_entries,
     sort_us_chamber_entries,
 )
+from tests.us_ev_fixtures import seed_canonical_allocations, set_model_target
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -783,8 +779,6 @@ def test_finalize_sorts_us_chambers_whatever_the_remembered_order() -> None:
 
 
 def test_finalize_is_idempotent_on_a_mixed_list_with_president_between_chambers() -> None:
-    from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
-
     def mixed() -> list[dict[str, Any]]:
         ids = [
             ("current-us-president", "us_presidential", True),

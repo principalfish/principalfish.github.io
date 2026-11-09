@@ -30,20 +30,16 @@ import sys
 from pathlib import Path
 from typing import cast
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import pytest
 from flask import Flask
-
-from db import Database
-from models import ElectionType
 
 from console.blueprints.holyrood import (
     _choices_for_holyrood_model_form,
     _holyrood_model_arg_explanations,
 )
 from console.paths import HOLYROOD_MODEL_SCRIPT
-
+from core.db import Database
+from core.schema import ElectionType
 from tests.console_fixtures import (
     RecordingRunner as _RecordingRunner,
     app,

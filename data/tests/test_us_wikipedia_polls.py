@@ -19,16 +19,16 @@ from urllib.error import HTTPError
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-import polls.importers.us.us_poll_cli as us_poll_cli
-import polls.importers.us.us_wikipedia_polls as us_wikipedia_polls
-from db import Database
-from polls.importers.us.us_polls_common import (
+from core.db import Database
+import importers.polls.us.us_poll_cli as us_poll_cli
+from importers.polls.us.us_poll_cli import run_importer
+from importers.polls.us.us_polls_common import (
     CandidateReading,
     PageTables,
     parse_poll_tables,
 )
-from polls.importers.us.us_poll_cli import run_importer
-from polls.importers.us.us_wikipedia_polls import (
+import importers.polls.us.us_wikipedia_polls as us_wikipedia_polls
+from importers.polls.us.us_wikipedia_polls import (
     HOUSE_DISTRICTS,
     HOUSE_INDEX_URL,
     HOUSE_NATIONAL,
@@ -451,7 +451,7 @@ def _link(url: str, text: str) -> str:
 
 def _house_index_page() -> str:
     """Build the House index: 44 multi-district states, 6 at-large, plus noise."""
-    from polls.importers.us.us_geography import AT_LARGE_STATES, HOUSE_DISTRICT_COUNTS
+    from core.us_geography import AT_LARGE_STATES, HOUSE_DISTRICT_COUNTS
 
     links: list[str] = []
     for state in HOUSE_DISTRICT_COUNTS:

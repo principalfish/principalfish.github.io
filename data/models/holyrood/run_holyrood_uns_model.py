@@ -145,7 +145,6 @@ import argparse
 import json
 import math
 import re
-import sys
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -153,33 +152,12 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-DATA_DIR = Path(__file__).resolve().parents[2]
-SCRIPTS_DIR = DATA_DIR / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
-if str(DATA_DIR) not in sys.path:
-    sys.path.insert(0, str(DATA_DIR))
-
 from sqlalchemy import select as sa_select
 
-from config import DatabaseConfig
-from db import Database
-from model_support.history import HistoryRecomputationError
-from model_support.io import publish_json, validate_output_target
-from model_support.trends import (
-    default_trend_path,
-    publish_trends,
-    trend_batch,
-    validate_trend_scope,
-)
-from model_support.persistence import (
-    OutputScope,
-    OutputVote,
-    delete_outputs,
-    output_dates,
-    replace_output,
-)
-from model_support.cli import (
+from core.config import DatabaseConfig
+from core.db import Database
+from core.schema import Election, ElectionType, Pollster, Seat
+from models.support.cli import (
     parse_manual_shares,
     single_date_window,
     validate_date_range,
@@ -189,7 +167,16 @@ from model_support.cli import (
     validate_manual_share,
     validate_run_arguments,
 )
-from model_support.polling import (
+from models.support.history import HistoryRecomputationError
+from models.support.io import publish_json, validate_output_target
+from models.support.persistence import (
+    OutputScope,
+    OutputVote,
+    delete_outputs,
+    output_dates,
+    replace_output,
+)
+from models.support.polling import (
     PollAggregation,
     PollContributor,
     PollSource,
@@ -197,8 +184,13 @@ from model_support.polling import (
     select_poll_endpoint,
     effective_pollster_weight,
 )
-from model_support.summaries import recorded_vote_rows, summarize_votes
-from models import Election, ElectionType, Pollster, Seat
+from models.support.summaries import recorded_vote_rows, summarize_votes
+from models.support.trends import (
+    default_trend_path,
+    publish_trends,
+    trend_batch,
+    validate_trend_scope,
+)
 
 BASELINE_ELECTION_NAME = "2026 Scottish Parliament Election"
 LIST_SEATS_PER_REGION = 7

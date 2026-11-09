@@ -9,13 +9,10 @@ election silently dropped. Pure function; no DB needed.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
+from typing import Any, cast
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-
-from export_elections import (
+from core.schema import Election
+from export.export_elections import (
     PAGE_OUTPUT_ROOTS,
     PAGE_PARLIAMENTS,
     partition_elections_by_page,
@@ -33,12 +30,17 @@ class _LegacyMap:
     """A Map with no ``parliament`` attribute (older Westminster rows predate the column)."""
 
 
-class _Election:
+class _FakeElection:
     """Minimal stand-in for an Election ORM row (only ``.map`` is read by the router)."""
 
     def __init__(self, eid: str, map_obj: object) -> None:
         self.id = eid
         self.map = map_obj
+
+
+def _election(*args: Any, **kwargs: Any) -> Election:
+    """Build the stand-in, typed as the real row the helpers are annotated to take."""
+    return cast(Election, _FakeElection(*args, **kwargs))
 
 
 class TestPageRoutingContract:
@@ -69,29 +71,29 @@ class TestPartitionElectionsByPage:
     """A mixed election list is split so each page gets only its own parliaments."""
 
     def test_splits_uk_and_us_elections(self) -> None:
-        uk = _Election("2024-general", _Map("westminster"))
-        holyrood = _Election("2021-holyrood", _Map("holyrood"))
-        house = _Election("2024-us-house", _Map("us_house"))
-        senate = _Election("2024-us-senate", _Map("us_senate"))
+        uk = _election("2024-general", _Map("westminster"))
+        holyrood = _election("2021-holyrood", _Map("holyrood"))
+        house = _election("2024-us-house", _Map("us_house"))
+        senate = _election("2024-us-senate", _Map("us_senate"))
         by_page = partition_elections_by_page([uk, house, holyrood, senate])
         assert by_page["electionmaps"] == [uk, holyrood]
         assert by_page["uselectionmaps"] == [house, senate]
 
     def test_every_page_key_present_even_when_empty(self) -> None:
         # US-only input still yields an (empty) electionmaps bucket, so callers can index it.
-        by_page = partition_elections_by_page([_Election("2024-us-house", _Map("us_house"))])
+        by_page = partition_elections_by_page([_election("2024-us-house", _Map("us_house"))])
         assert set(by_page) == set(PAGE_PARLIAMENTS)
         assert by_page["electionmaps"] == []
 
     def test_legacy_map_without_parliament_defaults_to_westminster(self) -> None:
-        legacy = _Election("2015-general", _LegacyMap())
+        legacy = _election("2015-general", _LegacyMap())
         by_page = partition_elections_by_page([legacy])
         assert by_page["electionmaps"] == [legacy]
 
     def test_election_with_unrouted_parliament_is_dropped(self) -> None:
         # A parliament belonging to no page (e.g. one added to the DB but not yet to a page)
         # is silently excluded from every page rather than crashing the export.
-        stray = _Election("2021-senedd", _Map("senedd"))
+        stray = _election("2021-senedd", _Map("senedd"))
         by_page = partition_elections_by_page([stray])
         assert all(stray not in bucket for bucket in by_page.values())
 

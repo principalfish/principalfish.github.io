@@ -21,7 +21,7 @@ from console.services.uncertainty_explorer import (
     seat_decomposition,
 )
 from console.services.uncertainty_runs import central_results, mapping
-from model_support.monte_carlo import SimulationDraws, SimulationFileError
+from models.support.monte_carlo import SimulationDraws, SimulationFileError
 
 bp = Blueprint("uncertainty_explorer", __name__)
 

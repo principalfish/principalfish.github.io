@@ -10,6 +10,7 @@ the repository's real trend files.
 from __future__ import annotations
 
 import dataclasses
+import importlib
 import json
 import math
 import shutil
@@ -20,22 +21,19 @@ from contextlib import closing
 from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, Literal, cast
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "us"))
 
 import pytest
 from sqlalchemy import event, text
 
-from model_support.io import OutputPublicationError
-from db import Database
-from models import ElectionType, Map, Party, Pollster, Seat
-from polls.importers.us import us_polls_common
-from polls.importers.us.us_polls_common import CandidateColumn, matchup_label
-from tests.us_ev_fixtures import seed_canonical_allocations
-
-import _common
-from _common import (
+from core.db import Database
+from core.schema import ElectionType, Map, Party, Pollster, Seat
+from importers.polls.us import us_polls_common
+from importers.polls.us.us_polls_common import CandidateColumn, matchup_label
+from models.support.io import OutputPublicationError
+from models.us import _common
+from models.us._common import (
     LatestPollUsage,
     MATERIAL_CANDIDATE_SHARE,
     PARTY_ID_ALIASES,
@@ -76,6 +74,7 @@ from _common import (
     weighted_average,
     write_trend_cache_meta,
 )
+from tests.us_ev_fixtures import seed_canonical_allocations
 
 DEMOCRAT = 20
 REPUBLICAN = 21
@@ -209,18 +208,15 @@ class TestComputeRegionDiffs:
         baseline_regional: dict[int, dict[int, float]],
         national_totals: dict[int, float] | None = None,
     ) -> tuple[set[int], dict[int, dict[int, float]], list[dict[str, Any]]]:
-        return cast(
-            tuple[set[int], dict[int, dict[int, float]], list[dict[str, Any]]],
-            compute_region_diffs(
-                seats=seats,
-                region_by_id=region_by_id,
-                party_name_by_id={DEMOCRAT: "Democratic", REPUBLICAN: "Republican"},
-                national_party_totals=national_totals or {DEMOCRAT: 1000.0, REPUBLICAN: 1000.0},
-                weighted_sums=defaultdict(float, weighted_sums),
-                total_weights=defaultdict(float, total_weights),
-                baseline_national_shares=baseline_national,
-                baseline_region_shares=baseline_regional,
-            ),
+        return compute_region_diffs(
+            seats=seats,
+            region_by_id=region_by_id,
+            party_name_by_id={DEMOCRAT: "Democratic", REPUBLICAN: "Republican"},
+            national_party_totals=national_totals or {DEMOCRAT: 1000.0, REPUBLICAN: 1000.0},
+            weighted_sums=defaultdict(float, weighted_sums),
+            total_weights=defaultdict(float, total_weights),
+            baseline_national_shares=baseline_national,
+            baseline_region_shares=baseline_regional,
         )
 
     def test_national_poll_applies_same_delta_to_every_region(self) -> None:
@@ -364,7 +360,7 @@ class TestProjectSeatVotes:
 
 class TestClassStateAllowlist:
     def test_reads_class_2_states_only(self, tmp_path: Path) -> None:
-        from run_us_senate_model import class_state_allowlist
+        from models.us.run_us_senate_model import class_state_allowlist
 
         snapshot = {
             "schema": "pf-senate-current-v1",
@@ -380,7 +376,7 @@ class TestClassStateAllowlist:
         assert allowlist == frozenset({"Georgia", "Maine"})
 
     def test_reads_the_requested_class(self, tmp_path: Path) -> None:
-        from run_us_senate_model import class_state_allowlist
+        from models.us.run_us_senate_model import class_state_allowlist
 
         snapshot = {
             "seats": [
@@ -395,7 +391,7 @@ class TestClassStateAllowlist:
         assert class_state_allowlist(3, path) == frozenset({"Georgia", "Arizona"})
 
     def test_an_unknown_class_returns_none(self, tmp_path: Path) -> None:
-        from run_us_senate_model import class_state_allowlist
+        from models.us.run_us_senate_model import class_state_allowlist
 
         path = tmp_path / "senate-current.json"
         path.write_text(json.dumps({"seats": [{"n": "Maine", "members": [{"class": 2}]}]}), encoding="utf-8")
@@ -403,7 +399,7 @@ class TestClassStateAllowlist:
         assert class_state_allowlist(None, path) is None
 
     def test_missing_file_returns_none(self, tmp_path: Path) -> None:
-        from run_us_senate_model import class_state_allowlist
+        from models.us.run_us_senate_model import class_state_allowlist
 
         assert class_state_allowlist(2, tmp_path / "does-not-exist.json") is None
 
@@ -417,22 +413,19 @@ def _us_spec(
     map_name: str,
     national_poll_map_name: str | None = None,
     tracked_matchup_required: bool = False,
-    seat_matchup_policy: str = "per_seat",
+    seat_matchup_policy: Literal["per_seat", "national"] = "per_seat",
 ) -> UsModelSpec:
     """A spec whose trend files live under ``tmp_path`` — never the repo's own."""
-    return cast(
-        UsModelSpec,
-        UsModelSpec(
-            map_name=map_name,
-            baseline_election_name=f"baseline for {map_name}",
-            election_type="us_test_model",
-            election_name_prefix="US Test UNS",
-            trend_cache_json=tmp_path / "trends.json",
-            trend_cache_meta_json=tmp_path / "trends_meta.json",
-            national_poll_map_name=national_poll_map_name,
-            tracked_matchup_required=tracked_matchup_required,
-            seat_matchup_policy=seat_matchup_policy,
-        ),
+    return UsModelSpec(
+        map_name=map_name,
+        baseline_election_name=f"baseline for {map_name}",
+        election_type="us_test_model",
+        election_name_prefix="US Test UNS",
+        trend_cache_json=tmp_path / "trends.json",
+        trend_cache_meta_json=tmp_path / "trends_meta.json",
+        national_poll_map_name=national_poll_map_name,
+        tracked_matchup_required=tracked_matchup_required,
+        seat_matchup_policy=seat_matchup_policy,
     )
 
 
@@ -705,13 +698,13 @@ class TestResolvePollScope:
         assert scope.seat_matchup_policy == "per_seat"
 
     def test_shipped_senate_spec_points_at_the_house_map(self) -> None:
-        from run_us_senate_model import SPEC as SENATE_SPEC
+        from models.us.run_us_senate_model import SPEC as SENATE_SPEC
 
         assert SENATE_SPEC.national_poll_map_name == HOUSE_MAP
         assert SENATE_SPEC.tracked_matchup_required is False
 
     def test_shipped_president_spec_requires_a_matchup(self) -> None:
-        from run_us_presidential_model import SPEC as PRESIDENT_SPEC
+        from models.us.run_us_presidential_model import SPEC as PRESIDENT_SPEC
 
         assert PRESIDENT_SPEC.tracked_matchup_required is True
         assert PRESIDENT_SPEC.seat_matchup_policy == "national"
@@ -1496,28 +1489,25 @@ class TestBlendSeatSwings:
         party_names: dict[int, str] | None = None,
         region_by_seat_id: dict[int, int | None] | None = None,
     ) -> dict[int, dict[int, float]]:
-        return cast(
-            dict[int, dict[int, float]],
-            blend_seat_swings(
-                seat_averages=seat_averages,
-                seat_party_vote_totals=baselines
-                if baselines is not None
-                else {1: {REPUBLICAN: 600.0, DEMOCRAT: 400.0}},
-                region_by_seat_id=region_by_seat_id if region_by_seat_id is not None else {1: 10},
-                region_swings=region_swings
-                if region_swings is not None
-                else {10: {REPUBLICAN: -10.0, DEMOCRAT: 10.0}},
-                party_universe=party_universe or {DEMOCRAT, REPUBLICAN, INDEPENDENT},
-                party_name_by_id=party_names
-                or {
-                    DEMOCRAT: "Democratic",
-                    REPUBLICAN: "Republican",
-                    INDEPENDENT: "Independent",
-                    OTHERS: "Others",
-                },
-                parent_seat_by_id=parents or {},
-                prior_weight=prior_weight,
-            ),
+        return blend_seat_swings(
+            seat_averages=seat_averages,
+            seat_party_vote_totals=baselines
+            if baselines is not None
+            else {1: {REPUBLICAN: 600.0, DEMOCRAT: 400.0}},
+            region_by_seat_id=region_by_seat_id if region_by_seat_id is not None else {1: 10},
+            region_swings=region_swings
+            if region_swings is not None
+            else {10: {REPUBLICAN: -10.0, DEMOCRAT: 10.0}},
+            party_universe=party_universe or {DEMOCRAT, REPUBLICAN, INDEPENDENT},
+            party_name_by_id=party_names
+            or {
+                DEMOCRAT: "Democratic",
+                REPUBLICAN: "Republican",
+                INDEPENDENT: "Independent",
+                OTHERS: "Others",
+            },
+            parent_seat_by_id=parents or {},
+            prior_weight=prior_weight,
         )
 
     def test_no_poll_weight_leaves_the_region_swing_alone(self) -> None:
@@ -1704,7 +1694,7 @@ class TestProjectSeatVotesWithSeatSwings:
         assert shares[REPUBLICAN] == pytest.approx(100.0)
 
     def test_an_empty_seat_swings_map_is_the_old_behaviour(self) -> None:
-        arguments: tuple[Any, ...] = (
+        arguments: tuple[Any, Any, Any, Any, Any] = (
             {1: {DEMOCRAT: 4900.0, REPUBLICAN: 5100.0}},
             {1: 10},
             {DEMOCRAT, REPUBLICAN},
@@ -2467,12 +2457,12 @@ def _shell_2026_cycle(tmp_path: Path) -> Path:
 
 class TestSenateSpecialElections:
     def test_the_shipped_shell_has_no_live_specials_after_the_2026_rollover(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_special_elections
+        from models.us.run_us_senate_model import senate_special_elections
 
         assert senate_special_elections(_shell_copy(tmp_path), current_year=2026) == ()
 
     def test_a_2026_cycle_shell_holds_florida_and_ohio_from_2022(self, tmp_path: Path) -> None:
-        from run_us_senate_model import SenateSpecial, senate_special_elections
+        from models.us.run_us_senate_model import SenateSpecial, senate_special_elections
 
         specials = senate_special_elections(_shell_2026_cycle(tmp_path), current_year=2026)
 
@@ -2482,12 +2472,12 @@ class TestSenateSpecialElections:
         )
 
     def test_a_missing_shell_means_no_specials(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_special_elections
+        from models.us.run_us_senate_model import senate_special_elections
 
         assert senate_special_elections(tmp_path / "does-not-exist.json") == ()
 
     def test_unreadable_json_means_no_specials(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_special_elections
+        from models.us.run_us_senate_model import senate_special_elections
 
         path = tmp_path / "map-modes-shell.json"
         path.write_text("{not json", encoding="utf-8")
@@ -2495,7 +2485,7 @@ class TestSenateSpecialElections:
         assert senate_special_elections(path) == ()
 
     def test_a_missing_key_means_no_specials(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_special_elections
+        from models.us.run_us_senate_model import senate_special_elections
 
         path = _edit_shell(
             _shell_2026_cycle(tmp_path),
@@ -2505,7 +2495,7 @@ class TestSenateSpecialElections:
         assert senate_special_elections(path) == ()
 
     def test_a_missing_next_election_year_means_no_specials(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_special_elections
+        from models.us.run_us_senate_model import senate_special_elections
 
         path = _edit_shell(
             _shell_2026_cycle(tmp_path),
@@ -2515,7 +2505,7 @@ class TestSenateSpecialElections:
         assert senate_special_elections(path) == ()
 
     def test_an_entry_for_another_cycle_is_ignored(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_special_elections
+        from models.us.run_us_senate_model import senate_special_elections
 
         def move_florida_to_2028(payload: dict[str, Any]) -> None:
             payload["mapModes"]["23"]["senateSpecialElections"][0]["year"] = 2028
@@ -2527,7 +2517,7 @@ class TestSenateSpecialElections:
         ] == ["Ohio"]
 
     def test_every_entry_drops_out_once_the_cycle_moves_on(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_special_elections
+        from models.us.run_us_senate_model import senate_special_elections
 
         def next_cycle(payload: dict[str, Any]) -> None:
             payload["parliamentFeatures"]["us_senate"]["nextElectionYear"] = 2028
@@ -2537,7 +2527,7 @@ class TestSenateSpecialElections:
     def test_a_cycle_that_has_already_passed_keeps_nothing(self, tmp_path: Path) -> None:
         # A shell nobody bumped after the cycle ended must not leave the model
         # projecting a finished race, which is the export's rule too.
-        from run_us_senate_model import senate_special_elections
+        from models.us.run_us_senate_model import senate_special_elections
 
         def stale_cycle(payload: dict[str, Any]) -> None:
             payload["parliamentFeatures"]["us_senate"]["nextElectionYear"] = 2024
@@ -2555,9 +2545,9 @@ class TestSenateSpecialElections:
         # One rule, two readers: the runner's own filter and the export's, over
         # the same payload, must name the same seats — including when the cycle
         # has passed and neither should keep anything.
-        from scripts.export.manifest import _live_senate_specials, senate_next_election_year
+        from export.manifest import _live_senate_specials, senate_next_election_year
 
-        from run_us_senate_model import senate_special_elections
+        from models.us.run_us_senate_model import senate_special_elections
 
         path = _shell_2026_cycle(tmp_path)
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -2572,7 +2562,7 @@ class TestSenateSpecialElections:
             assert model == exported, f"disagreed for current_year={year}"
 
     def test_an_entry_without_a_seat_or_baseline_is_skipped(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_special_elections
+        from models.us.run_us_senate_model import senate_special_elections
 
         def half_written(payload: dict[str, Any]) -> None:
             entries = payload["mapModes"]["23"]["senateSpecialElections"]
@@ -2588,7 +2578,7 @@ class TestSenateSpecialElections:
     def test_malformed_entries_are_skipped_as_the_export_skips_them(self, tmp_path: Path) -> None:
         # The export's rules: an integer year and class, and a non-blank string
         # seat and baseline id. Anything else is skipped rather than raising.
-        from run_us_senate_model import senate_special_elections
+        from models.us.run_us_senate_model import senate_special_elections
 
         def malformed(payload: dict[str, Any]) -> None:
             entries = payload["mapModes"]["23"]["senateSpecialElections"]
@@ -2616,7 +2606,7 @@ class TestSenateSpecialElections:
 
 class TestSenateFieldAllowlist:
     def test_class_2_states_plus_the_specials(self) -> None:
-        from run_us_senate_model import SenateSpecial, senate_field_allowlist
+        from models.us.run_us_senate_model import SenateSpecial, senate_field_allowlist
 
         specials = [
             SenateSpecial(seat="Ohio", seat_class=3, year=2026, baseline_election_id="2022-us-senate"),
@@ -2629,7 +2619,7 @@ class TestSenateFieldAllowlist:
     def test_an_unknown_field_stays_unknown(self) -> None:
         # No Class-2 snapshot means "project every baseline seat"; adding the
         # specials to None would shrink the Senate to two seats.
-        from run_us_senate_model import SenateSpecial, senate_field_allowlist
+        from models.us.run_us_senate_model import SenateSpecial, senate_field_allowlist
 
         specials = [
             SenateSpecial(seat="Ohio", seat_class=3, year=2026, baseline_election_id="2022-us-senate"),
@@ -2638,7 +2628,7 @@ class TestSenateFieldAllowlist:
         assert senate_field_allowlist(None, specials) is None
 
     def test_the_shipped_spec_swings_class_3_from_2022_with_florida_and_ohio_from_2026(self) -> None:
-        from run_us_senate_model import SPEC
+        from models.us.run_us_senate_model import SPEC
 
         assert SPEC.baseline_election_name == "2022 US Senate Election"
         assert dict(SPEC.seat_baseline_overrides) == {
@@ -2651,7 +2641,7 @@ class TestSenateFieldAllowlist:
         assert len(SPEC.seat_name_allowlist) == 34
 
     def test_the_shipped_house_spec_swings_the_2026_result(self) -> None:
-        from run_us_house_model import SPEC as HOUSE_SPEC
+        from models.us.run_us_house_model import SPEC as HOUSE_SPEC
 
         assert HOUSE_SPEC.baseline_election_name == "2026 US House Election"
         assert HOUSE_SPEC.map_name == "US House Districts 2026"
@@ -2661,7 +2651,7 @@ class TestSenateFieldAllowlist:
 
 class TestSenateBaselineOverrides:
     def test_the_shipped_shell_names_florida_and_ohio_on_2026(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_seat_baseline_overrides
+        from models.us.run_us_senate_model import senate_seat_baseline_overrides
 
         assert senate_seat_baseline_overrides(_shell_copy(tmp_path)) == {
             "Florida": "2026-us-senate",
@@ -2669,12 +2659,12 @@ class TestSenateBaselineOverrides:
         }
 
     def test_the_shipped_shell_puts_class_3_up_next(self, tmp_path: Path) -> None:
-        from run_us_senate_model import next_senate_class
+        from models.us.run_us_senate_model import next_senate_class
 
         assert next_senate_class(_shell_copy(tmp_path)) == 3
 
     def test_the_class_follows_the_next_election_year(self, tmp_path: Path) -> None:
-        from run_us_senate_model import next_senate_class
+        from models.us.run_us_senate_model import next_senate_class
 
         def set_year(year: int) -> Any:
             return lambda payload: payload["parliamentFeatures"]["us_senate"].__setitem__(
@@ -2685,7 +2675,7 @@ class TestSenateBaselineOverrides:
         assert next_senate_class(_edit_shell(_shell_copy(tmp_path), set_year(2030))) == 1
 
     def test_an_unknowable_class_is_none(self, tmp_path: Path) -> None:
-        from run_us_senate_model import next_senate_class
+        from models.us.run_us_senate_model import next_senate_class
 
         assert next_senate_class(tmp_path / "does-not-exist.json") is None
         no_cycle = _edit_shell(
@@ -2694,7 +2684,7 @@ class TestSenateBaselineOverrides:
         assert next_senate_class(no_cycle) is None
 
     def test_an_override_applies_only_while_its_class_is_contested(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_seat_baseline_overrides
+        from models.us.run_us_senate_model import senate_seat_baseline_overrides
 
         def class_one_year(payload: dict[str, Any]) -> None:
             # 2030 contests Class 1: Ohio's and Florida's Class-3 specials no longer apply, but
@@ -2709,7 +2699,7 @@ class TestSenateBaselineOverrides:
         assert senate_seat_baseline_overrides(path) == {"Ohio": "2030-us-senate"}
 
     def test_no_overrides_without_a_known_contested_class(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_seat_baseline_overrides
+        from models.us.run_us_senate_model import senate_seat_baseline_overrides
 
         path = _edit_shell(
             _shell_copy(tmp_path), lambda payload: payload["mapModes"]["23"].pop("senateClassCycle")
@@ -2718,7 +2708,7 @@ class TestSenateBaselineOverrides:
         assert senate_seat_baseline_overrides(path) == {}
 
     def test_overrides_are_not_year_gated(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_seat_baseline_overrides
+        from models.us.run_us_senate_model import senate_seat_baseline_overrides
 
         def far_future(payload: dict[str, Any]) -> None:
             payload["parliamentFeatures"]["us_senate"]["nextElectionYear"] = 2040
@@ -2729,7 +2719,7 @@ class TestSenateBaselineOverrides:
         }
 
     def test_a_missing_shell_or_key_means_no_overrides(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_seat_baseline_overrides
+        from models.us.run_us_senate_model import senate_seat_baseline_overrides
 
         assert senate_seat_baseline_overrides(tmp_path / "does-not-exist.json") == {}
         no_key = _edit_shell(
@@ -2739,7 +2729,7 @@ class TestSenateBaselineOverrides:
         assert senate_seat_baseline_overrides(no_key) == {}
 
     def test_malformed_entries_are_skipped_as_the_export_skips_them(self, tmp_path: Path) -> None:
-        from run_us_senate_model import senate_seat_baseline_overrides
+        from models.us.run_us_senate_model import senate_seat_baseline_overrides
 
         def malformed(payload: dict[str, Any]) -> None:
             payload["mapModes"]["23"]["senateBaselineOverrides"].extend(
@@ -2761,7 +2751,7 @@ class TestSenateBaselineOverrides:
         }
 
     def test_an_override_wins_over_a_special_for_the_same_seat(self) -> None:
-        from run_us_senate_model import SenateSpecial, senate_seat_baselines
+        from models.us.run_us_senate_model import SenateSpecial, senate_seat_baselines
 
         specials = [
             SenateSpecial(seat="Ohio", seat_class=3, year=2028, baseline_election_id="2022-us-senate"),
@@ -2774,9 +2764,9 @@ class TestSenateBaselineOverrides:
         }
 
     def test_the_model_and_the_export_agree_on_one_shell(self, tmp_path: Path) -> None:
-        from scripts.export.manifest import build_map_modes_with_regions
+        from export.manifest import build_map_modes_with_regions
 
-        from run_us_senate_model import senate_seat_baseline_overrides
+        from models.us.run_us_senate_model import senate_seat_baseline_overrides
 
         path = _shell_copy(tmp_path)
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -2791,7 +2781,7 @@ class TestSenateBaselineOverrides:
     def test_florida_and_ohio_swing_from_2026_and_georgia_from_2022(
         self, db: Database, tmp_path: Path
     ) -> None:
-        from run_us_senate_model import (
+        from models.us.run_us_senate_model import (
             SPEC,
             class_state_allowlist,
             next_senate_class,
@@ -3036,7 +3026,7 @@ class TestPresidentialRecordedSummaries:
             },
         )
         with db.session() as session:
-            for name, electoral_votes in [
+            for name, seat_electoral_votes in [
                 (state, 2),
                 ("District of Columbia", 3),
                 (orphan, 1),
@@ -3044,7 +3034,7 @@ class TestPresidentialRecordedSummaries:
             ]:
                 session.execute(
                     text("UPDATE seats SET electoral_votes = :ev WHERE id = :id"),
-                    {"ev": electoral_votes, "id": seats[name].id},
+                    {"ev": seat_electoral_votes, "id": seats[name].id},
                 )
         spec = dataclasses.replace(
             _us_spec(tmp_path, map_name=PRESIDENT_MAP),
@@ -3065,7 +3055,9 @@ class TestPresidentialRecordedSummaries:
         assert dict(seat_totals[seats[district].id]) == district_votes
         assert dict(national) == {dem.id: 170.0, rep.id: 130.0, independent.id: 0.0}
         assert national_shares[dem.id] == pytest.approx(17000.0 / 300.0)
-        assert regional_shares[seats[state].region_id][dem.id] == pytest.approx(
+        state_region_id = seats[state].region_id
+        assert state_region_id is not None
+        assert regional_shares[state_region_id][dem.id] == pytest.approx(
             17000.0 / 300.0
         )
         cfg = dataclasses.replace(_cfg(spec), dry_run=False)
@@ -3180,7 +3172,7 @@ class TestSenateSpecialsEndToEnd:
         Class-2 seat; Georgia has 2022 votes it must not take. The generic ballot
         sits on the House map, as it does live.
         """
-        from run_us_senate_model import (
+        from models.us.run_us_senate_model import (
             class_state_allowlist,
             senate_field_allowlist,
             senate_special_elections,
@@ -3464,7 +3456,7 @@ class TestRebuildHistoryFlag:
     )
     def test_every_runner_accepts_the_flag(self, runner: str) -> None:
         # The console appends exactly this spelling (console.services.us_models).
-        module = __import__(runner)
+        module = importlib.import_module(f"models.us.{runner}")
         parser = build_arg_parser(module.SPEC)
 
         assert parser.parse_args(["--rebuild-history"]).rebuild_history is True
@@ -5166,7 +5158,7 @@ def test_poll_metadata_failure_requires_model_rerun(
     def fail(source: Path, target: Path) -> None:
         raise OSError("disk failed")
 
-    monkeypatch.setattr("model_support.io.os.replace", fail)
+    monkeypatch.setattr("models.support.io.os.replace", fail)
     with pytest.raises(OutputPublicationError, match="Rerun this model") as error:
         _common.write_trend_cache_meta(spec, date(2026, 6, 1), date(2026, 5, 1), None)
     assert "rebuild_model_trends" not in str(error.value)

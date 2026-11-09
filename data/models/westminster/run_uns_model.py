@@ -7,7 +7,6 @@ import argparse
 import csv
 import json
 import math
-import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
@@ -19,34 +18,66 @@ from sqlalchemy import text
 
 DATA_DIR = Path(__file__).resolve().parents[2]
 REPO_ROOT = DATA_DIR.parent
-SCRIPTS_DIR = DATA_DIR / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
 TREND_CACHE_META_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
 # Default baseline election the projection swings from (override with --baseline-election-name).
 # Bump to the latest general election once it lands. Mirrors Holyrood's BASELINE_ELECTION_NAME.
 BASELINE_ELECTION_NAME = "2024 General Election"
-if str(DATA_DIR) not in sys.path:
-    sys.path.insert(0, str(DATA_DIR))
 
-from config import DatabaseConfig
-from db import Database
-from model_support.history import HistoryRecomputationError
-from model_support.io import OutputPublicationError, publish_json, validate_output_target
-from model_support.monte_carlo import (
+from core.config import DatabaseConfig
+from core.db import Database
+from core.schema import Election, Map, Region
+from models.support.cli import (
+    single_date_window,
+    validate_date_range,
+    validate_date_window,
+    validate_day_count,
+    validate_half_life,
+    validate_run_arguments,
+)
+from models.support.history import HistoryRecomputationError
+from models.support.io import (
+    OutputPublicationError,
+    publish_json,
+    validate_output_target,
+)
+from models.support.monte_carlo import (
     DrawsMeta,
     SimulationRun,
     build_simulation_inputs,
     run_simulations,
     save_draws,
 )
-from model_support.poll_bases import PollNIndex
-from model_support.uncertainty import (
+from models.support.persistence import (
+    OutputVote,
+    UncertaintyPayload,
+    UncertaintyStoreError,
+    delete_outputs,
+    latest_saved_run,
+    output_dates,
+    replace_output,
+    westminster_uns_scope,
+)
+from models.support.poll_bases import PollNIndex
+from models.support.polling import (
+    PollAggregation,
+    PollContributor,
+    PollSource,
+    candidate_since,
+    select_poll_endpoint,
+    effective_pollster_weight,
+)
+from models.support.trends import (
+    default_trend_path,
+    publish_trends,
+    trend_batch,
+    validate_trend_scope,
+)
+from models.support.uncertainty import (
     UncertaintyConfig,
     UncertaintyError,
     load_uncertainty_config,
 )
-from model_support.westminster_uncertainty import (
+from models.westminster.westminster_uncertainty import (
     NI_POLLING_EXCLUSION,
     NI_REGION_NAME,
     PollKey,
@@ -57,39 +88,6 @@ from model_support.westminster_uncertainty import (
     split_averages,
     uncertainty_payload,
 )
-from model_support.trends import (
-    default_trend_path,
-    publish_trends,
-    trend_batch,
-    validate_trend_scope,
-)
-from model_support.persistence import (
-    OutputVote,
-    UncertaintyPayload,
-    UncertaintyStoreError,
-    delete_outputs,
-    latest_saved_run,
-    output_dates,
-    replace_output,
-    westminster_uns_scope,
-)
-from model_support.cli import (
-    single_date_window,
-    validate_date_range,
-    validate_date_window,
-    validate_day_count,
-    validate_half_life,
-    validate_run_arguments,
-)
-from model_support.polling import (
-    PollAggregation,
-    PollContributor,
-    PollSource,
-    candidate_since,
-    select_poll_endpoint,
-    effective_pollster_weight,
-)
-from models import Election, Map, Region
 
 TREND_CACHE_JSON = default_trend_path("westminster")
 

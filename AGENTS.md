@@ -8,7 +8,9 @@ the data runbook.
 ## Testing
 
 The Python data pipeline and console are tested under `data/`. The test commands
-use the `data/election_data` virtualenv (falling back to `data/.venv`).
+use the `data/election_data` virtualenv (falling back to `data/.venv`), which needs the
+one-time editable install from [data/README.md](data/README.md#python-environment): no
+code or test adds to `sys.path`, so scripts run by path fail without it.
 
 Run the full check suite — strict `mypy` first (it gates the run), then `pytest`:
 
@@ -30,8 +32,8 @@ Tests live in `data/tests/`; shared DB fixtures are in `data/tests/conftest.py`
 Quick smoke checks (no test runner):
 
     cd data && ./election_data/bin/python -c "from console import create_app; create_app()"   # console app builds
-    cd data && ./election_data/bin/python scripts/export_elections.py --dry-run                # export plan, writes nothing
-    cd data && ./election_data/bin/python scripts/export_elections.py --output-base /tmp/x     # real export into /tmp/x/<page>/data, repo untouched
+    cd data && ./election_data/bin/python export/export_elections.py --dry-run                 # export plan, writes nothing
+    cd data && ./election_data/bin/python export/export_elections.py --output-base /tmp/x      # real export into /tmp/x/<page>/data, repo untouched
 
 `--output-root` applies only to `--current-simulation`; use `--output-base` for any
 scratch export of the full site.
@@ -50,7 +52,7 @@ pages keep the old logic (both pages share the engine, so both are regenerated):
 `map-modes.json` is generated. Edit `map-modes-shell.json` (the hand-authored source of
 truth) and re-export — `parliamentFeatures` is copied through verbatim:
 
-    cd data && ./election_data/bin/python scripts/export_elections.py
+    cd data && ./election_data/bin/python export/export_elections.py
 
 ### Driving the maps page headlessly
 

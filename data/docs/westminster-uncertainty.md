@@ -3,7 +3,7 @@
 Run the offline acceptance harness from `data/`:
 
 ```bash
-./election_data/bin/python scripts/validate_westminster_uncertainty.py
+./election_data/bin/python models/westminster/validate_westminster_uncertainty.py
 ```
 
 This reads the configured SQLite database with `mode=ro` and `query_only`,
@@ -15,7 +15,7 @@ Validation page displays this saved report and flags a changed config.
 For an explicit input set and scratch output:
 
 ```bash
-./election_data/bin/python scripts/validate_westminster_uncertainty.py \
+./election_data/bin/python models/westminster/validate_westminster_uncertainty.py \
   --database /path/to/elections.db \
   --replay /path/to/westminster-latest.npz \
   --output /tmp/westminster-validation.json
@@ -45,7 +45,8 @@ moved on.
 
 Historical seat-total and favourite-reliability checks condition on **actual
 regional votes**. They reproduce the Gaussian calibration experiment that fits
-the seat and lambda scales (`data/scripts/calibrate_uncertainty.py`), with
+the seat and lambda scales
+(`data/models/westminster/calibrate_uncertainty.py`), with
 leave-one-pair-out fitted scales; they are not an end-to-end forecast
 backtest. Only four transitions and nine national final-poll elections are
 available. Any new conversion-error component must also be added to this
@@ -60,7 +61,7 @@ config reliability uses the deployed scales, rounded to 2 dp (σ_seat 4.90,
 `swing.pooled.sigma_seat_raw` and `swing.pooled.sigma_lambda` in
 `data/models/westminster/uncertainty_calibration_report.json`).
 
-## One-off upgrade and evidence scripts
+## Archived upgrade scripts and the evidence builder
 
 `SIMULATIONS_PATH` (see `.env_example`; default
 `~/dbs/simulations/westminster-latest.npz`) is where each
@@ -68,21 +69,21 @@ Westminster model run saves its raw Monte Carlo draws, unless run with
 `--no-raw-sims`. The console's Explore simulations pages read that file. It is
 reproducible and not part of the database backups.
 
-An existing database needs these once, in this order, from `data/`. Back up
-first (`scripts/backup_db.py`). Each takes `--dry-run`, which writes nothing:
+An existing database once needed five one-off scripts, run in this order. They now
+live in `archive/`, are not maintained, and **may no longer run**; a fresh setup uses
+`scripts/rebuild_database.py` instead, which builds the current schema and data.
+The record, for reference:
 
-```bash
-./election_data/bin/python scripts/migrate_add_poll_bases.py          # 1. create poll_bases
-./election_data/bin/python scripts/migrate_add_model_uncertainty.py   # 2. create model_uncertainty
-./election_data/bin/python scripts/repair_poll_records.py             # 3. fix wrong sample sizes and dates
-./election_data/bin/python scripts/repair_regional_poll_rows.py       # 4. fix wrong regional shares
-./election_data/bin/python scripts/backfill_poll_bases.py             # 5. fill poll_bases from the sources
-```
+1. `archive/migrate_add_poll_bases.py` created `poll_bases`.
+2. `archive/migrate_add_model_uncertainty.py` created `model_uncertainty`.
+3. `archive/repair_poll_records.py` fixed wrong sample sizes and dates.
+4. `archive/repair_regional_poll_rows.py` fixed wrong regional shares.
+5. `archive/backfill_poll_bases.py` filled `poll_bases` from the sources.
 
-Steps 3 to 5 re-fetch poll sources, and step 5's matching relies on the values
-steps 3 and 4 correct, so keep that order. All five are safe to re-run.
+Steps 3 to 5 re-fetched poll sources, and step 5's matching relied on the values steps 3
+and 4 corrected, which fixed the order.
 
-`scripts/build_final_poll_errors.py PATH/TO/PollBase.xlsx` is separate and
-needs no database: it rebuilds `data/models/westminster/uk_final_poll_errors.json`
-from a new PollBase edition, and `scripts/calibrate_uncertainty.py` then reads
-that table.
+`models/westminster/build_final_poll_errors.py PATH/TO/PollBase.xlsx` is separate and
+needs no database: it rebuilds
+`data/models/westminster/uk_final_poll_errors.json` from a new PollBase edition, and
+`models/westminster/calibrate_uncertainty.py` then reads that table.

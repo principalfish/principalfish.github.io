@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from db import Database
-from models import Election, ElectionType, Map, Seat
+from core.db import Database
+from core.schema import Election, ElectionType, Map, Seat
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────

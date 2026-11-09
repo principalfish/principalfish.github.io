@@ -25,9 +25,9 @@ from urllib.request import Request
 
 import pytest
 
-from db import Database
-from polls.importers.westminster import techne_import
-from polls.importers.westminster.techne_import import (
+from core.db import Database
+from importers.polls.westminster import techne_import
+from importers.polls.westminster.techne_import import (
     PARTY_NAME_MAP,
     ImportPlan,
     ParsedPoll,

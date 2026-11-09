@@ -11,10 +11,10 @@ from urllib.request import Request
 
 import pytest
 
-from polls.importers import wikipedia_common
-from polls.importers.holyrood import holyrood_wikipedia_import
-from polls.importers.us import us_polls_common
-from polls.importers.wikipedia_common import (
+from importers.polls import wikipedia_common
+from importers.polls.holyrood import holyrood_wikipedia_import
+from importers.polls.us import us_polls_common
+from importers.polls.wikipedia_common import (
     MAX_PAGE_BYTES,
     PageTooLargeError,
     fetch_html,

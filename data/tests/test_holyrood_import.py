@@ -16,10 +16,10 @@ from urllib.request import Request
 
 import pytest
 
-from db import Database
-from polls.importers import wikipedia_common
-from polls.importers.holyrood import holyrood_wikipedia_import as hw_import
-from polls.importers.holyrood.holyrood_wikipedia_import import (
+from core.db import Database
+from importers.polls import wikipedia_common
+from importers.polls.holyrood import holyrood_wikipedia_import as hw_import
+from importers.polls.holyrood.holyrood_wikipedia_import import (
     BALLOT_CONSTITUENCY,
     BALLOT_LIST,
     ParsedScottishPoll,

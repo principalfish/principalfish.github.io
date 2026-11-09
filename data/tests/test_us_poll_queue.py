@@ -54,9 +54,9 @@ from console.services.wikipedia_queue import (
     advance,
     current_item,
 )
-from db import Database
-from polls.importers.us.us_polls_common import CandidateReading, pollster_identifier
-from polls.importers.us.us_wikipedia_polls import (
+from core.db import Database
+from importers.polls.us.us_polls_common import CandidateReading, pollster_identifier
+from importers.polls.us.us_wikipedia_polls import (
     PRESIDENT,
     SENATE_RACES,
     US_CONTESTS,

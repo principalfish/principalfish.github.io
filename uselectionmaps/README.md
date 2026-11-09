@@ -17,19 +17,19 @@ snapshot of all 100 seats, not an exported election: per state `n`, `r`, `w` (th
 shared party, or `split`) and two `members`, each `{party, name, class}` with the permanent
 Senate class 1/2/3. Two generators write it:
 
-- `old_data/scripts/usa/convert_senate_current.py` builds it from congress-legislators data
-  (the pre-2026 chamber).
-- `scripts/us_results/current_senate.py` derives it from the 2026 results: the 65 holdovers
+- `archive/convert_senate_current.py` (under `data/`) built it from congress-legislators data
+  (the pre-2026 chamber). It is archived and may no longer run.
+- `importers/results/us/nyt/current_senate.py` derives it from the 2026 results: the 65 holdovers
   (every senator whose seat the 2026 election did not contest) plus the 2026 winners, being
   the 33 class 2 regular winners and the Florida and Ohio special winners (class 3), named
-  from the winning party's row. It reads the committed `old_data/files/usa/senate-2026.json`
+  from the winning party's row. It reads the committed `inputs/us/senate-2026.json`
   (and the specials file its `meta.special_file` names, a plain file name in the same
   folder), never the database.
 
 ```
 cd data
-./election_data/bin/python scripts/us_results/cli.py current-senate --dry-run   # counts only, writes nothing
-./election_data/bin/python scripts/us_results/cli.py current-senate             # rewrite the snapshot in place
+./election_data/bin/python importers/results/us/nyt/cli.py current-senate --dry-run   # counts only, writes nothing
+./election_data/bin/python importers/results/us/nyt/cli.py current-senate             # rewrite the snapshot in place
 ```
 
 Options: `--snapshot` (input), `--election-file` (default `senate-2026.json`), `--out`

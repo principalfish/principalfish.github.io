@@ -9,38 +9,33 @@ in a later test. Only read-only model functions are called.
 from __future__ import annotations
 
 import sqlite3
-import sys
 from collections.abc import Generator
 from datetime import date
 from pathlib import Path
 from typing import Any
 
-_MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
-sys.path.insert(0, str(_MODELS_DIR / "westminster"))
-sys.path.insert(0, str(_MODELS_DIR / "holyrood"))
 
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
 
-from config import DatabaseConfig
-from console.importers_registry import IMPORTERS
-from db import Database
-from models import Base, ElectionType, Party
-from polls.importers.holyrood import holyrood_wikipedia_import
-from polls.importers.westminster import (
+from core.config import DatabaseConfig
+from core.db import Database
+from core.schema import Base, ElectionType, Party
+from importers.polls.holyrood import holyrood_wikipedia_import
+from importers.polls.westminster import (
     find_out_now_import,
     lord_ashcroft_import,
     survation_import,
 )
-
-from run_holyrood_uns_model import (
+from importers.polls.westminster.registry import IMPORTERS
+from models.holyrood.run_holyrood_uns_model import (
     BASELINE_ELECTION_NAME as HOLYROOD_BASELINE_ELECTION_NAME,
     HolyroodSimulationConfig,
     _is_list_seat,
     run_holyrood_projection,
 )
-from run_uns_model import (
+from models.westminster.run_uns_model import (
     BASELINE_ELECTION_NAME as WESTMINSTER_BASELINE_ELECTION_NAME,
     PARTY_ID_ALIASES,
     build_baseline_vote_state,

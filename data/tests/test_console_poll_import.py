@@ -30,16 +30,10 @@ from collections.abc import Generator
 from datetime import date
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import pytest
 from flask import Flask, Response
 from flask.testing import FlaskClient
 from openpyxl import Workbook
-
-from db import Database
-from polls.importers.types import PollImportResult
-from polls.importers.westminster import survation_import
 
 from console.blueprints.poll_import import _run_model_and_export
 from console.paths import (
@@ -48,7 +42,9 @@ from console.paths import (
     UNS_MODEL_SCRIPT,
 )
 from console.services.preview import PREVIEW_CACHE, store_preview
-
+from core.db import Database
+from importers.polls.types import PollImportResult
+from importers.polls.westminster import survation_import
 from tests.console_fixtures import (
     RecordingRunner,
     app,

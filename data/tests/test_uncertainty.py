@@ -1,4 +1,4 @@
-"""Tests for ``model_support.uncertainty``: settings and sampling-error inputs.
+"""Tests for ``models.support.uncertainty``: settings and sampling-error inputs.
 
 Expected values are worked by hand from the formulas (shares in percent,
 errors in points), with real-ish poll bases: Opinium's London decided base of
@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from model_support.poll_bases import UNRESOLVED, NBasis, ResolvedN
-from model_support.uncertainty import (
+from models.support.poll_bases import UNRESOLVED, NBasis, ResolvedN
+from models.support.uncertainty import (
     AverageVariance,
     EffectiveN,
     UncertaintyConfig,
@@ -172,7 +172,7 @@ class TestLoadUncertaintyConfig:
     ) -> None:
         path = tmp_path / "uncertainty_config.json"
         path.write_text('{"sigma_seat": 4.4}', encoding="utf-8")
-        monkeypatch.setattr("model_support.uncertainty.UNCERTAINTY_CONFIG_PATH", path)
+        monkeypatch.setattr("models.support.uncertainty.UNCERTAINTY_CONFIG_PATH", path)
 
         assert load_uncertainty_config().sigma_seat == 4.4
 

@@ -1,4 +1,4 @@
-"""Tests for ``scripts/calibrate_uncertainty.py`` and its committed outputs.
+"""Tests for ``models/westminster/calibrate_uncertainty.py`` and its committed outputs.
 
 A synthetic database holds one same-boundary election pair whose seat
 results were generated with a known swing-type factor λ and residual SD, so
@@ -19,7 +19,7 @@ from pathlib import Path
 
 import pytest
 
-from model_support.calibration import (
+from models.support.calibration import (
     CALIBRATION_REPORT_PATH,
     FINAL_POLL_ERRORS_PATH,
     FINAL_POLL_SCHEMA,
@@ -27,14 +27,14 @@ from model_support.calibration import (
     load_calibration_report,
     load_final_poll_table,
 )
-from model_support.io import write_text_files
-from model_support.uncertainty import (
+from models.support.io import write_text_files
+from models.support.uncertainty import (
     UNCERTAINTY_CONFIG_PATH,
     UncertaintyConfig,
     load_uncertainty_config,
     share_scale,
 )
-from scripts import calibrate_uncertainty as script
+from models.westminster import calibrate_uncertainty as script
 
 LAB, REFORM, CON, LD, GREEN, OTHER, OTHERS = 1, 2, 4, 5, 6, 7, 15
 PARTIES = {

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 
-from scripts.export.uncertainty import link_uncertainty_payload
+from export.uncertainty import link_uncertainty_payload
 
 
 def test_identity_is_shared_stable_and_contains_only_public_inputs() -> None:

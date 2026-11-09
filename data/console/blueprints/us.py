@@ -23,8 +23,6 @@ from typing import Protocol
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
 
-from db import Database
-
 from console.db import get_db
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services.model_outputs import (
@@ -55,6 +53,7 @@ from console.services.us_models import (
     run_us_chamber_and_export,
     run_us_models_and_export,
 )
+from core.db import Database
 
 __all__ = ["US_CHAMBERS", "UsChamber", "bp"]
 

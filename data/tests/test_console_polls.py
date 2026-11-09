@@ -19,18 +19,14 @@ import io
 import json
 import re
 import sqlite3
-import sys
 from datetime import date
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 from flask import Flask
 
-from db import Database
-from models import PollBase
-
+from core.db import Database
+from core.schema import PollBase
 from tests.console_fixtures import app, flashes as _flashes
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 
@@ -49,7 +45,7 @@ def config_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     change; the expected margins here are computed from the defaults.
     """
     path = tmp_path / "uncertainty_config.json"
-    monkeypatch.setattr("model_support.uncertainty.UNCERTAINTY_CONFIG_PATH", path)
+    monkeypatch.setattr("models.support.uncertainty.UNCERTAINTY_CONFIG_PATH", path)
     return path
 
 
@@ -628,7 +624,7 @@ class TestPollDetailCsv:
         # off the live database is that this path IS the db fixture's own
         # file; requesting the fixture guards against a future edit that
         # points this connection elsewhere. A raw sqlite3 connection has
-        # foreign-key enforcement off by default (only db.py's SQLAlchemy
+        # foreign-key enforcement off by default (only core/db.py's SQLAlchemy
         # engine turns it on), so the delete needs no schema-enforcement
         # bypass of its own.
         conn = sqlite3.connect(str(only_the_test_database))

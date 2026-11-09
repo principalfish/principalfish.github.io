@@ -82,7 +82,7 @@ chamber, and **Run US Models** on the home page has one for all three (see
 ## Model runs
 
 Note: the House and Senate forecasts are currently not exported (`EXPORT_US_CHAMBER_FORECASTS`
-in `scripts/export_elections.py`, see [Full export](export.md#full-export-elections-and-latest-forecasts)); the runs and the poll tracker still work.
+in `export/export_elections.py`, see [Full export](export.md#full-export-elections-and-latest-forecasts)); the runs and the poll tracker still work.
 
 **Run US Models** (home page) runs House → President → Senate → export. Its
 **Rebuild all US history** box appends `--rebuild-history` to all three runners
@@ -97,7 +97,7 @@ serialised with them.) The CLI equivalent, with the console's poll windows:
 ./election_data/bin/python models/us/run_us_house_model.py --since-days-back 60
 ./election_data/bin/python models/us/run_us_presidential_model.py --since-days-back 120
 ./election_data/bin/python models/us/run_us_senate_model.py --since-days-back 60
-./election_data/bin/python scripts/export_elections.py
+./election_data/bin/python export/export_elections.py
 ```
 
 Each runner also takes `--dry-run`, `--as-of-date`, `--half-life-days`, and
@@ -140,40 +140,36 @@ The same scrape without the review step. **The default is a dry-run listing**;
 `--commit` writes and applies automatic matchup tracking.
 
 ```bash
-./election_data/bin/python polls/importers/us/us_house_generic_ballot_import.py   # house_national + house_districts
-./election_data/bin/python polls/importers/us/us_senate_import.py
-./election_data/bin/python polls/importers/us/us_presidential_import.py
-./election_data/bin/python polls/importers/us/us_senate_import.py --state Michigan --commit
+./election_data/bin/python importers/polls/us/us_house_generic_ballot_import.py   # house_national + house_districts
+./election_data/bin/python importers/polls/us/us_senate_import.py
+./election_data/bin/python importers/polls/us/us_presidential_import.py
+./election_data/bin/python importers/polls/us/us_senate_import.py --state Michigan --commit
 ```
 
 Options: `--contest SLUG` (repeatable), `--state STATE` (repeatable; name or postal
 code), `--include-collapsed-for-uncovered`, `--commit`.
 
-## One-off upgrade (existing database)
+## One-off upgrade (existing database, archived)
 
-Run once, in order, on a database from before seat and matchup polls. Stop the
-console first. Until step 2 the console, models and export cannot read polls from
-that database.
+This is the record of the upgrade that was run once on a database from before seat
+and matchup polls. Its two scripts now live in `archive/` and **may no longer run**
+(they are not maintained or type-checked). A fresh setup does not need any of it:
+`scripts/rebuild_database.py` builds the current schema. Steps 4 to 6 are the normal
+first import and model run on a new database.
 
 1. **Back up** — `sqlite3 "$DATABASE_PATH" ".backup $HOME/dbs/elections.pre-us-seat-polls-<date>.db"`,
    plus the console's **Backup now**.
-2. **Migrate** — adds `polls.matchup`, `polls.seat_id`, `poll_rows.candidate_name`
-   and the `tracked_matchups` table. Idempotent, one transaction.
-   ```bash
-   ./election_data/bin/python scripts/migrate_add_us_poll_scope.py --dry-run
-   ./election_data/bin/python scripts/migrate_add_us_poll_scope.py
-   sqlite3 "$DATABASE_PATH" "PRAGMA table_info(polls);"   # matchup, seat_id listed
-   ```
-3. **Reset the legacy polls** — deletes the old matchup-averaged presidential polls
-   and the Senate map's copy of the generic ballot (polls with no seat and no
-   matchup on those two maps, with their rows), then the `*_us_senate` pollsters
-   left without polls. House, UK and new-style polls are never touched. It refuses
-   to run before step 2. Dry run by default (read-only); expect 22 presidential
-   polls, 12 Senate polls and 6 pollsters. A second `--apply` finds nothing.
-   ```bash
-   ./election_data/bin/python scripts/reset_us_poll_matchups.py
-   ./election_data/bin/python scripts/reset_us_poll_matchups.py --apply
-   ```
+2. **Migrate** (archived: `archive/migrate_add_us_poll_scope.py`) — added
+   `polls.matchup`, `polls.seat_id`, `poll_rows.candidate_name` and the
+   `tracked_matchups` table, idempotently in one transaction. A database built by the
+   rebuild already has them: `sqlite3 "$DATABASE_PATH" "PRAGMA table_info(polls);"`
+   lists `matchup` and `seat_id`.
+3. **Reset the legacy polls** (archived: `archive/reset_us_poll_matchups.py`) — deleted
+   the old matchup-averaged presidential polls and the Senate map's copy of the generic
+   ballot (polls with no seat and no matchup on those two maps, with their rows), then
+   the `*_us_senate` pollsters left without polls: 22 presidential polls, 12 Senate
+   polls and 6 pollsters. House, UK and new-style polls were never touched. Nothing
+   in a rebuilt database needs it.
 4. **First import** — `/us/import` with all contests and a blank cutoff (about 530
    rows across 130 races); bulk-approve race by race. Leave "Run US models" unticked.
 5. **Set the president matchup** at `/us/president/matchup` (e.g.
@@ -184,7 +180,7 @@ that database.
    ./election_data/bin/python models/us/run_us_house_model.py --since-days-back 60 --rebuild-history
    ./election_data/bin/python models/us/run_us_presidential_model.py --since-days-back 120 --rebuild-history
    ./election_data/bin/python models/us/run_us_senate_model.py --since-days-back 60 --rebuild-history
-   ./election_data/bin/python scripts/export_elections.py
+   ./election_data/bin/python export/export_elections.py
    ```
    While `EXPORT_US_CHAMBER_FORECASTS` is off (the default) the export does not publish the
    House or Senate forecast; with it on, `uselectionmaps/data/results/us-senate-forecast.json`

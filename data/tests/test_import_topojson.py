@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import copy
-import importlib.util
+import importlib
 import json
 import sys
 from pathlib import Path
@@ -12,8 +12,8 @@ from typing import Protocol, cast
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from db import Database
-from models import ElectionType
+from core.db import Database
+from core.schema import ElectionType
 
 
 class TopojsonImporter(Protocol):
@@ -36,16 +36,7 @@ class TopojsonImporter(Protocol):
 
 
 def _load() -> TopojsonImporter:
-    path = (
-        Path(__file__).resolve().parents[1]
-        / "old_data/scripts/westminster/import_topojson.py"
-    )
-    name = "test_westminster_import_topojson_module"
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
+    module = importlib.import_module("importers.results.westminster.import_topojson")
     return cast(TopojsonImporter, module)
 
 
@@ -377,13 +368,13 @@ class TestMain:
         repeat_flag: str | None,
     ) -> None:
         unrelated = _seed_unrelated(db)
-        root = tmp_path / "old_data"
-        inputs = root / "files/westminster"
+        root = tmp_path / "data"
+        inputs = root / "inputs/westminster"
         inputs.mkdir(parents=True)
         _write(inputs / "650map.json", _topology())
         _write(inputs / "650map_new.json", _topology())
         monkeypatch.setattr(
-            importer, "__file__", str(root / "scripts/westminster/import_topojson.py")
+            importer, "__file__", str(root / "importers/results/westminster/import_topojson.py")
         )
         # config is already imported; this wins over its initial .env load.
         monkeypatch.setenv("DATABASE_PATH", db.config.database_path)

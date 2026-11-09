@@ -16,20 +16,16 @@ from datetime import date
 from pathlib import Path
 from typing import cast
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import pytest
 from flask import Flask
-
-from db import Database
-from models import ElectionType
 
 from console.blueprints.westminster import (
     _choices_for_model_form,
     _model_arg_explanations,
 )
 from console.paths import PREDICTION_SIMULATION_OUTPUT, UNS_MODEL_SCRIPT
-
+from core.db import Database
+from core.schema import ElectionType
 from tests.console_fixtures import (
     RecordingRunner as _RecordingRunner,
     app,

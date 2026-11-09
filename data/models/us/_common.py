@@ -52,30 +52,20 @@ from typing import Any, Callable, Literal
 
 from sqlalchemy import select, text
 
-# ``data/`` root — home of config.py / db.py / models.py.
-DATA_DIR = Path(__file__).resolve().parents[2]
-if str(DATA_DIR) not in sys.path:
-    sys.path.insert(0, str(DATA_DIR))
-
-from config import DatabaseConfig
-from db import Database
-from electoral_votes import allocation_year, get_electoral_votes, positive_integer
-from model_support.history import HistoryRecomputationError
-from model_support.io import publish_json, validate_output_target
-from model_support.trends import (
-    default_trend_path,
-    publish_trends,
-    trend_batch,
-    validate_trend_scope,
+from core.config import DatabaseConfig
+from core.db import Database
+from core.electoral_votes import allocation_year, get_electoral_votes, positive_integer
+from core.schema import Election, Map, Region, Vote
+from core.us_geography import parent_seat_name
+from export.naming import is_folded_senate_special, manifest_id_for_election
+from importers.polls.us.us_polls_common import (
+    MAJOR_PARTY_NAMES,
+    MatchupCandidate,
+    candidate_matches,
+    matchup_candidates,
+    matchup_stored_candidate_count,
 )
-from model_support.persistence import (
-    OutputScope,
-    OutputVote,
-    delete_outputs,
-    output_dates,
-    replace_output,
-)
-from model_support.cli import (
+from models.support.cli import (
     single_date_window,
     validate_date_range,
     validate_date_window,
@@ -84,28 +74,33 @@ from model_support.cli import (
     validate_prior_weight,
     validate_run_arguments,
 )
-from model_support.polling import (
+from models.support.history import HistoryRecomputationError
+from models.support.io import publish_json, validate_output_target
+from models.support.persistence import (
+    OutputScope,
+    OutputVote,
+    delete_outputs,
+    output_dates,
+    replace_output,
+)
+from models.support.polling import (
     PollSource,
     candidate_since,
     effective_pollster_weight,
     latest_poll_key,
     select_poll_endpoint,
 )
-from model_support.summaries import (
+from models.support.summaries import (
     non_overlapping_seat_ids,
     recorded_vote_rows,
     summarize_votes,
 )
-from models import Election, Map, Region, Vote
-from polls.importers.us.us_geography import parent_seat_name
-from polls.importers.us.us_polls_common import (
-    MAJOR_PARTY_NAMES,
-    MatchupCandidate,
-    candidate_matches,
-    matchup_candidates,
-    matchup_stored_candidate_count,
+from models.support.trends import (
+    default_trend_path,
+    publish_trends,
+    trend_batch,
+    validate_trend_scope,
 )
-from scripts.export.naming import is_folded_senate_special, manifest_id_for_election
 
 # US polls insert Democrat/Republican rows directly, so no party-id merge is
 # needed (contrast the Westminster model, which aliases "Other" → "Others").
@@ -1588,7 +1583,7 @@ def resolve_special_baselines(
     manifest does (``"2022-us-senate"``) — that is the id the front end fetches, so
     the shell can hold one value the model and the map both understand. The model
     needs the row, so each id is matched against
-    :func:`~scripts.export.naming.manifest_id_for_election` over the map's elections.
+    :func:`~export.naming.manifest_id_for_election` over the map's elections.
 
     Args:
         db: Open database handle.

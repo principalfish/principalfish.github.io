@@ -142,7 +142,7 @@ the configured path and inspect map/baseline identities without writes:
 
 ```bash
 MODEL_DB=$(./election_data/bin/python -c \
-  'from config import DatabaseConfig; print(DatabaseConfig.from_env().database_path)')
+  'from core.config import DatabaseConfig; print(DatabaseConfig.from_env().database_path)')
 sqlite3 -readonly "$MODEL_DB" \
   'SELECT id, name, parliament FROM maps ORDER BY id;
    SELECT map_id, name, type FROM elections ORDER BY map_id, election_date;'
@@ -189,7 +189,7 @@ applicable command separately, stopping on failure before the next stage:
   --model <model> --map-id <map-id> --database "$MODEL_DB"
 # Optional isolated destination: add --output /tmp/repaired-trends.json
 
-./election_data/bin/python scripts/export_elections.py
+./election_data/bin/python export/export_elections.py
 ```
 
 Stop before export on any failed refresh. Successful dates are retained, failed

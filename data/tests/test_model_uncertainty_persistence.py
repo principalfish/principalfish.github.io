@@ -20,15 +20,16 @@ from console.services.model_outputs import (
     delete_model_output,
     delete_selected_model_outputs,
 )
-from db import Database
-from model_support.monte_carlo import (
+from core.db import Database
+from core.schema import ElectionType
+from models.support.monte_carlo import (
     NationalPartyOutcome,
     RegionPartyOutcome,
     SeatHistogram,
     SeatPartyOutcome,
     SimulationSummary,
 )
-from model_support.persistence import (
+from models.support.persistence import (
     UNCERTAINTY_SCHEMA,
     OutputScope,
     OutputVote,
@@ -46,7 +47,6 @@ from model_support.persistence import (
     uncertainty_status,
     westminster_uns_scope,
 )
-from models import ElectionType
 
 Row = tuple[str, str, str | None, str | None]
 
@@ -426,7 +426,7 @@ class TestWithoutPayload:
         kept = save(path, scopes["main"], 1)
         drop_table(path)
 
-        with pytest.raises(UncertaintyStoreError, match="migrate_add_model_unc"):
+        with pytest.raises(UncertaintyStoreError, match="archive/migrate_add_model_uncertainty"):
             save(path, scopes["main"], 1, payload(1))
 
         with closing(sqlite3.connect(path)) as conn:

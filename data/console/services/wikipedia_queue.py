@@ -45,11 +45,10 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field
 
-from db import Database
-from polls.importers.types import PollImportResult, ScrapedPollRow
-from polls.importers.westminster.wikipedia_index import PollIndex
-
-from console.importers_registry import IMPORTERS
+from core.db import Database
+from importers.polls.types import PollImportResult, ScrapedPollRow
+from importers.polls.westminster.registry import IMPORTERS
+from importers.polls.westminster.wikipedia_index import PollIndex
 
 QueueStatus = Literal["pending", "imported", "skipped", "failed", "no_importer"]
 

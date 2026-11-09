@@ -10,17 +10,19 @@ from typing import Any
 
 import pytest
 
-from db import Database
-from models import ElectionType
-from scripts.us_results import convert
-from scripts.us_results.adapters import apply_runoffs, parse
-from scripts.us_results.cli import (
+from core.db import Database
+from core.schema import ElectionType
+from importers.results.us import import_house_elections as import_house_mod
+from importers.results.us import import_senate_elections as import_senate_mod
+from importers.results.us.nyt import convert
+from importers.results.us.nyt.adapters import apply_runoffs, parse
+from importers.results.us.nyt.cli import (
     CliError,
     election_name,
     import_files,
     write_conversion,
 )
-from scripts.us_results.convert import (
+from importers.results.us.nyt.convert import (
     ConversionResult,
     ConvertError,
     SourceFile,
@@ -29,12 +31,10 @@ from scripts.us_results.convert import (
     map_for,
     source_note,
 )
-from scripts.us_results.fetch import FetchResult, source_updated_at
-from scripts.us_results.races import Candidate, Race
-from scripts.us_results.sources import Chamber, SourceStatus, source_for
-from tests.test_usa_house import import_house_mod
-from tests.test_usa_senate import import_senate_mod
-from us_import import import_us_election
+from importers.results.us.nyt.fetch import FetchResult, source_updated_at
+from importers.results.us.nyt.races import Candidate, Race
+from importers.results.us.nyt.sources import Chamber, SourceStatus, source_for
+from importers.results.us.us_import import import_us_election
 
 FIXTURES = Path(__file__).parent / "fixtures" / "nyt"
 RETRIEVED = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
@@ -246,10 +246,9 @@ def test_winner_mismatch_with_earlier_totals_warns() -> None:
     assert "FL-10: earlier totals not used, winner was republican, now democrat" in warnings
 
 
-def test_nominal_total_is_the_538_converters() -> None:
-    from tests.test_usa_house import convert_538
-
-    assert convert.UNOPPOSED_NOMINAL_VOTES == convert_538.UNOPPOSED_NOMINAL_VOTES
+def test_the_unopposed_nominal_total_is_100() -> None:
+    """The placeholder total that makes a sole unopposed winner 100% of the seat."""
+    assert convert.UNOPPOSED_NOMINAL_VOTES == 100
 
 
 def test_meta_records_source_map_and_date() -> None:

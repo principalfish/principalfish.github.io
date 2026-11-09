@@ -9,8 +9,8 @@ import pytest
 from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 
-from db import Database, MatchupSummary
-from models import Map, Party, Poll, Pollster, Seat, TrackedMatchup
+from core.db import Database, MatchupSummary
+from core.schema import Map, Party, Poll, Pollster, Seat, TrackedMatchup
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -168,7 +168,7 @@ class TestAddPoll:
 
 
 class TestInvertedFieldworkGuard:
-    """models.py's before_insert/before_update guard on Poll fieldwork order."""
+    """core/schema.py's before_insert/before_update guard on Poll fieldwork order."""
 
     def test_insert_with_start_after_end_raises(self, db: Database) -> None:
         pollster, m, _, _ = _make_poll_scaffold(db)

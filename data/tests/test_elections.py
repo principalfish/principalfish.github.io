@@ -2,8 +2,8 @@
 
 import pytest
 
-from db import Database
-from models import ElectionType
+from core.db import Database
+from core.schema import ElectionType
 
 
 class TestAddElection:

@@ -10,25 +10,21 @@ from collections.abc import Callable
 from contextlib import closing
 from datetime import date
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "us"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "holyrood"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westminster"))
-
-import _common
-import run_holyrood_uns_model
-import run_uns_model
-from _common import UsSimulationConfig
-from db import Database
-from model_support import trends
-from model_support.history import HistoryRecomputationError
-from model_support.io import OutputPublicationError, publish_json
-from model_support.persistence import OutputScope, OutputVote, replace_output
-from model_support.trends import TREND_MODELS, reconstruct_trends
-
+from core.db import Database
+from models.holyrood import run_holyrood_uns_model
+from models.support import trends
+from models.support.history import HistoryRecomputationError
+from models.support.io import OutputPublicationError, publish_json
+from models.support.persistence import OutputScope, OutputVote, replace_output
+from models.support.trends import TREND_MODELS, reconstruct_trends
+from models.us import _common
+from models.us._common import UsSimulationConfig
+from models.westminster import run_uns_model
 from tests import test_holyrood_model as holy
 from tests import test_us_model as us
 from tests import test_westminster_model as west
@@ -63,6 +59,7 @@ def history_case(
     monkeypatch.setattr(
         trends, "default_trend_path", lambda _: tmp_path / "unused.json"
     )
+    module: ModuleType
     if model == "westminster":
         world = request.getfixturevalue("westminster_world")
         cache, _ = west._guard_writes(tmp_path, monkeypatch, only_the_test_database)
@@ -247,7 +244,7 @@ def test_publication_failure_reports_committed_dates_and_keeps_old_cache(
         raise OSError("disk failed")
 
     monkeypatch.setattr(case.module, case.function, fail_date)
-    monkeypatch.setattr("model_support.io.os.replace", fail_publish)
+    monkeypatch.setattr("models.support.io.os.replace", fail_publish)
     with pytest.raises(OutputPublicationError) as error:
         case.run_batch()
     assert "Database dates committed in this batch: 2026-06-01" in str(error.value)
@@ -377,7 +374,7 @@ def test_first_date_and_publication_failure_reports_no_commits(
         raise OSError("disk failed")
 
     monkeypatch.setattr(case.module, case.function, fail_date)
-    monkeypatch.setattr("model_support.io.os.replace", fail_publish)
+    monkeypatch.setattr("models.support.io.os.replace", fail_publish)
     with pytest.raises(OutputPublicationError) as error:
         case.run_batch()
     assert "No database dates committed in this batch" in str(error.value)

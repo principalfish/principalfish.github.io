@@ -1,136 +1,16 @@
-"""Tests for the US presidential converter and importer (data/old_data/scripts/usa)."""
+"""Tests for the US presidential importer (``import_presidential_elections.py``)."""
 
 from __future__ import annotations
 
-import importlib.util
 import json
-import sys
 from pathlib import Path
-from types import ModuleType
 
-import pytest
 from sqlalchemy import select
 
-from db import Database
-from models import ElectionType, Vote
+from core.db import Database
+from core.schema import ElectionType, Vote
+from importers.results.us import import_presidential_elections as import_pres
 from tests.us_ev_fixtures import seed_canonical_allocations
-
-USA_DIR = Path(__file__).resolve().parents[1] / "old_data" / "scripts" / "usa"
-
-
-def _load(name: str) -> ModuleType:
-    """Load a usa/ script module by file path."""
-    spec = importlib.util.spec_from_file_location(name, USA_DIR / f"{name}.py")
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-# convert_538_presidential imports convert_538_house (sibling); make USA_DIR importable.
-sys.path.insert(0, str(USA_DIR))
-convert_pres = _load("convert_538_presidential")
-import_pres = _load("import_presidential_elections")
-
-
-def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
-    cols = ["cycle", "stage", "state_abbrev", "state", "ballot_party",
-            "candidate_id", "candidate_name", "votes", "winner"]
-    lines = [",".join(cols)]
-    for row in rows:
-        lines.append(",".join(row.get(c, "") for c in cols))
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-@pytest.mark.parametrize(("year", "california_ev"), [("2020", 55), ("2024", 54)])
-def test_convert_assigns_electoral_votes_and_drops_pr(
-    tmp_path: Path, year: str, california_ev: int,
-) -> None:
-    """EV from the table; Maine split into statewide + districts; PR dropped."""
-    csv_path = tmp_path / "pres.csv"
-    rows = [
-        {"cycle": "2024", "stage": "general", "state_abbrev": "CA", "state": "California",
-         "ballot_party": "DEM", "candidate_id": "1", "candidate_name": "D", "votes": "100", "winner": "true"},
-        {"cycle": "2024", "stage": "general", "state_abbrev": "ME", "state": "Maine",
-         "ballot_party": "DEM", "candidate_id": "1", "candidate_name": "D", "votes": "50", "winner": "true"},
-        {"cycle": "2024", "stage": "general", "state_abbrev": "M2", "state": "Maine CD-2",
-         "ballot_party": "REP", "candidate_id": "2", "candidate_name": "R", "votes": "40", "winner": "true"},
-        {"cycle": "2024", "stage": "general", "state_abbrev": "PR", "state": "Puerto Rico",
-         "ballot_party": "DEM", "candidate_id": "3", "candidate_name": "X", "votes": "9", "winner": "true"},
-    ]
-    for row in rows:
-        row["cycle"] = year
-    rows.extend([
-        {"cycle": year, "stage": "primary", "state_abbrev": "TX", "state": "Texas",
-         "ballot_party": "DEM", "candidate_id": "4", "candidate_name": "P", "votes": "9", "winner": "true"},
-        {"cycle": "2016", "stage": "general", "state_abbrev": "FL", "state": "Florida",
-         "ballot_party": "REP", "candidate_id": "5", "candidate_name": "R", "votes": "9", "winner": "true"},
-    ])
-    _write_csv(csv_path, rows)
-    result = convert_pres.convert(csv_path, year)
-    # PR dropped; Maine CD-1 (absent from source) is backfilled from the statewide Maine winner.
-    assert set(result) == {"California", "Maine", "Maine CD-1", "Maine CD-2"}
-    assert result["California"]["seatInfo"] == {
-        "current": "democrat", "electoral_votes": california_ev,
-    }
-    assert result["Maine"]["seatInfo"]["electoral_votes"] == 2
-    assert result["Maine CD-2"]["seatInfo"] == {"current": "republican", "electoral_votes": 1}
-    assert result["Maine CD-1"]["seatInfo"] == {"current": "democrat", "electoral_votes": 1}  # backfilled
-
-
-def test_convert_rejects_unseeded_future_year(tmp_path: Path) -> None:
-    csv_path = tmp_path / "pres.csv"
-    _write_csv(csv_path, [])
-    with pytest.raises(ValueError, match="2032"):
-        convert_pres.convert(csv_path, "2032")
-
-
-def test_convert_rejects_inconsistent_unit_names(tmp_path: Path) -> None:
-    csv_path = tmp_path / "pres.csv"
-    _write_csv(csv_path, [
-        {"cycle": "2024", "stage": "general", "state_abbrev": "CA", "state": "California",
-         "ballot_party": "DEM", "candidate_id": "1", "candidate_name": "D", "votes": "100", "winner": "true"},
-        {"cycle": "2024", "stage": "general", "state_abbrev": "CA", "state": "Colorado",
-         "ballot_party": "REP", "candidate_id": "2", "candidate_name": "R", "votes": "80", "winner": "false"},
-    ])
-    with pytest.raises(ValueError, match="disagree on state name"):
-        convert_pres.convert(csv_path, "2024")
-
-
-def test_convert_backfills_missing_nebraska_cd_units(tmp_path: Path) -> None:
-    """A cycle missing NE district units (e.g. 2004) backfills them from the statewide winner."""
-    csv_path = tmp_path / "pres.csv"
-    _write_csv(csv_path, [
-        # Nebraska statewide only — no N1/N2/N3 rows, as in the 2004 source.
-        {"cycle": "2004", "stage": "general", "state_abbrev": "NE", "state": "Nebraska",
-         "ballot_party": "REP", "candidate_id": "1", "candidate_name": "Bush", "votes": "500", "winner": "true"},
-        {"cycle": "2004", "stage": "general", "state_abbrev": "NE", "state": "Nebraska",
-         "ballot_party": "DEM", "candidate_id": "2", "candidate_name": "Kerry", "votes": "250", "winner": "false"},
-    ])
-    result = convert_pres.convert(csv_path, "2004")
-    # All three district units are synthesised from the statewide Republican win.
-    for cd in ("Nebraska CD-1", "Nebraska CD-2", "Nebraska CD-3"):
-        assert result[cd]["seatInfo"] == {"current": "republican", "electoral_votes": 1}
-        assert result[cd]["partyInfo"] == result["Nebraska"]["partyInfo"]
-    # The backfilled partyInfo is a copy, not a shared reference to the parent's.
-    assert result["Nebraska CD-1"]["partyInfo"] is not result["Nebraska"]["partyInfo"]
-
-
-def test_convert_does_not_backfill_when_cd_units_present(tmp_path: Path) -> None:
-    """When the source already has a CD unit, its real result is kept (no overwrite)."""
-    csv_path = tmp_path / "pres.csv"
-    _write_csv(csv_path, [
-        {"cycle": "2020", "stage": "general", "state_abbrev": "NE", "state": "Nebraska",
-         "ballot_party": "REP", "candidate_id": "1", "candidate_name": "Trump", "votes": "500", "winner": "true"},
-        {"cycle": "2020", "stage": "general", "state_abbrev": "N2", "state": "Nebraska CD-2",
-         "ballot_party": "DEM", "candidate_id": "2", "candidate_name": "Biden", "votes": "100", "winner": "true"},
-    ])
-    result = convert_pres.convert(csv_path, "2020")
-    assert result["Nebraska CD-2"]["seatInfo"]["current"] == "democrat"  # real split kept
-    # The other two districts (absent from source) still backfill from the statewide winner.
-    assert result["Nebraska CD-1"]["seatInfo"]["current"] == "republican"
-    assert result["Nebraska CD-3"]["seatInfo"]["current"] == "republican"
 
 
 def _seed_us_parties(db: Database) -> None:

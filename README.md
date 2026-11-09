@@ -11,6 +11,7 @@ Needs Node.js with npm (22+ for the Referdle benchmark), Python 3.10+ and the
 ```bash
 npm ci
 cd data && python3 -m venv election_data && ./election_data/bin/pip install -r requirements.txt
+./election_data/bin/pip install --no-deps -e . --config-settings editable_mode=compat
 ```
 
 Run from the repo root:
@@ -68,13 +69,16 @@ npm run minify:electionmaps  # rebuild the bundles after editing electionmapslog
 
 SQLAlchemy models, poll and results importers, election models, the static export
 and a local web console, all on one SQLite database. Details:
-[data/README.md](data/README.md), which links a page for each topic.
+[data/README.md](data/README.md), which links a page for each topic. The `data/` virtualenv
+needs a one-time editable install (`pip install --no-deps -e . --config-settings
+editable_mode=compat`, run in `data/`); without it a data script run by path (the
+backup job, the scripts the console launches) cannot import its modules.
 
 ```bash
 cd data
 ./election_data/bin/python server.py                               # console: imports, models, backups
-./election_data/bin/python scripts/export_elections.py --dry-run   # show the export plan
-./election_data/bin/python scripts/export_elections.py             # write the site's data files
+./election_data/bin/python export/export_elections.py --dry-run    # show the export plan
+./election_data/bin/python export/export_elections.py              # write the site's data files
 ./election_data/bin/python scripts/rebuild_database.py --dry-run   # list the rebuild steps
 ./election_data/bin/python scripts/backup_db.py                    # back up the database
 ```

@@ -31,14 +31,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parents[1]
-OLD_SCRIPTS = DATA_DIR / "old_data" / "scripts"
-USA_FILES = DATA_DIR / "old_data" / "files" / "usa"
-WESTMINSTER_FILES = DATA_DIR / "old_data" / "files" / "westminster"
+IMPORTERS_DIR = DATA_DIR / "importers"
+USA_FILES = DATA_DIR / "inputs" / "us"
+WESTMINSTER_FILES = DATA_DIR / "inputs" / "westminster"
 BY_ELECTIONS_FILE = WESTMINSTER_FILES / "by_elections.txt"
 REGION_POPULATIONS_CSV = WESTMINSTER_FILES / "region_populations.csv"
 REGION_POPULATIONS_MAP = "UK Constituencies post 2022"
-EXPORT_SCRIPT = DATA_DIR / "scripts" / "export_elections.py"
-BY_ELECTION_IMPORT = DATA_DIR / "scripts" / "by_election_import.py"
+EXPORT_SCRIPT = DATA_DIR / "export" / "export_elections.py"
+BY_ELECTION_IMPORT = IMPORTERS_DIR / "results" / "westminster" / "by_election_import.py"
 
 # Boundary downloads + a full reseed are slow; give each step plenty of room.
 DEFAULT_STEP_TIMEOUT = 1800
@@ -112,7 +112,7 @@ def parse_by_elections_file(path: Path) -> list[ByElectionEntry]:
 
 
 def us_election_steps(usa_files_dir: Path) -> list[Step]:
-    """Build the per-file US import steps from ``old_data/files/usa/*.json``.
+    """Build the per-file US import steps from ``inputs/us/*.json``.
 
     A file named ``<chamber>-<year>.json`` maps to that chamber's importer with
     ``--file/--year/--name/--refresh``; the ``--name`` matches the stored DB
@@ -158,7 +158,7 @@ def us_election_steps(usa_files_dir: Path) -> list[Step]:
         steps.append(
             Step(
                 label=f"Import {name}",
-                script=OLD_SCRIPTS / "usa" / script_name,
+                script=IMPORTERS_DIR / "results" / "us" / script_name,
                 args=(
                     "--file", str(json_file),
                     "--year", str(year),
@@ -241,35 +241,35 @@ def build_steps() -> list[Step]:
         The ordered list of :class:`Step` to execute.
     """
     steps: list[Step] = [
-        Step("Import parties", OLD_SCRIPTS / "import_parties.py", ()),
+        Step("Import parties", IMPORTERS_DIR / "seed" / "import_parties.py", ()),
         Step(
             "Bootstrap US electoral vote allocations",
-            DATA_DIR / "scripts" / "migrate_us_electoral_votes.py",
+            IMPORTERS_DIR / "seed" / "migrate_us_electoral_votes.py",
             ("--legacy-forecast-target-year", "2028"),
         ),
         Step(
             "Import Westminster geometry",
-            OLD_SCRIPTS / "westminster" / "import_topojson.py",
+            IMPORTERS_DIR / "results" / "westminster" / "import_topojson.py",
             ("--refresh",),
         ),
         Step(
             "Import region populations",
-            OLD_SCRIPTS / "import_region_populations.py",
+            IMPORTERS_DIR / "seed" / "import_region_populations.py",
             ("--map-name", REGION_POPULATIONS_MAP, "--input", str(REGION_POPULATIONS_CSV)),
         ),
         Step(
             "Import Westminster general elections",
-            OLD_SCRIPTS / "westminster" / "import_general_elections.py",
+            IMPORTERS_DIR / "results" / "westminster" / "import_general_elections.py",
             ("--refresh",),
         ),
         Step(
             "Import Holyrood constituency seats",
-            OLD_SCRIPTS / "holyrood" / "import_holyrood_seats.py",
+            IMPORTERS_DIR / "results" / "holyrood" / "import_holyrood_seats.py",
             ("--refresh",),
         ),
         Step(
             "Import Holyrood elections",
-            OLD_SCRIPTS / "holyrood" / "import_holyrood_elections.py",
+            IMPORTERS_DIR / "results" / "holyrood" / "import_holyrood_elections.py",
             ("--refresh",),
         ),
     ]

@@ -8,11 +8,11 @@ from typing import Any
 
 import pytest
 
-import scripts.us_results.fetch as fetch_module
-from db import Database
-from scripts.us_results import cli
-from scripts.us_results.cli import SeatResult, diff_against_existing, main
-from scripts.us_results.sources import source_for
+from core.db import Database
+from importers.results.us.nyt import cli
+from importers.results.us.nyt import fetch as fetch_module
+from importers.results.us.nyt.cli import SeatResult, diff_against_existing, main
+from importers.results.us.nyt.sources import source_for
 
 FIXTURES = Path(__file__).parent / "fixtures" / "nyt"
 
@@ -527,7 +527,7 @@ def test_house_all_ignores_a_senate_special(
 ) -> None:
     _seed_us_parties(db)
     senate_map = db.add_map("US Senate 2024", parliament="us_senate")
-    from models import ElectionType
+    from core.schema import ElectionType
 
     db.add_election(
         senate_map.id, 2026, "2026 US Senate Special Election", ElectionType.us_senate,

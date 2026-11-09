@@ -1,13 +1,13 @@
 """Poll viewing: list, detail (party x region matrix), CSV export, delete.
 
 The list and detail views also show the respondent count (n) behind each
-column of shares, resolved by ``model_support.poll_bases`` (captured base,
+column of shares, resolved by ``models.support.poll_bases`` (captured base,
 else sample size, else a population estimate) and labelled with its source;
 ``/polls/coverage`` summarises how many polls and crossbreaks have captured
 bases, per pollster.
 
 For Westminster polls they also show sampling error, from
-``model_support.uncertainty`` with the settings loaded once per request: each
+``models.support.uncertainty`` with the settings loaded once per request: each
 column's kind adjustment and effective n, a margin of error beside each share
 in the detail matrix, and in the list a national margin of error for a party
 on the reference share (30%). The list mixes parliaments, so a malformed
@@ -33,8 +33,11 @@ from flask.typing import ResponseReturnValue
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from model_support.poll_bases import PollNIndex, ResolvedN, poll_base_coverage
-from model_support.uncertainty import (
+from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
+from console.db import get_db
+from core.schema import Map, Party, Poll, PollBase, PollRow, Pollster, Region, Seat
+from models.support.poll_bases import PollNIndex, ResolvedN, poll_base_coverage
+from models.support.uncertainty import (
     EffectiveN,
     UncertaintyConfig,
     UncertaintyConfigError,
@@ -42,10 +45,6 @@ from model_support.uncertainty import (
     load_uncertainty_config,
     poll_moe,
 )
-from models import Map, Party, Poll, PollBase, PollRow, Pollster, Region, Seat
-
-from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
-from console.db import get_db
 
 bp = Blueprint("polls", __name__)
 

@@ -27,15 +27,11 @@ would fail any time the export is regenerated ahead of a data change.
 from __future__ import annotations
 
 import statistics
-import sys
 from collections.abc import Mapping
-from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-
-from export_elections import SeatRow, build_result_payload, choose_winner
+from core.schema import Party, Vote
+from export.payload import SeatRow, build_result_payload, choose_winner
 
 # ── Stand-ins ─────────────────────────────────────────────────────────────────
 
@@ -45,7 +41,7 @@ SNP, LABOUR, CONSERVATIVE, LIBDEMS, GREEN = 8, 1, 4, 5, 17
 LIST_SEAT_MARKER = " List "
 
 
-class _Party:
+class _FakeParty:
     """Minimal stand-in for a Party row."""
 
     def __init__(self, id: int, name: str) -> None:
@@ -53,7 +49,12 @@ class _Party:
         self.name = name
 
 
-class _Vote:
+def _party(*args: Any, **kwargs: Any) -> Party:
+    """Build the stand-in, typed as the real row the helpers are annotated to take."""
+    return cast(Party, _FakeParty(*args, **kwargs))
+
+
+class _FakeVote:
     """Minimal stand-in for a Vote row (the fields payload.py reads)."""
 
     def __init__(
@@ -61,7 +62,7 @@ class _Vote:
         seat_id: int,
         vote_total: float | None,
         *,
-        party: _Party | None = None,
+        party: Party | None = None,
         elected: bool = False,
         candidate_name: str | None = None,
     ) -> None:
@@ -73,12 +74,17 @@ class _Vote:
 
 
 _PARTIES = {
-    SNP: _Party(SNP, "Scottish National Party"),
-    LABOUR: _Party(LABOUR, "Labour"),
-    CONSERVATIVE: _Party(CONSERVATIVE, "Conservative"),
-    LIBDEMS: _Party(LIBDEMS, "Liberal Democrats"),
-    GREEN: _Party(GREEN, "Scottish Greens"),
+    SNP: _party(SNP, "Scottish National Party"),
+    LABOUR: _party(LABOUR, "Labour"),
+    CONSERVATIVE: _party(CONSERVATIVE, "Conservative"),
+    LIBDEMS: _party(LIBDEMS, "Liberal Democrats"),
+    GREEN: _party(GREEN, "Scottish Greens"),
 }
+
+
+def _vote(*args: Any, **kwargs: Any) -> Vote:
+    """Build the stand-in, typed as the real row the helpers are annotated to take."""
+    return cast(Vote, _FakeVote(*args, **kwargs))
 
 
 def _seat(seat_id: int, name: str) -> SeatRow:
@@ -92,7 +98,7 @@ def _seat(seat_id: int, name: str) -> SeatRow:
     )
 
 
-def _votes(seat_id: int, totals: Mapping[int, float], winner: int) -> list[_Vote]:
+def _votes(seat_id: int, totals: Mapping[int, float], winner: int) -> list[Vote]:
     """Build one seat's votes, flagging *winner* as elected.
 
     Args:
@@ -105,7 +111,7 @@ def _votes(seat_id: int, totals: Mapping[int, float], winner: int) -> list[_Vote
         One ``_Vote`` per party.
     """
     return [
-        _Vote(seat_id, total, party=_PARTIES[pid], elected=(pid == winner))
+        _vote(seat_id, total, party=_PARTIES[pid], elected=(pid == winner))
         for pid, total in totals.items()
     ]
 
@@ -182,8 +188,8 @@ class TestPayloadSurfacesTheContradiction:
     def test_choose_winner_honours_elected_over_the_vote_leader(self) -> None:
         # This is *why* the bad data was expressible: the flag wins. The export
         # is faithful to the database, so the invariant has to be checked.
-        leader = _Vote(1, 15000.0, party=_PARTIES[SNP], elected=False)
-        flagged = _Vote(1, 9000.0, party=_PARTIES[LABOUR], elected=True)
+        leader = _vote(1, 15000.0, party=_PARTIES[SNP], elected=False)
+        flagged = _vote(1, 9000.0, party=_PARTIES[LABOUR], elected=True)
         assert choose_winner([leader, flagged]) is flagged
 
     def test_vote_rows_are_sorted_so_p0_is_the_leader(self) -> None:
@@ -246,7 +252,7 @@ class TestPartyRatioStdevs:
 
     def _payload(self, seats: Mapping[str, Mapping[int, float]]) -> dict[str, Any]:
         rows = list(seats.items())
-        votes: list[_Vote] = []
+        votes: list[Vote] = []
         for index, (_, totals) in enumerate(rows, start=1):
             winner = max(totals, key=lambda p: totals[p])
             votes += _votes(index, totals, winner=winner)

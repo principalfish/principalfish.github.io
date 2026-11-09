@@ -9,13 +9,13 @@ from typing import Any
 
 from sqlalchemy import func, select
 
-from db import Database
-from model_support.persistence import (
+from core.db import Database
+from core.schema import Election, ElectionType, Map, Party, Region, Seat, Vote
+from models.support.persistence import (
     StoredUncertainty,
     load_uncertainty,
     westminster_uns_scope,
 )
-from models import Election, ElectionType, Map, Party, Region, Seat, Vote
 
 WESTMINSTER_MAP = "UK Constituencies post 2022"
 

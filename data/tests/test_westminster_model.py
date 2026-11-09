@@ -24,15 +24,15 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westminster"))
 
 import pytest
 
-import run_uns_model
-from model_support.io import OutputPublicationError
-from db import Database
-from models import ElectionType, Poll
-from run_uns_model import (
+from core.db import Database
+from core.schema import ElectionType, Poll
+from models.support.io import OutputPublicationError
+from models.support.uncertainty import load_uncertainty_config
+from models.westminster import run_uns_model
+from models.westminster.run_uns_model import (
     LatestPollUsage,
     PARTY_ID_ALIASES,
     SeatRef,
@@ -166,18 +166,15 @@ class TestComputeRegionDiffs:
         from collections import defaultdict
         ws = defaultdict(float, weighted_sums)
         tw = defaultdict(float, total_weights)
-        return cast(
-            tuple[set[int], dict[int, dict[int, float]], list[dict[str, Any]]],
-            compute_region_diffs(
-                seats=seats,
-                region_by_id=region_by_id,
-                party_name_by_id=party_name_by_id,
-                national_party_totals=national_totals,
-                weighted_sums=ws,
-                total_weights=tw,
-                baseline_national_shares=baseline_national,
-                baseline_region_shares=baseline_regional,
-            ),
+        return compute_region_diffs(
+            seats=seats,
+            region_by_id=region_by_id,
+            party_name_by_id=party_name_by_id,
+            national_party_totals=national_totals,
+            weighted_sums=ws,
+            total_weights=tw,
+            baseline_national_shares=baseline_national,
+            baseline_region_shares=baseline_regional,
         )
 
     def test_zero_swing_when_poll_matches_baseline(self) -> None:
@@ -375,7 +372,7 @@ class TestProjectSeatVotes:
 
     def test_zero_swing_preserves_winner(self) -> None:
         seat_votes = {1: {10: 6000.0, 20: 4000.0}}  # party 10 leads
-        region_by_seat = {1: 99}
+        region_by_seat: dict[int, int | None] = {1: 99}
         party_universe = {10, 20}
         region_swings = {99: {10: 0.0, 20: 0.0}}
         party_names = {10: "Labour", 20: "Conservative"}
@@ -395,7 +392,7 @@ class TestProjectSeatVotes:
     def test_positive_swing_flips_winner(self) -> None:
         # Con starts at 60%, Lab at 40%; swing +25 to Lab flips it
         seat_votes = {1: {10: 4000.0, 20: 6000.0}}  # party 20 leads
-        region_by_seat = {1: 99}
+        region_by_seat: dict[int, int | None] = {1: 99}
         party_universe = {10, 20}
         region_swings = {99: {10: 25.0, 20: -25.0}}
         party_names = {10: "Labour", 20: "Conservative"}
@@ -409,7 +406,7 @@ class TestProjectSeatVotes:
     def test_negative_swing_clamped_at_zero(self) -> None:
         # A party with 10% share and -15pp swing should not go negative
         seat_votes = {1: {10: 1000.0, 20: 9000.0}}
-        region_by_seat = {1: 99}
+        region_by_seat: dict[int, int | None] = {1: 99}
         party_universe = {10, 20}
         region_swings = {99: {10: -20.0, 20: 0.0}}
         party_names = {10: "Labour", 20: "Conservative"}
@@ -422,7 +419,7 @@ class TestProjectSeatVotes:
 
     def test_zero_baseline_seat_skipped(self) -> None:
         seat_votes = {1: {10: 0.0, 20: 0.0}}  # zero total
-        region_by_seat = {1: 99}
+        region_by_seat: dict[int, int | None] = {1: 99}
         party_universe = {10, 20}
         region_swings: dict[int, dict[int, float]] = {}
         party_names = {10: "Labour", 20: "Conservative"}
@@ -438,7 +435,7 @@ class TestProjectSeatVotes:
             1: {10: 6000.0, 20: 4000.0},
             2: {10: 4000.0, 20: 6000.0},
         }
-        region_by_seat = {1: 99, 2: 99}
+        region_by_seat: dict[int, int | None] = {1: 99, 2: 99}
         party_universe = {10, 20}
         region_swings = {99: {10: 0.0, 20: 0.0}}
         party_names = {10: "Labour", 20: "Conservative"}
@@ -2457,7 +2454,7 @@ def _seed_swing_poll(
 def _parse_args(monkeypatch: pytest.MonkeyPatch, *argv: str) -> argparse.Namespace:
     """Parse ``argv`` with the model's CLI parser."""
     monkeypatch.setattr(sys, "argv", ["run_uns_model.py", *argv])
-    return cast(argparse.Namespace, run_uns_model.parse_args())
+    return run_uns_model.parse_args()
 
 
 def _world_argv(world: WestminsterWorld) -> list[str]:
@@ -2532,6 +2529,7 @@ class TestRunSimulation:
         assert len(projected) == 32
         assert len(region_diffs) == 32
         assert winners == Counter({"Labour": 4})
+        assert latest is not None
         assert latest.fieldwork_end == date(2026, 6, 9)
         assert _model_uns_elections(only_the_test_database) == []
         assert not trend_json.exists()
@@ -2954,7 +2952,7 @@ class TestBuildConfigFromArgs:
             half_life_days=14.0,
             output_csv="out.csv",
             dry_run=True,
-            uncertainty=run_uns_model.load_uncertainty_config(),
+            uncertainty=load_uncertainty_config(),
         )
 
     @pytest.mark.parametrize(
@@ -3545,7 +3543,7 @@ def test_poll_metadata_failure_requires_model_rerun(
     def fail(source: Path, target: Path) -> None:
         raise OSError("disk failed")
 
-    monkeypatch.setattr("model_support.io.os.replace", fail)
+    monkeypatch.setattr("models.support.io.os.replace", fail)
     with pytest.raises(OutputPublicationError, match="Rerun this model") as error:
         write_trend_cache_meta(
             date(2026, 6, 1), date(2026, 5, 1), None, trend_cache_meta_json=destination

@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 
-from scripts.us_results.adapters import (
+from importers.results.us.nyt.adapters import (
     AdapterError,
     _as_int,
     apply_runoffs,
@@ -27,13 +27,13 @@ from scripts.us_results.adapters import (
     parse_b,
     parse_c,
 )
-from scripts.us_results.races import (
+from importers.results.us.nyt.races import (
     Candidate,
     Race,
     party_key,
     senate_class_for_year,
 )
-from scripts.us_results.sources import Chamber, Kind, source_for
+from importers.results.us.nyt.sources import Chamber, Kind, source_for
 
 FIXTURES = Path(__file__).parent / "fixtures" / "nyt"
 

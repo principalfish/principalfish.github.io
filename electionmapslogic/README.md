@@ -55,8 +55,8 @@ for supported fields, selection rules, and shell transformations.
   front end sums the rows for party totals, tallies and the ±, and, when it sees a repeated party, lists the individual
   rows (no per-row deltas) in the seat popup instead of the per-party rows, and the popup's majority (and the majority
   filters) and the second-place filter use the top two candidates rather than the top two party totals.
-- Seat candidate overrides: `data/scripts/export/seat_overrides.json`, applied on every export by
-  `data/scripts/export/seat_overrides.py`, replaces one uncalled seat's `p` with the individual candidates and sets `w` to the
+- Seat candidate overrides: `data/export/seat_overrides.json`, applied on every export by
+  `data/export/seat_overrides.py`, replaces one uncalled seat's `p` with the individual candidates and sets `w` to the
   individual vote leader. It is keyed by election name (exact, e.g. `"2026 US Senate Election"`), then seat name
   (`"Alaska"`), each `{"w": partyKey, "p": [[partyKey, votes, name], ...]}` with rows in descending vote order (no tie for the top count) and `w` the party of the first row, the individual leader; party keys
   are resolved to manifest ids at export. It exists for the 2026 Alaska Senate seat, where Sullivan and Heikes (both

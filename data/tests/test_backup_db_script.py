@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-import backup
+from core import backup
 from scripts import backup_db
 
 

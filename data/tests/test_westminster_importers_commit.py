@@ -1,6 +1,6 @@
 """Shared commit tests for the eleven Westminster pollster importers.
 
-Every module in ``polls/importers/westminster/*_import.py`` carries its own copy
+Every module in ``importers/polls/westminster/*_import.py`` carries its own copy
 of ``commit_import_plan`` and ``_find_existing_poll``. The copies of
 ``_find_existing_poll`` are identical; ``commit_import_plan`` comes in two
 variants:
@@ -28,11 +28,11 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
-from db import Database
-from models import Poll, PollBase, Pollster
-from polls.importers.bases import PlannedPollBase
-from polls.importers.types import PollImportResult
-from polls.importers.westminster import (
+from core.db import Database
+from core.schema import Poll, PollBase, Pollster
+from importers.polls.bases import PlannedPollBase
+from importers.polls.types import PollImportResult
+from importers.polls.westminster import (
     bmg_research_import,
     deltapoll_import,
     find_out_now_import,
@@ -84,7 +84,7 @@ VARIANT_B: tuple[ModuleType, ...] = (
 
 
 def _short_name(importer: ModuleType) -> str:
-    """Return ``"opinium"`` for ``polls.importers.westminster.opinium_import``."""
+    """Return ``"opinium"`` for ``importers.polls.westminster.opinium_import``."""
     return importer.__name__.rsplit(".", 1)[-1].removesuffix("_import")
 
 

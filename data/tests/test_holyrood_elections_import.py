@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import json
 import sys
 from datetime import date
@@ -11,8 +11,8 @@ from typing import Protocol, cast
 
 import pytest
 
-from db import Database
-from models import ElectionType, Map, Party, Seat
+from core.db import Database
+from core.schema import ElectionType, Map, Party, Seat
 
 
 class Spec(Protocol):
@@ -63,16 +63,7 @@ class Importer(Protocol):
 
 
 def _load() -> Importer:
-    path = Path(__file__).resolve().parents[1] / (
-        "old_data/scripts/holyrood/import_holyrood_elections.py"
-    )
-    spec = importlib.util.spec_from_file_location(
-        "test_holyrood_elections_module", path,
-    )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    module = importlib.import_module("importers.results.holyrood.import_holyrood_elections")
     return cast(Importer, module)
 
 
@@ -350,7 +341,7 @@ def test_list_dry_run_writes_no_rows(db: Database, files: Path) -> None:
 )
 def test_missing_constituency_file_hints(db: Database, files: Path, spec: Spec) -> None:
     map_row, _ = _world(db)
-    hint = "scrape_holyrood_2026" if spec.year == 2026 else "check it out"
+    hint = "archive/scrape_holyrood_2026" if spec.year == 2026 else "check it out"
     with pytest.raises(FileNotFoundError, match=hint):
         importer.import_constituency_results(db, spec, map_row, {}, False, False)
 

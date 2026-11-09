@@ -10,9 +10,9 @@ from datetime import date
 import pytest
 from bs4 import BeautifulSoup, Tag
 
-from polls.importers import wikipedia_common
-from polls.importers.us import us_polls_common
-from polls.importers.us.us_polls_common import (
+from importers.polls import wikipedia_common
+from importers.polls.us import us_polls_common
+from importers.polls.us.us_polls_common import (
     PARTY_SUFFIXES,
     CandidateColumn,
     Cell,
@@ -32,7 +32,7 @@ from polls.importers.us.us_polls_common import (
     pollster_identifier,
     surname,
 )
-from polls.importers.wikipedia_common import PageTooLargeError
+from importers.polls.wikipedia_common import PageTooLargeError
 
 
 class TestFetchHtml:

@@ -102,11 +102,11 @@ Rejected:
 
 2. **Navigation and section pages**
    - Files: new `console/nav.py`, `templates/base.html`, new section landing templates, `home.html`, `static/style.css`, `tests/test_console_{us,site,db_admin,us_results,uncertainty}.py`.
-   - What: top nav and section nav from `nav.py`, the current section taken from `request.endpoint`, breadcrumbs. Landing pages for each section. Home becomes links only, and its POST forms move to their sections or Admin (the rebuild-all-history option moves with the run form in piece 5).
+   - What: top nav and section nav from `nav.py`, built from `SECTIONS` and `Capability`, breadcrumbs. The current section comes from a table of endpoints, using the `chamber` value for the shared US endpoints, not from the URL. Landing pages at `/westminster`, `/holyrood`, `/house`, `/senate`, `/president`, and an Admin page at `/admin`. Home becomes links only, and its POST forms move to their sections or Admin (the rebuild-all-history option moves with the run form in piece 5). Until piece 5 replaces it, the one "Run US models" form appears on all three US landing pages through one shared partial, confirm text intact. `/polls` and poll detail sit under a top-level "All polls" link with no current section; `/polls/coverage` sits under Westminster. Nav lists only pages that exist: Export arrives in piece 6 and Runs in piece 9.
    - Depends on: 1.
-   - Acceptance: every page shows navigation; home has no POST forms; existing confirm text survives the move.
+   - Acceptance: every page shows navigation; home has no POST forms; existing confirm text survives the move; the 75 existing URL rules are unchanged and only the six new ones are added.
    - Tests: crawl from `/` over a seeded temporary database with no 4xx or 5xx; every parameterless GET rule reachable from `/`; every `nav.py` entry resolves and renders; `/` has no `method="post"`.
-   - Manual review: `cd data && ./election_data/bin/python server.py` from the worktree, on a free port. Walk each section and Admin in a browser, including narrow width.
+   - Manual review: `cd data && ./election_data/bin/python server.py` from the worktree, with nothing else on port 5055 (`server.py` fixes the port). Walk each section and Admin in a browser, including narrow width.
 
 3. **Template and route consolidation**
    - Files: new `templates/_macros/{run_result,queue,forms,meta}.html`, `_uncertainty_nav.html`; `model_run.html` replacing `holyrood_model_run.html`; `wikipedia_*` and `us_poll_queue*` templates; the outputs route code in `westminster.py:256-367`, `holyrood.py:282-372`, `us.py:432-504`; `shared/runner.py`.

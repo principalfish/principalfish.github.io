@@ -21,6 +21,10 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - Piece 1 moves each route file whole; `westminster.py` and `holyrood.py` are split into model and outputs only when piece 3 rewrites the outputs routes (user, 2026-11-09, by starting piece 1 on that recommendation)
 - `home.py` goes to `console/home.py` and `site.py` to `console/admin/site.py` (user, 2026-11-09, by starting piece 1 on that recommendation)
 - `mypy.ini` gets one `type-var` section per new package holding routes, keeps the `arg-type` exception for the US routes, and the pin in `tests/test_project_layout.py` follows; no blanket `console.*` section (user, 2026-11-09, by starting piece 1 on that recommendation)
+- The nav finds the current section from a table of endpoints, plus the `chamber` value for the shared US endpoints, not from the URL (user, 2026-11-09, by starting piece 2 on that recommendation)
+- `/polls` and poll detail sit under a top-level "All polls" link with no current section; `/polls/coverage` sits under Westminster (user, 2026-11-09, by starting piece 2 on that recommendation)
+- New pages are `/westminster`, `/holyrood`, `/house`, `/senate`, `/president`, `/admin`; the 75 existing rules stay unchanged (user, 2026-11-09, by starting piece 2 on that recommendation)
+- Until piece 5 replaces it, the "Run US models" form appears on all three US landing pages through one shared partial (user, 2026-11-09, by starting piece 2 on that recommendation)
 
 ## Open
 

@@ -10,7 +10,7 @@ The console's pages don't change here, only its imports. Its redesign is a separ
 
 ## Plan
 
-_2026-11-09 · 10 of 10 pieces done · now: all done, in review_
+_2026-11-09 · 10 of 10 pieces done · now: all done, in review, waiting on a decision_
 
 - [x] **1/10 Editable install, archive folder, dead files** · `4b0f4475`
   Make `data/` installable so scripts can import normally, and create the archive folder.
@@ -32,3 +32,4 @@ _2026-11-09 · 10 of 10 pieces done · now: all done, in review_
   Move the shared root modules, with a test pinning `.env` loading.
 - [x] **10/10 Path hacks gone, docs updated** · `413f28eb`
   Remove the remaining path adjustments and update the README and docs.
+- [x] **Review fixes (round 1)** · `4acadf28`

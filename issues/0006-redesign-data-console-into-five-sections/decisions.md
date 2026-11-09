@@ -41,6 +41,10 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - Piece 5's manual review starts one auto import and leaves it at the first step without pressing Abandon, because abandoning still relabels polls and applies automatic tracking to the live database; tests cover the abandon path (user, 2026-11-09, by starting piece 5 on that recommendation)
 - A dry run never exports, whatever the "export when done" box says, and the form says so; the queue's "run model at end" keeps exporting as it does now (user, 2026-11-09, by starting piece 5 on that recommendation)
 - The US import, queue and results pages become per-chamber pages built from shared views: `/<house, senate or president>/polls/import…`, `/<house or senate>/results…`, `/senate/results/current-senate`, `/<house or senate>/matchups/<map>/<seat>` (user, 2026-11-09, by starting piece 5 on that recommendation)
+- The global export runs the script once, with new `--sections` and `--content` flags; the existing flags are unchanged and a no-filter run stays byte-identical. The builder's alternative of one subprocess per content type was not taken, because the no-flag run already writes results, forecasts and the manifest together and separate runs could leave an export half-written (user, 2026-11-09, by starting piece 6 on that recommendation)
+- "Current forecast" is on for Westminster and President and disabled with a note for House and Senate, whose forecasts are switched off by `EXPORT_US_CHAMBER_FORECASTS`. The builder traces how Holyrood's forecast reaches the site; with no existing path its box is disabled with a note and the builder reports it (user, 2026-11-09, by starting piece 6 on that recommendation)
+- A one-section metadata refresh updates parties on that section's page manifest and regions only for that section's maps (user, 2026-11-09, by starting piece 6 on that recommendation)
+- The "Export to site" button after an NYT results import links to the export page with that chamber and Results pre-ticked and dry run on (user, 2026-11-09, by starting piece 6 on that recommendation)
 
 ## Open
 

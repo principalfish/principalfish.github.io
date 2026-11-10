@@ -45,6 +45,8 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - "Current forecast" is on for Westminster and President and disabled with a note for House and Senate, whose forecasts are switched off by `EXPORT_US_CHAMBER_FORECASTS`. The builder traces how Holyrood's forecast reaches the site; with no existing path its box is disabled with a note and the builder reports it (user, 2026-11-09, by starting piece 6 on that recommendation)
 - A one-section metadata refresh updates parties on that section's page manifest and regions only for that section's maps (user, 2026-11-09, by starting piece 6 on that recommendation)
 - The "Export to site" button after an NYT results import links to the export page with that chamber and Results pre-ticked and dry run on (user, 2026-11-09, by starting piece 6 on that recommendation)
+- The "Current forecast" box stays available for every section, with a note that it applies to Westminster and President only; a selection with no forecast prints a note and writes nothing. This replaces the disabled box in the decision above (user, 2026-11-10, approving piece 6 after review of this deviation)
+- The site export is a page of its own at `/export` with a top-bar item, not under `/admin` (user, 2026-11-10, approving piece 6)
 
 ## Open
 

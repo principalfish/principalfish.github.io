@@ -22,7 +22,7 @@ _2026-11-09 · 5 of 12 pieces done · now: waiting on review of piece 6_
   Give every section the same URLs.
 - [x] **5/12 Section parity** · `c237fea0`
   Filtered polls, per-chamber US runs and imports, and export-when-done on each run form.
-- [ ] **6/12 Global export page** · waiting on you
+- [ ] **6/12 Global export page** · approved, committing
   One page to tick sections and what to write, with dry run on by default.
 - [ ] **7/12 Admin page, confirms and small fixes** · not started
   Gather rebuild, backup and restore, and add confirm steps to destructive actions.

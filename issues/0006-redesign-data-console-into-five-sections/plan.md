@@ -205,7 +205,7 @@ Rejected:
 - [x] 4: One URL shape
 - [x] 5: Section parity
 - [x] 6: Global export page
-- [ ] 7: Admin page, confirms and small fixes
+- [x] 7: Admin page, confirms and small fixes
 - [ ] 8: Looks and readability
 - [ ] 9: Run log
 - [ ] 10: Background runs with live progress

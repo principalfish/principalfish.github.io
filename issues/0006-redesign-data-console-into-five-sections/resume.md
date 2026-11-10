@@ -1,6 +1,9 @@
 # Resume point — read this first
 
-State checks: builder session `local_25f43011-ef61-46dc-9023-7e1b5918b096` has piece 7 staged and uncommitted (`git -C .claude/worktrees/redesign-data-console-into-five-sections-e76f9c diff --cached --shortstat`: 24 files, +796/−92) on top of `3809a18c`. Draft PR #85 is open. State is `building`.
+State checks: builder session `local_25f43011-ef61-46dc-9023-7e1b5918b096`, branch `claude/redesign-data-console-into-five-sections-e76f9c`, HEAD `40e84df0` (piece 7/12 committed and pushed). Draft PR #85 is open. State is `building`.
 
-## The pending decision (exact)
-Manual review and approval of piece 7's diff: cancel each new confirm (poll delete, single and bulk output delete, a matchup rebuild; optionally queue abandon) and check nothing changed, without pressing OK. An approval must say they tried it. Also open: whether "Rebuild Current Senate" (rewrites `senate-current.json`, tracked and re-derivable) gets a confirm; recommended no.
+## Where it stands
+Pieces 1–7 are done. Piece 7 was approved after a manual review ("Tried it, approve"); "Rebuild Current Senate" stays without a confirm.
+
+## Next
+Piece 8: Looks and readability, including hiding the Westminster n_eff paragraph on the Holyrood and US poll lists. Start it only when the planner chat relays the user's go-ahead. Details in `plan.md`.

@@ -26,7 +26,7 @@ _2026-11-10 · 7 of 12 pieces done · now: waiting on review of piece 8_
   One page to tick sections and what to write, with dry run on by default.
 - [x] **7/12 Admin page, confirms and small fixes** · `40e84df0`
   Gather rebuild, backup and restore, and add confirm steps to destructive actions.
-- [ ] **8/12 Looks and readability** · waiting on you
+- [ ] **8/12 Looks and readability** · approved, committing
   Consistent styling, tables and spacing, in light and dark.
 - [ ] **9/12 Run log** · not started
   Keep every run's output, viewable afterwards.

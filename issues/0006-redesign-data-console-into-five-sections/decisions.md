@@ -55,6 +55,13 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - On the Holyrood, House, Senate and President poll lists the n_eff paragraph, the invalid-settings alert and the n_eff and margin-of-error columns are hidden; Westminster's list and All polls keep them. `list_polls` computes n_eff only for the Westminster map, so no number is lost (user, 2026-11-10, by starting piece 8 on that recommendation)
 - Wide tables scroll sideways inside their box at narrow width, with numbers right-aligned in tabular figures; rows are not stacked as cards (user, 2026-11-10, by starting piece 8 on that recommendation)
 - The by-election preview's red spans become a class, and a test allows no template `style=` except the calibration bar width (user, 2026-11-10, by starting piece 8 on that recommendation)
+- Run records live in `console-runs/` beside the database file (the folder holding `DATABASE_PATH`), outside git and not in the B2 backup; tests always get a temporary folder (user, 2026-11-10, by starting piece 9 on that recommendation)
+- The newest 200 records are kept, set by `CONSOLE_RUN_LOG_KEEP`, pruned oldest first after each write; no size cap (user, 2026-11-10, by starting piece 9 on that recommendation)
+- Each record is `record.json` (id, section or none, label, argument vector, working directory, start and end times, duration, exit code or timeout or crash status, dry run) plus `stdout.txt` and `stderr.txt`, written under a temporary name then moved into place; its status field leaves room for piece 10's running and interrupted (user, 2026-11-10, by starting piece 9 on that recommendation)
+- The log is read-only: a top-bar "Runs" item, `/runs` newest first with a `?section=` filter, `/runs/<id>` with the full output, and a "Recent runs" link on each section page; no delete or re-run. `/runs/<id>` accepts only ids in the record format (user, 2026-11-10, by starting piece 9 on that recommendation)
+- Logging happens inside `run_command`, so no call site is missed; callers pass section and label. A failure to write the log never fails the run: the result comes back with a note (user, 2026-11-10, by starting piece 9 on that recommendation)
+- A run refused because the slot is busy is not logged; a failed or timed-out run keeps its partial output (user, 2026-11-10, by starting piece 9 on that recommendation)
+- Piece 9 gets a manual review: one dry-run model run, find and open it in `/runs`, restart the console, and check it is still there (user, 2026-11-10, by starting piece 9 on that recommendation)
 
 ## Open
 

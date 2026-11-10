@@ -171,6 +171,7 @@ Rejected:
    - Depends on: 3, 5.
    - Acceptance: a run's output is viewable after leaving the page and after a restart; the elections database is untouched by logging.
    - Tests: a record is written for success, failure and timeout; pruning keeps the newest N; a corrupt record is skipped with a note, not an error; the log folder follows the configured database path, so tests can't reach the live one.
+   - Manual review: run one dry-run model (Westminster), find and open it in `/runs`, restart the console, and check it is still there. Writes only under `console-runs/` beside the database.
 
 10. **Background runs with live progress**
     - Files: new `shared/jobs.py`, `shared/runner.py`, run forms, `/runs/<id>` live view, a small script in `static/`, `console/__init__.py`.

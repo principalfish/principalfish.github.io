@@ -10,7 +10,7 @@ Every existing diagnostic number stays visible, along with the safeguards around
 
 ## Plan
 
-_2026-11-10 · 9 of 12 pieces done · now: waiting on a decision_
+_2026-11-10 · 9 of 12 pieces done · now: piece 10 in progress_
 
 - [x] **1/12 Section registry and internal layout** · `0b98a7b1`
   Define the five sections in one place and reorganise the console's code, with no visible change.
@@ -30,7 +30,7 @@ _2026-11-10 · 9 of 12 pieces done · now: waiting on a decision_
   Consistent styling, tables and spacing, in light and dark.
 - [x] **9/12 Run log** · `0c45b65b`
   Keep every run's output, viewable afterwards.
-- [ ] **10/12 Background runs with live progress** · not started
+- [ ] **10/12 Background runs with live progress** · in progress
   Runs stop blocking the page and show progress as they go.
 - [ ] **11/12 Docs** · not started
   Document the new layout, export page and run log.

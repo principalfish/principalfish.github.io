@@ -62,6 +62,14 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - Logging happens inside `run_command`, so no call site is missed; callers pass section and label. A failure to write the log never fails the run: the result comes back with a note (user, 2026-11-10, by starting piece 9 on that recommendation)
 - A run refused because the slot is busy is not logged; a failed or timed-out run keeps its partial output (user, 2026-11-10, by starting piece 9 on that recommendation)
 - Piece 9 gets a manual review: one dry-run model run, find and open it in `/runs`, restart the console, and check it is still there (user, 2026-11-10, by starting piece 9 on that recommendation)
+- Background jobs: model runs (with their export-when-done step), the Export page, and Rebuild database (added beyond the plan: the slowest run, and it held no slot). Imports and queue finishes stay synchronous (user, 2026-11-10, by starting piece 10 on that recommendation)
+- A model-then-export run is one job with two step records; the live page follows the running step and ends with today's result blocks (user, 2026-11-10, by starting piece 10 on that recommendation)
+- The live page polls once a second for new output by byte offset and stops when the job ends (user, 2026-11-10, by starting piece 10 on that recommendation)
+- A timeout shows "Timed out after N seconds" with partial output kept; a start failure or job-thread exception shows "crashed" with the error; the slot is released in a `finally` (user, 2026-11-10, by starting piece 10 on that recommendation)
+- At startup, records still `running` become `interrupted` with a note that the command may have been stopped or may have finished, so check the output and database before running again; the sweep runs once under the debug reloader (user, 2026-11-10, by starting piece 10 on that recommendation)
+- One job at a time everywhere through `model_run_slot`: Westminster and Holyrood runs are now refused while another run holds it, with a link to the running job; queue finishes and synchronous US routes are refused, not queued (user, 2026-11-10, by starting piece 10 on that recommendation)
+- `read_record` and `read_output` refuse a symlinked id folder, as the list does (user, 2026-11-10, by starting piece 10 on that recommendation)
+- A job's end requests a backup itself unless it was a dry run; tests run jobs inline through an injectable runner and follow the redirect, keeping their result-page assertions (user, 2026-11-10, by starting piece 10 on that recommendation)
 
 ## Open
 

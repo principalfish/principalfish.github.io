@@ -28,7 +28,7 @@ _2026-11-10 · 8 of 12 pieces done · now: waiting on review of piece 9_
   Gather rebuild, backup and restore, and add confirm steps to destructive actions.
 - [x] **8/12 Looks and readability** · `73df3a2c`
   Consistent styling, tables and spacing, in light and dark.
-- [ ] **9/12 Run log** · waiting on you
+- [ ] **9/12 Run log** · approved, committing
   Keep every run's output, viewable afterwards.
 - [ ] **10/12 Background runs with live progress** · not started
   Runs stop blocking the page and show progress as they go.

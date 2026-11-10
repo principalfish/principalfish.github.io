@@ -3,10 +3,10 @@
   <section class="card">
     <h2>{{ year }} US {{ chamber_label }} Results Imported</h2>
     <p>The site has not been exported. Export when you want these results published.</p>
-    <form method="post" action="{{ url_for('us_results.us_results_export', chamber=chamber) }}" class="inline-form button-form">
-      <button type="submit" class="button primary">Export to site</button>
-      <small>Runs export_elections.py, which rewrites every map's static data.</small>
-    </form>
+    <p>
+      <a class="button primary" href="{{ url_for('export.export_form', sections=chamber, content='results') }}">Export to site</a>
+      <small>Opens the export page with US {{ chamber_label }} and Results ticked and dry run on, so you can preview before writing any files.</small>
+    </p>
     <p>
       <a class="button" href="{{ url_for('us_results.us_results_form', chamber=chamber) }}">Back to US {{ chamber_label }} results</a>
     </p>

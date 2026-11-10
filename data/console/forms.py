@@ -7,8 +7,13 @@ from datetime import date
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
+from console.sections import SECTIONS_BY_SLUG
 from importers.polls.us.us_wikipedia_polls import US_CONTESTS, normalise_states
 from models.support.cli import validate_half_life, validate_prior_weight
+
+# The kinds of content the site export can be narrowed to, in the order the
+# console passes them to the script.
+EXPORT_CONTENT_KINDS: tuple[str, ...] = ("results", "forecast", "metadata")
 
 
 class ModelRunForm(BaseModel):
@@ -247,3 +252,54 @@ class ByElectionPreviewForm(BaseModel):
 
     source_url: str
     parent_election: str = ""
+
+
+class ExportForm(BaseModel):
+    """Validated form data for POST /export.
+
+    ``dry_run`` is a real export only when it is exactly ``"false"``; a post
+    that omits it is a dry run, the form's safe default, and any value other
+    than ``"true"`` or ``"false"`` is refused.
+
+    Attributes:
+        sections: Section slugs to export, at least one, each in the registry.
+        content: Content kinds to export, at least one, each in
+            :data:`EXPORT_CONTENT_KINDS`.
+        dry_run: Report what would be written without writing anything.
+    """
+
+    sections: list[str]
+    content: list[str]
+    dry_run: bool = True
+
+    @field_validator("sections")
+    @classmethod
+    def check_sections(cls, value: list[str]) -> list[str]:
+        """Require at least one section, each a known slug."""
+        if not value:
+            raise ValueError("Choose at least one section")
+        unknown = [slug for slug in value if slug not in SECTIONS_BY_SLUG]
+        if unknown:
+            raise ValueError(f"Unknown section: {', '.join(unknown)}")
+        return value
+
+    @field_validator("content")
+    @classmethod
+    def check_content(cls, value: list[str]) -> list[str]:
+        """Require at least one content kind, each a known one."""
+        if not value:
+            raise ValueError("Choose at least one kind of content")
+        unknown = [kind for kind in value if kind not in EXPORT_CONTENT_KINDS]
+        if unknown:
+            raise ValueError(f"Unknown content: {', '.join(unknown)}")
+        return value
+
+    @field_validator("dry_run", mode="before")
+    @classmethod
+    def check_dry_run(cls, value: object) -> object:
+        """Accept only the strings ``true`` and ``false``."""
+        if isinstance(value, str):
+            if value not in ("true", "false"):
+                raise ValueError("Dry run must be true or false")
+            return value == "true"
+        return value

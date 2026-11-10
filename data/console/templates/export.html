@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero">
+    <h1>Export</h1>
+    <p>Write the static site data for the sections and content you choose. It always runs as one export.</p>
+  </section>
+
+  <section class="card">
+    <form method="post" action="{{ url_for('export.export_run') }}" class="form"
+          onsubmit="return this.dry_run.value !== 'false' || confirm({{ 'Write the export into the repository for: ' | tojson | forceescape }} + Array.from(this.querySelectorAll('input[name=sections]:checked'), function (box) { return box.dataset.label; }).join(', ') + '?');">
+      <h2>Sections</h2>
+      {% for section in sections %}
+        <label class="checkbox">
+          <input type="checkbox" name="sections" value="{{ section.slug }}" data-label="{{ section.label }}"{% if section.slug in ticked_sections %} checked{% endif %}>
+          {{ section.label }}
+        </label>
+      {% endfor %}
+
+      <h2>Content</h2>
+      {% for value, label, help in content_options %}
+        <label class="checkbox">
+          <input type="checkbox" name="content" value="{{ value }}"{% if value in ticked_content %} checked{% endif %}>
+          {{ label }}
+        </label>
+        <small>{{ help }}</small>
+      {% endfor %}
+
+      <label for="dry_run">Dry run</label>
+      <select name="dry_run" id="dry_run">
+        <option value="true"{% if dry_run %} selected{% endif %}>Yes — preview only, writes nothing</option>
+        <option value="false"{% if not dry_run %} selected{% endif %}>No — write the files into the repository</option>
+      </select>
+      <small>A dry run lists the files the export would write. Choosing No writes them, after a confirmation.</small>
+
+      <button type="submit" class="button primary">Run export</button>
+    </form>
+  </section>
+{% endblock %}

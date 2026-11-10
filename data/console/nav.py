@@ -17,6 +17,7 @@ from flask import request, url_for
 from console.sections import SECTIONS, SECTIONS_BY_SLUG, Capability, Section
 
 ADMIN = "admin"
+EXPORT = "export"
 ALL_POLLS = "polls"
 
 # Endpoints that name the section they belong to in the endpoint itself or in
@@ -32,6 +33,7 @@ _BLUEPRINT_AREAS: Mapping[str, str] = {
     "holyrood": "holyrood",
     "polls": ALL_POLLS,
     "admin": ADMIN,
+    "export": EXPORT,
     "site": ADMIN,
     "db_admin": ADMIN,
 }
@@ -140,7 +142,7 @@ def current_area(
             runs, poll import, results) and the section on its poll list.
 
     Returns:
-        A section slug, ``"admin"``, ``"polls"``, or None for a page that
+        A section slug, ``"admin"``, ``"export"``, ``"polls"``, or None for a page that
         belongs to no one section.
     """
     if not endpoint:
@@ -298,6 +300,7 @@ def _top_items(area: str | None) -> tuple[NavItem, ...]:
             for section in SECTIONS
         ),
         ("All polls", "polls.poll_list", ALL_POLLS),
+        ("Export", "export.export_form", EXPORT),
         ("Admin", "admin.admin_page", ADMIN),
     )
     return tuple(
@@ -309,7 +312,7 @@ def _top_items(area: str | None) -> tuple[NavItem, ...]:
 def _breadcrumbs(
     endpoint: str | None, area: str | None, items: tuple[NavItem, ...]
 ) -> tuple[Crumb, ...]:
-    """Home, then the section (or Admin, or All polls), then the current page."""
+    """Home, then the section (or Export, Admin or All polls), then the page."""
 
     def crumb(label: str, page_endpoint: str) -> Crumb:
         # The page you are on is not a link.
@@ -326,6 +329,8 @@ def _breadcrumbs(
         current = next((item for item in items if item.active), None)
         if current is not None:
             crumbs.append(Crumb(current.label))
+    elif area == EXPORT:
+        crumbs.append(crumb("Export", "export.export_form"))
     elif area == ADMIN:
         crumbs.append(crumb("Admin", "admin.admin_page"))
     elif area == ALL_POLLS:

@@ -1,10 +1,11 @@
 """Exercise the US results console routes with the real pipeline and a temp DB.
 
-Only NYT downloads and the export subprocess are replaced: downloads serve the
+Only NYT downloads and subprocesses are replaced: downloads serve the
 hand-made fixtures under ``tests/fixtures/nyt`` (which a test may edit first),
-and the export goes through a ``RecordingRunner``. The out-dir and the NYT
-cache are temporary folders set through the app config, and tripwires fail any
-test that would reach the network or run the export without opting in.
+and the ``export_runner`` records every script run, which none of these routes
+should make. The out-dir and the NYT cache are temporary folders set through
+the app config, and tripwires fail any test that would reach the network or run
+a script without opting in.
 """
 
 from __future__ import annotations
@@ -12,8 +13,6 @@ from __future__ import annotations
 import dataclasses
 import json
 import re
-import subprocess
-import sys
 from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
@@ -25,7 +24,7 @@ from flask import Flask, Response
 from flask.testing import FlaskClient
 from sqlalchemy.exc import OperationalError
 
-from console.paths import EXPORT_ELECTION_SCRIPT
+from console.shared import runner as script_runner
 from console.shared.preview import PREVIEW_CACHE, store_preview
 from console.us import results as us_results
 from console.us.models import MODEL_RUN_LOCK, model_run_slot
@@ -83,8 +82,8 @@ def _isolate(
     dirs: tuple[Path, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> Generator[None, None, None]:
-    def unexpected_export(*_args: object, **_kwargs: object) -> NoReturn:
-        raise AssertionError("Export requires the export_runner fixture")
+    def unexpected_run(*_args: object, **_kwargs: object) -> NoReturn:
+        raise AssertionError("Running a script requires the export_runner fixture")
 
     def unexpected_download(url: str) -> NoReturn:
         raise AssertionError(f"Downloading {url} requires the nyt fixture")
@@ -95,7 +94,7 @@ def _isolate(
     # Never the committed Current Senate file: a test that rebuilds it opts in.
     app.config[us_results.SNAPSHOT_CONFIG] = out_dir.parent / "senate-current.json"
     monkeypatch.setattr(us_results, "get_db", lambda: db)
-    monkeypatch.setattr(us_results, "run_python_script", unexpected_export)
+    monkeypatch.setattr(script_runner, "run_command", unexpected_run)
     monkeypatch.setattr(fetch_module, "_download", unexpected_download)
     for name in PARTY_KEY_TO_NAME.values():
         db.add_party(name)
@@ -136,17 +135,9 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> Iterator[datetime]:
 
 @pytest.fixture()
 def export_runner(monkeypatch: pytest.MonkeyPatch) -> RecordingRunner:
+    """Record every subprocess the console would start instead of starting it."""
     runner = RecordingRunner()
-
-    def run_script(
-        script: Path,
-        *args: str,
-        cwd: Path | None = None,
-        timeout: int,
-    ) -> subprocess.CompletedProcess[str]:
-        return runner([sys.executable, str(script), *args], cwd=cwd, timeout=timeout)
-
-    monkeypatch.setattr(us_results, "run_python_script", run_script)
+    monkeypatch.setattr(script_runner, "run_command", runner)
     return runner
 
 
@@ -704,7 +695,8 @@ class TestConfirm:
             "<td>6</td> <td>4</td> <td>democrat 3, republican 1</td> <td>6</td>"
         ) in cells
         assert f"imported {_HOUSE}: 11 votes, election id {election.id}" in body
-        assert 'action="/house/results/export"' in body
+        assert 'href="/export?sections=house&amp;content=results"' in body
+        assert "/results/export" not in body
         assert token not in PREVIEW_CACHE
         assert export_runner.calls == []
 
@@ -1114,87 +1106,6 @@ class TestConfirm:
         assert db.get_election_by_name(_HOUSE) is None
 
 
-class TestExport:
-    @pytest.mark.parametrize("export_code", [0, 3])
-    def test_runs_the_site_export(
-        self, app: Flask, export_code: int, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        runner = RecordingRunner(
-            return_codes={EXPORT_ELECTION_SCRIPT.name: export_code},
-        )
-
-        def run_script(
-            script: Path, *, timeout: int
-        ) -> subprocess.CompletedProcess[str]:
-            return runner([sys.executable, str(script)], timeout=timeout)
-
-        monkeypatch.setattr(us_results, "run_python_script", run_script)
-
-        response = app.test_client().post("/house/results/export")
-
-        assert response.status_code == 200
-        body = response.get_data(as_text=True)
-        assert command_line(body) == "export_elections.py (rebuild site data)"
-        assert f"<strong>Exit code:</strong> {export_code}" in body
-        assert 'href="/house/results"' in body
-        assert runner.calls == [(sys.executable, str(EXPORT_ELECTION_SCRIPT))]
-        assert runner.timeouts == [900]
-
-    def test_the_senate_url_runs_the_same_export_and_links_back_to_its_page(
-        self, app: Flask, export_runner: RecordingRunner
-    ) -> None:
-        response = app.test_client().post("/senate/results/export")
-
-        assert response.status_code == 200
-        assert len(export_runner.calls) == 1
-        assert 'href="/senate/results"' in response.get_data(as_text=True)
-
-    def test_the_president_has_no_export_route(self, app: Flask) -> None:
-        assert app.test_client().post("/president/results/export").status_code == 404
-
-    def test_timeout_renders_a_failed_result(
-        self, app: Flask, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        def time_out(script: Path, *, timeout: int) -> NoReturn:
-            raise subprocess.TimeoutExpired([str(script)], timeout)
-
-        monkeypatch.setattr(us_results, "run_python_script", time_out)
-
-        body = app.test_client().post("/house/results/export").get_data(as_text=True)
-
-        assert "<strong>Exit code:</strong> 1" in body
-        assert "TimeoutExpired" in body
-
-    def test_missing_script_is_reported(
-        self,
-        app: Flask,
-        export_runner: RecordingRunner,
-        monkeypatch: pytest.MonkeyPatch,
-        tmp_path: Path,
-    ) -> None:
-        missing = tmp_path / "absent_export.py"
-        monkeypatch.setattr(us_results, "EXPORT_ELECTION_SCRIPT", missing)
-        client = app.test_client()
-
-        response = client.post("/house/results/export")
-
-        assert response.headers["Location"] == "/house/results"
-        assert flashes(client, response) == [f"Export script not found: {missing}"]
-        assert export_runner.calls == []
-
-    def test_busy_slot_refuses_export(
-        self, app: Flask, export_runner: RecordingRunner
-    ) -> None:
-        client = app.test_client()
-
-        with MODEL_RUN_LOCK:
-            response = client.post("/house/results/export")
-
-        [message] = flashes(client, response)
-        assert message.startswith("Not exported: another US model run")
-        assert export_runner.calls == []
-
-
 class TestCurrentSenate:
     @pytest.fixture()
     def files(self, app: Flask, dirs: tuple[Path, Path]) -> tuple[Path, Path, dict[str, Any]]:
@@ -1340,11 +1251,10 @@ class TestCrossSite:
             headers=_CROSS_SITE,
         )
         confirm = client.post(f"/house/results/confirm/{token}", headers=_CROSS_SITE)
-        export = client.post("/house/results/export", headers=_CROSS_SITE)
         senate = client.post("/senate/results/current-senate", headers=_CROSS_SITE)
 
-        statuses = [preview.status_code, confirm.status_code, export.status_code, senate.status_code]
-        assert statuses == [403, 403, 403, 403]
+        statuses = [preview.status_code, confirm.status_code, senate.status_code]
+        assert statuses == [403, 403, 403]
         assert nyt.requested == []
         assert token in PREVIEW_CACHE
         assert not out_dir.exists()

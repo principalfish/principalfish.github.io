@@ -2,16 +2,12 @@
 {% block content %}
   <section class="hero">
     <h1>Admin</h1>
-    <p>Rebuild the published site data or the database, and back up or restore the database.</p>
+    <p>Rebuild the database from source, and back up or restore it. To publish site data, use the Export page.</p>
   </section>
 
   <section class="card">
-    <h2>Site</h2>
-    <div class="action-grid action-grid-two">
-      <form method="post" action="{{ url_for('site.rebuild_site_data') }}" class="inline-form button-form">
-        <button type="submit" class="button button-block">Rebuild Site Data</button>
-        <small>Regenerate the static map data (current parliament + all elections) from the database.</small>
-      </form>
+    <h2>Rebuild</h2>
+    <div class="action-grid">
       <form method="post" action="{{ url_for('site.rebuild_database') }}" class="inline-form button-form"
             onsubmit="return confirm('Rebuild the DATABASE from source files? This re-imports parties, maps, geometry and every historical election result, and downloads live boundary/by-election data from the internet — it can take many minutes (up to an hour). Your polls and model runs are preserved.');">
         <button type="submit" class="button button-block button-danger">Rebuild Database</button>

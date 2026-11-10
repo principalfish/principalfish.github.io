@@ -1,4 +1,4 @@
-"""US House and Senate results from NYT: form -> preview -> confirm, then export.
+"""US House and Senate results from NYT: form -> preview -> confirm.
 
 The console face of ``importers/results/us/nyt/cli.py``, reusing its steps rather than
 repeating them:
@@ -19,9 +19,8 @@ repeating them:
   place. Every file is checked before anything is written, and the CLI's
   import plans every file before importing any. A token made under the other
   chamber's URL is treated as expired.
-- **Export** (POST ``/<chamber>/results/export``): a separate button that runs
-  the site export. Importing never exports. The export is the whole site's,
-  not the chamber's: the URL only decides which page the result links back to.
+- **Export**: importing never exports. The result page links to the console's
+  export page (``/export``) with this chamber and its results pre-selected.
 - **Rebuild Current Senate** (POST ``/senate/results/current-senate``, Senate
   only): a separate button that re-derives ``senate-current.json`` from the
   imported 2026 Senate file (``importers/results/us/nyt/current_senate.py``). It
@@ -34,15 +33,13 @@ The out-dir and the NYT cache come from the app config keys
 from :data:`SNAPSHOT_CONFIG`, defaulting to the committed snapshot. Tests point
 all three at a temporary folder.
 
-Import, export and the Current Senate rebuild all hold the console's one US model-run slot
-(:func:`~console.us.models.model_run_slot`): the export publishes
-every US chamber's trend history, which a running history rebuild may have
-half-cleared, and a double-submitted confirm must not import twice at once.
+Import and the Current Senate rebuild hold the console's one US model-run slot
+(:func:`~console.us.models.model_run_slot`), so a double-submitted confirm cannot
+import twice at once.
 """
 
 from __future__ import annotations
 
-import subprocess
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
@@ -62,14 +59,13 @@ from flask import (
 from flask.typing import ResponseReturnValue
 
 from console.db import get_db
-from console.paths import EXPORT_ELECTION_SCRIPT
 from console.shared.preview import (
     PREVIEW_CACHE,
     get_preview,
     pop_preview,
     store_preview,
 )
-from console.shared.runner import render_command_result, run_python_script
+from console.shared.runner import render_command_result
 from console.us.models import (
     US_RACE_CHAMBER_CONVERTER,
     busy_message,
@@ -129,9 +125,6 @@ SNAPSHOT_CONFIG = "US_RESULTS_CURRENT_SENATE"
 # The converted 2026 Senate election, in the out-dir.
 CURRENT_SENATE_ELECTION_FILE = output_name(2026, "senate")
 
-# The same full export as the Admin page's "Rebuild Site Data" and its timeout.
-EXPORT_TIMEOUT_SECONDS = 900
-EXPORT_COMMAND_LABEL = "export_elections.py (rebuild site data)"
 CURRENT_SENATE_COMMAND_LABEL = "cli.py current-senate (rebuild senate-current.json)"
 
 PREVIEW_TYPE = "us_results"
@@ -425,7 +418,7 @@ def us_results_confirm(chamber: str, token: str) -> ResponseReturnValue:
             under the other chamber's URL counts as unknown.
 
     Returns:
-        The result page (with the separate export button), or a redirect to
+        The result page (with a link to the export page), or a redirect to
         the form with a flash on an unknown token or a failed import.
     """
     form = url_for("us_results.us_results_form", chamber=chamber)
@@ -474,49 +467,6 @@ def us_results_confirm(chamber: str, token: str) -> ResponseReturnValue:
         written=written,
         elections=elections,
         report=report,
-    )
-
-
-@bp.route(f"/{_CHAMBER_ROUTE}/results/export", methods=["POST"])
-def us_results_export(chamber: str) -> ResponseReturnValue:
-    """POST /<chamber>/results/export — Run the site export (``export_elections.py``).
-
-    The same full export as the Admin page's Rebuild Site Data, run separately from the
-    import so a provisional refresh is only published on purpose. It exports the
-    whole site whichever chamber's URL it is posted to.
-
-    Args:
-        chamber: The chamber slug from the path; where the result links back to.
-
-    Returns:
-        The command result, or a redirect to the form when the script is
-        missing or another US run holds the slot.
-    """
-    form = url_for("us_results.us_results_form", chamber=chamber)
-    if not EXPORT_ELECTION_SCRIPT.exists():
-        flash(f"Export script not found: {EXPORT_ELECTION_SCRIPT}")
-        return redirect(form)
-    with model_run_slot() as free:
-        if not free:
-            flash(busy_message("Not exported"))
-            return redirect(form)
-        try:
-            export = run_python_script(
-                EXPORT_ELECTION_SCRIPT, timeout=EXPORT_TIMEOUT_SECONDS,
-            )
-        except (subprocess.SubprocessError, OSError) as err:
-            stdout, stderr, code = "", f"{type(err).__name__}: {err}", 1
-        else:
-            stdout, stderr, code = export.stdout, export.stderr, export.returncode
-    return render_command_result(
-        title="Export US Results to Site",
-        command=EXPORT_COMMAND_LABEL,
-        stdout=stdout,
-        stderr=stderr,
-        return_code=code,
-        back_endpoint="us_results.us_results_form",
-        back_label=f"Back to US {_CHAMBER_LABELS[_CHAMBERS[chamber]]} results",
-        back_values={"chamber": chamber},
     )
 
 

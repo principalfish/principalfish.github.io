@@ -1,4 +1,4 @@
-"""The Admin page: site and database operations, kept off the section pages."""
+"""The Admin page: database operations, kept off the section pages."""
 
 from __future__ import annotations
 
@@ -9,5 +9,5 @@ bp = Blueprint("admin", __name__)
 
 @bp.route("/admin")
 def admin_page() -> str:
-    """GET /admin — Rebuild site data, rebuild the database, back up or restore."""
+    """GET /admin — Rebuild the database, back it up or restore it."""
     return render_template("admin.html")

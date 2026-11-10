@@ -61,9 +61,6 @@ def test_the_shared_us_pages_build_from_the_chamber(
         assert url_for(
             "us_results.us_results_confirm", chamber="house", token="abc"
         ) == "/house/results/confirm/abc"
-        assert url_for("us_results.us_results_export", chamber="senate") == (
-            "/senate/results/export"
-        )
         assert url_for("us_results.us_results_current_senate") == (
             "/senate/results/current-senate"
         )
@@ -99,6 +96,13 @@ _OLD_US_PATHS = (
     "/us/matchups/1/2",
 )
 
+# The two ways to run the whole export that the Export page replaced.
+_REMOVED_EXPORT_PATHS = (
+    "/site/rebuild",
+    "/house/results/export",
+    "/senate/results/export",
+)
+
 
 def test_no_old_us_rule_is_registered(app: Flask) -> None:  # noqa: F811
     rules = [str(rule) for rule in app.url_map.iter_rules()]
@@ -108,6 +112,17 @@ def test_no_old_us_rule_is_registered(app: Flask) -> None:  # noqa: F811
 
 @pytest.mark.parametrize("path", _OLD_US_PATHS)
 def test_the_old_us_urls_no_longer_exist(
+    app: Flask,  # noqa: F811
+    path: str,
+) -> None:
+    client = app.test_client()
+
+    assert client.get(path).status_code == 404
+    assert client.post(path).status_code == 404
+
+
+@pytest.mark.parametrize("path", _REMOVED_EXPORT_PATHS)
+def test_the_old_export_urls_no_longer_exist(
     app: Flask,  # noqa: F811
     path: str,
 ) -> None:

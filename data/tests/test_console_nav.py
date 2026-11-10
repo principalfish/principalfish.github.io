@@ -13,6 +13,7 @@ from flask import Flask
 from console.nav import (
     ADMIN,
     ALL_POLLS,
+    EXPORT,
     UNSECTIONED_BLUEPRINTS,
     Nav,
     NavItem,
@@ -40,6 +41,7 @@ def test_the_crawl_from_home_finds_no_error_pages(seeded_app: Flask) -> None:
         "/senate",
         "/president",
         "/admin",
+        "/export",
         "/polls",
         "/house/matchups",
         "/senate/matchups",
@@ -69,6 +71,7 @@ def test_every_page_has_navigation(seeded_app: Flask) -> None:
         for section in SECTIONS:
             assert f'href="/{section.slug}"' in body, key
         assert 'href="/admin"' in body, key
+        assert 'href="/export"' in body, key
 
 
 def test_home_is_links_only(app: Flask) -> None:  # noqa: F811
@@ -80,18 +83,15 @@ def test_home_is_links_only(app: Flask) -> None:  # noqa: F811
         assert f'href="/{section.slug}"' in body
 
 
-def test_the_admin_page_holds_the_site_and_database_forms(
+def test_the_admin_page_holds_the_database_forms_and_no_site_export(
     app: Flask,  # noqa: F811
 ) -> None:
     body = app.test_client().get("/admin").get_data(as_text=True)
 
-    for action in (
-        "/site/rebuild",
-        "/site/rebuild-database",
-        "/db/backup",
-        "/db/restore",
-    ):
+    for action in ("/site/rebuild-database", "/db/backup", "/db/restore"):
         assert f'action="{action}"' in body
+    assert 'action="/site/rebuild"' not in body
+    assert "Rebuild Site Data" not in body
 
 
 def test_the_holyrood_landing_page_holds_the_one_click_import(
@@ -226,6 +226,8 @@ def test_the_sectionless_list_matches_the_pinned_one() -> None:
         ("us.set_race_matchup", {}, None),
         ("db_admin.backup_database", {}, ADMIN),
         ("site.rebuild_database", {}, ADMIN),
+        ("export.export_form", {}, EXPORT),
+        ("export.export_run", {}, EXPORT),
         ("sections.house", {}, "house"),
         (None, {}, None),
     ],
@@ -258,7 +260,7 @@ def test_pages_outside_a_section_have_no_section_nav(
     seeded_app: Flask,
 ) -> None:
     client = seeded_app.test_client()
-    for path in ("/polls", "/admin", "/"):
+    for path in ("/polls", "/admin", "/export", "/"):
         assert 'class="subnav"' not in client.get(path).get_data(as_text=True), path
 
 
@@ -290,6 +292,7 @@ def _active(items: tuple[NavItem, ...]) -> list[str]:
             [("Home", "/"), ("US Senate", "/senate"), ("Results", None)],
         ),
         ("/admin", [("Home", "/"), ("Admin", None)]),
+        ("/export", [("Home", "/"), ("Export", None)]),
         ("/polls", [("Home", "/"), ("All polls", None)]),
         ("/holyrood", [("Home", "/"), ("Holyrood", None)]),
         (
@@ -327,6 +330,8 @@ def test_breadcrumbs(
         ("POST /house/matchups/1/2", ["US House"]),
         ("/holyrood", ["Holyrood"]),
         ("/admin", ["Admin"]),
+        ("/export", ["Export"]),
+        ("POST /export", ["Export"]),
         ("POST /db/backup", ["Admin"]),
         ("/polls", ["All polls"]),
         ("/senate/matchups", ["US Senate"]),

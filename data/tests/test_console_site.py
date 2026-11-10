@@ -1,4 +1,4 @@
-"""Tests for the console site blueprint: the Rebuild Database route + home button."""
+"""Tests for the console site blueprint: the Rebuild Database route + admin button."""
 
 from __future__ import annotations
 
@@ -18,11 +18,11 @@ def app() -> Flask:
 
 
 class TestSiteRoutesRegistered:
-    """create_app wires both site actions."""
+    """create_app wires the rebuild-database action and no site-data rebuild."""
 
     def test_rebuild_routes_exist(self, app: Flask) -> None:
         rules = {str(rule) for rule in app.url_map.iter_rules()}
-        assert "/site/rebuild" in rules
+        assert "/site/rebuild" not in rules
         assert "/site/rebuild-database" in rules
 
 
@@ -32,7 +32,8 @@ class TestAdminPage:
     def test_admin_renders_rebuild_database_button(self, app: Flask) -> None:
         body = app.test_client().get("/admin").get_data(as_text=True)
         assert "Rebuild Database" in body
-        assert 'action="/site/rebuild"' in body
+        assert 'action="/site/rebuild"' not in body
+        assert "Rebuild Site Data" not in body
         assert 'action="/site/rebuild-database"' in body
         # Health-warning confirm mentions the destructive rewrite + preservation.
         assert "Rebuild the DATABASE from source" in body

@@ -10,7 +10,7 @@ Every existing diagnostic number stays visible, along with the safeguards around
 
 ## Plan
 
-_2026-11-10 · 7 of 12 pieces done · now: waiting on review of piece 8_
+_2026-11-10 · 8 of 12 pieces done · now: waiting on a decision_
 
 - [x] **1/12 Section registry and internal layout** · `0b98a7b1`
   Define the five sections in one place and reorganise the console's code, with no visible change.
@@ -26,7 +26,7 @@ _2026-11-10 · 7 of 12 pieces done · now: waiting on review of piece 8_
   One page to tick sections and what to write, with dry run on by default.
 - [x] **7/12 Admin page, confirms and small fixes** · `40e84df0`
   Gather rebuild, backup and restore, and add confirm steps to destructive actions.
-- [ ] **8/12 Looks and readability** · approved, committing
+- [x] **8/12 Looks and readability** · `73df3a2c`
   Consistent styling, tables and spacing, in light and dark.
 - [ ] **9/12 Run log** · not started
   Keep every run's output, viewable afterwards.

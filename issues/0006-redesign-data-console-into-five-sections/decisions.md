@@ -51,6 +51,10 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - New confirms use the existing `onsubmit="return confirm(...)"` style, name the item (pollster and date, or election; the bulk delete names how many are selected) and say it can't be undone from the console (user, 2026-11-10, by starting piece 7 on that recommendation)
 - The stale reload copy says a restart, or a code reload when `CONSOLE_DEBUG=1` is set, discards a catch-up in progress (user, 2026-11-10, by starting piece 7 on that recommendation)
 - "Rebuild Current Senate" gets no confirm: it rewrites the tracked `senate-current.json`, which is re-derived from the imported Senate file and undone with git (user, 2026-11-10, approving piece 7 without asking for one, on that recommendation)
+- Dark mode follows the system or browser setting (`prefers-color-scheme`), with no toggle (user, 2026-11-10, by starting piece 8 on that recommendation)
+- On the Holyrood, House, Senate and President poll lists the n_eff paragraph, the invalid-settings alert and the n_eff and margin-of-error columns are hidden; Westminster's list and All polls keep them. `list_polls` computes n_eff only for the Westminster map, so no number is lost (user, 2026-11-10, by starting piece 8 on that recommendation)
+- Wide tables scroll sideways inside their box at narrow width, with numbers right-aligned in tabular figures; rows are not stacked as cards (user, 2026-11-10, by starting piece 8 on that recommendation)
+- The by-election preview's red spans become a class, and a test allows no template `style=` except the calibration bar width (user, 2026-11-10, by starting piece 8 on that recommendation)
 
 ## Open
 

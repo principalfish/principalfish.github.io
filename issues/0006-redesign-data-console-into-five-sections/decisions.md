@@ -47,6 +47,9 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - The "Export to site" button after an NYT results import links to the export page with that chamber and Results pre-ticked and dry run on (user, 2026-11-09, by starting piece 6 on that recommendation)
 - The "Current forecast" box stays available for every section, with a note that it applies to Westminster and President only; a selection with no forecast prints a note and writes nothing. This replaces the disabled box in the decision above (user, 2026-11-10, approving piece 6 after review of this deviation)
 - The site export is a page of its own at `/export` with a top-bar item, not under `/admin` (user, 2026-11-10, approving piece 6)
+- Piece 7's manual review cancels the new confirms (a poll delete, a single and a bulk output delete, a matchup rebuild) and deletes nothing; the Rebuild database and Restore confirms are left out, since they already exist and OK would rebuild or overwrite the live database; tests cover the deletes (user, 2026-11-10, by starting piece 7 on that recommendation)
+- New confirms use the existing `onsubmit="return confirm(...)"` style, name the item (pollster and date, or election; the bulk delete names how many are selected) and say it can't be undone from the console (user, 2026-11-10, by starting piece 7 on that recommendation)
+- The stale reload copy says a restart, or a code reload when `CONSOLE_DEBUG=1` is set, discards a catch-up in progress (user, 2026-11-10, by starting piece 7 on that recommendation)
 
 ## Open
 

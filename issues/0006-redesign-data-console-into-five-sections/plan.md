@@ -154,7 +154,7 @@ Rejected:
    - Depends on: 4.
    - Acceptance: every destructive action has a confirm; backup requested after a GET finish that wrote.
    - Tests: each destructive form has a confirm; existing confirm text unchanged; a GET finish that writes requests a backup and one that doesn't write doesn't; Westminster finish serialises per token.
-   - Manual review: in a browser, cancel each confirm on Rebuild database and Restore. Delete a disposable model run.
+   - Manual review: in a browser, cancel each new confirm (a poll delete, a single and a bulk output delete, a matchup rebuild) and check nothing changed. Nothing is deleted; tests cover the deletes.
 
 8. **Looks and readability**
    - Files: `static/style.css`, templates using inline styles.

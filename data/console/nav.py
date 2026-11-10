@@ -18,6 +18,7 @@ from console.sections import SECTIONS, SECTIONS_BY_SLUG, Capability, Section
 
 ADMIN = "admin"
 EXPORT = "export"
+RUNS = "runs"
 ALL_POLLS = "polls"
 
 # Endpoints that name the section they belong to in the endpoint itself or in
@@ -34,6 +35,7 @@ _BLUEPRINT_AREAS: Mapping[str, str] = {
     "polls": ALL_POLLS,
     "admin": ADMIN,
     "export": EXPORT,
+    "runs": RUNS,
     "site": ADMIN,
     "db_admin": ADMIN,
 }
@@ -142,8 +144,8 @@ def current_area(
             runs, poll import, results) and the section on its poll list.
 
     Returns:
-        A section slug, ``"admin"``, ``"export"``, ``"polls"``, or None for a page that
-        belongs to no one section.
+        A section slug, ``"admin"``, ``"export"``, ``"runs"``, ``"polls"``, or
+        None for a page that belongs to no one section.
     """
     if not endpoint:
         return None
@@ -301,6 +303,7 @@ def _top_items(area: str | None) -> tuple[NavItem, ...]:
         ),
         ("All polls", "polls.poll_list", ALL_POLLS),
         ("Export", "export.export_form", EXPORT),
+        ("Runs", "runs.run_list", RUNS),
         ("Admin", "admin.admin_page", ADMIN),
     )
     return tuple(
@@ -312,7 +315,7 @@ def _top_items(area: str | None) -> tuple[NavItem, ...]:
 def _breadcrumbs(
     endpoint: str | None, area: str | None, items: tuple[NavItem, ...]
 ) -> tuple[Crumb, ...]:
-    """Home, then the section (or Export, Admin or All polls), then the page."""
+    """Home, then the section (or Export, Runs, Admin or All polls), then the page."""
 
     def crumb(label: str, page_endpoint: str) -> Crumb:
         # The page you are on is not a link.
@@ -331,6 +334,10 @@ def _breadcrumbs(
             crumbs.append(Crumb(current.label))
     elif area == EXPORT:
         crumbs.append(crumb("Export", "export.export_form"))
+    elif area == RUNS:
+        crumbs.append(crumb("Runs", "runs.run_list"))
+        if endpoint == "runs.run_detail":
+            crumbs.append(Crumb("Run"))
     elif area == ADMIN:
         crumbs.append(crumb("Admin", "admin.admin_page"))
     elif area == ALL_POLLS:

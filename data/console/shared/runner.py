@@ -10,12 +10,14 @@ from __future__ import annotations
 import subprocess
 import sys
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import AbstractContextManager, nullcontext
 from pathlib import Path
 
 from flask import render_template
 from flask.typing import ResponseReturnValue
 
 from console.paths import DATA_DIR
+from console.shared import run_log
 
 
 def run_command(
@@ -24,7 +26,12 @@ def run_command(
     cwd: Path | None = None,
     timeout: int,
 ) -> subprocess.CompletedProcess[str]:
-    """Run a command, capturing stdout/stderr as text.
+    """Run a command, capturing stdout/stderr as text, and log the run.
+
+    Every run is recorded by :mod:`console.shared.run_log` under the section and
+    label of the enclosing :func:`~console.shared.run_log.run_context`, if any.
+    Logging never changes the outcome: the process is returned, and
+    ``TimeoutExpired`` or any other exception raised, exactly as without it.
 
     Args:
         command: Argument vector to execute.
@@ -34,13 +41,21 @@ def run_command(
     Returns:
         The completed process with captured ``stdout``/``stderr``.
     """
-    return subprocess.run(
-        list(command),
-        cwd=str(cwd or DATA_DIR),
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
+    workdir = cwd or DATA_DIR
+    start = run_log.begin_run()
+    try:
+        result = subprocess.run(
+            list(command),
+            cwd=str(workdir),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except Exception as err:
+        run_log.log_run(start, command, cwd=workdir, timeout=timeout, error=err)
+        raise
+    run_log.log_run(start, command, cwd=workdir, timeout=timeout, result=result)
+    return result
 
 
 def run_python_script(
@@ -63,6 +78,7 @@ def run_model_then_export(
     export_timeout: int,
     export_cwd: Path,
     export_message: str,
+    section: str | None = None,
 ) -> list[str]:
     """Run a model command, then an optional export command.
 
@@ -77,6 +93,9 @@ def run_model_then_export(
         export_timeout: Seconds allowed for the export.
         export_cwd: Working directory for the export.
         export_message: Progress message recorded once the export succeeds.
+        section: Section slug under which the run log records the two steps
+            (as ``"<Section> model"`` and ``"<Section> export"``), or None to
+            leave them to the caller's own context.
 
     Returns:
         Progress messages, one per completed step.
@@ -88,11 +107,18 @@ def run_model_then_export(
     """
     messages: list[str] = []
 
-    run(model_command, timeout=model_timeout).check_returncode()
+    def step(kind: str) -> AbstractContextManager[None]:
+        if section is None:
+            return nullcontext()
+        return run_log.section_context(section, kind)
+
+    with step("model"):
+        run(model_command, timeout=model_timeout).check_returncode()
     messages.append(model_message)
 
     if export_command is not None:
-        result = run(export_command, cwd=export_cwd, timeout=export_timeout)
+        with step("export"):
+            result = run(export_command, cwd=export_cwd, timeout=export_timeout)
         result.check_returncode()
         messages.append(export_message)
 

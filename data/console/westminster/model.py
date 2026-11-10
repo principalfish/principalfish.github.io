@@ -39,6 +39,7 @@ from console.shared.run_form import (
     run_summary,
     ticked,
 )
+from console.shared.run_log import section_context
 from console.shared.runner import run_command
 from console.westminster.outputs import register_outputs
 from core.db import Database
@@ -255,7 +256,8 @@ def model_run_execute() -> ResponseReturnValue:
     if form.dry_run:
         command.append("--dry-run")
 
-    result = run_command(command, timeout=1800)
+    with section_context("westminster", "model"):
+        result = run_command(command, timeout=1800)
 
     export_result = None
     export_return_code: int | None = None
@@ -276,7 +278,8 @@ def model_run_execute() -> ResponseReturnValue:
                 "--output-file",
                 str(PREDICTION_SIMULATION_OUTPUT),
             ]
-            export_proc = run_command(export_command, timeout=900)
+            with section_context("westminster", "export"):
+                export_proc = run_command(export_command, timeout=900)
             export_result = {
                 "command": shlex.join(export_command),
                 "stdout": export_proc.stdout,

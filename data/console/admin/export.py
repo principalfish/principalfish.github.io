@@ -22,6 +22,7 @@ from pydantic import ValidationError
 from console.forms import EXPORT_CONTENT_KINDS, ExportForm
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.sections import SECTIONS
+from console.shared.run_log import run_context
 from console.shared.runner import render_command_result, run_python_script
 from console.us.models import busy_message, model_run_slot
 
@@ -153,9 +154,10 @@ def export_run() -> ResponseReturnValue:
             flash(busy_message("Export not run"))
             return _render_form(form.sections, form.content, dry_run=form.dry_run)
         try:
-            result = run_python_script(
-                EXPORT_ELECTION_SCRIPT, *args, timeout=EXPORT_TIMEOUT_SECONDS
-            )
+            with run_context(section=None, label="Export"):
+                result = run_python_script(
+                    EXPORT_ELECTION_SCRIPT, *args, timeout=EXPORT_TIMEOUT_SECONDS
+                )
         except (subprocess.SubprocessError, OSError) as err:
             stdout, stderr, code = "", f"{type(err).__name__}: {err}", 1
         else:

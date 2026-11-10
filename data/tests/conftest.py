@@ -46,6 +46,23 @@ def _never_open_the_live_database(
     console.db.reset_db()
 
 
+@pytest.fixture(autouse=True)
+def _never_write_the_live_run_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Point the console's run log at a per-test folder.
+
+    Every command the console launches is logged beside the live database, so
+    without this any test that runs one (even through a real subprocess) would
+    write into the live ``console-runs`` folder. Returns the folder.
+    """
+    from console.shared import run_log
+
+    folder = tmp_path / "test-console-runs"
+    monkeypatch.setattr(run_log, "runs_dir", lambda: folder)
+    return folder
+
+
 @pytest.fixture()
 def db(tmp_path: Path) -> Generator[Database, None, None]:
     """Provide a Database instance with clean tables for every test.

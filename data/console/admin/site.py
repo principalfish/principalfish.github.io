@@ -6,6 +6,7 @@ from flask import Blueprint, flash, redirect, url_for
 from flask.typing import ResponseReturnValue
 
 from console.paths import REBUILD_DB_SCRIPT
+from console.shared.run_log import run_context
 from console.shared.runner import render_command_result, run_python_script
 
 bp = Blueprint("site", __name__)
@@ -35,7 +36,8 @@ def rebuild_database() -> ResponseReturnValue:
         flash(f"Rebuild script not found: {REBUILD_DB_SCRIPT}")
         return redirect(url_for("home.home"))
 
-    result = run_python_script(REBUILD_DB_SCRIPT, timeout=REBUILD_DB_TIMEOUT)
+    with run_context(section=None, label="Rebuild database"):
+        result = run_python_script(REBUILD_DB_SCRIPT, timeout=REBUILD_DB_TIMEOUT)
     return render_command_result(
         title="Rebuild Database from Source",
         command="rebuild_database.py (re-import all base data, then export)",

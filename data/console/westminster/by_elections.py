@@ -11,6 +11,7 @@ from console.db import get_db
 from console.forms import ByElectionPreviewForm
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.shared.preview import get_preview, pop_preview, store_preview
+from console.shared.run_log import run_context
 from console.shared.runner import render_command_result, run_python_script
 from core.schema import Election, ElectionType
 from importers.results.westminster import by_election_import
@@ -118,7 +119,8 @@ def by_election_confirm(token: str) -> ResponseReturnValue:
         flash(f"Imported, but export script not found: {EXPORT_ELECTION_SCRIPT}")
         return redirect(url_for("by_elections.by_election_form"))
 
-    export = run_python_script(EXPORT_ELECTION_SCRIPT, timeout=900)
+    with run_context(section="westminster", label="By-election export"):
+        export = run_python_script(EXPORT_ELECTION_SCRIPT, timeout=900)
     return render_command_result(
         title="Import By-Election",
         command="export_elections.py (export site data)",

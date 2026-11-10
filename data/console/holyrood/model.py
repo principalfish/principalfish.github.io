@@ -34,6 +34,7 @@ from console.shared.run_form import (
     run_summary,
     ticked,
 )
+from console.shared.run_log import section_context
 from console.shared.runner import (
     render_command_result,
     run_command,
@@ -69,7 +70,10 @@ def holyrood_import_polls() -> ResponseReturnValue:
         ("Import Scottish constituency polls from Wikipedia", []),
         ("Import Scottish list polls from Wikipedia", ["--ballot", "list"]),
     ]:
-        result = run_python_script(HOLYROOD_IMPORT_SCRIPT, *extra_args, timeout=300)
+        with section_context("holyrood", "import"):
+            result = run_python_script(
+                HOLYROOD_IMPORT_SCRIPT, *extra_args, timeout=300
+            )
         combined_stdout.append(f"=== {label} ===\n{result.stdout}")
         if result.stderr:
             combined_stderr.append(f"=== {label} ===\n{result.stderr}")
@@ -265,7 +269,8 @@ def run_holyrood_model() -> ResponseReturnValue:
         # Preview: write nothing (no DB rows, no prediction JSON).
         command += ["--dry-run", "--no-output"]
 
-    result = run_command(command, timeout=1800)
+    with section_context("holyrood", "model"):
+        result = run_command(command, timeout=1800)
 
     export_result = None
     export_return_code: int | None = None
@@ -282,7 +287,8 @@ def run_holyrood_model() -> ResponseReturnValue:
             # Full static-data export refreshes every payload, including the
             # preserved holyrood-prediction.json — no --current-simulation here.
             export_command = [sys.executable, str(EXPORT_ELECTION_SCRIPT)]
-            export_proc = run_command(export_command, timeout=900)
+            with section_context("holyrood", "export"):
+                export_proc = run_command(export_command, timeout=900)
             export_result = {
                 "command": shlex.join(export_command),
                 "stdout": export_proc.stdout,

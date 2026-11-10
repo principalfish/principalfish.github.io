@@ -30,6 +30,7 @@ node_modules/
 data/election_data/*
 data/.venv/
 data/*.db
+data/console-runs/
 *.db-wal
 *.db-shm
 

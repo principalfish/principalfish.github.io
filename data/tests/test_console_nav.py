@@ -14,6 +14,7 @@ from console.nav import (
     ADMIN,
     ALL_POLLS,
     EXPORT,
+    RUNS,
     UNSECTIONED_BLUEPRINTS,
     Nav,
     NavItem,
@@ -42,6 +43,7 @@ def test_the_crawl_from_home_finds_no_error_pages(seeded_app: Flask) -> None:
         "/president",
         "/admin",
         "/export",
+        "/runs",
         "/polls",
         "/house/matchups",
         "/senate/matchups",
@@ -72,6 +74,7 @@ def test_every_page_has_navigation(seeded_app: Flask) -> None:
             assert f'href="/{section.slug}"' in body, key
         assert 'href="/admin"' in body, key
         assert 'href="/export"' in body, key
+        assert 'href="/runs"' in body, key
 
 
 def test_home_is_links_only(app: Flask) -> None:  # noqa: F811
@@ -228,6 +231,8 @@ def test_the_sectionless_list_matches_the_pinned_one() -> None:
         ("site.rebuild_database", {}, ADMIN),
         ("export.export_form", {}, EXPORT),
         ("export.export_run", {}, EXPORT),
+        ("runs.run_list", {}, RUNS),
+        ("runs.run_detail", {}, RUNS),
         ("sections.house", {}, "house"),
         (None, {}, None),
     ],
@@ -260,7 +265,7 @@ def test_pages_outside_a_section_have_no_section_nav(
     seeded_app: Flask,
 ) -> None:
     client = seeded_app.test_client()
-    for path in ("/polls", "/admin", "/export", "/"):
+    for path in ("/polls", "/admin", "/export", "/runs", "/"):
         assert 'class="subnav"' not in client.get(path).get_data(as_text=True), path
 
 
@@ -293,6 +298,11 @@ def _active(items: tuple[NavItem, ...]) -> list[str]:
         ),
         ("/admin", [("Home", "/"), ("Admin", None)]),
         ("/export", [("Home", "/"), ("Export", None)]),
+        ("/runs", [("Home", "/"), ("Runs", None)]),
+        (
+            "/runs/20261110T120000000000Z-1a2b3c4d",
+            [("Home", "/"), ("Runs", "/runs"), ("Run", None)],
+        ),
         ("/polls", [("Home", "/"), ("All polls", None)]),
         ("/holyrood", [("Home", "/"), ("Holyrood", None)]),
         (
@@ -332,6 +342,8 @@ def test_breadcrumbs(
         ("/admin", ["Admin"]),
         ("/export", ["Export"]),
         ("POST /export", ["Export"]),
+        ("/runs", ["Runs"]),
+        ("/runs/20261110T120000000000Z-1a2b3c4d", ["Runs"]),
         ("POST /db/backup", ["Admin"]),
         ("/polls", ["All polls"]),
         ("/senate/matchups", ["US Senate"]),

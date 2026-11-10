@@ -17,7 +17,7 @@ from __future__ import annotations
 import subprocess
 import threading
 from collections.abc import Collection, Iterator, Mapping
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -31,6 +31,7 @@ from console.paths import (
     US_SENATE_MODEL_SCRIPT,
     US_SENATE_TREND_CACHE_JSON,
 )
+from console.shared.run_log import run_context, section_context
 from console.shared.runner import run_python_script
 from core.db import Database
 from core.schema import ElectionType
@@ -432,6 +433,13 @@ def run_us_chamber_and_export(
     )
 
 
+def _step_context(section: str | None, kind: str) -> AbstractContextManager[None]:
+    """The run-log context for one step: the section's own, or none without one."""
+    if section is None:
+        return run_context(section=None, label=kind.capitalize())
+    return section_context(section, kind)
+
+
 def _run_chambers_and_export(
     db: Database,
     chambers: Collection[UsChamber],
@@ -465,11 +473,21 @@ def _run_chambers_and_export(
     stderr_parts: list[str] = []
     skipped: list[str] = []
 
+    # The export covers one chamber's section when only that chamber ran.
+    export_section = next(iter(chambers)).slug if len(chambers) == 1 else None
+
     def run_step(
-        label: str, script: Path, args: tuple[str, ...], *, timeout: int = STEP_TIMEOUT_SECONDS
+        label: str,
+        script: Path,
+        args: tuple[str, ...],
+        *,
+        timeout: int = STEP_TIMEOUT_SECONDS,
+        section: str | None,
+        kind: str,
     ) -> int:
         try:
-            result = runner(script, *args, timeout=timeout)
+            with _step_context(section, kind):
+                result = runner(script, *args, timeout=timeout)
         except (subprocess.SubprocessError, OSError) as err:
             stdout_parts.append(
                 f"=== {label} ===\n{_output_text(getattr(err, 'stdout', None))}"
@@ -501,13 +519,24 @@ def _run_chambers_and_export(
         timeout = REBUILD_TIMEOUT_SECONDS if rebuilding else STEP_TIMEOUT_SECONDS
 
         return_code = run_step(
-            chamber.model_step_label, chamber.model_script, args, timeout=timeout
+            chamber.model_step_label,
+            chamber.model_script,
+            args,
+            timeout=timeout,
+            section=chamber.slug,
+            kind="model",
         )
         if return_code != 0:
             break
     else:
         if export:
-            return_code = run_step(EXPORT_STEP_LABEL, EXPORT_ELECTION_SCRIPT, ())
+            return_code = run_step(
+                EXPORT_STEP_LABEL,
+                EXPORT_ELECTION_SCRIPT,
+                (),
+                section=export_section,
+                kind="export",
+            )
 
     return UsModelRun(
         stdout="\n".join(stdout_parts),

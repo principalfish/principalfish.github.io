@@ -31,6 +31,7 @@ def create_app() -> Flask:
     from console.admin.db_admin import bp as db_admin_bp
     from console.admin.export import bp as export_bp
     from console.admin.pages import bp as admin_bp
+    from console.admin.runs import bp as runs_bp
     from console.admin.site import bp as site_bp
     from console.holyrood.model import bp as holyrood_bp
     from console.home import bp as home_bp
@@ -51,6 +52,7 @@ def create_app() -> Flask:
         sections_bp,
         admin_bp,
         export_bp,
+        runs_bp,
         poll_import_bp,
         polls_bp,
         westminster_bp,

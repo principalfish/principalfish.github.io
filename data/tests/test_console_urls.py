@@ -132,6 +132,27 @@ def test_the_old_export_urls_no_longer_exist(
     assert client.post(path).status_code == 404
 
 
+def test_the_run_log_has_exactly_two_get_only_rules(
+    app: Flask,  # noqa: F811
+) -> None:
+    rules = {
+        str(rule): (
+            rule.endpoint,
+            sorted((rule.methods or set()) - {"HEAD", "OPTIONS"}),
+        )
+        for rule in app.url_map.iter_rules()
+        if rule.endpoint.startswith("runs.")
+    }
+
+    assert rules == {
+        "/runs": ("runs.run_list", ["GET"]),
+        "/runs/<run_id>": ("runs.run_detail", ["GET"]),
+    }
+    with app.test_request_context():
+        assert url_for("runs.run_list", section="house") == "/runs?section=house"
+        assert url_for("runs.run_detail", run_id="abc") == "/runs/abc"
+
+
 def test_the_president_has_none_of_the_chamber_only_pages(
     app: Flask,  # noqa: F811
 ) -> None:

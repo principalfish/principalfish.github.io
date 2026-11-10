@@ -116,6 +116,7 @@ def _run_model_and_export(*, timeout: int = MODEL_RUN_TIMEOUT) -> list[str]:
         export_timeout=EXPORT_TIMEOUT,
         export_cwd=DATA_DIR,
         export_message="Prediction simulation exported.",
+        section="westminster",
     )
 
 

@@ -193,7 +193,7 @@
               <th scope="col">Section</th>
               <th scope="col">Seat</th>
               <th scope="col">Reason</th>
-              <th scope="col">Rows dropped</th>
+              <th class="num" scope="col">Rows dropped</th>
             </tr>
           </thead>
           <tbody>
@@ -203,7 +203,7 @@
                 <td>{{ seat.heading_path }}</td>
                 <td>{{ seat.seat_name or "-" }}</td>
                 <td>{{ seat.reason }}</td>
-                <td>{{ seat.dropped_rows }}</td>
+                <td class="num">{{ seat.dropped_rows }}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -237,7 +237,7 @@
               <th scope="col">Page</th>
               <th scope="col">Section</th>
               <th scope="col">Race</th>
-              <th scope="col">Rows dropped</th>
+              <th class="num" scope="col">Rows dropped</th>
             </tr>
           </thead>
           <tbody>
@@ -246,7 +246,7 @@
                 <td><a href="{{ table.page_url }}" target="_blank" rel="noopener">{{ table.page_url }}</a></td>
                 <td>{{ table.heading_path }}</td>
                 <td>{{ contest_labels.get(table.contest, table.contest) }} · {{ table.seat_name or "National" }}</td>
-                <td>{{ table.dropped_rows }}</td>
+                <td class="num">{{ table.dropped_rows }}</td>
               </tr>
             {% endfor %}
           </tbody>

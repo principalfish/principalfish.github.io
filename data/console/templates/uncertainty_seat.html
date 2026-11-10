@@ -16,10 +16,10 @@
     <thead>
       <tr>
         <th scope="col">Party</th>
-        <th scope="col">Central share</th>
-        <th scope="col">Simulated share interval</th>
-        <th scope="col">Wins / probability</th>
-        <th scope="col">Seat raw / applied SD</th>
+        <th class="num" scope="col">Central share</th>
+        <th class="num" scope="col">Simulated share interval</th>
+        <th class="num" scope="col">Wins / probability</th>
+        <th class="num" scope="col">Seat raw / applied SD</th>
       </tr>
     </thead>
     <tbody>
@@ -28,10 +28,10 @@
         {% set item = mapping(outcomes.get(party|string)) %}
         <tr>
           <td>{{ labels.parties.get(party|string, party) }}</td>
-          <td>{{ fmt(central.get('shares', {}).get(party|string, 0)) }}</td>
-          <td>{{ item.get('v', 'Below compact storage threshold; interval not retained')|round_display }}</td>
-          <td>{{ wins[k] }} / {{ fmt(100 * wins[k] / draws.lam|length, '.2f') }}%</td>
-          <td>{% if reference %}{{ fmt(reference.rows[k].seat_raw_sd) }} / {{ fmt(reference.rows[k].seat_sd) }}{% else %}not stored{% endif %}</td>
+          <td class="num">{{ fmt(central.get('shares', {}).get(party|string, 0)) }}</td>
+          <td class="num">{{ item.get('v', 'Below compact storage threshold; interval not retained')|round_display }}</td>
+          <td class="num">{{ wins[k] }} / {{ fmt(100 * wins[k] / draws.lam|length, '.2f') }}%</td>
+          <td class="num">{% if reference %}{{ fmt(reference.rows[k].seat_raw_sd) }} / {{ fmt(reference.rows[k].seat_sd) }}{% else %}not stored{% endif %}</td>
         </tr>
       {% endfor %}
     </tbody>

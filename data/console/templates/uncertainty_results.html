@@ -8,12 +8,12 @@
     <thead>
       <tr>
         <th scope="col">Party</th>
-        <th scope="col">Central seats</th>
-        <th scope="col">Simulated seats low / median / high</th>
-        <th scope="col">Simulated mean seats</th>
-        <th scope="col">Simulated vote interval</th>
-        <th scope="col">P(majority)</th>
-        <th scope="col">P(largest)</th>
+        <th class="num" scope="col">Central seats</th>
+        <th class="num" scope="col">Simulated seats low / median / high</th>
+        <th class="num" scope="col">Simulated mean seats</th>
+        <th class="num" scope="col">Simulated vote interval</th>
+        <th class="num" scope="col">P(majority)</th>
+        <th class="num" scope="col">P(largest)</th>
         {% if histograms %}
           <th scope="col">Seat distribution</th>
         {% endif %}
@@ -23,12 +23,12 @@
 {% for party, item in ordered_parties(block.get('parties'), totals) %}
 <tr>
   <td>{{ labels.parties.get(party, party) }}</td>
-  <td>{{ totals.get(party, 0) }}</td>
-  <td>{{ item.get('s', '-')|round_display }}</td>
-  <td>{{ fmt(item.mean, '.2f') if item.get('mean') is number else 'not stored' }}</td>
-  <td>{{ item.get('v', '-')|round_display }}</td>
-  <td>{{ fmt(item.pm * 100, '.1f') ~ '%' if item.get('pm') is number else 'not stored' }}</td>
-  <td>{{ fmt(item.pl * 100, '.1f') ~ '%' if item.get('pl') is number else 'not stored' }}</td>
+  <td class="num">{{ totals.get(party, 0) }}</td>
+  <td class="num">{{ item.get('s', '-')|round_display }}</td>
+  <td class="num">{{ fmt(item.mean, '.2f') if item.get('mean') is number else 'not stored' }}</td>
+  <td class="num">{{ item.get('v', '-')|round_display }}</td>
+  <td class="num">{{ fmt(item.pm * 100, '.1f') ~ '%' if item.get('pm') is number else 'not stored' }}</td>
+  <td class="num">{{ fmt(item.pl * 100, '.1f') ~ '%' if item.get('pl') is number else 'not stored' }}</td>
 {% if histograms %}
 <td>
   {% set hist = mapping(item.get('hist')) %}
@@ -50,10 +50,10 @@
   <details>
     <summary>Histogram counts</summary>
     <table>
-      <thead><tr><th scope="col">Seats</th><th scope="col">Simulations</th></tr></thead>
+      <thead><tr><th class="num" scope="col">Seats</th><th class="num" scope="col">Simulations</th></tr></thead>
       <tbody>
         {% for count in counts %}
-        <tr><td>{{ hist.start + loop.index0 }}</td><td>{{ count }}</td></tr>
+        <tr><td class="num">{{ hist.start + loop.index0 }}</td><td class="num">{{ count }}</td></tr>
         {% endfor %}
       </tbody>
     </table>

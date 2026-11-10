@@ -102,31 +102,31 @@
             <thead>
               <tr>
                 <th scope="col">Against</th>
-                <th scope="col">Seats</th>
-                <th scope="col">Added</th>
-                <th scope="col">Removed</th>
+                <th class="num" scope="col">Seats</th>
+                <th class="num" scope="col">Added</th>
+                <th class="num" scope="col">Removed</th>
                 <th scope="col">Winner changes</th>
                 <th scope="col">Newly called</th>
                 <th scope="col">Newly uncalled</th>
-                <th scope="col">% counted changes</th>
-                <th scope="col">Seats with vote changes</th>
+                <th class="num" scope="col">% counted changes</th>
+                <th class="num" scope="col">Seats with vote changes</th>
               </tr>
             </thead>
             <tbody>
               {% for comparison in target.diff.comparisons %}
                 <tr>
                   <td>{{ comparison.label }}</td>
-                  <td>{{ comparison.old_seats }} → {{ comparison.new_seats }}</td>
-                  <td>{{ comparison.added | length }}</td>
-                  <td>{{ comparison.removed | length }}</td>
+                  <td class="num">{{ comparison.old_seats }} → {{ comparison.new_seats }}</td>
+                  <td class="num">{{ comparison.added | length }}</td>
+                  <td class="num">{{ comparison.removed | length }}</td>
                   <td>
                     {{ comparison.winner_changes | length }}
                     {% for change in comparison.winner_changes %}<br>{{ change.seat }}: {{ change.old }} → {{ change.new }}{% endfor %}
                   </td>
                   <td>{{ comparison.newly_called | length }}{% if comparison.newly_called %}: {{ comparison.newly_called | join(", ") }}{% endif %}</td>
                   <td>{{ comparison.newly_uncalled | length }}{% if comparison.newly_uncalled %}: {{ comparison.newly_uncalled | join(", ") }}{% endif %}</td>
-                  <td>{{ comparison.pct_changes | length }}</td>
-                  <td>{{ comparison.vote_deltas | length }}</td>
+                  <td class="num">{{ comparison.pct_changes | length }}</td>
+                  <td class="num">{{ comparison.vote_deltas | length }}</td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -160,8 +160,8 @@
             <th scope="col">NYT party code</th>
             <th scope="col">Party key</th>
             <th scope="col">Database party</th>
-            <th scope="col">Candidates</th>
-            <th scope="col">Votes</th>
+            <th class="num" scope="col">Candidates</th>
+            <th class="num" scope="col">Votes</th>
           </tr>
         </thead>
         <tbody>
@@ -170,8 +170,8 @@
               <td>{{ party.nyt_party }}</td>
               <td>{{ party.party_key }}</td>
               <td>{{ party.db_party }}</td>
-              <td>{{ party.candidates }}</td>
-              <td>{{ "{:,}".format(party.votes) }}</td>
+              <td class="num">{{ party.candidates }}</td>
+              <td class="num">{{ "{:,}".format(party.votes) }}</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -203,8 +203,8 @@
             <th scope="col">File</th>
             <th scope="col">Leader</th>
             <th scope="col">Runner-up</th>
-            <th scope="col">Margin</th>
-            <th scope="col">% counted</th>
+            <th class="num" scope="col">Margin</th>
+            <th class="num" scope="col">% counted</th>
             <th scope="col">Called</th>
             <th scope="col">Decisive round</th>
             <th scope="col">Votes source</th>
@@ -219,8 +219,8 @@
               <td>{{ row.file }}</td>
               <td>{{ row.leader }} ({{ row.leader_party }} → {{ row.leader_key }})</td>
               <td>{% if row.runner_up %}{{ row.runner_up }} ({{ row.runner_up_party }}){% else %}none{% endif %}</td>
-              <td>{{ "%.2f%%" | format(row.margin_pct) if row.margin_pct is not none else "n/a" }}</td>
-              <td>{{ "{:g}%".format(row.pct_counted) if row.pct_counted is not none else "n/a" }}</td>
+              <td class="num">{{ "%.2f%%" | format(row.margin_pct) if row.margin_pct is not none else "n/a" }}</td>
+              <td class="num">{{ "{:g}%".format(row.pct_counted) if row.pct_counted is not none else "n/a" }}</td>
               <td>{% if row.called %}yes{% if row.winner %} ({{ row.winner }}){% endif %}{% else %}UNCALLED{% endif %}</td>
               <td>{{ row.decisive_round or "first round" }}</td>
               <td>{{ row.votes_source or "" }}</td>

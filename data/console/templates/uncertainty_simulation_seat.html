@@ -19,18 +19,18 @@
     <thead>
       <tr>
         <th scope="col">Party</th>
-        <th scope="col">Baseline</th>
-        <th scope="col">Uniform Δ</th>
-        <th scope="col">Proportional Δ</th>
-        <th scope="col">λ adjustment</th>
-        <th scope="col">Applied national</th>
-        <th scope="col">Regional</th>
-        <th scope="col">Seat error</th>
-        <th scope="col">Seat raw / applied SD</th>
-        <th scope="col">Pre-clamp x</th>
-        <th scope="col">Clamped</th>
-        <th scope="col">Normalised share</th>
-        <th scope="col">Central share</th>
+        <th class="num" scope="col">Baseline</th>
+        <th class="num" scope="col">Uniform Δ</th>
+        <th class="num" scope="col">Proportional Δ</th>
+        <th class="num" scope="col">λ adjustment</th>
+        <th class="num" scope="col">Applied national</th>
+        <th class="num" scope="col">Regional</th>
+        <th class="num" scope="col">Seat error</th>
+        <th class="num" scope="col">Seat raw / applied SD</th>
+        <th class="num" scope="col">Pre-clamp x</th>
+        <th class="num" scope="col">Clamped</th>
+        <th class="num" scope="col">Normalised share</th>
+        <th class="num" scope="col">Central share</th>
       </tr>
     </thead>
     <tbody>
@@ -38,11 +38,11 @@
         <tr>
           <td>{{ labels.parties.get(row.party, row.party) }}</td>
           {% for field in ['baseline','uniform','proportional','lambda_term','national','regional','seat'] %}
-            <td>{{ fmt(row[field], '.2f') }}</td>
+            <td class="num">{{ fmt(row[field], '.2f') }}</td>
           {% endfor %}
-          <td>{{ fmt(row.seat_raw_sd, '.2f') }} / {{ fmt(row.seat_sd, '.2f') }}</td>
+          <td class="num">{{ fmt(row.seat_raw_sd, '.2f') }} / {{ fmt(row.seat_sd, '.2f') }}</td>
           {% for field in ['x','clamped','share','central'] %}
-            <td>{{ fmt(row[field], '.2f') }}</td>
+            <td class="num">{{ fmt(row[field], '.2f') }}</td>
           {% endfor %}
         </tr>
       {% endfor %}

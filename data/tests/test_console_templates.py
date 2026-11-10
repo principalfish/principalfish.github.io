@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 import html
 import re
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -261,3 +263,108 @@ def test_every_model_run_form_offers_the_export_checkbox(
     # Only the US forms rebuild history, so only they ask for confirmation.
     is_us = path.split("/")[1] in {"house", "senate", "president"}
     assert ("onsubmit=" in body) is is_us
+
+
+CONSOLE_DIR = Path(__file__).resolve().parent.parent / "console"
+TEMPLATES = sorted((CONSOLE_DIR / "templates").rglob("*.html"))
+STYLESHEET = CONSOLE_DIR / "static" / "style.css"
+# The one inline style: a histogram bar's width is the bin's data.
+HIST_BAR_STYLE = re.compile(
+    r'class="hist-bar" style="width: \{\{ "%\.1f" \| format\(row\.share\) \}\}%"'
+)
+
+
+def test_the_templates_are_found() -> None:
+    names = {path.name for path in TEMPLATES}
+
+    assert {"base.html", "poll_list.html", "queue.html"} <= names
+
+
+@pytest.mark.parametrize("template", TEMPLATES, ids=lambda path: path.name)
+def test_no_template_has_an_inline_style_but_the_histogram_bar(template: Path) -> None:
+    source = HIST_BAR_STYLE.sub("", template.read_text(encoding="utf-8"))
+
+    assert not re.search(r"\bstyle\s*=", source), template.name
+
+
+def test_the_histogram_bar_width_is_the_one_inline_style() -> None:
+    source = (CONSOLE_DIR / "templates" / "uncertainty_calibration.html").read_text(
+        encoding="utf-8"
+    )
+
+    assert len(HIST_BAR_STYLE.findall(source)) == 1
+
+
+@pytest.mark.parametrize("template", TEMPLATES, ids=lambda path: path.name)
+def test_every_table_sits_in_a_table_wrap(template: Path) -> None:
+    open_divs: list[bool] = []
+    for tag in re.finditer(
+        r"<(/?)(div|table)\b([^>]*)>", template.read_text(encoding="utf-8")
+    ):
+        closing, name, attributes = tag.groups()
+        if name == "div" and closing:
+            open_divs.pop()
+        elif name == "div":
+            open_divs.append("table-wrap" in attributes)
+        elif not closing:
+            assert any(open_divs), f"{template.name}: a <table> outside .table-wrap"
+
+
+# Classes the stylesheet styles that the scan below cannot see being applied.
+DYNAMIC_CLASSES: dict[str, str] = {}
+
+CLASS_ATTRIBUTE = re.compile(r"""\bclass=(?:"([^"]*)"|'([^']*)')""")
+CLASS_BLOCK = re.compile(r"\{%-?\s*block container_class\s*-?%\}(.*?)\{%-?\s*endblock")
+WORD = re.compile(r"[A-Za-z_][\w-]*")
+JS_STRING = re.compile(r"""(["'`])((?:\\.|(?!\1).)*)\1""")
+
+
+def _stylesheet_selectors() -> str:
+    css = re.sub(r"/\*.*?\*/", "", STYLESHEET.read_text(encoding="utf-8"), flags=re.S)
+    rules = (part for part in re.findall(r"([^{}]+)\{", css))
+    return "\n".join(part for part in rules if not part.strip().startswith("@"))
+
+
+def _classes_used_by_the_console() -> set[str]:
+    """Class names applied by a template class attribute, a script or Python."""
+    used: set[str] = set()
+    for template in TEMPLATES:
+        source = template.read_text(encoding="utf-8")
+        for double, single in CLASS_ATTRIBUTE.findall(source):
+            used.update(WORD.findall(double or single))
+        for block in CLASS_BLOCK.findall(source):
+            used.update(WORD.findall(block))
+    for script in (CONSOLE_DIR / "static").glob("*.js"):
+        for _, text in JS_STRING.findall(script.read_text(encoding="utf-8")):
+            used.update(WORD.findall(text))
+    for module in CONSOLE_DIR.rglob("*.py"):
+        for node in ast.walk(ast.parse(module.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                used.update(WORD.findall(node.value))
+    return used
+
+
+def test_every_class_in_the_stylesheet_is_used() -> None:
+    classes = set(re.findall(r"\.([A-Za-z_][\w-]*)", _stylesheet_selectors()))
+
+    assert {"topbar", "table-wrap", "num", "container-wide"} <= classes
+    unused = classes - _classes_used_by_the_console() - set(DYNAMIC_CLASSES)
+    assert not unused, f"classes in style.css used nowhere: {sorted(unused)}"
+
+
+def test_the_numeric_table_text_opt_out_covers_headings() -> None:
+    selectors = _stylesheet_selectors()
+
+    assert ".table-numeric th.text" in selectors
+    assert ".table-numeric .text" in selectors
+
+
+def test_the_stylesheet_has_a_dark_scheme_and_tokens() -> None:
+    css = STYLESHEET.read_text(encoding="utf-8")
+
+    assert "color-scheme: light dark" in css
+    assert "@media (prefers-color-scheme: dark)" in css
+    assert ".action-grid-three" not in css
+    # Colours live in the tokens on :root, not in rules.
+    rules = css.split("* {", 1)[1]
+    assert not re.search(r"#[0-9a-fA-F]{3,8}\b", rules)

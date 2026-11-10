@@ -42,14 +42,14 @@
     <thead>
       <tr>
         <th scope="col">Party</th>
-        <th scope="col">Polls / Kish</th>
-        <th scope="col">Total n_eff</th>
-        <th scope="col">Average / baseline / swing</th>
-        <th scope="col">National raw / applied SD</th>
-        <th scope="col">Regional systematic raw / applied SD</th>
-        <th scope="col">Sampling poll / applied SD</th>
-        <th scope="col">Combined polling SD</th>
-        <th scope="col">Polling-only normal swing band</th>
+        <th class="num" scope="col">Polls / Kish</th>
+        <th class="num" scope="col">Total n_eff</th>
+        <th class="num" scope="col">Average / baseline / swing</th>
+        <th class="num" scope="col">National raw / applied SD</th>
+        <th class="num" scope="col">Regional systematic raw / applied SD</th>
+        <th class="num" scope="col">Sampling poll / applied SD</th>
+        <th class="num" scope="col">Combined polling SD</th>
+        <th class="num" scope="col">Polling-only normal swing band</th>
         <th scope="col">Evidence</th>
       </tr>
     </thead>
@@ -59,13 +59,13 @@
                       region=group.id, party=cell.party) }}">{{ labels.parties.get(cell.party, cell.party) }}</a>
   {%- if cell.ineligible %} (N/A: geographically ineligible){% endif %}
   {%- if v.get('polling_exclusion') %}<br>{{ v.polling_exclusion }}{% endif %}</td>
-<td>{{ v.get('poll_count', '-') }} / {{ fmt(v.get('kish_count')) }}</td><td>{{ fmt(v.get('total_n_eff'), '.0f') }}</td>
-<td>{% if cell.ineligible %}N/A{% else %}{{ fmt(v.get('poll_average')) }} / {{ fmt(v.get('baseline_share')) }} / {{ fmt(v.get('swing')) }}{% endif %}</td>
-<td>{{ fmt(v.get('national_raw_sd')) }} / {{ fmt(v.get('national_sd')) }}</td>
-<td>{{ fmt(v.get('regional_systematic_raw_sd')) }} / {{ fmt(v.get('regional_systematic_sd')) }}</td>
-<td>{{ fmt(v.get('poll_sampling_sd')) }} / {{ fmt(v.get('sampling_sd')) }}</td>
-<td>{{ fmt(v.get('combined_sd')) }}</td>
-<td>{{ (v.get('swing_interval', '-') if not cell.ineligible else 'N/A')|round_display }}</td>
+<td class="num">{{ v.get('poll_count', '-') }} / {{ fmt(v.get('kish_count')) }}</td><td class="num">{{ fmt(v.get('total_n_eff'), '.0f') }}</td>
+<td class="num">{% if cell.ineligible %}N/A{% else %}{{ fmt(v.get('poll_average')) }} / {{ fmt(v.get('baseline_share')) }} / {{ fmt(v.get('swing')) }}{% endif %}</td>
+<td class="num">{{ fmt(v.get('national_raw_sd')) }} / {{ fmt(v.get('national_sd')) }}</td>
+<td class="num">{{ fmt(v.get('regional_systematic_raw_sd')) }} / {{ fmt(v.get('regional_systematic_sd')) }}</td>
+<td class="num">{{ fmt(v.get('poll_sampling_sd')) }} / {{ fmt(v.get('sampling_sd')) }}</td>
+<td class="num">{{ fmt(v.get('combined_sd')) }}</td>
+<td class="num">{{ (v.get('swing_interval', '-') if not cell.ineligible else 'N/A')|round_display }}</td>
 <td>
   <details>
     <summary>{{ v.get('sampling_source', 'not stored') }} · all fields and poll provenance</summary>

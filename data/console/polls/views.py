@@ -94,6 +94,10 @@ def _poll_list_page(
         The rendered ``poll_list.html``.
     """
     db = get_db()
+    # n_eff and margins are computed for Westminster polls only, so the other
+    # parliaments' lists drop those columns and their explanation.
+    westminster = SECTIONS_BY_SLUG["westminster"]
+    show_n_eff = parliament is None or parliament == westminster.parliament
     config: UncertaintyConfig | None
     try:
         config, config_error = load_uncertainty_config(), None
@@ -164,6 +168,7 @@ def _poll_list_page(
         config_error=config_error,
         title=title,
         section=section,
+        show_n_eff=show_n_eff,
     )
 
 

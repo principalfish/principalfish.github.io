@@ -4,43 +4,71 @@
   const page = JSON.parse(document.getElementById("outputs-page-data").textContent);
   const trendData = page.trend_data;
 
+  // Chart.js draws on a canvas, which the stylesheet cannot reach, so its text
+  // and grid colours are read from the page's CSS variables and the charts are
+  // redrawn when the colour scheme changes.
+  const applyThemeColours = () => {
+    const style = getComputedStyle(document.documentElement);
+    window.Chart.defaults.color = style.getPropertyValue("--muted").trim() || "#666";
+    window.Chart.defaults.borderColor =
+      style.getPropertyValue("--row-border").trim() || "rgba(0, 0, 0, 0.1)";
+  };
+
+  const chartSpecs = [];
+  const charts = [];
+
   const createLineChart = (canvasId, datasets, yLabel) => {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !window.Chart) return;
-    new window.Chart(canvas, {
-      type: "line",
-      data: {
-        labels: trendData.labels,
-        datasets,
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        resizeDelay: 200,
-        plugins: {
-          legend: {
-            position: "bottom",
+    chartSpecs.push({ canvas, datasets, yLabel });
+  };
+
+  const drawCharts = () => {
+    charts.splice(0).forEach((chart) => chart.destroy());
+    if (!window.Chart) return;
+    applyThemeColours();
+    chartSpecs.forEach(({ canvas, datasets, yLabel }) => {
+      charts.push(
+        new window.Chart(canvas, {
+          type: "line",
+          data: {
+            labels: trendData.labels,
+            datasets,
           },
-        },
-        scales: {
-          x: {
-            ticks: {
-              maxTicksLimit: 12,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            resizeDelay: 200,
+            plugins: {
+              legend: {
+                position: "bottom",
+              },
+            },
+            scales: {
+              x: {
+                ticks: {
+                  maxTicksLimit: 12,
+                },
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: yLabel,
+                },
+              },
             },
           },
-          y: {
-            title: {
-              display: true,
-              text: yLabel,
-            },
-          },
-        },
-      },
+        }),
+      );
     });
   };
 
   createLineChart("seats-trend-chart", trendData.seats_datasets, page.seats_label);
   createLineChart("vote-totals-trend-chart", trendData.vote_pct_datasets, "Vote %");
+  drawCharts();
+  window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", drawCharts);
 
   const selectAll = document.getElementById("select-all-models");
   const checkboxes = Array.from(document.querySelectorAll(".model-select"));

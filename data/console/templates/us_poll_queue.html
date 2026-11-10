@@ -37,7 +37,7 @@
     {{ poll_rows_table(row.readings, [
       {"heading": "Party", "attribute": "party_name", "blank": "Unrecognised party"},
       {"heading": "Candidate", "attribute": "candidate_name", "blank": "-"},
-      {"heading": "%", "attribute": "percentage", "format": "%g"},
+      {"heading": "%", "attribute": "percentage", "format": "%g", "numeric": true},
     ]) }}
   </section>
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 import html
+import re
 import subprocess
 import threading
 from collections.abc import Generator
@@ -1858,7 +1859,7 @@ class TestStepPage:
             "44",
         )
         for cell in cells:
-            assert f"<td>{cell}</td>" in body
+            assert re.search(rf"<td(?: [^>]*)?>{cell}</td>", body), cell
         assert "This will create a new pollster: Glengariff Group (US Senate)." in body
         assert "Partisan poll: the pollster is tagged (R)." in body
         assert "Race tracked:</strong> none yet" in body
@@ -2572,7 +2573,7 @@ class TestFinishRoute:
         assert "Tables with no matchup (1)" in body
         assert "General election › Polling › Hinson" in body
         assert "Iowa</td>" in body
-        assert "<td>5</td>" in body
+        assert '<td class="num">5</td>' in body
         assert "Oversized tables (1)" in body
         assert "https://en.wikipedia.org/wiki/Huge" in body
         assert "[District 7 › Polling]" in body

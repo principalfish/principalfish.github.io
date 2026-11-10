@@ -40,7 +40,7 @@
         <thead>
           <tr>
             <th scope="col">Setting</th>
-            <th scope="col">Value</th>
+            <th class="num" scope="col">Value</th>
             <th scope="col">Unit</th>
             <th scope="col">Source</th>
             <th scope="col">Calibration wrote</th>
@@ -51,7 +51,7 @@
           {% for row in parameters %}
             <tr>
               <th scope="row"><code>{{ row.name }}</code></th>
-              <td>{{ row.value|round_display }}</td>
+              <td class="num">{{ row.value|round_display }}</td>
               <td>{{ row.unit }}</td>
               <td>{{ row.source }}</td>
               <td>
@@ -84,13 +84,13 @@
         {{ national.centring_method }}
       </p>
       <div class="table-wrap">
-        <table>
+        <table class="table-numeric">
           <thead>
             <tr>
               <th scope="col">Election</th>
               <th scope="col">Final polls</th>
               <th scope="col">RMS z</th>
-              <th scope="col">Party</th>
+              <th class="text" scope="col">Party</th>
               <th scope="col">A (poll avg)</th>
               <th scope="col">R (result)</th>
               <th scope="col">A &minus; R</th>
@@ -118,7 +118,7 @@
                     <td rowspan="{{ election.parties | length }}">{{ election.final_polls }}</td>
                     <td rowspan="{{ election.parties | length }}">{{ fmt(election.rms_z) }}</td>
                   {% endif %}
-                  <td>{{ party.label }}</td>
+                  <td class="text">{{ party.label }}</td>
                   <td>{{ fmt(party.average) }}</td>
                   <td>{{ fmt(party.result) }}</td>
                   <td>{{ fmt(party.error, "+.2f") }}</td>
@@ -155,7 +155,7 @@
 
       <h4>By party</h4>
       <div class="table-wrap">
-        <table>
+        <table class="table-numeric">
           <thead>
             <tr>
               <th scope="col">Party</th>
@@ -177,11 +177,11 @@
 
       <h4>Results cross-check (PollBase vs database GB shares)</h4>
       <div class="table-wrap">
-        <table>
+        <table class="table-numeric">
           <thead>
             <tr>
               <th scope="col">Election</th>
-              <th scope="col">Party</th>
+              <th class="text" scope="col">Party</th>
               <th scope="col">PollBase</th>
               <th scope="col">Database</th>
               <th scope="col">Difference</th>
@@ -191,7 +191,7 @@
             {% for check in national.cross_check %}
               <tr>
                 <th scope="row">{{ check.year }}</th>
-                <td>{{ check.key }}</td>
+                <td class="text">{{ check.key }}</td>
                 <td>{{ fmt(check.pollbase) }}</td>
                 <td>{{ fmt(check.database) }}</td>
                 <td>{{ fmt(check.difference, "+.2f") }}</td>
@@ -207,7 +207,7 @@
       <h3>λ and σ_seat: seat swings against regional swings</h3>
       <p>{{ swing.method }}</p>
       <div class="table-wrap">
-        <table>
+        <table class="table-numeric">
           <thead>
             <tr>
               <th scope="col">Pair</th>
@@ -248,7 +248,7 @@
       <h4>σ_seat: robust spread of the scaled residuals u, then engine units</h4>
       <p>{{ swing.centring_method }}</p>
       <div class="table-wrap">
-        <table>
+        <table class="table-numeric">
           <thead>
             <tr>
               <th scope="col">Pair</th>
@@ -301,7 +301,7 @@
 
       <h4>Centring ratios (share of a raw error a party keeps)</h4>
       <div class="table-wrap">
-        <table>
+        <table class="table-numeric">
           <thead>
             <tr>
               <th scope="col">Cells</th>
@@ -323,7 +323,7 @@
       {% if percentiles %}
         <h4>Percentiles of u (points at p_ref)</h4>
         <div class="table-wrap">
-          <table>
+          <table class="table-numeric">
             <thead>
               <tr>
                 <th scope="col">Percentile</th>
@@ -346,7 +346,7 @@
       {% if histogram %}
         <h4>Histogram of u (cells per 1-point bin)</h4>
         <div class="table-wrap">
-          <table>
+          <table class="table-numeric">
             <thead>
               <tr>
                 <th scope="col">u</th>
@@ -371,7 +371,7 @@
 
       <h4>λ̂ by party (cells)</h4>
       <div class="table-wrap">
-        <table>
+        <table class="table-numeric">
           <thead>
             <tr>
               <th scope="col">Party</th>
@@ -393,7 +393,7 @@
 
       <h4>Cells left out</h4>
       <div class="table-wrap">
-        <table>
+        <table class="table-numeric">
           <thead>
             <tr>
               <th scope="col">Reason</th>
@@ -425,7 +425,7 @@
         written as <strong>{{ decided.rounded }}</strong>.
       </p>
       <div class="table-wrap">
-        <table>
+        <table class="table-numeric">
           <thead>
             <tr>
               <th scope="col">Pollster</th>

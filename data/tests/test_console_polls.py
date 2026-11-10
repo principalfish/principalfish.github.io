@@ -63,7 +63,7 @@ def _table_rows(body: str) -> list[list[str]]:
     tbody_match = re.search(r"<tbody>(.*?)</tbody>", body, re.DOTALL)
     assert tbody_match is not None, "no <tbody> in body"
     return [
-        re.findall(r"<td>(.*?)</td>", row_html, re.DOTALL)
+        re.findall(r"<td(?: [^>]*)?>(.*?)</td>", row_html, re.DOTALL)
         for row_html in re.findall(r"<tr>(.*?)</tr>", tbody_match.group(1), re.DOTALL)
     ]
 
@@ -574,17 +574,59 @@ class TestSectionPollList:
         n_eff = _table_rows(section)[0][9]
         assert n_eff != "-"
 
-    def test_us_lists_show_no_effective_n(
-        self, app: Flask, db: Database, westminster_world: WestminsterWorld
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/polls",
+            *(f"/{section.slug}/polls" for section in SECTIONS),
+        ],
+    )
+    def test_n_eff_and_margins_only_on_westminster_lists_and_all_polls(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        config_path: Path,
+        path: str,
     ) -> None:
         _seed_section_polls(db, westminster_world.map_id)
+        westminster = path in ("/polls", "/westminster/polls")
 
-        row = _table_rows(
-            app.test_client().get("/house/polls").get_data(as_text=True)
-        )[0]
+        body = app.test_client().get(path).get_data(as_text=True)
 
-        assert row[9] == "-"
-        assert row[10] == "-"
+        headers = _table_headers(body)
+        text = " ".join(body.split())
+        assert ("n_eff" in headers) is westminster
+        assert any(h.startswith("MoE") for h in headers) is westminster
+        assert ("Westminster polls also show n_eff" in text) is westminster
+        # n and its source stay on every list.
+        assert {"n", "n source", "Weighted n"} <= set(headers)
+        assert "the captured base" in text
+        for row in _table_rows(body):
+            assert len(row) == len(headers)
+            assert row[headers.index("n source")] == "sample_size"
+            assert row[headers.index("n")] == "1000"
+
+    @pytest.mark.parametrize("section", SECTIONS, ids=lambda s: s.slug)
+    def test_invalid_settings_alert_only_where_n_eff_is_shown(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        config_path: Path,
+        section: Section,
+    ) -> None:
+        config_path.write_text('{"design_effect": 0}', encoding="utf-8")
+        _seed_section_polls(db, westminster_world.map_id)
+        client = app.test_client()
+
+        listing = client.get(f"/{section.slug}/polls").get_data(as_text=True)
+        everything = client.get("/polls").get_data(as_text=True)
+
+        message = "the uncertainty settings are invalid"
+        assert message in " ".join(everything.split())
+        shown = " ".join(listing.split())
+        assert (message in shown) is (section.slug == "westminster")
 
     def test_empty_section_names_itself(self, app: Flask, db: Database) -> None:
         body = app.test_client().get("/senate/polls").get_data(as_text=True)
@@ -950,7 +992,7 @@ def _tfoot_rows(body: str) -> dict[str, list[str]]:
     for row_html in re.findall(r"<tr[^>]*>(.*?)</tr>", match.group(1), re.DOTALL):
         label = re.search(r'<th scope="row">(.*?)</th>', row_html, re.DOTALL)
         assert label is not None
-        cells = re.findall(r"<td>(.*?)</td>", row_html, re.DOTALL)
+        cells = re.findall(r"<td(?: [^>]*)?>(.*?)</td>", row_html, re.DOTALL)
         rows[html.unescape(label.group(1).strip())] = [
             html.unescape(cell.strip()) for cell in cells
         ]

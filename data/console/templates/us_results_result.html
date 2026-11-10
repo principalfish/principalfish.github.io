@@ -19,13 +19,13 @@
         <thead>
           <tr>
             <th scope="col">Election</th>
-            <th scope="col">Id</th>
-            <th scope="col">Map</th>
+            <th class="num" scope="col">Id</th>
+            <th class="num" scope="col">Map</th>
             <th scope="col">File</th>
-            <th scope="col">Seats</th>
-            <th scope="col">Called</th>
+            <th class="num" scope="col">Seats</th>
+            <th class="num" scope="col">Called</th>
             <th scope="col">Elected per party</th>
-            <th scope="col">Status rows</th>
+            <th class="num" scope="col">Status rows</th>
             <th scope="col">Source note</th>
           </tr>
         </thead>
@@ -33,13 +33,13 @@
           {% for election in elections %}
             <tr>
               <td>{{ election.name }}</td>
-              <td>{{ election.election_id }}</td>
-              <td>{{ election.map_id }}</td>
+              <td class="num">{{ election.election_id }}</td>
+              <td class="num">{{ election.map_id }}</td>
               <td><code>{{ election.file }}</code></td>
-              <td>{{ election.seats }}</td>
-              <td>{{ election.called }}</td>
+              <td class="num">{{ election.seats }}</td>
+              <td class="num">{{ election.called }}</td>
               <td>{% for party, count in election.elected %}{{ party }} {{ count }}{{ ", " if not loop.last }}{% endfor %}</td>
-              <td>{{ election.status_rows }}</td>
+              <td class="num">{{ election.status_rows }}</td>
               <td>{{ election.source_note or "" }}</td>
             </tr>
           {% endfor %}

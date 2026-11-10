@@ -9,9 +9,9 @@
     <thead>
       <tr>
         <th scope="col">Party</th>
-        <th scope="col">Mean global national error: matching / all</th>
-        <th scope="col">Median seats: matching / all</th>
-        <th scope="col">Median vote: matching / all</th>
+        <th class="num" scope="col">Mean global national error: matching / all</th>
+        <th class="num" scope="col">Median seats: matching / all</th>
+        <th class="num" scope="col">Median vote: matching / all</th>
       </tr>
     </thead>
     <tbody>
@@ -19,9 +19,9 @@
         {% set k = loop.index0 %}
         <tr>
           <td>{{ labels.parties.get(party|string, party) }}</td>
-          <td>{{ fmt(comparison.national_selected[k] if comparison.national_selected is not none else none) }} / {{ fmt(comparison.national_all[k]) }}</td>
-          <td>{{ fmt(comparison.seats_selected[k] if comparison.seats_selected is not none else none, '.1f') }} / {{ fmt(comparison.seats_all[k], '.1f') }}</td>
-          <td>{{ fmt(comparison.vote_selected[k] if comparison.vote_selected is not none else none) }} / {{ fmt(comparison.vote_all[k]) }}</td>
+          <td class="num">{{ fmt(comparison.national_selected[k] if comparison.national_selected is not none else none) }} / {{ fmt(comparison.national_all[k]) }}</td>
+          <td class="num">{{ fmt(comparison.seats_selected[k] if comparison.seats_selected is not none else none, '.1f') }} / {{ fmt(comparison.seats_all[k], '.1f') }}</td>
+          <td class="num">{{ fmt(comparison.vote_selected[k] if comparison.vote_selected is not none else none) }} / {{ fmt(comparison.vote_all[k]) }}</td>
         </tr>
       {% endfor %}
     </tbody>
@@ -35,8 +35,8 @@
         <tr>
           <th scope="col">Region</th>
           <th scope="col">Party</th>
-          <th scope="col">Matching</th>
-          <th scope="col">All</th>
+          <th class="num" scope="col">Matching</th>
+          <th class="num" scope="col">All</th>
         </tr>
       </thead>
       <tbody>
@@ -47,8 +47,8 @@
             <tr>
               <td>{{ labels.regions.get(region|string, region) }}</td>
               <td>{{ labels.parties.get(party|string, party) }}</td>
-              <td>{{ fmt(comparison.regional_selected[r][k] if comparison.regional_selected is not none else none) }}</td>
-              <td>{{ fmt(comparison.regional_all[r][k]) }}</td>
+              <td class="num">{{ fmt(comparison.regional_selected[r][k] if comparison.regional_selected is not none else none) }}</td>
+              <td class="num">{{ fmt(comparison.regional_all[r][k]) }}</td>
             </tr>
           {% endfor %}
         {% endfor %}

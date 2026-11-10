@@ -387,7 +387,7 @@ class TestImportPreviewBases:
         assert "<h3>Respondent Bases</h3>" in body
         section = body.split("<h3>Respondent Bases</h3>", 1)[1]
         cells = [
-            re.findall(r"<td>(.*?)</td>", row, re.DOTALL)
+            re.findall(r"<td(?: [^>]*)?>(.*?)</td>", row, re.DOTALL)
             for row in re.findall(
                 r"<tr>(.*?)</tr>", section.split("</tbody>", 1)[0], re.DOTALL
             )

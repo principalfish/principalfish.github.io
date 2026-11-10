@@ -9,11 +9,11 @@
       {% if plan.seat_name_matched %}
         {{ plan.seat_name_matched }}
       {% else %}
-        <span style="color: red;">NOT FOUND</span>
+        <span class="text-error">NOT FOUND</span>
       {% endif %}
     </p>
     <p><strong>Parent election:</strong> {{ plan.parent_election_name }}
-      {% if plan.parent_election_id %}(id={{ plan.parent_election_id }}){% else %}<span style="color: red;">NOT FOUND</span>{% endif %}
+      {% if plan.parent_election_id %}(id={{ plan.parent_election_id }}){% else %}<span class="text-error">NOT FOUND</span>{% endif %}
     </p>
     <p><strong>Source:</strong> <a href="{{ plan.url }}" target="_blank">{{ plan.url }}</a></p>
 
@@ -35,16 +35,16 @@
           <tr>
             <th>Party</th>
             <th>Candidate</th>
-            <th>Votes</th>
+            <th class="num">Votes</th>
             <th>Elected</th>
           </tr>
         </thead>
         <tbody>
           {% for c in plan.candidates %}
             <tr>
-              <td>{{ c.party_name }}{% if c.party_name in plan.party_id_by_name %} (id={{ plan.party_id_by_name[c.party_name] }}){% else %} <span style="color: orange;">unmapped</span>{% endif %}</td>
+              <td>{{ c.party_name }}{% if c.party_name in plan.party_id_by_name %} (id={{ plan.party_id_by_name[c.party_name] }}){% else %} <span class="text-warning">unmapped</span>{% endif %}</td>
               <td>{{ c.candidate_name }}</td>
-              <td>{{ "{:,}".format(c.votes) }}</td>
+              <td class="num">{{ "{:,}".format(c.votes) }}</td>
               <td>{{ "Yes" if c.elected else "" }}</td>
             </tr>
           {% endfor %}

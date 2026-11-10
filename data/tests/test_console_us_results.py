@@ -344,7 +344,8 @@ class TestPreview:
             r"<td>DEM</td>\s*<td>democrat</td>\s*<td>Democratic</td>", body,
         )
         assert re.search(
-            r"<td>OTH</td>\s*<td>others</td>\s*<td>Others</td>\s*<td>1</td>", body,
+            r"<td>OTH</td>\s*<td>others</td>\s*<td>Others</td>\s*"
+            r'<td class="num">1</td>', body,
         )
         # Pipeline counts, source note, no diff yet.
         assert re.search(r"races parsed \(runoffs applied\)</th><td>6</td>", body)
@@ -690,9 +691,13 @@ class TestConfirm:
         written = json.loads((out_dir / "house-2026.json").read_text(encoding="utf-8"))
         assert written["TX-28"]["seatInfo"]["current"] == "democrat"
         cells = re.sub(r"\s+", " ", body)
-        assert f"<td>{_HOUSE}</td> <td>{election.id}</td> <td>24</td>" in cells
         assert (
-            "<td>6</td> <td>4</td> <td>democrat 3, republican 1</td> <td>6</td>"
+            f'<td>{_HOUSE}</td> <td class="num">{election.id}</td> '
+            '<td class="num">24</td>'
+        ) in cells
+        assert (
+            '<td class="num">6</td> <td class="num">4</td> '
+            '<td>democrat 3, republican 1</td> <td class="num">6</td>'
         ) in cells
         assert f"imported {_HOUSE}: 11 votes, election id {election.id}" in body
         assert 'href="/export?sections=house&amp;content=results"' in body
@@ -740,7 +745,10 @@ class TestConfirm:
             "senate-2026.json",
         ]
         cells = re.sub(r"\s+", " ", response.get_data(as_text=True))
-        assert f"<td>{special.name}</td> <td>{special.id}</td> <td>23</td>" in cells
+        assert (
+            f'<td>{special.name}</td> <td class="num">{special.id}</td> '
+            '<td class="num">23</td>'
+        ) in cells
 
     def test_refused_import_writes_nothing_and_keeps_token(
         self, app: Flask, db: Database, nyt: FakeNyt, dirs: tuple[Path, Path]

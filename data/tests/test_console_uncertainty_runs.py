@@ -55,7 +55,7 @@ def test_stored_pages_render(app: Flask, saved: dict[str, Any], suffix: str) -> 
         assert "Simulated mean seats" in body
         national: Any = saved["record"].stored.national
         labour = national["parties"][str(saved["world"].party_ids["Labour"])]
-        assert f"<td>{labour['mean']:.2f}</td>" in body
+        assert f'<td class="num">{labour["mean"]:.2f}</td>' in body
     if suffix == "sims":
         assert "50 / 50 simulations" in body
         assert "not necessary thresholds" in body
@@ -557,7 +557,9 @@ def test_hub_previews_the_published_export(
     ):
         size = len(files[name].encode("utf-8"))
         assert re.search(
-            rf"<td><code>{re.escape(name)}</code></td>\s*<td>{size:,} bytes</td>", body
+            rf"<td><code>{re.escape(name)}</code></td>\s*"
+            rf'<td class="num">{size:,} bytes</td>',
+            body,
         ), name
     assert "<strong>UNS 2026-06-10</strong>" in body
     assert (

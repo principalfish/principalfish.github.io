@@ -46,11 +46,11 @@
           <thead>
             <tr>
               <th><input type="checkbox" id="select-all-models" /></th>
-              <th>Election ID</th>
+              <th class="num">Election ID</th>
               <th>Name</th>
-              <th>Year</th>
+              <th class="num">Year</th>
               <th>Map</th>
-              <th>Vote Rows</th>
+              <th class="num">Vote Rows</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -65,11 +65,11 @@
                     value="{{ output.election_id }}"
                   />
                 </td>
-                <td>{{ output.election_id }}</td>
+                <td class="num">{{ output.election_id }}</td>
                 <td>{{ output.name }}</td>
-                <td>{{ output.year }}</td>
+                <td class="num">{{ output.year }}</td>
                 <td>{{ output.map_name }}</td>
-                <td>{{ output.vote_rows }}</td>
+                <td class="num">{{ output.vote_rows }}</td>
                 <td>
                   <div class="table-actions">
                     <a class="button" href="{{ url_for(detail_endpoint, election_id=output.election_id) }}">View Model</a>

@@ -1405,7 +1405,7 @@ class TestPollDetailShowsUsScope:
             ("Mary Peltola", "45.0"),
         ):
             assert f"<td>{name}</td>" in body
-            assert f"<td>{value}</td>" in body
+            assert f'<td class="num">{value}</td>' in body
 
     def test_party_only_poll_has_no_us_fields(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
@@ -1422,7 +1422,7 @@ class TestPollDetailShowsUsScope:
         assert "Seat:" not in body
         assert "Matchup:" not in body
         assert "Candidate" not in body
-        assert "<td>30.0</td>" in body
+        assert '<td class="num">30.0</td>' in body
 
 
 class TestRaceMatchupsPage:

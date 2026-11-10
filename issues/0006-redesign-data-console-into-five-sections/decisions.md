@@ -50,6 +50,7 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - Piece 7's manual review cancels the new confirms (a poll delete, a single and a bulk output delete, a matchup rebuild) and deletes nothing; the Rebuild database and Restore confirms are left out, since they already exist and OK would rebuild or overwrite the live database; tests cover the deletes (user, 2026-11-10, by starting piece 7 on that recommendation)
 - New confirms use the existing `onsubmit="return confirm(...)"` style, name the item (pollster and date, or election; the bulk delete names how many are selected) and say it can't be undone from the console (user, 2026-11-10, by starting piece 7 on that recommendation)
 - The stale reload copy says a restart, or a code reload when `CONSOLE_DEBUG=1` is set, discards a catch-up in progress (user, 2026-11-10, by starting piece 7 on that recommendation)
+- "Rebuild Current Senate" gets no confirm: it rewrites the tracked `senate-current.json`, which is re-derived from the imported Senate file and undone with git (user, 2026-11-10, approving piece 7 without asking for one, on that recommendation)
 
 ## Open
 

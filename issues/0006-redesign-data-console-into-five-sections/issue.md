@@ -24,7 +24,7 @@ _2026-11-10 · 6 of 12 pieces done · now: waiting on review of piece 7_
   Filtered polls, per-chamber US runs and imports, and export-when-done on each run form.
 - [x] **6/12 Global export page** · `3809a18c`
   One page to tick sections and what to write, with dry run on by default.
-- [ ] **7/12 Admin page, confirms and small fixes** · waiting on you
+- [ ] **7/12 Admin page, confirms and small fixes** · approved, committing
   Gather rebuild, backup and restore, and add confirm steps to destructive actions.
 - [ ] **8/12 Looks and readability** · not started
   Consistent styling, tables and spacing, in light and dark.

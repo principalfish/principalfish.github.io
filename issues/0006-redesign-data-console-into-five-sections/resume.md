@@ -1,6 +1,6 @@
 # Resume point — read this first
 
-State checks: builder session `local_25f43011-ef61-46dc-9023-7e1b5918b096`, branch `claude/redesign-data-console-into-five-sections-e76f9c`, HEAD `73df3a2c` (piece 8/12 committed and pushed). Piece 9 is built and staged but uncommitted (21 files). Draft PR #85 is open. State is `building`.
+State checks: piece 9 staged and uncommitted in the builder worktree (21 files, +2220/−29) on top of `73df3a2c`. Builder `local_25f43011-ef61-46dc-9023-7e1b5918b096` idle. Draft PR #85 open. State `building`.
 
 ## The pending decision (exact)
-Manual review and approval of piece 9's diff: one dry-run Westminster model, find and open it in `/runs`, restart the console and check it is still there. It writes only under `console-runs/` beside the database. Then the builder commits and pushes; tick piece 9 and give the piece 10 briefing.
+Manual review and approval of piece 9: one dry-run Westminster model run, find it in `/runs`, restart, still there. The planner had not yet run the affected tests itself (usage limit); do that before relaying an approval. Approval must say they tried it.

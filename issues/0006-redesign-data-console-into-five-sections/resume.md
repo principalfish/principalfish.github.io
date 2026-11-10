@@ -1,9 +1,6 @@
 # Resume point — read this first
 
-State checks: builder session `local_25f43011-ef61-46dc-9023-7e1b5918b096`, branch `claude/redesign-data-console-into-five-sections-e76f9c`, HEAD `0c45b65b` (piece 9/12 committed and pushed). Draft PR #85 is open. State is `building`.
+State checks: piece 9 committed `0c45b65b` and pushed. Builder session `local_25f43011-ef61-46dc-9023-7e1b5918b096` is idle, waiting for the go-ahead for piece 10. Draft PR #85 is open. State is `building`.
 
-## Where it stands
-Pieces 1–9 are done. Piece 9 was approved after a manual review ("Tried it, approve").
-
-## Next
-Piece 10: Background runs with live progress. Start it only when the planner chat relays the user's go-ahead. Details in `plan.md`.
+## The pending decision (exact)
+Whether to start piece 10 (background runs), with recommendations put to the user: (1) model runs, exports and Rebuild database go to the background (Rebuild added beyond the plan: slowest run, and today it holds no slot); imports and queue finishes stay synchronous; (2) model-then-export is one job of two step records; (3) poll every second by byte offset; (4) timeout and crash banners, slot released in `finally`; (5) records left running become interrupted at startup with a note that the command may have finished, swept once under the reloader; (6) one job at a time everywhere via `model_run_slot`, so Westminster and Holyrood runs are refused while another run holds it (a behaviour change); queue finishes refused, not queued; (7) `read_record`/`read_output` refuse symlinked id folders; (8) a job's end requests a backup unless it was a dry run; tests run jobs inline through an injectable runner and follow the redirect.

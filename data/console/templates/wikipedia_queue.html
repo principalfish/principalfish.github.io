@@ -57,7 +57,9 @@
     <h3>Skip or Leave</h3>
     <div class="actions">
       {{ skip_form(url_for('poll_import.wikipedia_skip', token=token), expected_index) }}
-      {{ abandon_form(url_for('poll_import.wikipedia_finish', token=token)) }}
+      {{ abandon_form(
+        url_for('poll_import.wikipedia_finish', token=token),
+        "Abandon this queue? Polls already imported stay; the rest are not imported and the model is not run. This can't be undone from the console.") }}
     </div>
     <p>Abandoning stops the run without importing anything further and without running the model.</p>
   </section>

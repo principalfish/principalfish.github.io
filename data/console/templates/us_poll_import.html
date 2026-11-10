@@ -11,8 +11,8 @@
     </p>
     <p>
       Reading every page takes 20–40 seconds. The queue is held in memory while the console
-      runs, so restarting the server — including the automatic reload after any code change —
-      discards an import in progress.
+      runs, so restarting the server — or, when <code>CONSOLE_DEBUG=1</code> is set, a code
+      reload after any change — discards an import in progress.
     </p>
     <form method="post" action="{{ url_for('us_poll_import.start', chamber=chamber.slug) }}" class="form">
       <fieldset>

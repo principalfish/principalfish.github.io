@@ -40,9 +40,7 @@ from __future__ import annotations
 
 import functools
 import logging
-import threading
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
 from typing import Any
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -53,6 +51,7 @@ from pydantic_core import ErrorDetails
 from console.db import get_db
 from console.forms import UsQueueStartForm
 from console.shared.preview import get_preview, store_preview
+from console.shared.queue_lock import queue_lock
 from console.shared.runner import run_python_script
 from console.shared.wikipedia_queue import (
     QueueState,
@@ -85,6 +84,7 @@ from console.us.poll_queue import (
     prepare_us_item,
     tracking_changed,
 )
+from core import backup
 from core.db import Database
 from importers.polls.us.us_wikipedia_polls import (
     AUTO_TRACKING_OUTCOMES,
@@ -104,12 +104,6 @@ bp = Blueprint("us_poll_import", __name__)
 #: redeem the other's token.
 US_QUEUE_PREVIEW_TYPE = "us_wikipedia_queue"
 
-# One lock per queue token, created on the token's first request and dropped
-# once the token has left the preview cache. The guard protects the dict itself;
-# each queue's lock serialises that queue's requests.
-_QUEUE_LOCKS: dict[str, threading.Lock] = {}
-_QUEUE_LOCKS_GUARD = threading.Lock()
-
 _CHAMBER_ROUTE = US_CHAMBER_CONVERTER
 
 # What each automatic-tracking outcome means, in the order the summary lists
@@ -123,30 +117,10 @@ _AUTO_TRACKING_LABELS: dict[str, str] = {
 }
 
 
-@contextmanager
-def _queue_lock(token: str) -> Iterator[None]:
-    """Hold one queue's lock for the duration of a request.
-
-    The per-token lock is looked up (or created) under the module guard, which
-    also drops the locks of tokens no longer in the preview cache, so the map
-    never outgrows the cache. Dropping a lock is safe even if a request still
-    holds it: its token is gone, so every request for it ends as expired.
-
-    Args:
-        token: Token from the request path; need not be live.
-    """
-    with _QUEUE_LOCKS_GUARD:
-        for stale in [known for known in _QUEUE_LOCKS if get_preview(known) is None]:
-            del _QUEUE_LOCKS[stale]
-        lock = _QUEUE_LOCKS.setdefault(token, threading.Lock())
-    with lock:
-        yield
-
-
 def _serialised(
     view: Callable[[str, str], ResponseReturnValue],
 ) -> Callable[[str, str], ResponseReturnValue]:
-    """Run a queue route under its token's lock (see :func:`_queue_lock`).
+    """Run a queue route under its token's lock (see :func:`queue_lock`).
 
     The routes check the cursor and then act on the shared, in-place payload.
     Under the threaded dev server two submits of one form could otherwise both
@@ -157,7 +131,7 @@ def _serialised(
 
     @functools.wraps(view)
     def locked(chamber: str, token: str) -> ResponseReturnValue:
-        with _queue_lock(token):
+        with queue_lock(token):
             return view(chamber, token)
 
     return locked
@@ -469,7 +443,19 @@ def finish(chamber: str, token: str) -> ResponseReturnValue:
 
     abandon = request.method == "POST" and request.form.get("abandon") == "on"
     # Looked up at call time, so tests can swap the module's runner.
-    finish_us_queue(get_db(), payload, runner=run_python_script, abandon=abandon)
+    try:
+        wrote = finish_us_queue(
+            get_db(), payload, runner=run_python_script, abandon=abandon
+        )
+    except Exception:
+        # A failed model run can follow relabel or tracking writes, and the
+        # app's after-request hook skips GETs, so ask for the backup here.
+        backup.request_backup()
+        raise
+    if wrote:
+        # The app's after-request hook backs up only POST/PUT/PATCH/DELETE, and
+        # this page is also reached by GET (the last step redirects here).
+        backup.request_backup()
 
     auto_tracking: dict[str, int] | None = payload.get(AUTO_TRACKING_KEY)
     return render_template(

@@ -13,6 +13,7 @@ constant names per blueprint.
 from __future__ import annotations
 
 import html
+import json
 import re
 import subprocess
 import sys
@@ -165,6 +166,27 @@ def flashes(client: FlaskClient[Response], response: Response) -> list[str]:
 def flashes_on_page(body: str) -> list[str]:
     """Return the flashed messages rendered directly into ``body`` (no redirect)."""
     return [html.unescape(message.strip()) for message in ALERT.findall(body)]
+
+
+_ONSUBMIT = re.compile(r'onsubmit="([^"]*)"')
+_JS_STRING = re.compile(r'"((?:[^"\\]|\\.)*)"')
+
+
+def onsubmit_handlers(body: str) -> list[str]:
+    """Return the text of every inline ``onsubmit`` handler in ``body``, unescaped."""
+    return [html.unescape(handler) for handler in _ONSUBMIT.findall(body)]
+
+
+def confirm_text(handler: str) -> str:
+    """Join the double-quoted JSON string literals of an ``onsubmit`` handler.
+
+    The console writes confirm messages with ``tojson``, so a handler such as
+    ``return confirm("Delete " + n + " rows?");`` yields ``Delete  rows?``: the
+    message pieces without the script around them.
+    """
+    return "".join(
+        json.loads(f'"{literal}"') for literal in _JS_STRING.findall(handler)
+    )
 
 
 def select_block(body: str, field_name: str) -> str:

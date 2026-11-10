@@ -24,6 +24,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 
 from console import create_app
 from console.paths import EXPORT_ELECTION_SCRIPT
+from console.shared import queue_lock
 from console.shared.preview import PREVIEW_CACHE, store_preview
 from console.shared.wikipedia_queue import (
     NO_CUTOFF,
@@ -54,6 +55,7 @@ from console.us.poll_queue import (
     prepare_us_item,
     tracking_changed,
 )
+from core import backup
 from core.db import Database
 from importers.polls.us.us_polls_common import CandidateReading, pollster_identifier
 from importers.polls.us.us_wikipedia_polls import (
@@ -75,6 +77,7 @@ from importers.polls.us.us_wikipedia_polls import (
     commit_us_import_plan,
     rows_for_page,
 )
+from tests.console_fixtures import confirm_text, onsubmit_handlers
 
 HOUSE_MAP = "US House Districts 2024"
 SENATE_MAP = "US Senate 2024"
@@ -1039,6 +1042,62 @@ class TestFinish:
         assert payload[AUTO_TRACKING_KEY] is first_tracking
         assert payload[MODEL_RUN_KEY] is first_run
 
+    def test_it_reports_whether_this_call_wrote(self, us_db: Database) -> None:
+        runner = _RecordingRunner()
+        payload = _imported_payload(us_db, _row(us_db))
+
+        first = finish_us_queue(us_db, payload, runner=runner)
+        refresh = finish_us_queue(us_db, payload, runner=runner)
+
+        assert first is True
+        assert refresh is False
+
+    def test_a_finish_that_changed_nothing_reports_no_write(
+        self, us_db: Database
+    ) -> None:
+        # Nothing stored, so tracking skips the race; nothing imported or
+        # relabelled, so no model runs.
+        row = _row(us_db)
+        state = _queue(us_db, row)
+        state.items[0].status = "skipped"
+        payload: dict[str, Any] = {
+            CHAMBER_KEY: "senate",
+            STATE_KEY: state,
+            INDEX_KEY: _index(row),
+        }
+        runner = _RecordingRunner()
+
+        wrote = finish_us_queue(us_db, payload, runner=runner)
+
+        assert wrote is False
+        assert runner.calls == []
+
+    def test_a_tracking_only_finish_with_the_model_off_still_reports_a_write(
+        self, us_db: Database
+    ) -> None:
+        payload = _imported_payload(us_db, _row(us_db))
+        payload[STATE_KEY].run_model_at_end = False
+
+        wrote = finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+        assert payload[AUTO_TRACKING_KEY]["created"] == 1
+        assert wrote is True
+
+    def test_a_refused_model_run_with_nothing_else_changed_reports_no_write(
+        self, us_db: Database
+    ) -> None:
+        # Tracked and relabelled by an earlier call, so only the model remains;
+        # another run holds the slot, so it does not start.
+        payload = _imported_payload(us_db, _row(us_db))
+        payload[RELABEL_KEY] = 0
+        payload[AUTO_TRACKING_KEY] = {"unchanged": 1}
+
+        with MODEL_RUN_LOCK:
+            wrote = finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+        assert payload[MODEL_RUN_KEY] is None
+        assert wrote is False
+
     def _skipped_but_stored_payload(self, us_db: Database) -> dict[str, Any]:
         """A run that imported nothing: its one row was stored beforehand."""
         row = _row(us_db)
@@ -1108,11 +1167,42 @@ class TestFinish:
         payload = self._skipped_but_stored_payload(us_db)
         runner = _RecordingRunner()
 
-        finish_us_queue(us_db, payload, runner=runner)
+        wrote = finish_us_queue(us_db, payload, runner=runner)
 
         assert AUTO_TRACKING_ERROR_KEY in payload
         assert runner.calls == []
         assert MODEL_RUN_KEY not in payload
+        # The failed pass may have written part of its work.
+        assert wrote is True
+
+    def test_a_relabel_pass_that_raised_reports_a_write(
+        self, us_db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def failing(db: Database, rows: list[UsPollRow]) -> int:
+            raise UsImportError("boom")
+
+        monkeypatch.setattr(us_poll_queue, "apply_relabelled_polls", failing)
+        payload = _imported_payload(us_db, _row(us_db), run_model_at_end=False)
+        payload[AUTO_TRACKING_KEY] = {"unchanged": 1}
+
+        wrote = finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+        assert RELABEL_ERROR_KEY in payload
+        assert wrote is True
+
+    def test_relabelled_polls_report_a_write_with_the_model_off(
+        self, us_db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            us_poll_queue, "apply_relabelled_polls", lambda db, rows: 2
+        )
+        payload = _imported_payload(us_db, _row(us_db), run_model_at_end=False)
+        payload[AUTO_TRACKING_KEY] = {"unchanged": 1}
+
+        wrote = finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+        assert payload[RELABEL_KEY] == 2
+        assert wrote is True
 
     def test_tracking_from_an_earlier_request_still_counts(
         self, us_db: Database
@@ -1717,6 +1807,25 @@ class TestStartRoute:
 
 
 class TestStepPage:
+    def test_the_abandon_form_confirms_what_is_kept_and_what_is_not(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, _row(us_db))
+
+        body = client.get(f"/senate/polls/import/{token}").get_data(as_text=True)
+
+        [handler] = [h for h in onsubmit_handlers(body) if "Abandon" in h]
+        assert handler.startswith("return confirm(")
+        assert confirm_text(handler) == (
+            "Abandon this queue? Polls already imported stay; the rest are not "
+            "imported and the US Senate model is not run. Automatic matchup "
+            "tracking and relabelling onto renamed matchups are still applied for "
+            "the polls already stored. This can't be undone from the console."
+        )
+
     def test_renders_the_matchup_candidates_and_warnings(
         self,
         client: FlaskClient[Any],
@@ -2177,6 +2286,60 @@ class TestFinishRoute:
             in html.unescape(body)
         )
         assert len(model_runner.calls) == 2
+
+    def test_a_get_finish_that_wrote_requests_a_backup_and_a_refresh_does_not(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+        token = self._import_one(client, us_db, monkeypatch)
+        requests.clear()
+
+        client.get(f"/senate/polls/import/{token}/finish")
+        assert len(requests) == 1
+
+        client.get(f"/senate/polls/import/{token}/finish")
+        assert len(requests) == 1
+
+    def test_a_finish_that_raises_after_writing_still_requests_a_backup(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+
+        def write_then_fail(*args: Any, **kwargs: Any) -> bool:
+            raise RuntimeError("model blew up")
+
+        monkeypatch.setattr(us_poll_import, "finish_us_queue", write_then_fail)
+        token = self._import_one(client, us_db, monkeypatch)
+        requests.clear()
+
+        with pytest.raises(RuntimeError, match="model blew up"):
+            client.get(f"/senate/polls/import/{token}/finish")
+
+        assert len(requests) == 1
+
+    def test_a_get_finish_that_wrote_nothing_requests_no_backup(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+        token = _open_queue(client, monkeypatch, _row(us_db))
+        client.post(f"/senate/polls/import/{token}/skip", data={"expected_index": "0"})
+
+        response = client.get(f"/senate/polls/import/{token}/finish")
+
+        assert response.status_code == 200
+        assert requests == []
 
     def test_nothing_imported_runs_no_models(
         self,
@@ -2782,11 +2945,11 @@ class TestConcurrentSubmits:
     ) -> None:
         gone = _open_queue(client, monkeypatch, _row(us_db))
         client.get(f"/senate/polls/import/{gone}")
-        assert gone in us_poll_import._QUEUE_LOCKS
+        assert gone in queue_lock.QUEUE_LOCKS
         PREVIEW_CACHE.pop(gone)
         live = _open_queue(client, monkeypatch, _row(us_db))
 
         client.get(f"/senate/polls/import/{live}")
 
-        assert gone not in us_poll_import._QUEUE_LOCKS
-        assert live in us_poll_import._QUEUE_LOCKS
+        assert gone not in queue_lock.QUEUE_LOCKS
+        assert live in queue_lock.QUEUE_LOCKS

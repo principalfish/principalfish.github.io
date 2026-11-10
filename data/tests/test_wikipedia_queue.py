@@ -20,6 +20,7 @@ script, so pointing the path somewhere harmless would still launch python).
 from __future__ import annotations
 
 import re
+import threading
 from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
 from datetime import date
@@ -52,6 +53,7 @@ from console.shared.wikipedia_queue import (
 from console.westminster.poll_import import (
     WIKIPEDIA_PREVIEW_TYPE,
 )
+from core import backup
 from core.db import Database
 from importers.polls.types import PollImportResult, ScrapedPollRow
 from importers.polls.westminster.registry import IMPORTERS, ImporterMeta
@@ -62,6 +64,7 @@ from importers.polls.westminster.wikipedia_index import (
     fetch_poll_index,
     normalize_pollster_name,
 )
+from tests.console_fixtures import confirm_text, onsubmit_handlers
 
 # ── HTML fixture ──────────────────────────────────────────────────────────────
 # Mirrors the live page's shape: <section> per heading level, the heading itself
@@ -1128,11 +1131,30 @@ class TestQueueStep:
         assert re.search(
             rf'<form method="post" '
             rf'action="/westminster/polls/import/wikipedia/{token}/finish"'
-            r' class="inline-form">\s*'
+            r' class="inline-form"\s+onsubmit="return confirm\([^"]*\);">\s*'
             r'<input type="hidden" name="abandon" value="on" />\s*'
             r'<button type="submit" class="button button-danger">Abandon queue'
             r"</button>\s*</form>",
             body,
+        )
+
+    def test_the_abandon_form_confirms_what_is_kept_and_what_is_not(
+        self, app: Flask
+    ) -> None:
+        token = _store(_queue_state())
+
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
+        )
+
+        [handler] = onsubmit_handlers(body)
+        assert handler.startswith("return confirm(")
+        assert confirm_text(handler) == (
+            "Abandon this queue? Polls already imported stay; the rest are not "
+            "imported and the model is not run. This can't be undone from the "
+            "console."
         )
 
     def test_date_disagreement_raises_a_warning(
@@ -1471,6 +1493,155 @@ class TestFinish:
         assert len(calls) == 1
         assert "UNS model updated." in first
         assert "Wikipedia Catch-Up Summary" in first
+
+    def test_a_get_finish_that_ran_the_model_requests_a_backup_once(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export",
+            lambda *, timeout=0: ["UNS model updated."],
+        )
+        token = _store(self._imported_state())
+        client = app.test_client()
+
+        client.get(f"/westminster/polls/import/wikipedia/{token}/finish")
+        assert len(requests) == 1
+
+        client.get(f"/westminster/polls/import/wikipedia/{token}/finish")
+        assert len(requests) == 1
+
+    def test_a_failed_model_run_still_requests_a_backup(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+
+        def _boom(*, timeout: int = 0) -> list[str]:
+            raise RuntimeError("model crashed")
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _boom
+        )
+        token = _store(self._imported_state())
+
+        app.test_client().get(f"/westminster/polls/import/wikipedia/{token}/finish")
+
+        assert len(requests) == 1
+
+    def test_a_finish_that_did_not_run_the_model_requests_no_backup(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export",
+            lambda *, timeout=0: [],
+        )
+        client = app.test_client()
+        nothing_imported = _queue_state()
+        _mark(nothing_imported.items[0], "skipped", detail="Skipped")
+        nothing_imported.index = 1
+        skipped = _store(nothing_imported)
+        abandoned = _store(self._imported_state())
+        model_off = self._imported_state()
+        model_off.run_model_at_end = False
+        off = _store(model_off)
+
+        client.get(f"/westminster/polls/import/wikipedia/{skipped}/finish")
+        client.post(
+            f"/westminster/polls/import/wikipedia/{abandoned}/finish",
+            data={"abandon": "on"},
+        )
+        client.get(f"/westminster/polls/import/wikipedia/{off}/finish")
+
+        assert requests == []
+
+    def test_concurrent_finishes_of_one_token_run_the_model_once(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[str] = []
+        second_arrived = threading.Event()
+
+        started = threading.Event()
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(threading.current_thread().name)
+            started.set()
+            if len(calls) == 1:
+                # Hold the first run open long enough for a second request to
+                # reach the route; with no lock it would start its own run.
+                second_arrived.wait(timeout=0.5)
+            else:
+                second_arrived.set()
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        token = _store(self._imported_state())
+        statuses: list[int] = []
+
+        def _finish() -> None:
+            response = app.test_client().get(
+                f"/westminster/polls/import/wikipedia/{token}/finish"
+            )
+            statuses.append(response.status_code)
+
+        threads = [threading.Thread(target=_finish, name=f"f{n}") for n in range(2)]
+        threads[0].start()
+        assert started.wait(timeout=5)
+        threads[1].start()
+        for thread in threads:
+            thread.join(timeout=10)
+
+        assert statuses == [200, 200]
+        assert len(calls) == 1
+
+    def test_finishes_of_different_tokens_do_not_block_each_other(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[int] = []
+        release = threading.Event()
+        started = threading.Event()
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(len(calls))
+            started.set()
+            if len(calls) == 1:
+                release.wait(timeout=10)
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        blocked = _store(self._imported_state())
+        free = _store(self._imported_state())
+        statuses: list[int] = []
+
+        def _finish_blocked() -> None:
+            response = app.test_client().get(
+                f"/westminster/polls/import/wikipedia/{blocked}/finish"
+            )
+            statuses.append(response.status_code)
+
+        holder = threading.Thread(target=_finish_blocked)
+        holder.start()
+        assert started.wait(timeout=5)
+
+        other = app.test_client().get(
+            f"/westminster/polls/import/wikipedia/{free}/finish"
+        )
+
+        # The second token's whole request finished while the first still holds
+        # its own lock.
+        assert other.status_code == 200
+        assert len(calls) == 2
+        assert holder.is_alive()
+        release.set()
+        holder.join(timeout=10)
+        assert statuses == [200]
 
     def test_model_does_not_run_on_abandon(
         self, app: Flask, monkeypatch: pytest.MonkeyPatch

@@ -10,8 +10,10 @@ Two flows share this blueprint and the importer dispatch at its centre:
 
 The catch-up queue lives in the shared preview cache under a single token and
 is mutated in place across requests. It is process-local, so a server restart
-(``server.py`` runs with the reloader on) discards an in-flight run; the token
-guard turns that into a "queue expired" redirect rather than a crash.
+(or a code reload, when ``server.py`` runs with ``CONSOLE_DEBUG=1``) discards an
+in-flight run; the token guard turns that into a "queue expired" redirect rather
+than a crash. The finish route holds the token's lock (see
+:mod:`console.shared.queue_lock`), so two requests cannot both run the model.
 
 Two catch-up queues open at once are independent and self-healing: each holds
 its own state over the same database, and because plans are built lazily and
@@ -40,6 +42,7 @@ from console.paths import (
 )
 from console.sections import WESTMINSTER_MAP_NAME
 from console.shared.preview import get_preview, pop_preview, store_preview
+from console.shared.queue_lock import queue_lock
 from console.shared.runner import run_command, run_model_then_export
 from console.shared.wikipedia_queue import (
     QueueItem,
@@ -55,6 +58,7 @@ from console.shared.wikipedia_queue import (
     progress,
     summarise,
 )
+from core import backup
 from importers.polls.types import ScrapedPollRow
 from importers.polls.westminster.registry import IMPORTERS
 from importers.polls.westminster.wikipedia_index import (
@@ -447,32 +451,38 @@ def wikipedia_finish(token: str) -> ResponseReturnValue:
         Rendered wikipedia_summary.html, or a redirect to import_poll_form if
         the token is not a live queue.
     """
-    payload = _load_queue(token)
-    if payload is None:
-        return _queue_expired()
-    state: QueueState = payload["state"]
+    # Two finish requests for one token must not both run the model: the second
+    # waits here, then finds the recorded run and repeats nothing.
+    with queue_lock(token):
+        payload = _load_queue(token)
+        if payload is None:
+            return _queue_expired()
+        state: QueueState = payload["state"]
 
-    if request.method == "POST" and request.form.get("abandon") == "on":
-        state.run_model_at_end = False
+        if request.method == "POST" and request.form.get("abandon") == "on":
+            state.run_model_at_end = False
 
-    imported = any(item.status == "imported" for item in state.items)
-    if state.run_model_at_end and imported and "model_output" not in payload:
-        try:
-            payload["model_output"] = _run_model_and_export()
-        except Exception as exc:
-            payload["model_output"] = []
-            payload["model_error"] = f"UNS model run failed: {exc}"
+        imported = any(item.status == "imported" for item in state.items)
+        if state.run_model_at_end and imported and "model_output" not in payload:
+            try:
+                payload["model_output"] = _run_model_and_export()
+            except Exception as exc:
+                payload["model_output"] = []
+                payload["model_error"] = f"UNS model run failed: {exc}"
+            # A failed run may still have written. The app's after-request hook
+            # skips GETs, and this page is reached by one.
+            backup.request_backup()
 
-    return render_template(
-        "wikipedia_summary.html",
-        token=token,
-        state=state,
-        grouped=summarise(state),
-        progress=progress(state),
-        cutoff_label=cutoff_label(state),
-        model_output=payload.get("model_output"),
-        model_error=payload.get("model_error", ""),
-    )
+        return render_template(
+            "wikipedia_summary.html",
+            token=token,
+            state=state,
+            grouped=summarise(state),
+            progress=progress(state),
+            cutoff_label=cutoff_label(state),
+            model_output=payload.get("model_output"),
+            model_error=payload.get("model_error", ""),
+        )
 
 
 def _load_queue(token: str) -> dict[str, Any] | None:

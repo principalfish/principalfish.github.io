@@ -113,7 +113,7 @@ def by_election_confirm(token: str) -> ResponseReturnValue:
         f"{result.votes_inserted} votes."
     )
 
-    # Rebuild the static site data so the by-election shows in current-parliament.
+    # Export the static site data so the by-election shows in current-parliament.
     if not EXPORT_ELECTION_SCRIPT.exists():
         flash(f"Imported, but export script not found: {EXPORT_ELECTION_SCRIPT}")
         return redirect(url_for("by_elections.by_election_form"))
@@ -121,7 +121,7 @@ def by_election_confirm(token: str) -> ResponseReturnValue:
     export = run_python_script(EXPORT_ELECTION_SCRIPT, timeout=900)
     return render_command_result(
         title="Import By-Election",
-        command="export_elections.py (rebuild site data)",
+        command="export_elections.py (export site data)",
         stdout=export.stdout,
         stderr=export.stderr,
         return_code=export.returncode,

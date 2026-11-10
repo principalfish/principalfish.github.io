@@ -1,1 +1,1 @@
-"""Admin routes: database rebuild, backup and restore, and the site rebuild."""
+"""Admin routes: database rebuild (ending in the export), backup and restore."""

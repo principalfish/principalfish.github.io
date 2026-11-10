@@ -66,9 +66,11 @@
 </form>
 {% endmacro %}
 
-{# "Abandon queue" form: always a POST to the finish endpoint. #}
-{% macro abandon_form(finish_url) %}
-<form method="post" action="{{ finish_url }}" class="inline-form">
+{# "Abandon queue" form: always a POST to the finish endpoint, behind a confirm
+   whose text the caller words (`confirm_message`). #}
+{% macro abandon_form(finish_url, confirm_message) %}
+<form method="post" action="{{ finish_url }}" class="inline-form"
+      onsubmit="return confirm({{ confirm_message | tojson | forceescape }});">
   <input type="hidden" name="abandon" value="on" />
   <button type="submit" class="button button-danger">Abandon queue</button>
 </form>

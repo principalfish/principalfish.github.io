@@ -70,7 +70,9 @@
           <button type="submit" class="button">Approve all {{ group_remaining }} remaining in {{ race_label }}</button>
         </form>
       {% endif %}
-      {{ abandon_form(url_for('us_poll_import.finish', chamber=chamber.slug, token=token)) }}
+      {{ abandon_form(
+        url_for('us_poll_import.finish', chamber=chamber.slug, token=token),
+        "Abandon this queue? Polls already imported stay; the rest are not imported and the " ~ chamber.label ~ " model is not run. Automatic matchup tracking and relabelling onto renamed matchups are still applied for the polls already stored. This can't be undone from the console.") }}
     </div>
     <p>
       Approving the race imports every poll still pending in it without showing each one.

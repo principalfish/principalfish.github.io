@@ -97,8 +97,8 @@ and use **Catch Up from Wikipedia** for Westminster polls.
 4. Check the summary for failed imports, rows without an importer, and unreadable
    Wikipedia rows.
 
-The queue lives in memory. Restarting the console, including a development
-auto-reload, discards a catch-up in progress; confirmed polls remain stored.
+The queue lives in memory. Restarting the console, or a code reload under
+`CONSOLE_DEBUG=1`, discards a catch-up in progress; confirmed polls remain stored.
 
 ## Run local server
 

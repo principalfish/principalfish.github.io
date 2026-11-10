@@ -36,7 +36,8 @@
       <p>No model outputs have been generated yet.</p>
     {% else %}
       <div class="bulk-actions">
-        <form id="bulk-delete-form" method="post" action="{{ url_for(delete_selected_endpoint) }}" class="inline-form">
+        <form id="bulk-delete-form" method="post" action="{{ url_for(delete_selected_endpoint) }}" class="inline-form"
+              onsubmit="var n = document.querySelectorAll('.model-select:checked').length; return confirm({{ 'Delete ' | tojson | forceescape }} + n + {{ ' selected model output(s) and their vote rows? This can\'t be undone from the console.' | tojson | forceescape }});">
           <button id="bulk-delete-btn" type="submit" class="button button-danger" disabled>Delete Selected</button>
         </form>
       </div>
@@ -72,7 +73,8 @@
                 <td>
                   <div class="table-actions">
                     <a class="button" href="{{ url_for(detail_endpoint, election_id=output.election_id) }}">View Model</a>
-                    <form method="post" action="{{ url_for(delete_endpoint, election_id=output.election_id) }}" class="inline-form">
+                    <form method="post" action="{{ url_for(delete_endpoint, election_id=output.election_id) }}" class="inline-form"
+                          onsubmit="return confirm({{ ('Delete the model output for ' ~ output.name ~ ' (' ~ output.year ~ ') and its vote rows? This can\'t be undone from the console.') | tojson | forceescape }});">
                       <button type="submit" class="button button-danger">Delete</button>
                     </form>
                   </div>

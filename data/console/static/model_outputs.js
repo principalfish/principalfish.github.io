@@ -72,6 +72,9 @@
   const bulkDeleteForm = document.getElementById("bulk-delete-form");
   if (bulkDeleteForm && bulkDeleteBtn) {
     bulkDeleteForm.addEventListener("submit", (event) => {
+      // The form's inline onsubmit confirm runs first; a declined confirm must
+      // not strip the ids or disable the button.
+      if (event.defaultPrevented) return;
       const selected = checkboxes.filter((box) => box.checked).map((box) => box.value);
       if (selected.length === 0) {
         event.preventDefault();

@@ -654,7 +654,7 @@ def finish_us_queue(
     *,
     runner: ScriptRunner,
     abandon: bool = False,
-) -> None:
+) -> bool:
     """Close a queue run: relabel, track every scraped race, then run the model.
 
     Stored polls the scrape lists under a renamed matchup are moved onto it
@@ -701,6 +701,14 @@ def finish_us_queue(
         abandon: True when the user left the queue early; turns the model run
             off for good, as in the UK queue.
 
+    Returns:
+        True if this call may have changed the database: it relabelled polls,
+        moved a race onto a new tracked matchup or ran the model, or one of
+        the relabel and tracking passes raised (which can leave part of its
+        work written). False for a refresh that repeats nothing and for a
+        finish that changed nothing, so the caller can ask for a backup only
+        when one is due.
+
     Raises:
         TypeError: If the payload holds no ``QueueState``, no ``UsPollIndex`` or
             no known chamber.
@@ -716,14 +724,17 @@ def finish_us_queue(
         raise TypeError("the payload holds no known chamber")
     chamber = US_CHAMBERS_BY_SLUG[chamber_slug]
 
+    wrote = False
     if abandon:
         state.run_model_at_end = False
 
     if RELABEL_KEY not in payload and RELABEL_ERROR_KEY not in payload:
         try:
             payload[RELABEL_KEY] = apply_relabelled_polls(db, index.rows)
+            wrote = wrote or bool(payload[RELABEL_KEY])
         except (UsImportError, SQLAlchemyError) as err:
             logger.warning("US renamed-matchup relabelling failed", exc_info=True)
+            wrote = True
             payload[RELABEL_ERROR_KEY] = (
                 f"Moving polls onto renamed matchups failed: {err}"
             )
@@ -731,18 +742,20 @@ def finish_us_queue(
     if AUTO_TRACKING_KEY not in payload and AUTO_TRACKING_ERROR_KEY not in payload:
         try:
             payload[AUTO_TRACKING_KEY] = apply_auto_tracked_matchups(db, index.rows)
+            wrote = wrote or tracking_changed(payload[AUTO_TRACKING_KEY])
         except (ValueError, SQLAlchemyError) as err:
             logger.warning("US automatic matchup tracking failed", exc_info=True)
+            wrote = True
             payload[AUTO_TRACKING_ERROR_KEY] = (
                 f"Automatic matchup tracking failed: {err}"
             )
 
     if MODEL_RUN_KEY in payload or not state.run_model_at_end:
-        return
+        return wrote
     imported = any(item.status == "imported" for item in state.items)
     changed = imported or bool(payload.get(RELABEL_KEY))
     if not changed and not tracking_changed(payload.get(AUTO_TRACKING_KEY)):
-        return
+        return wrote
     with model_run_slot() as free:
         if not free:
             # Recorded, not retried, like any finish result: a refresh long
@@ -753,7 +766,7 @@ def finish_us_queue(
                 "history rebuild was in progress. Run it from the "
                 f"{chamber.label} section's Run model page once it finishes."
             )
-            return
+            return wrote
         try:
             payload[MODEL_RUN_KEY] = run_us_chamber_and_export(
                 db, chamber, runner=runner, rebuild_history=False
@@ -763,3 +776,4 @@ def finish_us_queue(
             # whether the model saved an output the export never picked up.
             payload[MODEL_RUN_KEY] = err.partial
             payload[MODEL_ERROR_KEY] = f"US model run failed: {err}"
+    return True

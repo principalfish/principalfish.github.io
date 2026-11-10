@@ -341,7 +341,7 @@ class TestByElectionConfirm:
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         assert flashes_on_page(body) == [_IMPORT_MESSAGE]
-        assert command_line(body) == "export_elections.py (rebuild site data)"
+        assert command_line(body) == "export_elections.py (export site data)"
         assert f"<strong>Exit code:</strong> {export_code}" in body
         assert pre_after_heading(body, "h3", "Stdout") == "ran export_elections.py"
         assert pre_after_heading(body, "h3", "Stderr") == (

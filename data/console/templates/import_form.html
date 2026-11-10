@@ -8,8 +8,8 @@
       imported never reach the queue, and the UNS model runs once at the end.
     </p>
     <p>
-      The queue is held in memory while the console runs, so restarting the server — including
-      the automatic reload after any code change — discards a catch-up in progress.
+      The queue is held in memory while the console runs, so restarting the server — or, when
+      <code>CONSOLE_DEBUG=1</code> is set, a code reload after any change — discards a catch-up in progress.
     </p>
     <form method="post" action="{{ url_for('poll_import.wikipedia_start') }}" class="form">
       <label for="cutoff_date">Only polls ending on or after (optional)</label>

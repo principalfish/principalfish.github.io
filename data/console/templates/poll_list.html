@@ -77,7 +77,8 @@
                   {{- "±%.1f" | format(poll.moe) if poll.moe is not none else "-" -}}
                 </td>
                 <td>
-                  <form method="post" action="{{ url_for('polls.delete_poll', poll_id=poll.poll_id) }}" class="inline-form">
+                  <form method="post" action="{{ url_for('polls.delete_poll', poll_id=poll.poll_id) }}" class="inline-form"
+                        onsubmit="return confirm({{ ('Delete poll #' ~ poll.poll_id ~ ' by ' ~ poll.pollster_name ~ ' (fieldwork ' ~ poll.fieldwork_start ~ ' to ' ~ poll.fieldwork_end ~ ') and its ' ~ poll.row_count ~ ' poll rows? This can\'t be undone from the console.') | tojson | forceescape }});">
                     {% if section %}<input type="hidden" name="next_section" value="{{ section.slug }}">{% endif %}
                     <button type="submit" class="button button-danger">Delete</button>
                   </form>

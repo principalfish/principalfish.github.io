@@ -11,8 +11,9 @@ Payloads carry a ``"type"`` key identifying the flow that stored them, and each
 flow checks it before trusting a token; the cache is one shared namespace.
 
 The cache is process-local and intentionally simple — this is a single-user
-local tool. Note it does not survive a restart, and ``server.py`` runs with the
-reloader on, so editing any Python file mid-run discards an in-flight queue.
+local tool. Note it does not survive a restart, and with ``CONSOLE_DEBUG=1`` (the only
+mode in which ``server.py`` runs the reloader) editing any Python file mid-run
+restarts the server and so discards an in-flight queue.
 """
 
 from __future__ import annotations

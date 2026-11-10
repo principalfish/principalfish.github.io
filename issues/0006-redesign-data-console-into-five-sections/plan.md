@@ -208,7 +208,7 @@ Rejected:
 - [x] 6: Global export page
 - [x] 7: Admin page, confirms and small fixes
 - [x] 8: Looks and readability
-- [ ] 9: Run log
+- [x] 9: Run log
 - [ ] 10: Background runs with live progress
 - [ ] 11: Docs
 - [ ] 12: Favicon

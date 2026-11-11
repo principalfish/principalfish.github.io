@@ -79,6 +79,8 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - `console.md` has a short Limits list: a stopped job doesn't stop processes its script started, a `CONSOLE_DEBUG=1` reload marks a running job interrupted, Restore is refused while a run is going (user, 2026-11-11, by starting piece 11 on that recommendation)
 - The Holyrood run form gets one help line saying the run writes `results/holyrood-prediction.json` itself, even with Export when done unticked (a template change in the docs piece) (user, 2026-11-11, by starting piece 11 on that recommendation)
 - A pytest test checks that every console path named in the docs matches a route and every relative docs link resolves, replacing the plan's "no tests" (user, 2026-11-11, by starting piece 11 on that recommendation)
+- The favicon is three ascending white bars on a rounded square in the console accent blue `#2563eb`, with a small orange corner dot to set it apart from the site's tab; one design for light and dark tabs (user, 2026-11-11, "Shape: Bar chart · Colour: Accent blue · Corner dot: Orange dot")
+- It is an SVG with a 32×32 PNG fallback in `console/static/`, linked by two `<link rel="icon">` lines in `base.html`, generated without an image tool (user, 2026-11-11, by choosing the design on that recommendation)
 
 ## Open
 

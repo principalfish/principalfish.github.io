@@ -34,5 +34,5 @@ _2026-11-11 · 11 of 12 pieces done · now: waiting on review of piece 12_
   Runs stop blocking the page and show progress as they go.
 - [x] **11/12 Docs** · `7afd0b84`
   Document the new layout, export page and run log.
-- [ ] **12/12 Favicon** · waiting on you, added 2026-11-09: the user asked for it as a final step
+- [ ] **12/12 Favicon** · approved, committing, added 2026-11-09: the user asked for it as a final step
   Give the console its own icon in the browser tab.

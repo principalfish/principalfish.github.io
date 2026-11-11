@@ -32,7 +32,7 @@ _2026-11-11 · 10 of 12 pieces done · now: waiting on review of piece 11_
   Keep every run's output, viewable afterwards.
 - [x] **10/12 Background runs with live progress** · `c0700844`
   Runs stop blocking the page and show progress as they go.
-- [ ] **11/12 Docs** · waiting on you
+- [ ] **11/12 Docs** · approved, committing
   Document the new layout, export page and run log.
 - [ ] **12/12 Favicon** · not started, added 2026-11-09: the user asked for it as a final step
   Give the console its own icon in the browser tab.

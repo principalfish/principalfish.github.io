@@ -3,13 +3,13 @@
   "slug": "redesign-data-console-into-five-sections",
   "title": "Redesign the data console into five uniform sections",
   "mode": "build",
-  "state": "review",
+  "state": "ready",
   "branch": "claude/redesign-data-console-into-five-sections-e76f9c",
   "base": "master",
   "gh_issue": 83,
   "build_model": null,
   "created": "2026-11-08 15:51",
-  "updated": "2026-11-11 11:39",
+  "updated": "2026-11-11 13:05",
   "done": null,
   "local": [
     {

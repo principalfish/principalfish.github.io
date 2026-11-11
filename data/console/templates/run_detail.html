@@ -4,7 +4,7 @@
   <section class="card">
     <h2>{{ record.label }}</h2>
     <p><strong>Section:</strong> {{ section_label }}</p>
-    <p><strong>Command:</strong> {{ command }}</p>
+    <p><strong>Command:</strong> {{ command or 'none (no command ran)' }}</p>
     <p><strong>Working directory:</strong> {{ record.cwd }}</p>
     <p><strong>Started:</strong> {{ record.started_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
     {% if record.finished_at %}

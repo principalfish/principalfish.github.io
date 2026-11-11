@@ -916,10 +916,10 @@ class TestModelRun:
             assert free
             response = client.post(f"/{slug}/model", data=_model_form(form))
 
-        assert response.status_code == 302
-        assert response.headers["Location"] == f"/{slug}/model"
+        # The form is drawn again on the refusing response, not redirected to.
+        assert response.status_code == 200
         assert recording_runner.calls == []
-        assert _flashes(client, response)[-1] == (
+        assert _alerts(response.get_data(as_text=True))[-1] == (
             f"{refused.format(label=US_CHAMBERS_BY_SLUG[slug].label)}: "
             "another run is in progress (a model run, export or database "
             "rebuild); wait for it to finish, then try again."
@@ -1482,6 +1482,23 @@ class TestRaceMatchupsPage:
         assert f"{OSSOFF_COLLINS} (auto)" in georgia_row
         # Georgia sorts before Texas.
         assert body.index("Georgia</th>") < body.index("Texas</th>")
+
+    @pytest.mark.parametrize(
+        ("chamber", "map_name"),
+        [("house", "US House Districts 2024"), ("senate", "US Senate 2024")],
+    )
+    def test_a_missing_map_redirects_home_with_a_flash(
+        self, app: Flask, chamber: str, map_name: str
+    ) -> None:
+        client = app.test_client()
+
+        response = client.get(f"/{chamber}/matchups")
+
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith("/")
+        assert _flashes(client, response) == [
+            f"No map named '{map_name}'; import the US maps first."
+        ]
 
     def test_untracked_race_with_polls_is_listed(self, app: Flask, db: Database) -> None:
         _seed_senate_races(db)
@@ -2211,7 +2228,7 @@ class TestUsModelJobs:
             third = client.post(
                 "/president/model", data=_model_form({"rebuild_history": "on"})
             )
-            page = client.get(second.headers["Location"]).get_data(as_text=True)
+            page = second.get_data(as_text=True)
             running_page = client.get(first.headers["Location"]).get_data(as_text=True)
             runner.release.set()
             job = jobs.get_job(job_id)
@@ -2221,14 +2238,7 @@ class TestUsModelJobs:
             runner.release.set()
             jobs.set_executor(previous)
 
-        assert (second.status_code, second.headers["Location"]) == (
-            302,
-            "/senate/model",
-        )
-        assert (third.status_code, third.headers["Location"]) == (
-            302,
-            "/president/model",
-        )
+        assert (second.status_code, third.status_code) == (200, 200)
         assert (
             "US Senate model not run: another run is in progress (a model run, "
             "export or database rebuild); wait for it to finish, then try again."
@@ -2239,6 +2249,37 @@ class TestUsModelJobs:
         assert runner.scripts == ["run_us_house_model.py", "export_elections.py"]
         assert not MODEL_RUN_LOCK.locked()
 
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    def test_a_refused_run_draws_the_form_again_with_the_posted_values(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+        slug: str,
+    ) -> None:
+        _track_president(model_db)
+        client = app.test_client()
+        posted = _model_form(
+            {"since_days_back": "60", "ignore_seat_polls": "on", "dry_run": "true"}
+        )
+
+        with job_holding_the_slot() as job:
+            response = client.post(f"/{slug}/model", data=posted)
+            body = response.get_data(as_text=True)
+
+        assert response.status_code == 200
+        assert "another run is in progress" in html.unescape(body)
+        assert f'<a href="/runs/{job.id}">See the running job.</a>' in body
+        # The run form itself, with what was posted rather than its defaults.
+        assert "Run Model" in body
+        assert re.search(r'<option value="60"\s+selected', body)
+        assert re.search(r'<option value="true"\s+selected', body)
+        assert re.search(r'name="ignore_seat_polls"\s+checked', body)
+        assert re.search(r'name="export_when_done"\s+checked', body)
+        assert 'name="rebuild_history" checked' not in body
+        assert recording_runner.calls == []
+        assert jobs.running_job_id() is None
+
     def test_a_slot_held_by_a_synchronous_run_is_refused_without_a_link(
         self, app: Flask, model_db: Database, recording_runner: _RecordingRunner
     ) -> None:
@@ -2246,8 +2287,8 @@ class TestUsModelJobs:
         with MODEL_RUN_LOCK:
             response = client.post("/house/model", data=_model_form())
 
-        assert response.status_code == 302
-        [message] = _flashes(client, response)
+        assert response.status_code == 200
+        [message] = _alerts(response.get_data(as_text=True))
         assert message.startswith("US House model not run: another run is in progress")
         assert "See the running job" not in client.get("/house/model").get_data(
             as_text=True
@@ -2358,6 +2399,34 @@ class TestUsModelJobs:
         assert recording_runner.calls == []
         assert f"<strong>{NO_MATCHUP_NOTE}</strong>" in body
         assert "(skipped: no tracked matchup)" in body
+
+    def test_a_skipped_job_keeps_a_record_after_it_leaves_the_registry(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+    ) -> None:
+        _seed_president_map(model_db)
+        client = app.test_client()
+
+        response = client.post("/president/model", data=_model_form())
+        job_id = _job_id(response)
+        jobs.reset()
+        detail = client.get(f"/runs/{job_id}")
+        listing = client.get("/runs").get_data(as_text=True)
+
+        assert recording_runner.calls == []
+        assert detail.status_code == 200
+        assert NO_MATCHUP_NOTE in html.unescape(detail.get_data(as_text=True))
+        assert f'href="/runs/{job_id}"' in listing
+        record = run_log.read_record(job_id)
+        assert record is not None
+        assert (record.section, record.label, record.status) == (
+            "president",
+            "US President model",
+            "ok",
+        )
+        assert record.dry_run is False
 
     @pytest.mark.parametrize("slug", US_SLUGS)
     def test_the_rebuild_confirm_text_is_still_on_the_form(

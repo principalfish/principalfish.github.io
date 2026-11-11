@@ -28,7 +28,6 @@ from console.shared.runner import (
 )
 from console.us.models import (
     US_CHAMBERS_BY_SLUG,
-    _run_chambers_and_export,
     busy_message,
     model_run_slot,
     run_us_chamber_and_export,
@@ -998,27 +997,6 @@ def test_the_rebuild_route_logs_a_run_with_no_section(
     assert record["section"] is None
     assert (path / "stdout.txt").read_text() == "rebuilt\n"
     assert "rebuilt" in response.get_data(as_text=True)
-
-
-def test_a_multi_chamber_export_logs_without_a_section(
-    db: Database, folder: Path
-) -> None:
-    seen: list[run_log.RunContext | None] = []
-
-    def runner(
-        script: Path, *args: str, timeout: int
-    ) -> subprocess.CompletedProcess[str]:
-        seen.append(run_log.begin_run().context)
-        return subprocess.CompletedProcess([str(script), *args], 0, "", "")
-
-    chambers = [
-        c for c in US_CHAMBERS_BY_SLUG.values() if c.tracked_matchup_map_name is None
-    ]
-    assert chambers
-    # Two chambers sharing one export step: use the same chamber twice.
-    _run_chambers_and_export(db, [chambers[0], chambers[0]], runner=runner, rebuild=())
-
-    assert seen[-1] == run_log.RunContext(None, "Export")
 
 
 # --- more validation --------------------------------------------------------

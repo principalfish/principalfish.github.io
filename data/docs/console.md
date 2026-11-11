@@ -99,6 +99,9 @@ the database file (the folder that holds `DATABASE_PATH`; by default
 - `stdout.txt` and `stderr.txt`: the output, kept whole, including the partial
   output of a run that timed out.
 
+A job that ran no command (a skipped US chamber, or one that failed before its
+first step) gets a record of its own under its job id.
+
 The status is `ok`, `failed` (non-zero exit), `timeout`, `crashed` (it could not
 start, or raised something unexpected), `running` or `interrupted`.
 

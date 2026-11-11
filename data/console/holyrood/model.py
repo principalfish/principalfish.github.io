@@ -6,7 +6,6 @@ registered from :mod:`console.holyrood.outputs`.
 
 from __future__ import annotations
 
-import shlex
 import sys
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -23,6 +22,7 @@ from console.paths import (
     HOLYROOD_MODEL_SCRIPT,
 )
 from console.shared import jobs
+from console.shared.model_job import ExportStep, model_then_export_work
 from console.shared.run_form import (
     EXPORT_CHECKBOX_NAME,
     RunForm,
@@ -32,7 +32,6 @@ from console.shared.run_form import (
     election_options,
     export_checkbox,
     half_life_field,
-    run_summary,
     ticked,
 )
 from console.shared.run_log import section_context
@@ -51,7 +50,7 @@ register_outputs(bp)
 
 @bp.route("/holyrood/polls/import", methods=["POST"])
 def holyrood_import_polls() -> ResponseReturnValue:
-    """POST /holyrood/polls/import — Import new Scottish Parliament polls from Wikipedia.
+    """POST /holyrood/polls/import — Import new Holyrood polls from Wikipedia.
 
     Imports both the constituency and regional-list ballots. Idempotent — the
     importer skips polls already in the database. Running the projection model
@@ -230,7 +229,9 @@ def run_holyrood_model_form() -> str:
 
 @bp.route("/holyrood/model", methods=["POST"])
 def run_holyrood_model() -> ResponseReturnValue:
-    """POST /holyrood/model — Validate the form, run the Holyrood model, and export on success.
+    """POST /holyrood/model — Run the Holyrood model, then export if asked.
+
+    Validates the form first. The run is a background job.
 
     Form parameters:
         election_name (str): Baseline holyrood_general election providing seat-level votes.
@@ -293,52 +294,19 @@ def run_holyrood_model() -> ResponseReturnValue:
     dry_run = form.dry_run
     export_heading = _holyrood_run_form(choices).export_heading
 
-    def work() -> jobs.JobOutcome:
-        with section_context("holyrood", "model"):
-            result = run_command(command, timeout=1800)
-
-        export_result = None
-        export_return_code: int | None = None
-        if export_when_done and not dry_run and result.returncode == 0:
-            if not EXPORT_ELECTION_SCRIPT.exists():
-                export_result = {
-                    "command": "",
-                    "stdout": "",
-                    "stderr": f"Export script not found: {EXPORT_ELECTION_SCRIPT}",
-                    "return_code": 1,
-                }
-                export_return_code = 1
-            else:
-                # Full export; Holyrood's forecast keeps only its manifest entry.
-                # The export never writes holyrood-prediction.json.
-                export_command = [sys.executable, str(EXPORT_ELECTION_SCRIPT)]
-                with section_context("holyrood", "export"):
-                    export_proc = run_command(export_command, timeout=900)
-                export_result = {
-                    "command": shlex.join(export_command),
-                    "stdout": export_proc.stdout,
-                    "stderr": export_proc.stderr,
-                    "return_code": export_proc.returncode,
-                }
-                export_return_code = export_proc.returncode
-
-        run_result = {
-            "command": shlex.join(command),
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "return_code": result.returncode,
-            "export_result": export_result,
-            "summary": run_summary(
-                dry_run=dry_run,
-                export=export_when_done,
-                return_code=result.returncode,
-                export_return_code=export_return_code,
-            ),
-        }
-        ok = result.returncode == 0 and export_return_code in (None, 0)
-        return jobs.JobOutcome(
-            {"run_result": run_result, "export_heading": export_heading}, ok=ok
-        )
+    # Full export; Holyrood's forecast keeps only its manifest entry. The export
+    # never writes holyrood-prediction.json.
+    work = model_then_export_work(
+        section="holyrood",
+        command=command,
+        run=run_command,
+        export=ExportStep(
+            [sys.executable, str(EXPORT_ELECTION_SCRIPT)], EXPORT_ELECTION_SCRIPT
+        ),
+        export_when_done=export_when_done,
+        dry_run=dry_run,
+        export_heading=export_heading,
+    )
 
     try:
         job = jobs.start_job(

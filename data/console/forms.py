@@ -25,7 +25,7 @@ class ModelRunForm(BaseModel):
     since_days_back: int = Field(ge=0)
     half_life_days: float = Field(gt=0)
     output_csv: str = ""
-    dry_run: bool = False
+    dry_run: bool = True
     export_when_done: bool = False
 
     @field_validator("half_life_days")
@@ -56,7 +56,7 @@ class HolyroodModelRunForm(BaseModel):
     as_of_days_back: int = Field(ge=0)
     since_days_back: int = Field(ge=0)
     half_life_days: float = Field(gt=0)
-    dry_run: bool = False
+    dry_run: bool = True
     export_when_done: bool = False
 
     @field_validator("half_life_days")

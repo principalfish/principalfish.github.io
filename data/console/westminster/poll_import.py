@@ -81,6 +81,16 @@ WIKIPEDIA_PREVIEW_TYPE = "wikipedia_queue"
 MODEL_RUN_TIMEOUT = 1800
 EXPORT_TIMEOUT = 900
 
+# What a finish refused for a busy run slot records: shown on the summary, and
+# repeated on a refresh, long after the other run has ended.
+MODEL_BUSY_ERROR = (
+    "UNS model not run: another run was in progress (a model run, export or "
+    "database rebuild). Run it from the Westminster Run model page once it "
+    "finishes."
+)
+# Payload key holding the id of the job that held the slot, when one did.
+MODEL_BUSY_JOB_KEY = "model_busy_job"
+
 _SAMPLE_SIZE_RE = re.compile(r"\d[\d,]*")
 
 
@@ -451,8 +461,9 @@ def wikipedia_finish(token: str) -> ResponseReturnValue:
     and anything was actually imported. The run is recorded on the cached
     payload so refreshing the summary does not repeat it, and the queue is left
     in the cache so the report survives a refresh. While a background job holds
-    the console's run slot the model is not run and nothing is recorded, so the
-    summary says so and a later refresh runs it.
+    the console's run slot the model is not run: the refusal is recorded like a
+    run (with the job's id, when a job holds the slot), so the summary says so
+    and a later refresh does not start a surprise run.
 
     Args:
         token: Token identifying the cached catch-up queue.
@@ -478,11 +489,16 @@ def wikipedia_finish(token: str) -> ResponseReturnValue:
 
         imported = any(item.status == "imported" for item in state.items)
         if state.run_model_at_end and imported and "model_output" not in payload:
-            # Nothing is recorded when the slot is busy, so a refresh once the
-            # job has ended still runs the model, once.
             with model_run_slot() as free:
                 if not free:
-                    jobs.flash_busy("UNS model not run")
+                    # Recorded, not retried, like any finish result: a refresh
+                    # long after the other run has ended must not start a
+                    # surprise run.
+                    refusal = jobs.busy_refusal("UNS model not run")
+                    payload["model_output"] = None
+                    payload["model_error"] = MODEL_BUSY_ERROR
+                    if refusal.job_id is not None:
+                        payload[MODEL_BUSY_JOB_KEY] = refusal.job_id
                 else:
                     try:
                         payload["model_output"] = _run_model_and_export()
@@ -502,6 +518,7 @@ def wikipedia_finish(token: str) -> ResponseReturnValue:
             cutoff_label=cutoff_label(state),
             model_output=payload.get("model_output"),
             model_error=payload.get("model_error", ""),
+            model_busy_job=payload.get(MODEL_BUSY_JOB_KEY, ""),
         )
 
 

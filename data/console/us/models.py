@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import subprocess
 import threading
-from collections.abc import Collection, Iterator, Mapping
-from contextlib import AbstractContextManager, contextmanager
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -33,7 +33,7 @@ from console.paths import (
     US_SENATE_MODEL_SCRIPT,
     US_SENATE_TREND_CACHE_JSON,
 )
-from console.shared.run_log import run_context, section_context
+from console.shared.run_log import section_context
 from console.shared.runner import run_python_script
 from core.db import Database
 from core.schema import ElectionType
@@ -80,8 +80,8 @@ class UsChamber:
     """Console wiring for one US election type.
 
     Attributes:
-        slug: URL segment and endpoint-name stem (``"house"``). Also the name
-            used in the ``rebuild`` set of :func:`_run_chambers_and_export`.
+        slug: URL segment and endpoint-name stem (``"house"``); also the
+            section its run-log records belong to.
         label: Display name used in headings (``"US House"``).
         model_type: The forecast-output election type this chamber lists.
         baseline_type: Real-election type eligible as the seat-level baseline
@@ -254,7 +254,7 @@ class UsModelRun:
         stderr: The same for stderr, omitting steps that wrote none.
         return_code: The first non-zero return code, or 0 when every step that
             ran succeeded. A skipped chamber is not a failure.
-        skipped: Slugs of the chambers that were skipped.
+        skipped: The chamber's slug if it was skipped, else empty.
     """
 
     stdout: str
@@ -273,8 +273,8 @@ class UsModelRunInterrupted(subprocess.SubprocessError):
         step: Label of the step that died.
         partial: The run up to that point: every finished step's output, then
             whatever the dying step printed, under its own heading. Its
-            ``return_code`` is 1. It shows which chambers finished, and so
-            saved outputs the export never picked up.
+            ``return_code`` is 1. It shows whether the model step finished, and
+            so saved an output the export never picked up.
     """
 
     def __init__(self, step: str, partial: UsModelRun, cause: BaseException) -> None:
@@ -300,12 +300,14 @@ def _output_text(output: str | bytes | None) -> str:
     return output or ""
 
 
-# The console's one run slot. Every model run, export, database rebuild, import
-# and queue finish holds it for as long as it runs; a background job
-# (:func:`console.shared.jobs.start_job`) takes it for the job's whole life, so
-# the work inside a job never takes it again, and
-# :func:`run_us_chamber_and_export` never takes it itself: its callers (the job,
-# or the queue finish) already hold it.
+# The console's one run slot. Model runs, exports and database rebuilds, the
+# Holyrood import, a US results import and Rebuild Current Senate hold it for
+# their whole run; a poll queue finish, a single-poll import and a by-election
+# hold it around their model or export step only (their polls and tracking are
+# committed before). A background job (:func:`console.shared.jobs.start_job`)
+# takes it for the job's whole life, so the work inside a job never takes it
+# again, and :func:`run_us_chamber_and_export` never takes it itself: its callers
+# (the job, or the queue finish) already hold it.
 # One lock, not one per chamber or section, because every run ends with an export
 # that publishes *every* chamber's trend history: a run that exported while
 # another chamber's rebuild had cleared its points would publish that half-cleared
@@ -320,10 +322,12 @@ MODEL_RUN_LOCK = threading.Lock()
 def model_run_slot() -> Iterator[bool]:
     """Hold the console's one run slot, if it is free.
 
-    Every model run, export, database rebuild, import and queue finish in the
-    console holds this slot while it runs. The lock is tried without blocking,
-    so a second submit is told a run is in progress instead of queueing silently
-    behind an hour-long rebuild.
+    Model runs, exports and database rebuilds, the Holyrood import, a US results
+    import and Rebuild Current Senate hold this slot for their whole run; a poll
+    queue finish, a single-poll import and a by-election hold it around their
+    model or export step only (their polls and tracking are committed before).
+    The lock is tried without blocking, so a second submit is told a run is in
+    progress instead of queueing silently behind an hour-long rebuild.
 
     Yields:
         True while the slot is held (it is released on exit), or False when
@@ -421,7 +425,6 @@ def run_us_chamber_and_export(
         ValueError: ``dry_run`` and ``rebuild_history`` were both set.
         UsModelRunInterrupted: A step timed out or could not be started.
     """
-    rebuild = frozenset({chamber.slug}) if rebuild_history else frozenset()
     options = UsModelOptions(
         since_days_back=since_days_back,
         half_life_days=half_life_days,
@@ -429,43 +432,38 @@ def run_us_chamber_and_export(
         ignore_seat_polls=ignore_seat_polls,
         dry_run=dry_run,
     )
-    options.args_for(chamber, rebuild_history=rebuild_history)  # validates the pair
-    return _run_chambers_and_export(
+    # Building the arguments also rejects a dry run combined with a rebuild.
+    model_args = options.args_for(chamber, rebuild_history=rebuild_history)
+    return _run_chamber_and_export(
         db,
-        (chamber,),
+        chamber,
         runner=runner,
-        rebuild=rebuild,
-        options=options,
+        model_args=model_args,
+        rebuild_history=rebuild_history,
         export=export and not dry_run,
     )
 
 
-def _step_context(section: str | None, kind: str) -> AbstractContextManager[None]:
-    """The run-log context for one step: the section's own, or none without one."""
-    if section is None:
-        return run_context(section=None, label=kind.capitalize())
-    return section_context(section, kind)
-
-
-def _run_chambers_and_export(
+def _run_chamber_and_export(
     db: Database,
-    chambers: Collection[UsChamber],
+    chamber: UsChamber,
     *,
     runner: ScriptRunner,
-    rebuild: Collection[str],
-    options: UsModelOptions = UsModelOptions(),
-    export: bool = True,
+    model_args: tuple[str, ...],
+    rebuild_history: bool,
+    export: bool,
 ) -> UsModelRun:
-    """Run the given chambers' models in order, then the export.
+    """Run one chamber's model, then the export.
 
     Args:
         db: Active Database instance, used only to read tracked matchups.
-        chambers: The chambers to run, in order.
+        chamber: The chamber whose model to run.
         runner: Subprocess runner.
-        rebuild: Chamber slugs to run with their rebuild flag.
-        options: Argument overrides applied to every chamber's runner.
-        export: Whether to run the export once every model has succeeded or
-            been skipped.
+        model_args: The model runner's arguments.
+        rebuild_history: Whether ``model_args`` rebuild the trend history, which
+            runs under the longer rebuild timeout.
+        export: Whether to run the export once the model has succeeded or been
+            skipped.
 
     Returns:
         The combined :class:`UsModelRun`; see :func:`run_us_chamber_and_export`
@@ -480,20 +478,16 @@ def _run_chambers_and_export(
     stderr_parts: list[str] = []
     skipped: list[str] = []
 
-    # The export covers one chamber's section when only that chamber ran.
-    export_section = next(iter(chambers)).slug if len(chambers) == 1 else None
-
     def run_step(
         label: str,
         script: Path,
         args: tuple[str, ...],
         *,
         timeout: int = STEP_TIMEOUT_SECONDS,
-        section: str | None,
         kind: str,
     ) -> int:
         try:
-            with _step_context(section, kind):
+            with section_context(chamber.slug, kind):
                 result = runner(script, *args, timeout=timeout)
         except (subprocess.SubprocessError, OSError) as err:
             stdout_parts.append(
@@ -515,35 +509,23 @@ def _run_chambers_and_export(
         return result.returncode
 
     return_code = 0
-    for chamber in chambers:
-        if not tracked_matchup_in_force(db, chamber):
-            skipped.append(chamber.slug)
-            stdout_parts.append(f"=== {chamber.model_step_label} ===\n{NO_MATCHUP_NOTE}")
-            continue
-
-        rebuilding = chamber.slug in rebuild
-        args = options.args_for(chamber, rebuild_history=rebuilding)
-        timeout = REBUILD_TIMEOUT_SECONDS if rebuilding else STEP_TIMEOUT_SECONDS
-
+    if not tracked_matchup_in_force(db, chamber):
+        skipped.append(chamber.slug)
+        stdout_parts.append(f"=== {chamber.model_step_label} ===\n{NO_MATCHUP_NOTE}")
+    else:
         return_code = run_step(
             chamber.model_step_label,
             chamber.model_script,
-            args,
-            timeout=timeout,
-            section=chamber.slug,
+            model_args,
+            timeout=REBUILD_TIMEOUT_SECONDS
+            if rebuild_history
+            else STEP_TIMEOUT_SECONDS,
             kind="model",
         )
-        if return_code != 0:
-            break
-    else:
-        if export:
-            return_code = run_step(
-                EXPORT_STEP_LABEL,
-                EXPORT_ELECTION_SCRIPT,
-                (),
-                section=export_section,
-                kind="export",
-            )
+    if return_code == 0 and export:
+        return_code = run_step(
+            EXPORT_STEP_LABEL, EXPORT_ELECTION_SCRIPT, (), kind="export"
+        )
 
     return UsModelRun(
         stdout="\n".join(stdout_parts),

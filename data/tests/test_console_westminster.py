@@ -24,6 +24,7 @@ from console.westminster.model import (
     _choices_for_model_form,
     _model_arg_explanations,
 )
+from core import backup
 from core.db import Database
 from core.schema import ElectionType
 from tests.console_fixtures import (
@@ -576,27 +577,51 @@ class TestModelRunExecute:
         idx = command.index("--output-csv")
         assert command[idx + 1] == "models/westminster/output/custom-witness.csv"
 
-    def test_omitting_dry_run_defaults_to_a_real_run_pins_current_behaviour(
+    def test_omitting_dry_run_runs_as_a_dry_run(
         self,
         app: Flask,
         db: Database,
         westminster_world: WestminsterWorld,
         recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Pins a latent gap: ``ModelRunForm.dry_run`` defaults to ``False``, not
-        the "true" the GET form's own default value suggests, so a POST that
-        omits the field entirely triggers a real (non-dry-run) model run. Not
-        reachable through the rendered form today — the ``<select>`` always
-        submits a value — so this is latent, not exploitable via the UI.
-        """
+        """A POST without the field previews: the safe default, never a real run."""
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
         form = _valid_form(westminster_world)
         del form["dry_run"]
 
         app.test_client().post("/westminster/model", data=form)
 
-        assert len(recording_runner.calls) >= 1
+        [command] = recording_runner.calls
+        assert "--dry-run" in command
+        assert recording_runner.scripts == ["run_uns_model.py"]
+        assert requests == []
+
+    def test_an_explicit_dry_run_false_still_runs_for_real(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        export_script = tmp_path / "export_elections.py"
+        export_script.write_text("# stub for test", encoding="utf-8")
+        monkeypatch.setattr(
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", export_script
+        )
+        form = _valid_form(westminster_world, dry_run="false")
+
+        app.test_client().post("/westminster/model", data=form)
+
         model_command = recording_runner.calls[0]
         assert "--dry-run" not in model_command
+        assert recording_runner.scripts == ["run_uns_model.py", "export_elections.py"]
+        assert requests == ["b"]
 
 
 class TestModelOutputsRoute:

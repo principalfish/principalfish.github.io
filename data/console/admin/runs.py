@@ -91,7 +91,7 @@ def run_detail(run_id: str) -> ResponseReturnValue:
     return render_template(
         "run_detail.html",
         record=record,
-        command=shlex.join(record.command),
+        command=shlex.join(record.command) or None,
         stdout=run_log.read_output(run_id, run_log.STDOUT_FILE),
         stderr=run_log.read_output(run_id, run_log.STDERR_FILE),
         section_label=section_label(record.section),

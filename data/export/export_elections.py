@@ -1659,7 +1659,11 @@ def _export_page(
         return
 
     manifest_path = output_root / "map-modes.json"
-    existing = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+    existing = (
+        json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest_path.exists()
+        else {}
+    )
 
     held_back: list[dict[str, Any]] = []
     map_parliaments: dict[str, str] = {}

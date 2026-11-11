@@ -21,6 +21,7 @@ from typing import Any
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from console.forms import EXPORT_CONTENT_KINDS
 from console.sections import SECTIONS
@@ -34,6 +35,7 @@ from export.export_elections import (
     exportable_forecast_parliaments,
     scope_map_modes,
 )
+from export.payload import set_others_party_id
 from tests.export_golden import LEGACY_2019, read_files, seed_model_runs
 from tests.uk_fixtures import WestminsterWorld
 from tests.us_ev_fixtures import seed_canonical_allocations, set_model_target
@@ -422,6 +424,85 @@ class TestOneSectionLeavesTheRestAlone:
         _change_database(world.db)
         world.run("--sections", "house")
         assert manifest_path.stat().st_mtime_ns == stamp
+
+    def test_export_pages_skips_a_page_the_scope_has_nothing_on(
+        self, world: World
+    ) -> None:
+        # ``main`` filters before calling ``export_pages``, so the page guard inside
+        # it is reached only by calling it directly with every page root.
+        world.run()
+        roots = {page: world.base / page / "data" for page in PAGES}
+        before = world.tree()
+        _change_database(world.db)
+        scope = build_export_scope(["president"], None)
+        self._export_pages(world, roots, scope)
+        changed = _changed(before, world.tree())
+        assert changed
+        assert all(path.startswith("uselectionmaps/") for path in changed)
+
+        fresh = {page: world.base.parent / "fresh" / page / "data" for page in PAGES}
+        (fresh["uselectionmaps"] / "maps").mkdir(parents=True)
+        (fresh["uselectionmaps"] / "maps" / "map-6.topo.json").write_text(
+            "{}", encoding="utf-8"
+        )
+        self._export_pages(world, fresh, scope)
+        assert not fresh["electionmaps"].parent.exists()
+        assert fresh["uselectionmaps"].exists()
+
+    def test_refresh_manifest_metadata_skips_a_page_the_scope_has_nothing_on(
+        self, world: World
+    ) -> None:
+        # Likewise reached only by a direct call: ``main`` passes just the pages
+        # the scope touches.
+        world.run()
+        roots = {page: world.base / page / "data" for page in PAGES}
+        before = world.tree()
+        _change_database(world.db)
+        export_elections.refresh_manifest_metadata(
+            roots, dry_run=False, scope=build_export_scope(["president"], ["metadata"])
+        )
+        changed = _changed(before, world.tree())
+        assert changed == {"uselectionmaps/data/map-modes.json"}
+
+    @staticmethod
+    def _export_pages(
+        world: World, page_roots: dict[str, Path], scope: Any
+    ) -> None:
+        """Call ``export_pages`` directly, as ``main`` does, for ``scope``."""
+        others = world.db.get_party_by_name("Others")
+        assert others is not None
+        set_others_party_id(others.id)
+        monkeypatch = world.monkeypatch
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "export_elections.py",
+                "--legacy-files-dir",
+                str(world.legacy),
+            ],
+        )
+        args = export_elections.parse_args()
+        with world.db.session() as session:
+            elections = [
+                election
+                for election in session.execute(
+                    select(Election).options(joinedload(Election.map))
+                ).scalars()
+                if scope.covers_election(election)
+            ]
+            with contextlib.redirect_stdout(io.StringIO()):
+                export_elections.export_pages(
+                    session=session,
+                    elections=elections,
+                    page_roots=page_roots,
+                    args=args,
+                    manifest_parties=[],
+                    manifest_regions_by_map_id={},
+                    has_electorate=True,
+                    single_election_mode=False,
+                    scope=scope,
+                )
 
     def test_page_without_a_manifest_is_written_with_just_the_selection(
         self, world: World

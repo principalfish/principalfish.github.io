@@ -771,12 +771,118 @@ def test_the_inline_executor_returns_the_finished_job() -> None:
     assert not MODEL_RUN_LOCK.locked()
 
 
-def test_a_job_with_no_step_record_still_lives_in_the_registry(folder: Path) -> None:
+def test_a_job_with_no_step_lives_in_the_registry_and_has_no_step_ids(
+    folder: Path,
+) -> None:
     job = _start(lambda: JobOutcome({"title": "Fake"}, ok=True))
 
     assert jobs.get_job(job.id) is not None
-    assert run_log.read_record(job.id) is None
-    assert list(folder.iterdir()) == []
+    assert job.steps == []
+
+
+def test_a_job_that_ran_no_step_still_gets_a_record_under_its_own_id(
+    folder: Path, client: FlaskClient[Response]
+) -> None:
+    payload: dict[str, object] = {
+        "run_result": {
+            "command": "model.py --x (skipped: no tracked matchup)",
+            "stdout": "partial out",
+            "stderr": "some warning",
+            "return_code": 0,
+            "summary": "Nothing ran: no matchup.",
+        },
+        "export_heading": "Export",
+    }
+
+    job = _start(
+        lambda: JobOutcome(payload, ok=True), label="Skipped one", dry_run=True
+    )
+
+    [record] = _records(folder)
+    assert record.id == job.id
+    assert (record.section, record.label, record.status) == (None, "Skipped one", "ok")
+    assert record.command == ()
+    assert (record.dry_run, record.exit_code) == (True, 0)
+    assert record.cwd and record.finished_at is not None
+    assert record.duration_seconds is not None
+    assert run_log.read_output(job.id, run_log.STDOUT_FILE) == (
+        "Nothing ran: no matchup.\npartial out"
+    )
+    assert run_log.read_output(job.id, run_log.STDERR_FILE) == "some warning"
+    jobs.reset()
+    assert jobs.get_job(job.id) is None
+    assert run_log.read_record(job.id) == record
+    page = client.get(f"/runs/{job.id}").get_data(as_text=True)
+    assert "Skipped one" in page
+    assert "none (no command ran)" in page
+    assert "<span>ok</span>" in page
+
+
+def test_a_summary_already_in_the_output_is_not_written_twice(folder: Path) -> None:
+    note = "Skipped: no tracked matchup."
+    payload: dict[str, object] = {
+        "run_result": {
+            "command": "model.py",
+            "stdout": f"=== Model ===\n{note}",
+            "stderr": "",
+            "return_code": 0,
+            "summary": note,
+        },
+    }
+
+    job = _start(lambda: JobOutcome(payload, ok=True))
+
+    stdout = run_log.read_output(job.id, run_log.STDOUT_FILE)
+    assert stdout is not None and stdout.count(note) == 1
+
+
+def test_a_failed_job_that_ran_no_step_is_recorded_with_its_label_and_error(
+    folder: Path, client: FlaskClient[Response]
+) -> None:
+    def work() -> JobOutcome:
+        raise RuntimeError("went wrong before any step")
+
+    job = _start(work, label="Dies early")
+
+    [record] = _records(folder)
+    assert record.id == job.id and record.command == ()
+    assert record.status == "crashed"
+    assert record.error == "RuntimeError: went wrong before any step"
+    assert record.exit_code is None
+    jobs.reset()
+    page = client.get(f"/runs/{job.id}").get_data(as_text=True)
+    assert "Dies early" in page
+    assert "none (no command ran)" in page
+    assert "crashed" in page
+    assert "RuntimeError: went wrong before any step" in page
+
+
+def test_a_job_that_ran_a_step_gets_no_second_record(
+    folder: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    job = _start(_run_one("print('hi')"))
+
+    [record] = _records(folder)
+    assert record.id == job.id
+    assert record.command[-1] == "print('hi')"
+    assert run_log.read_output(job.id, run_log.STDOUT_FILE) == "hi\n"
+    # A second write under the same id would fail and be logged.
+    assert "Could not write the run record" not in caplog.text
+
+
+def test_a_failure_to_write_the_stepless_record_does_not_break_the_job(
+    folder: Path, backups: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(*args: object, **kwargs: object) -> Path:
+        raise OSError("disk full")
+
+    monkeypatch.setattr(run_log, "write_record", broken)
+
+    job = _start(lambda: JobOutcome({"title": "T"}, ok=True))
+
+    assert job.status == "ok"
+    assert backups == ["backup"]
+    assert not MODEL_RUN_LOCK.locked()
 
 
 def test_the_registry_keeps_a_running_job_and_only_the_last_finished_ones() -> None:

@@ -15,7 +15,8 @@ While a job's thread runs, :func:`current_job` returns it, and
 into its run record as it is produced (see
 :func:`console.shared.run_log.open_running`) and registers the record as one of
 the job's ``steps``. The job's own id is the id of its first step's record, so
-``/runs/<job id>`` is also that record.
+``/runs/<job id>`` is also that record. A job that ran no step gets one record
+of its own under its id when it ends, so its page outlives the registry.
 
 The registry is in memory: running jobs and the last few finished ones. A job
 that has left it is only a run record.
@@ -37,6 +38,7 @@ from typing import Protocol
 
 from flask import flash
 
+from console.paths import DATA_DIR
 from console.shared import run_log
 from console.shared.run_log import (
     STATUS_CRASHED,
@@ -372,6 +374,7 @@ def _run(
         finally:
             _current.reset(token)
         _finish(job, outcome, failure)
+        _record_stepless_job(job)
         if not job.dry_run:
             try:
                 backup.request_backup()
@@ -387,6 +390,69 @@ def _run(
             stack.close()
         finally:
             job._done.set()
+
+
+def _text_of(source: Mapping[str, object], key: str) -> str:
+    """``source[key]`` when it is a string, else an empty string."""
+    value = source.get(key)
+    return value if isinstance(value, str) else ""
+
+
+def _record_stepless_job(job: Job) -> None:
+    """Write the run record of a job that ended without running any step.
+
+    A step's record is written by :func:`~console.shared.runner.run_command`; a
+    job whose work ran no command (a chamber skipped for want of a matchup, a
+    job that failed before its first step) would otherwise leave nothing once it
+    left the registry, and ``/runs/<job id>`` would be a 404. The record takes
+    the job's id and an empty command, and its output file holds the result's
+    summary, output and errors. Never raises: a failure to write is logged only.
+    """
+    try:
+        with _lock:
+            if job.steps or job.running or job.finished_at is None:
+                return
+            payload = job.payload or {}
+            status, error = job.status, job.error
+            timeout, finished_at = job.timeout_seconds, job.finished_at
+        # A model result nests what the page draws under ``run_result``.
+        nested = payload.get("run_result")
+        shown: Mapping[str, object] = nested if isinstance(nested, dict) else payload
+        return_code = shown.get("return_code")
+        exit_code = (
+            return_code
+            if isinstance(return_code, int) and not isinstance(return_code, bool)
+            else None
+        )
+        output = _text_of(shown, "stdout")
+        summary = _text_of(shown, "summary")
+        # A skipped chamber's note is already part of its output.
+        stdout = output
+        if summary not in output:
+            stdout = "\n".join(filter(None, (summary, output)))
+        run_log.write_record(
+            run_log.RunRecord(
+                id=job.id,
+                section=job.section,
+                label=job.label,
+                command=(),
+                cwd=str(DATA_DIR),
+                started_at=job.started_at,
+                finished_at=finished_at,
+                duration_seconds=round(
+                    (finished_at - job.started_at).total_seconds(), 3
+                ),
+                status=status,
+                exit_code=exit_code,
+                timeout_seconds=timeout,
+                dry_run=job.dry_run,
+                error=error,
+            ),
+            stdout,
+            _text_of(shown, "stderr"),
+        )
+    except Exception:
+        log.warning("Could not write the run record of job %s", job.id, exc_info=True)
 
 
 def _mark_crashed(job: Job, text: str) -> None:
@@ -441,6 +507,8 @@ def busy_refusal(refused: str, busy: JobBusy | None = None) -> BusyRefusal:
         busy: The :class:`JobBusy` that ``start_job`` raised; None looks up
             the running job now (for a view that took the slot itself).
     """
+    # Imported here for the same reason as in start_job: a module-level import
+    # of the US models would loop back to this module through the runner.
     from console.us.models import busy_message
 
     job_id = busy.job_id if busy is not None else running_job_id()

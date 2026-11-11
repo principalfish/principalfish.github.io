@@ -26,6 +26,9 @@
 
   {% if model_error %}
     {{ error_alert(model_error) }}
+    {% if model_busy_job %}
+      <p><a href="{{ url_for('runs.run_detail', run_id=model_busy_job) }}">See the running job.</a></p>
+    {% endif %}
   {% endif %}
 
   {% if model_output %}

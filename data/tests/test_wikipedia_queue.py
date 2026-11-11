@@ -31,7 +31,6 @@ from flask import Flask
 
 from console import create_app
 from console.sections import WESTMINSTER_MAP_NAME
-from console.shared import jobs
 from console.shared.preview import PREVIEW_CACHE, store_preview
 from console.shared.wikipedia_queue import (
     NO_CUTOFF,
@@ -51,6 +50,7 @@ from console.shared.wikipedia_queue import (
     progress,
     summarise,
 )
+from console.us.models import model_run_slot
 from console.westminster.poll_import import (
     WIKIPEDIA_PREVIEW_TYPE,
 )
@@ -66,6 +66,7 @@ from importers.polls.westminster.wikipedia_index import (
     normalize_pollster_name,
 )
 from tests.console_fixtures import confirm_text, onsubmit_handlers
+from tests.job_fixtures import job_holding_the_slot
 
 # ── HTML fixture ──────────────────────────────────────────────────────────────
 # Mirrors the live page's shape: <section> per heading level, the heading itself
@@ -1647,7 +1648,7 @@ class TestFinish:
             holder.join(timeout=10)
         assert statuses == [200]
 
-    def test_a_finish_while_a_job_runs_is_refused_and_a_later_refresh_runs_it(
+    def test_a_finish_while_a_job_runs_is_refused_and_records_the_refusal(
         self, app: Flask, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[int] = []
@@ -1664,44 +1665,105 @@ class TestFinish:
         token = _store(self._imported_state())
         client = app.test_client()
         url = f"/westminster/polls/import/wikipedia/{token}/finish"
-        release = threading.Event()
-        started = threading.Event()
 
-        def _work() -> jobs.JobOutcome:
-            started.set()
-            release.wait(timeout=10)
-            return jobs.JobOutcome({}, ok=True)
+        with job_holding_the_slot() as job:
+            refused = client.get(url).get_data(as_text=True)
 
-        previous = jobs.set_executor(jobs.ThreadExecutor())
-        try:
-            job = jobs.start_job(
-                label="Export",
-                section=None,
-                dry_run=True,
-                work=_work,
-                result_kind=jobs.KIND_COMMAND,
-            )
-            try:
-                assert started.wait(timeout=5)
-                refused = client.get(url).get_data(as_text=True)
-            finally:
-                release.set()
-            assert job.wait(10)
-        finally:
-            jobs.set_executor(previous)
-
-        # Nothing ran and nothing was recorded; the page links to the job.
+        # Nothing ran and nothing needed backing up; the page names the busy
+        # refusal and links the job that holds the slot.
         assert calls == [] and requests == []
-        assert "UNS model not run: another run is in progress" in refused
+        assert "UNS model not run: another run was in progress" in refused
+        assert "Run it from the Westminster Run model page" in refused
         assert f'href="/runs/{job.id}"' in refused
+        assert "See the running job." in refused
         assert "UNS model updated." not in refused
         assert "Wikipedia Catch-Up Summary" in refused
 
-        # Once the slot is free a refresh runs the model, once.
+    def test_a_refresh_after_a_refused_finish_still_shows_it_and_runs_nothing(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[int] = []
+        requests: list[str] = []
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(timeout)
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        token = _store(self._imported_state())
+        client = app.test_client()
+        url = f"/westminster/polls/import/wikipedia/{token}/finish"
+
+        with job_holding_the_slot() as job:
+            client.get(url)
+
+        # The slot is free again; the refusal stands, recorded, not retried.
         again = client.get(url).get_data(as_text=True)
         client.get(url)
+
+        assert calls == [] and requests == []
+        assert "UNS model not run: another run was in progress" in again
+        assert f'href="/runs/{job.id}"' in again
+        assert "UNS model updated." not in again
+
+    def test_a_finish_while_a_non_job_run_holds_the_slot_has_no_job_link(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[int] = []
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(timeout)
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        monkeypatch.setattr(backup, "request_backup", lambda: None)
+        token = _store(self._imported_state())
+        client = app.test_client()
+        url = f"/westminster/polls/import/wikipedia/{token}/finish"
+
+        with model_run_slot() as free:
+            assert free
+            refused = client.get(url).get_data(as_text=True)
+        again = client.get(url).get_data(as_text=True)
+
+        assert calls == []
+        for body in (refused, again):
+            assert "UNS model not run: another run was in progress" in body
+            assert "See the running job" not in body
+            assert "UNS model updated." not in body
+
+    def test_a_fresh_finish_on_a_new_queue_runs_the_model_once_when_free(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[int] = []
+        requests: list[str] = []
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(timeout)
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        client = app.test_client()
+        refused_token = _store(self._imported_state())
+        with job_holding_the_slot():
+            client.get(f"/westminster/polls/import/wikipedia/{refused_token}/finish")
+
+        fresh = _store(self._imported_state())
+        url = f"/westminster/polls/import/wikipedia/{fresh}/finish"
+        body = client.get(url).get_data(as_text=True)
+        client.get(url)
+
         assert len(calls) == 1
-        assert "UNS model updated." in again
+        assert "UNS model updated." in body
+        assert "not run: another run" not in body
         assert requests == ["b"]
 
     def test_model_does_not_run_on_abandon(

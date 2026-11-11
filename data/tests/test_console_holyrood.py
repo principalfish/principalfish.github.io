@@ -40,6 +40,7 @@ from console.holyrood.model import (
 )
 from console.paths import HOLYROOD_MODEL_SCRIPT
 from console.us.models import MODEL_RUN_LOCK, model_run_slot
+from core import backup
 from core.db import Database
 from core.schema import ElectionType
 from tests.console_fixtures import (
@@ -525,7 +526,7 @@ class TestRunHolyroodModelFormRoute:
         """The GET form's other defaults matter as much as the election
         pick — in particular ``dry_run="true"``, since a form submitted
         untouched (or a POST that omits the field, see
-        ``HolyroodModelRunForm.dry_run``'s own default of ``False``) must
+        ``HolyroodModelRunForm.dry_run``'s own default, also true) must
         preview rather than silently write to the DB and run the export.
         """
         response = app.test_client().get("/holyrood/model")
@@ -725,6 +726,55 @@ class TestRunHolyroodModelExecute:
         body = response.get_data(as_text=True)
         assert "Static Data Export" not in body
         assert "Export when done was off, so nothing was exported." in body
+
+    def test_omitting_dry_run_runs_as_a_dry_run(
+        self,
+        app: Flask,
+        db: Database,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A POST without the field previews: the safe default, never a real run."""
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        world = seed_holyrood_world(db)
+        form = _valid_form(world)
+        del form["dry_run"]
+
+        app.test_client().post("/holyrood/model", data=form)
+
+        [command] = recording_runner.calls
+        assert "--dry-run" in command
+        assert "--no-output" in command
+        assert recording_runner.scripts == ["run_holyrood_uns_model.py"]
+        assert requests == []
+
+    def test_an_explicit_dry_run_false_still_runs_for_real(
+        self,
+        app: Flask,
+        db: Database,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        world = seed_holyrood_world(db)
+        export_script = tmp_path / "export_elections.py"
+        export_script.write_text("# stub for test", encoding="utf-8")
+        monkeypatch.setattr(
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", export_script
+        )
+        form = _valid_form(world, dry_run="false")
+
+        app.test_client().post("/holyrood/model", data=form)
+
+        assert "--dry-run" not in recording_runner.calls[0]
+        assert recording_runner.scripts == [
+            "run_holyrood_uns_model.py",
+            "export_elections.py",
+        ]
+        assert requests == ["b"]
 
     def test_a_dry_run_never_exports_even_with_the_box_ticked(
         self,

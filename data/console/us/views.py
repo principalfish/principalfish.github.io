@@ -145,9 +145,9 @@ def model_run(chamber: str) -> ResponseReturnValue:
         chamber: The chamber slug from the path.
 
     Returns:
-        The form again with a flash for an invalid value, a redirect back to
-        the form when the slot is taken or a script is missing, otherwise a
-        redirect to the job's page.
+        The form again with a flash for an invalid value or when the slot is
+        taken (the posted values kept), a redirect back to the form when a
+        script is missing, otherwise a redirect to the job's page.
     """
     spec = US_CHAMBERS_BY_SLUG[chamber]
     # The shared database handle: its engine allows use from other threads (the
@@ -258,7 +258,7 @@ def model_run(chamber: str) -> ResponseReturnValue:
             else f"{spec.label} model not run",
             busy,
         )
-        return redirect(back)
+        return _render_model_form(spec, form_values)
     return redirect(url_for("runs.run_detail", run_id=job.id), 303)
 
 

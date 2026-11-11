@@ -30,7 +30,7 @@ _2026-11-10 · 9 of 12 pieces done · now: waiting on review of piece 10_
   Consistent styling, tables and spacing, in light and dark.
 - [x] **9/12 Run log** · `0c45b65b`
   Keep every run's output, viewable afterwards.
-- [ ] **10/12 Background runs with live progress** · waiting on you
+- [ ] **10/12 Background runs with live progress** · approved, committing
   Runs stop blocking the page and show progress as they go.
 - [ ] **11/12 Docs** · not started
   Document the new layout, export page and run log.

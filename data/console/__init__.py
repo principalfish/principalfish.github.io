@@ -12,6 +12,7 @@ from flask import Flask, Response, request
 
 from console.csrf import same_origin_only
 from console.nav import nav_context
+from console.shared import jobs
 from core import backup
 
 
@@ -27,6 +28,7 @@ def create_app() -> Flask:
     app.config["TRUSTED_HOSTS"] = ["127.0.0.1", "localhost"]
     app.before_request(same_origin_only)
     app.context_processor(nav_context)
+    app.jinja_env.globals["BUSY_CATEGORY_PREFIX"] = jobs.BUSY_CATEGORY_PREFIX
 
     from console.admin.db_admin import bp as db_admin_bp
     from console.admin.export import bp as export_bp

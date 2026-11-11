@@ -8,8 +8,10 @@ per-chamber output routes it registers.
 :func:`run_us_chamber_and_export` runs one chamber's runner and then, optionally,
 the static export. It is Flask-free so it can be called from the end of the
 poll-review queue, and it takes its subprocess runner as an argument so tests
-never shell out. It serves each chamber's model page, the matchup pages'
-"rebuild history" option and the poll queue's "run model at end" option.
+never shell out. It never takes the run slot itself: it runs inside a background
+job, or under the caller's own hold of :func:`model_run_slot`. It serves each
+chamber's model page, the matchup pages' "rebuild history" option and the poll
+queue's "run model at end" option.
 """
 
 from __future__ import annotations
@@ -298,29 +300,34 @@ def _output_text(output: str | bytes | None) -> str:
     return output or ""
 
 
-# Held by every console run of a US model: an ordinary run, a history rebuild,
-# and the poll queue's finish step.
-# One lock, not one per chamber, because every run ends with the export, which
-# publishes *every* chamber's trend history: a run that exported while another
-# chamber's rebuild had cleared its points would publish that half-cleared
-# history. The threaded dev server makes a double submit reach a run twice.
+# The console's one run slot. Every model run, export, database rebuild, import
+# and queue finish holds it for as long as it runs; a background job
+# (:func:`console.shared.jobs.start_job`) takes it for the job's whole life, so
+# the work inside a job never takes it again, and
+# :func:`run_us_chamber_and_export` never takes it itself: its callers (the job,
+# or the queue finish) already hold it.
+# One lock, not one per chamber or section, because every run ends with an export
+# that publishes *every* chamber's trend history: a run that exported while
+# another chamber's rebuild had cleared its points would publish that half-cleared
+# history, and two exports would rewrite the same files at once. The threaded dev
+# server makes a double submit reach a run twice.
 # Process-local: it does not guard against a second server process or a
-# concurrent CLI run. Nor does it cover the console's other full exports (site
-# data, by-elections, Holyrood), which also rewrite the US files: one export at
-# a time across the whole console is a wider question than the US runs.
+# concurrent CLI run.
 MODEL_RUN_LOCK = threading.Lock()
 
 
 @contextmanager
 def model_run_slot() -> Iterator[bool]:
-    """Hold the console's one US model-run slot, if it is free.
+    """Hold the console's one run slot, if it is free.
 
-    The lock is tried without blocking, so a second submit is told a run is in
-    progress instead of queueing silently behind an hour-long rebuild.
+    Every model run, export, database rebuild, import and queue finish in the
+    console holds this slot while it runs. The lock is tried without blocking,
+    so a second submit is told a run is in progress instead of queueing silently
+    behind an hour-long rebuild.
 
     Yields:
         True while the slot is held (it is released on exit), or False when
-        another request holds it — in which case nothing may run.
+        another request or job holds it, in which case nothing may run.
     """
     if not MODEL_RUN_LOCK.acquire(blocking=False):
         yield False
@@ -338,8 +345,8 @@ def busy_message(refused: str) -> str:
         refused: What did not happen, e.g. ``"History not rebuilt"``.
     """
     return (
-        f"{refused}: another US model run or history rebuild is in progress; "
-        "wait for it to finish, then try again."
+        f"{refused}: another run is in progress (a model run, export or database "
+        "rebuild); wait for it to finish, then try again."
     )
 
 

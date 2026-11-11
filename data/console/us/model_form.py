@@ -42,7 +42,8 @@ def rebuild_confirm_message(chamber: UsChamber) -> str:
     return (
         f"Rebuild {chamber.label} history? The {short} model recomputes its whole "
         "trend history, then the export runs if Export when done is ticked. "
-        "This page stays open and blocked until it finishes, which can take hours."
+        "It runs in the background and can take hours; its progress shows on the "
+        "run page."
     )
 
 
@@ -83,7 +84,8 @@ def us_run_form(chamber: UsChamber) -> RunForm:
                 REBUILD_CHECKBOX_NAME,
                 f"Rebuild {chamber.label} history",
                 "Recomputes the whole trend history, not only today's point. "
-                "This page stays blocked until it finishes, which can take hours. "
+                "It runs in the background and can take hours; its progress shows "
+                "on the run page. "
                 "Not available with a dry run.",
             ),
             export_checkbox(),

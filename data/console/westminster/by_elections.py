@@ -10,9 +10,11 @@ from sqlalchemy import select
 from console.db import get_db
 from console.forms import ByElectionPreviewForm
 from console.paths import EXPORT_ELECTION_SCRIPT
+from console.shared import jobs
 from console.shared.preview import get_preview, pop_preview, store_preview
 from console.shared.run_log import run_context
 from console.shared.runner import render_command_result, run_python_script
+from console.us.models import model_run_slot
 from core.schema import Election, ElectionType
 from importers.results.westminster import by_election_import
 
@@ -93,7 +95,9 @@ def by_election_confirm(token: str) -> ResponseReturnValue:
 
     Returns:
         Rendered command_result.html showing the export output, or a redirect to
-        by_election_form with a flash message on error or expired token.
+        by_election_form with a flash message on error or expired token. If a
+        background job holds the console's run slot, the import is kept, the
+        export is skipped, and the redirect's flash says so.
     """
     cached = get_preview(token)
     if cached is None or cached.get("type") != "by_election":
@@ -119,8 +123,14 @@ def by_election_confirm(token: str) -> ResponseReturnValue:
         flash(f"Imported, but export script not found: {EXPORT_ELECTION_SCRIPT}")
         return redirect(url_for("by_elections.by_election_form"))
 
-    with run_context(section="westminster", label="By-election export"):
-        export = run_python_script(EXPORT_ELECTION_SCRIPT, timeout=900)
+    # The import is committed; only the export waits for a free run slot and is
+    # refused (not queued) while a background job runs.
+    with model_run_slot() as free:
+        if not free:
+            jobs.flash_busy("Imported, but site data not exported")
+            return redirect(url_for("by_elections.by_election_form"))
+        with run_context(section="westminster", label="By-election export"):
+            export = run_python_script(EXPORT_ELECTION_SCRIPT, timeout=900)
     return render_command_result(
         title="Import By-Election",
         command="export_elections.py (export site data)",

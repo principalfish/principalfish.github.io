@@ -36,7 +36,8 @@ What makes the US queue different from Westminster's:
 The finish step records its results on the cached payload under
 :data:`RELABEL_KEY` (or :data:`RELABEL_ERROR_KEY`), :data:`AUTO_TRACKING_KEY`
 (or :data:`AUTO_TRACKING_ERROR_KEY`), :data:`MODEL_RUN_KEY` and
-:data:`MODEL_ERROR_KEY`, so refreshing the summary page repeats none of them.
+:data:`MODEL_ERROR_KEY` (with :data:`MODEL_BUSY_JOB_KEY` when a background
+job held the run slot), so refreshing the summary page repeats none of them.
 """
 
 from __future__ import annotations
@@ -50,6 +51,7 @@ from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
 
+from console.shared.jobs import running_job_id
 from console.shared.wikipedia_queue import (
     NO_CUTOFF,
     QueueItem,
@@ -126,6 +128,11 @@ MODEL_RUN_KEY = "model_run"
 
 #: Payload key for the message of a model run that raised.
 MODEL_ERROR_KEY = "model_error"
+
+#: Payload key for the id of the background job that held the run slot when the
+#: model run was refused, written beside :data:`MODEL_ERROR_KEY` only when a job
+#: (not a synchronous run) held it. The summary links to that job's page.
+MODEL_BUSY_JOB_KEY = "model_busy_job"
 
 #: A race: the contest slug and the seat, None for a contest's national race.
 GroupKey = tuple[str, int | None]
@@ -761,9 +768,12 @@ def finish_us_queue(
             # Recorded, not retried, like any finish result: a refresh long
             # after the other run has ended must not start a surprise run.
             payload[MODEL_RUN_KEY] = None
+            busy_job = running_job_id()
+            if busy_job is not None:
+                payload[MODEL_BUSY_JOB_KEY] = busy_job
             payload[MODEL_ERROR_KEY] = (
-                f"{chamber.label} model not run: another US model run or "
-                "history rebuild was in progress. Run it from the "
+                f"{chamber.label} model not run: another run was in progress (a "
+                "model run, export or database rebuild). Run it from the "
                 f"{chamber.label} section's Run model page once it finishes."
             )
             return wrote

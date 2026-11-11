@@ -70,6 +70,7 @@ from console.us.poll_queue import (
     AUTO_TRACKING_KEY,
     CHAMBER_KEY,
     INDEX_KEY,
+    MODEL_BUSY_JOB_KEY,
     MODEL_ERROR_KEY,
     MODEL_RUN_KEY,
     RELABEL_ERROR_KEY,
@@ -476,6 +477,7 @@ def finish(chamber: str, token: str) -> ResponseReturnValue:
         relabel_error=payload.get(RELABEL_ERROR_KEY, ""),
         model_run=payload.get(MODEL_RUN_KEY),
         model_error=payload.get(MODEL_ERROR_KEY, ""),
+        model_busy_job=payload.get(MODEL_BUSY_JOB_KEY, ""),
     )
 
 

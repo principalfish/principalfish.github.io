@@ -63,6 +63,22 @@ def _never_write_the_live_run_log(
     return folder
 
 
+@pytest.fixture(autouse=True)
+def _jobs_run_inline_and_start_empty() -> Generator[None, None, None]:
+    """Run background jobs inside ``start_job`` and keep the registry per test.
+
+    With the default thread executor a view test would return before its job
+    finished. Tests of the threading itself pass ``ThreadExecutor`` explicitly.
+    """
+    from console.shared import jobs
+
+    previous = jobs.set_executor(jobs.InlineExecutor())
+    jobs.reset()
+    yield
+    jobs.set_executor(previous)
+    jobs.reset()
+
+
 @pytest.fixture()
 def db(tmp_path: Path) -> Generator[Database, None, None]:
     """Provide a Database instance with clean tables for every test.

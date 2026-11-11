@@ -233,6 +233,7 @@ def test_the_sectionless_list_matches_the_pinned_one() -> None:
         ("export.export_run", {}, EXPORT),
         ("runs.run_list", {}, RUNS),
         ("runs.run_detail", {}, RUNS),
+        ("runs.run_status", {}, RUNS),
         ("sections.house", {}, "house"),
         (None, {}, None),
     ],

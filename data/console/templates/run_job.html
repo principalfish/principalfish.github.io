@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_macros/run_result.html" import command_result, model_result, stream %}
+{% block content %}
+  <section class="card">
+    <h2>{{ job.label }}</h2>
+    <p><strong>Section:</strong> {{ section_label }}</p>
+    <p><strong>Status:</strong> <span{% if job.status not in ('running', 'ok') %} class="text-error"{% endif %}>{{ job.status }}</span></p>
+    <p><strong>Started:</strong> {{ job.started_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
+    {% if job.finished_at %}<p><strong>Finished:</strong> {{ job.finished_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>{% endif %}
+    {% if job.dry_run %}<p><strong>Dry run:</strong> yes</p>{% endif %}
+    {% if job.status == 'timeout' %}<p class="text-error">Timed out after {{ job.timeout_seconds }} seconds. The output up to then is kept.</p>{% endif %}
+    {% if job.status == 'crashed' and job.error %}<p class="text-error"><strong>Error:</strong> {{ job.error }}</p>{% endif %}
+    {% if job.running %}
+      <p id="run-live-step">{% if current %}<strong>Step {{ current.number }}:</strong> {{ current.label }}{% else %}Starting.{% endif %}</p>
+    {% endif %}
+    {% for step in steps %}
+      <p><a href="{{ url_for('runs.run_detail', run_id=step.id, record=1) }}">Step {{ step.number }} record: {{ step.label }}</a></p>
+    {% endfor %}
+    <p>
+      {% if back_url and job.result_kind == 'model' %}<a class="button" href="{{ back_url }}">{{ back_label }}</a>{% endif %}
+      <a class="button" href="{{ url_for('runs.run_list') }}">Back to runs</a>
+    </p>
+  </section>
+
+  {% if job.running %}
+    <div id="run-live" data-status-url="{{ url_for('runs.run_status', run_id=job.id) }}" data-step="{{ current.number - 1 if current else 0 }}" data-stdout-offset="{{ stdout_offset }}" data-stderr-offset="{{ stderr_offset }}">
+      <section class="card">
+        <h3>Stdout</h3>
+        <pre id="run-live-stdout" class="terminal-output">{{ stdout }}</pre>
+      </section>
+
+      <section class="card">
+        <h3>Stderr</h3>
+        <pre id="run-live-stderr" class="terminal-output">{{ stderr }}</pre>
+      </section>
+    </div>
+    <noscript><p class="text-warning">Live output needs JavaScript. Reload this page to see the latest output.</p></noscript>
+    <script src="{{ url_for('static', filename='run_live.js') }}"></script>
+  {% elif job.payload and job.result_kind == 'command' %}
+    {{ command_result(job.payload.title, job.payload.command, job.payload.return_code, job.payload.stdout, job.payload.stderr, back_url or url_for('home.home'), back_label if back_url else 'Back to home') }}
+  {% elif job.payload %}
+    {{ model_result(job.payload.run_result, job.payload.export_heading) }}
+  {% else %}
+    {% for step in steps %}
+      <section class="card">
+        <h3>Step {{ step.number }}: {{ step.label }}</h3>
+        {% if step.stdout is none %}<p class="text-warning">The standard output file could not be read.</p>{% endif %}
+        {{ stream("Stdout", step.stdout, "h4") }}
+        {% if step.stderr is none %}<p class="text-warning">The standard error file could not be read.</p>{% endif %}
+        {{ stream("Stderr", step.stderr, "h4") }}
+      </section>
+    {% endfor %}
+  {% endif %}
+{% endblock %}

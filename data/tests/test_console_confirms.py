@@ -241,8 +241,9 @@ class TestExistingConfirmsAreUnchanged:
         message = confirm_text(handler)
         assert message == (
             "Rebuild US Senate history? The Senate model recomputes its whole trend "
-            "history, then the export runs if Export when done is ticked. This page "
-            "stays open and blocked until it finishes, which can take hours."
+            "history, then the export runs if Export when done is ticked. It runs "
+            "in the background and can take hours; its progress shows on the run "
+            "page."
         )
         assert message == rebuild_confirm_message(US_CHAMBERS_BY_SLUG["senate"])
 

@@ -10,6 +10,7 @@ import html
 import pickle
 import re
 import subprocess
+import threading
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -18,6 +19,9 @@ from flask import Flask, Response
 from flask.testing import FlaskClient
 
 from console import create_app, paths as console_paths
+from console.shared import jobs, run_log
+from console.shared.runner import run_command
+from console.us.model_form import rebuild_confirm_message
 from console.us.models import (
     MODEL_RUN_LOCK,
     REBUILD_TIMEOUT_SECONDS,
@@ -34,9 +38,11 @@ from console.us.models import (
     UsModelOptions,
     run_us_chamber_and_export,
 )
+from core import backup
 from core.db import Database
 from core.schema import ElectionType
-from tests.console_fixtures import select_block
+from tests.console_fixtures import confirm_text, onsubmit_handlers, select_block
+from tests.job_fixtures import WAIT_SECONDS, job_holding_the_slot
 from tests.us_ev_fixtures import seed_allocations, set_model_target
 
 
@@ -704,7 +710,9 @@ class TestModelRun:
         _track_president(model_db)
 
         response = app.test_client().post(
-            f"/{slug}/model", data=_model_form({"ignore_seat_polls": "on"})
+            f"/{slug}/model",
+            data=_model_form({"ignore_seat_polls": "on"}),
+            follow_redirects=True,
         )
 
         assert response.status_code == 200
@@ -734,9 +742,6 @@ class TestModelRun:
         ) in body
         assert "The run finished and the export was requested" in body
         assert "ran export_elections.py" in body
-        # The posted values are drawn back into the form.
-        assert '<option value="45" selected>' in select_block(body, "since_days_back")
-        assert '<input type="checkbox" name="ignore_seat_polls" checked>' in body
         assert not MODEL_RUN_LOCK.locked()
 
     @pytest.mark.parametrize("slug", US_SLUGS)
@@ -750,14 +755,15 @@ class TestModelRun:
         _track_president(model_db)
 
         response = app.test_client().post(
-            f"/{slug}/model", data=_model_form(drop=("export_when_done",))
+            f"/{slug}/model",
+            data=_model_form(drop=("export_when_done",)),
+            follow_redirects=True,
         )
 
         assert recording_runner.scripts == [US_MODEL_SCRIPTS[slug]]
         body = response.get_data(as_text=True)
         assert "Export when done was off, so nothing was exported." in body
         assert "export_elections.py" not in body
-        assert '<input type="checkbox" name="export_when_done">' in body
 
     @pytest.mark.parametrize("slug", US_SLUGS)
     def test_a_dry_run_skips_the_export_even_with_the_box_ticked(
@@ -772,6 +778,7 @@ class TestModelRun:
         response = app.test_client().post(
             f"/{slug}/model",
             data=_model_form({"dry_run": "true", "export_when_done": "on"}),
+            follow_redirects=True,
         )
 
         assert recording_runner.scripts == [US_MODEL_SCRIPTS[slug]]
@@ -802,7 +809,9 @@ class TestModelRun:
         _track_president(model_db)
 
         response = app.test_client().post(
-            f"/{slug}/model", data=_model_form({"rebuild_history": "on"})
+            f"/{slug}/model",
+            data=_model_form({"rebuild_history": "on"}),
+            follow_redirects=True,
         )
 
         script = US_MODEL_SCRIPTS[slug]
@@ -912,8 +921,8 @@ class TestModelRun:
         assert recording_runner.calls == []
         assert _flashes(client, response)[-1] == (
             f"{refused.format(label=US_CHAMBERS_BY_SLUG[slug].label)}: "
-            "another US model run or history rebuild is in progress; "
-            "wait for it to finish, then try again."
+            "another run is in progress (a model run, export or database "
+            "rebuild); wait for it to finish, then try again."
         )
 
     def test_the_president_is_skipped_without_a_tracked_matchup(
@@ -924,7 +933,9 @@ class TestModelRun:
     ) -> None:
         _seed_president_map(model_db)
 
-        response = app.test_client().post("/president/model", data=_model_form())
+        response = app.test_client().post(
+            "/president/model", data=_model_form(), follow_redirects=True
+        )
 
         assert response.status_code == 200
         # Nothing ran, so there is nothing to export either.
@@ -993,7 +1004,9 @@ class TestModelRun:
         runner = _TimeoutRecorder(fail=fail, error=error)
         monkeypatch.setattr("console.us.views.run_python_script", runner)
 
-        response = app.test_client().post("/house/model", data=_model_form())
+        response = app.test_client().post(
+            "/house/model", data=_model_form(), follow_redirects=True
+        )
 
         assert response.status_code == 200
         body = html.unescape(response.get_data(as_text=True))
@@ -1018,7 +1031,11 @@ class TestModelRun:
 
         body = html.unescape(
             app.test_client()
-            .post("/house/model", data=_model_form({"dry_run": "true"}))
+            .post(
+                "/house/model",
+                data=_model_form({"dry_run": "true"}),
+                follow_redirects=True,
+            )
             .get_data(as_text=True)
         )
 
@@ -1035,7 +1052,9 @@ class TestModelRun:
         monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         response = app.test_client().post(
-            "/senate/model", data=_model_form({"rebuild_history": "on"})
+            "/senate/model",
+            data=_model_form({"rebuild_history": "on"}),
+            follow_redirects=True,
         )
 
         assert response.status_code == 200
@@ -1052,9 +1071,9 @@ class TestModelRun:
         monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         body = html.unescape(
-            app.test_client().post("/house/model", data=_model_form()).get_data(
-                as_text=True
-            )
+            app.test_client()
+            .post("/house/model", data=_model_form(), follow_redirects=True)
+            .get_data(as_text=True)
         )
 
         assert runner.scripts == ["run_us_house_model.py"]
@@ -1069,9 +1088,9 @@ class TestModelRun:
         monkeypatch.setattr("console.us.views.run_python_script", runner)
 
         body = html.unescape(
-            app.test_client().post("/house/model", data=_model_form()).get_data(
-                as_text=True
-            )
+            app.test_client()
+            .post("/house/model", data=_model_form(), follow_redirects=True)
+            .get_data(as_text=True)
         )
 
         assert runner.scripts == ["run_us_house_model.py", "export_elections.py"]
@@ -1084,8 +1103,10 @@ class TestModelRun:
         model_db: Database,
         recording_runner: _RecordingRunner,
     ) -> None:
-        body = app.test_client().post("/house/model", data=_model_form()).get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .post("/house/model", data=_model_form(), follow_redirects=True)
+            .get_data(as_text=True)
         )
 
         assert "did not finish" not in body
@@ -1317,6 +1338,7 @@ class TestPresidentMatchupPage:
         response = app.test_client().post(
             "/president/matchup",
             data={"matchup": VANCE_NEWSOM, "rebuild_history": "on"},
+            follow_redirects=True,
         )
 
         assert response.status_code == 200
@@ -1716,6 +1738,7 @@ class TestRaceMatchupsPage:
         response = app.test_client().post(
             f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
             data={"action": "set", "matchup": PAXTON_TALARICO, "rebuild_history": "on"},
+            follow_redirects=True,
         )
 
         assert response.status_code == 200
@@ -1736,6 +1759,7 @@ class TestRaceMatchupsPage:
         app.test_client().post(
             f"/house/matchups/{map_id}/{seat.id}",
             data={"action": "ignore", "rebuild_history": "on"},
+            follow_redirects=True,
         )
 
         assert recording_runner.scripts == ["run_us_house_model.py", "export_elections.py"]
@@ -1919,6 +1943,7 @@ class TestRebuildRouteFailure:
         response = app.test_client().post(
             "/president/matchup",
             data={"matchup": VANCE_NEWSOM, "rebuild_history": "on"},
+            follow_redirects=True,
         )
 
         assert response.status_code == 200
@@ -1946,6 +1971,7 @@ class TestRebuildRouteFailure:
         response = app.test_client().post(
             f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
             data={"action": "set", "matchup": PAXTON_TALARICO, "rebuild_history": "on"},
+            follow_redirects=True,
         )
 
         assert response.status_code == 200
@@ -1965,12 +1991,15 @@ class TestModelRunSlot:
         self,
         app: Flask,
         db: Database,
+        *,
+        follow: bool = True,
     ) -> tuple[FlaskClient[Response], Response]:
         seeded = _seed_senate_races(db)
         client = app.test_client()
         response = client.post(
             f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
             data={"action": "set", "matchup": PAXTON_TALARICO, "rebuild_history": "on"},
+            follow_redirects=follow,
         )
         return client, response
 
@@ -1978,14 +2007,14 @@ class TestModelRunSlot:
         self, app: Flask, db: Database, recording_runner: _RecordingRunner
     ) -> None:
         with MODEL_RUN_LOCK:
-            client, response = self._post_texas_rebuild(app, db)
+            client, response = self._post_texas_rebuild(app, db, follow=False)
 
         assert response.status_code == 302
         assert response.headers["Location"] == "/senate/matchups"
         assert recording_runner.calls == []
         assert _flashes(client, response)[-1] == (
-            "History not rebuilt: another US model run or history rebuild is in "
-            "progress; wait for it to finish, then try again."
+            "History not rebuilt: another run is in progress (a model run, export "
+            "or database rebuild); wait for it to finish, then try again."
         )
 
     def test_the_lock_is_free_after_a_rebuild(
@@ -2055,3 +2084,406 @@ class TestModelRunSlot:
             with model_run_slot():
                 raise RuntimeError("boom")
         assert not MODEL_RUN_LOCK.locked()
+
+
+# ── Background jobs ───────────────────────────────────────────────────────
+
+
+def _job_id(response: Response) -> str:
+    """The job id a 303 to ``/runs/<id>`` names."""
+    assert response.status_code == 303
+    match = re.fullmatch(r"/runs/([\w-]+)", response.headers["Location"])
+    assert match is not None, response.headers["Location"]
+    return match.group(1)
+
+
+class _BlockingRunner(_RecordingRunner):
+    """A recorder whose first call waits until the test lets it go."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.started = threading.Event()
+        self.release = threading.Event()
+
+    def __call__(
+        self, script: Path, *args: str, timeout: int
+    ) -> subprocess.CompletedProcess[str]:
+        if not self.started.is_set():
+            self.started.set()
+            assert self.release.wait(WAIT_SECONDS)
+        return super().__call__(script, *args, timeout=timeout)
+
+
+class TestUsModelJobs:
+    """A US model run, and a history rebuild, are background jobs."""
+
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    def test_a_run_form_post_starts_a_job_and_redirects_to_its_page(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+        slug: str,
+    ) -> None:
+        _track_president(model_db)
+
+        response = app.test_client().post(f"/{slug}/model", data=_model_form())
+
+        job = jobs.get_job(_job_id(response))
+        assert job is not None
+        assert (job.section, job.result_kind, job.status) == (slug, "model", "ok")
+        assert job.label == f"{US_CHAMBERS_BY_SLUG[slug].label} model"
+        assert job.dry_run is False
+        assert (job.back_endpoint, job.back_values) == (
+            "us.model_run_form",
+            {"chamber": slug},
+        )
+        assert recording_runner.scripts == [
+            US_MODEL_SCRIPTS[slug],
+            "export_elections.py",
+        ]
+
+    def test_a_rebuild_run_is_labelled_as_one(
+        self, app: Flask, model_db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        response = app.test_client().post(
+            "/house/model", data=_model_form({"rebuild_history": "on"})
+        )
+
+        job = jobs.get_job(_job_id(response))
+        assert job is not None
+        assert job.label == "US House history rebuild"
+
+    def test_an_invalid_form_starts_no_job(
+        self, app: Flask, model_db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        response = app.test_client().post(
+            "/house/model", data=_model_form({"since_days_back": "0"})
+        )
+
+        assert response.status_code == 200
+        assert jobs.running_job_id() is None
+        assert recording_runner.calls == []
+
+    def test_each_step_is_logged_under_its_own_section_and_label(
+        self,
+        app: Flask,
+        model_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        _never_write_the_live_run_log: Path,
+    ) -> None:
+        def real_command(
+            script: Path, *args: str, timeout: int
+        ) -> subprocess.CompletedProcess[str]:
+            return run_command(["true"], timeout=timeout)
+
+        monkeypatch.setattr("console.us.views.run_python_script", real_command)
+        _never_write_the_live_run_log.mkdir()
+        app.test_client().post("/senate/model", data=_model_form())
+
+        records = [
+            run_log.read_record(path.name)
+            for path in sorted(_never_write_the_live_run_log.iterdir())
+            if run_log.RECORD_ID_RE.fullmatch(path.name)
+        ]
+        assert sorted((r.section, r.label) for r in records if r is not None) == [
+            ("senate", "US Senate export"),
+            ("senate", "US Senate model"),
+        ]
+
+    def test_a_second_start_while_a_job_runs_is_refused_and_runs_nothing(
+        self,
+        app: Flask,
+        model_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _track_president(model_db)
+        runner = _BlockingRunner()
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
+        client = app.test_client()
+        previous = jobs.set_executor(jobs.ThreadExecutor())
+        try:
+            first = client.post("/house/model", data=_model_form())
+            job_id = _job_id(first)
+            assert runner.started.wait(WAIT_SECONDS)
+
+            second = client.post("/senate/model", data=_model_form())
+            third = client.post(
+                "/president/model", data=_model_form({"rebuild_history": "on"})
+            )
+            page = client.get(second.headers["Location"]).get_data(as_text=True)
+            running_page = client.get(first.headers["Location"]).get_data(as_text=True)
+            runner.release.set()
+            job = jobs.get_job(job_id)
+            assert job is not None
+            assert job.wait(WAIT_SECONDS)
+        finally:
+            runner.release.set()
+            jobs.set_executor(previous)
+
+        assert (second.status_code, second.headers["Location"]) == (
+            302,
+            "/senate/model",
+        )
+        assert (third.status_code, third.headers["Location"]) == (
+            302,
+            "/president/model",
+        )
+        assert (
+            "US Senate model not run: another run is in progress (a model run, "
+            "export or database rebuild); wait for it to finish, then try again."
+        ) in html.unescape(page)
+        assert f'<a href="/runs/{job_id}">See the running job.</a>' in page
+        assert "Status:</strong> <span>running</span>" in running_page
+        # Only the first job's steps ever ran.
+        assert runner.scripts == ["run_us_house_model.py", "export_elections.py"]
+        assert not MODEL_RUN_LOCK.locked()
+
+    def test_a_slot_held_by_a_synchronous_run_is_refused_without_a_link(
+        self, app: Flask, model_db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        client = app.test_client()
+        with MODEL_RUN_LOCK:
+            response = client.post("/house/model", data=_model_form())
+
+        assert response.status_code == 302
+        [message] = _flashes(client, response)
+        assert message.startswith("US House model not run: another run is in progress")
+        assert "See the running job" not in client.get("/house/model").get_data(
+            as_text=True
+        )
+
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    def test_the_slot_is_free_after_the_job(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+        slug: str,
+    ) -> None:
+        _track_president(model_db)
+        client = app.test_client()
+
+        client.post(f"/{slug}/model", data=_model_form())
+
+        assert not MODEL_RUN_LOCK.locked()
+        assert jobs.running_job_id() is None
+        again = client.post(f"/{slug}/model", data=_model_form())
+        assert again.status_code == 303
+
+    def test_a_dry_run_job_asks_for_no_backup_and_a_real_one_does(
+        self,
+        app: Flask,
+        model_db: Database,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: calls.append("backup"))
+        client = app.test_client()
+
+        dry = client.post("/house/model", data=_model_form({"dry_run": "true"}))
+        assert calls == []
+        job = jobs.get_job(_job_id(dry))
+        assert job is not None and job.dry_run
+
+        client.post("/house/model", data=_model_form())
+        assert calls == ["backup"]
+
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    def test_the_job_page_shows_the_command_output_exit_code_and_summary(
+        self,
+        app: Flask,
+        model_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        slug: str,
+    ) -> None:
+        _track_president(model_db)
+        runner = _RecordingRunner(return_codes={"export_elections.py": 3})
+        monkeypatch.setattr("console.us.views.run_python_script", runner)
+        client = app.test_client()
+
+        response = client.post(
+            f"/{slug}/model", data=_model_form({"ignore_seat_polls": "on"})
+        )
+        page = client.get(response.headers["Location"])
+
+        body = html.unescape(page.get_data(as_text=True))
+        script = US_MODEL_SCRIPTS[slug]
+        assert page.status_code == 200
+        assert "<h3>Run Result</h3>" in body
+        assert (
+            f"<strong>Command:</strong> {script} --since-days-back 45 "
+            "--half-life-days 21.0 --seat-prior-weight 2.0 --ignore-seat-polls "
+            "→ export_elections.py</p>"
+        ) in body
+        assert "<strong>Exit code:</strong> 3</p>" in body
+        assert "The run failed with exit code 3; see the output below." in body
+        label = US_CHAMBERS_BY_SLUG[slug].label
+        assert f"=== Run {label} model ===\nran {script}" in body
+        assert (
+            "=== Export elections to static data files ===\nran export_elections.py"
+        ) in body
+        assert "=== Export elections to static data files ===\nboom" in body
+        assert "Status:</strong> <span class=\"text-error\">failed</span>" in body
+        assert f'href="/{slug}/model"' in body
+
+    def test_a_successful_job_page_has_the_summary_and_empty_stderr(
+        self, app: Flask, model_db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        client = app.test_client()
+
+        response = client.post("/house/model", data=_model_form())
+        body = client.get(response.headers["Location"]).get_data(as_text=True)
+
+        assert (
+            "<strong>The run finished and the export was requested; its output is "
+            "below.</strong>"
+        ) in body
+        assert (
+            '<h4>Stderr</h4>\n<pre class="terminal-output">(no stderr)</pre>' in body
+        )
+        assert "<strong>Exit code:</strong> 0</p>" in body
+
+    def test_a_skipped_president_job_page_says_so(
+        self, app: Flask, model_db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        _seed_president_map(model_db)
+        client = app.test_client()
+
+        response = client.post("/president/model", data=_model_form())
+        page = client.get(response.headers["Location"])
+        body = html.unescape(page.get_data(as_text=True))
+
+        assert recording_runner.calls == []
+        assert f"<strong>{NO_MATCHUP_NOTE}</strong>" in body
+        assert "(skipped: no tracked matchup)" in body
+
+    @pytest.mark.parametrize("slug", US_SLUGS)
+    def test_the_rebuild_confirm_text_is_still_on_the_form(
+        self, app: Flask, model_db: Database, slug: str
+    ) -> None:
+        body = app.test_client().get(f"/{slug}/model").get_data(as_text=True)
+
+        [handler] = onsubmit_handlers(body)
+        assert handler.startswith("return !this.rebuild_history.checked || confirm(")
+        assert confirm_text(handler) == rebuild_confirm_message(
+            US_CHAMBERS_BY_SLUG[slug]
+        )
+
+
+class TestMatchupRebuildJobs:
+    """The matchup pages save synchronously; their rebuild is a job."""
+
+    @pytest.fixture(autouse=True)
+    def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("console.us.views.get_db", lambda: db)
+
+    def test_the_president_rebuild_starts_a_job_and_keeps_the_saved_flash(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        _seed_president_matchups(db)
+        client = app.test_client()
+
+        response = client.post(
+            "/president/matchup",
+            data={"matchup": VANCE_NEWSOM, "rebuild_history": "on"},
+        )
+
+        job = jobs.get_job(_job_id(response))
+        assert job is not None
+        assert (job.label, job.section, job.result_kind, job.dry_run) == (
+            "Rebuild US President History",
+            "president",
+            "command",
+            False,
+        )
+        assert (job.back_endpoint, job.back_label) == (
+            "us.president_matchup",
+            "Back to matchups",
+        )
+        president_map = db.get_map_by_name("US Presidential 2024")
+        assert president_map is not None
+        tracked = db.get_tracked_matchup(president_map.id, None)
+        assert tracked is not None and tracked.matchup == VANCE_NEWSOM
+        shown = client.get(response.headers["Location"])
+        page = html.unescape(shown.get_data(as_text=True))
+        assert "Rebuild US President History" in page
+        [saved] = _ALERT.findall(page)
+        assert VANCE_NEWSOM in saved
+
+    def test_the_race_rebuild_starts_a_job_with_its_back_values(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        seeded = _seed_senate_races(db)
+
+        response = app.test_client().post(
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
+            data={"action": "set", "matchup": PAXTON_TALARICO, "rebuild_history": "on"},
+        )
+
+        job = jobs.get_job(_job_id(response))
+        assert job is not None
+        assert job.back_values == {"chamber": "senate"}
+        assert recording_runner.scripts == [
+            "run_us_senate_model.py",
+            "export_elections.py",
+        ]
+
+    def test_a_save_without_the_box_ticked_starts_no_job(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        seeded = _seed_senate_races(db)
+        _seed_president_matchups(db)
+        client = app.test_client()
+
+        race = client.post(
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
+            data={"action": "set", "matchup": PAXTON_TALARICO},
+        )
+        president = client.post("/president/matchup", data={"matchup": VANCE_NEWSOM})
+
+        assert (race.status_code, president.status_code) == (302, 302)
+        assert jobs.running_job_id() is None
+        assert recording_runner.calls == []
+
+    def test_a_running_job_refuses_the_rebuild_after_saving_and_links_it(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        _seed_president_matchups(db)
+        client = app.test_client()
+
+        with job_holding_the_slot() as job:
+            response = client.post(
+                "/president/matchup",
+                data={"matchup": VANCE_NEWSOM, "rebuild_history": "on"},
+            )
+            page = client.get(response.headers["Location"]).get_data(as_text=True)
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/president/matchup"
+        assert "History not rebuilt: another run is in progress" in html.unescape(page)
+        assert f'<a href="/runs/{job.id}">See the running job.</a>' in page
+        assert recording_runner.calls == []
+        # The matchup itself was saved before the refusal.
+        president_map = db.get_map_by_name("US Presidential 2024")
+        assert president_map is not None
+        tracked = db.get_tracked_matchup(president_map.id, None)
+        assert tracked is not None and tracked.matchup == VANCE_NEWSOM
+
+    def test_a_failed_rebuild_job_ends_failed_with_the_note(
+        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seeded = _seed_senate_races(db)
+        monkeypatch.setattr(
+            "console.us.views.run_python_script",
+            _RecordingRunner(return_codes={"run_us_senate_model.py": 1}),
+        )
+
+        response = app.test_client().post(
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
+            data={"action": "set", "matchup": PAXTON_TALARICO, "rebuild_history": "on"},
+        )
+
+        job = jobs.get_job(_job_id(response))
+        assert job is not None and job.status == "failed"

@@ -7,12 +7,17 @@
     <p><strong>Command:</strong> {{ command }}</p>
     <p><strong>Working directory:</strong> {{ record.cwd }}</p>
     <p><strong>Started:</strong> {{ record.started_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
-    <p><strong>Finished:</strong> {{ record.finished_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC ({{ '%.1f' | format(record.duration_seconds) }} s)</p>
-    <p><strong>Status:</strong> <span{% if record.status != 'ok' %} class="text-error"{% endif %}>{{ record.status }}</span></p>
+    {% if record.finished_at %}
+      <p><strong>Finished:</strong> {{ record.finished_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC ({{ '%.1f' | format(record.duration_seconds) }} s)</p>
+    {% else %}
+      <p><strong>Finished:</strong> {{ 'not yet' if record.status == 'running' else 'unknown' }}</p>
+    {% endif %}
+    <p><strong>Status:</strong> <span{% if record.status not in ('ok', 'running') %} class="text-error"{% endif %}>{{ record.status }}</span></p>
     <p><strong>Exit code:</strong> {{ 'none' if record.exit_code is none else record.exit_code }}</p>
     <p><strong>Time limit:</strong> {{ 'none' if record.timeout_seconds is none else record.timeout_seconds ~ ' s' }}</p>
     <p><strong>Dry run:</strong> {{ 'unknown' if record.dry_run is none else ('yes' if record.dry_run else 'no') }}</p>
-    {% if record.error %}<p><strong>Error:</strong> {{ record.error }}</p>{% endif %}
+    {% if record.status == 'running' %}<p>This run is still in progress; reload for more output.</p>{% endif %}
+    {% if record.error %}<p><strong>{{ 'Note' if record.status == 'interrupted' else 'Error' }}:</strong> {{ record.error }}</p>{% endif %}
     <p><a class="button" href="{{ url_for('runs.run_list') }}">Back to runs</a></p>
   </section>
 

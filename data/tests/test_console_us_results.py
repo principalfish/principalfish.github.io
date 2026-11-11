@@ -45,6 +45,7 @@ from tests.console_fixtures import (
     flashes_on_page,
     select_block,
 )
+from tests.job_fixtures import job_holding_the_slot
 from tests.senate_current_fixtures import senate_election
 
 FIXTURES = Path(__file__).parent / "fixtures" / "nyt"
@@ -1109,9 +1110,27 @@ class TestConfirm:
             response = client.post(f"/house/results/confirm/{token}")
 
         [message] = flashes(client, response)
-        assert message.startswith("Results not imported: another US model run")
+        assert message.startswith("Results not imported: another run is in progress")
         assert token in PREVIEW_CACHE
         assert db.get_election_by_name(_HOUSE) is None
+
+    def test_a_running_job_refuses_import_and_is_linked(
+        self, app: Flask, db: Database, nyt: FakeNyt
+    ) -> None:
+        client = app.test_client()
+        token = _token(_preview(client))
+
+        with job_holding_the_slot() as job:
+            response = client.post(f"/house/results/confirm/{token}")
+            page = client.get(response.headers["Location"]).get_data(as_text=True)
+
+        assert "Results not imported: another run is in progress" in page
+        assert f'<a href="/runs/{job.id}">See the running job.</a>' in page
+        assert token in PREVIEW_CACHE
+        assert db.get_election_by_name(_HOUSE) is None
+        # Once the job has ended the same confirm goes through.
+        assert client.post(f"/house/results/confirm/{token}").status_code == 200
+        assert db.get_election_by_name(_HOUSE) is not None
 
 
 class TestCurrentSenate:
@@ -1219,8 +1238,27 @@ class TestCurrentSenate:
             response = client.post("/senate/results/current-senate")
 
         [message] = flashes(client, response)
-        assert message.startswith("Current Senate not rebuilt: another US model run")
+        assert message.startswith(
+            "Current Senate not rebuilt: another run is in progress"
+        )
         assert snapshot_path.read_text(encoding="utf-8") == render(snapshot)
+
+    def test_a_running_job_refuses_the_rebuild_and_is_linked(
+        self, app: Flask, files: tuple[Path, Path, dict[str, Any]]
+    ) -> None:
+        snapshot_path, _, snapshot = files
+        client = app.test_client()
+
+        with job_holding_the_slot() as job:
+            response = client.post("/senate/results/current-senate")
+            page = client.get(response.headers["Location"]).get_data(as_text=True)
+
+        assert "Current Senate not rebuilt: another run is in progress" in page
+        assert f'<a href="/runs/{job.id}">See the running job.</a>' in page
+        assert snapshot_path.read_text(encoding="utf-8") == render(snapshot)
+        # Free again once the job has ended.
+        body = client.post("/senate/results/current-senate").get_data(as_text=True)
+        assert "<strong>Exit code:</strong> 0" in body
 
     def test_the_form_offers_it_and_importing_never_runs_it(
         self,

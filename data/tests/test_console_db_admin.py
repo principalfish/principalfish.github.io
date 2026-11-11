@@ -10,7 +10,9 @@ from flask import Flask
 
 import console.admin.db_admin as db_admin
 from console import create_app
+from console.us.models import MODEL_RUN_LOCK, model_run_slot
 from core import backup
+from tests.job_fixtures import job_holding_the_slot
 
 
 @pytest.fixture()
@@ -203,6 +205,101 @@ def test_restore_reports_a_locked_database(
 
     assert response.status_code == 200
     assert "Restore failed: database is locked" in response.get_data(as_text=True)
+
+
+# --- the run slot ------------------------------------------------------------------
+
+
+def _file_text(path: Path) -> list[str]:
+    conn = sqlite3.connect(path)
+    try:
+        return [row[0] for row in conn.execute("SELECT x FROM t")]
+    finally:
+        conn.close()
+
+
+def test_a_restore_while_a_job_runs_is_refused_and_the_database_is_untouched(
+    app: Flask, live_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backup.backup_database()
+    conn = sqlite3.connect(live_db)
+    conn.execute("INSERT INTO t VALUES ('b')")
+    conn.commit()
+    conn.close()
+    before = live_db.read_bytes()
+    calls: list[str] = []
+    monkeypatch.setattr(db_admin, "reset_db", lambda: calls.append("reset"))
+    monkeypatch.setattr(backup, "restore_latest", lambda: calls.append("restore"))
+
+    with job_holding_the_slot() as job:
+        response = app.test_client().post("/db/restore")
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith("/admin")
+        page = app.test_client().post("/db/restore", follow_redirects=True)
+        body = page.get_data(as_text=True)
+
+    assert "Database not restored: another run is in progress" in body
+    assert f'href="/runs/{job.id}"' in body
+    assert calls == []
+    assert live_db.read_bytes() == before
+    assert not live_db.with_name(f"{live_db.name}.prerestore").exists()
+    assert _file_text(live_db) == ["a", "b"]
+
+
+def test_a_restore_while_something_else_holds_the_slot_is_refused_without_a_link(
+    app: Flask, live_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(backup, "restore_latest", lambda: calls.append("restore"))
+
+    with model_run_slot() as free:
+        assert free
+        body = (
+            app.test_client()
+            .post("/db/restore", follow_redirects=True)
+            .get_data(as_text=True)
+        )
+
+    assert "Database not restored: another run is in progress" in body
+    assert "See the running job" not in body
+    assert calls == []
+
+
+def test_a_restore_with_the_slot_free_works_as_before_and_frees_it(
+    app: Flask, live_db: Path
+) -> None:
+    backup.backup_database()
+    conn = sqlite3.connect(live_db)
+    conn.execute("INSERT INTO t VALUES ('b')")
+    conn.commit()
+    conn.close()
+
+    body = app.test_client().post("/db/restore").get_data(as_text=True)
+
+    assert "Restored from" in body
+    assert _file_text(live_db) == ["a"]
+    assert not MODEL_RUN_LOCK.locked()
+
+
+def test_a_restore_that_fails_still_frees_the_slot(
+    app: Flask, live_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken() -> Path:
+        raise RuntimeError("no archive")
+
+    monkeypatch.setattr(backup, "restore_latest", broken)
+
+    app.test_client().post("/db/restore")
+
+    assert not MODEL_RUN_LOCK.locked()
+
+
+def test_a_backup_is_not_refused_while_a_job_runs(app: Flask, live_db: Path) -> None:
+    with job_holding_the_slot():
+        body = app.test_client().post("/db/backup").get_data(as_text=True)
+
+    assert "Backup Database" in body
+    assert "another run is in progress" not in body
 
 
 # --- cross-site requests ----------------------------------------------------------

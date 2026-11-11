@@ -33,6 +33,7 @@ from tests.console_fixtures import (
     pre_after_heading,
     select_block,
 )
+from tests.job_fixtures import job_holding_the_slot
 from tests.uk_fixtures import WestminsterWorld
 
 _SOURCE_URL = "https://example.test/2025_Hexham_by-election"
@@ -390,6 +391,34 @@ class TestByElectionConfirm:
         assert export_runner.calls == []
         assert token not in PREVIEW_CACHE
         assert fake_page == [_SOURCE_URL]
+        _assert_imported(db, world)
+
+    def test_export_is_refused_while_a_job_runs_but_the_import_is_kept(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        fake_page: list[str],
+        export_runner: RecordingRunner,
+    ) -> None:
+        world = westminster_world
+        client = app.test_client()
+        token = _token(_preview(client, world.baseline_election_name))
+
+        with job_holding_the_slot() as job:
+            response = client.post(f"/westminster/by-elections/confirm/{token}")
+            body = client.get(response.headers["Location"]).get_data(as_text=True)
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/westminster/by-elections"
+        assert _IMPORT_MESSAGE in flashes_on_page(body)
+        assert any(
+            message.startswith("Imported, but site data not exported: another")
+            for message in flashes_on_page(body)
+        )
+        assert f'href="/runs/{job.id}"' in body
+        assert export_runner.calls == []
+        assert token not in PREVIEW_CACHE
         _assert_imported(db, world)
 
     def test_reimport_rejected_even_with_crafted_refresh_field(

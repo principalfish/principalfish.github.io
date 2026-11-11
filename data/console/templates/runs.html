@@ -36,8 +36,8 @@
                 <td><a href="{{ url_for('runs.run_detail', run_id=record.id) }}">{{ record.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</a></td>
                 <td>{{ section_label(record.section) }}</td>
                 <td>{{ record.label }}{% if record.dry_run %} (dry run){% endif %}</td>
-                <td{% if record.status != 'ok' %} class="text-error"{% endif %}>{{ record.status }}</td>
-                <td class="num">{{ '%.1f' | format(record.duration_seconds) }} s</td>
+                <td{% if record.status not in ('ok', 'running') %} class="text-error"{% endif %}>{{ record.status }}</td>
+                <td class="num">{% if record.duration_seconds is not none %}{{ '%.1f' | format(record.duration_seconds) }} s{% endif %}</td>
                 <td class="num">{{ '' if record.exit_code is none else record.exit_code }}</td>
               </tr>
             {% endfor %}

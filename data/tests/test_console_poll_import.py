@@ -52,6 +52,7 @@ from tests.console_fixtures import (
     forbid_call,
     select_block,
 )
+from tests.job_fixtures import job_holding_the_slot
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows, build_workbook
 
 # One national figure per canonical party _parse_party_region_percentages
@@ -656,6 +657,32 @@ class TestImportPollConfirm:
             "UNS model updated.",
             "Prediction simulation exported.",
         ]
+
+    def test_run_model_while_a_job_runs_keeps_the_import_and_skips_the_model(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+        recording_runner: RecordingRunner,
+    ) -> None:
+        client = app.test_client()
+        token = _preview_token(client, monkeypatch)
+
+        with job_holding_the_slot() as job:
+            response = client.post(
+                f"/westminster/polls/import/confirm/{token}",
+                data={"run_model": "on"},
+            )
+            body = client.get(response.headers["Location"]).get_data(as_text=True)
+
+        assert response.status_code == 302
+        poll_id = _poll_id_from_redirect(response.headers["Location"])
+        assert len(db.get_rows_for_poll(poll_id)) == _SURVATION_PLANNED_ROW_COUNT
+        assert recording_runner.calls == []
+        assert "UNS model not run: another" in body
+        assert f'href="/runs/{job.id}"' in body
+        assert "UNS model updated." not in body
 
     @pytest.mark.parametrize(
         "failed_script", [UNS_MODEL_SCRIPT, EXPORT_ELECTION_SCRIPT]

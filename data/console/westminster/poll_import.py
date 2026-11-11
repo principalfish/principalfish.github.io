@@ -41,6 +41,7 @@ from console.paths import (
     UNS_MODEL_SCRIPT,
 )
 from console.sections import WESTMINSTER_MAP_NAME
+from console.shared import jobs
 from console.shared.preview import get_preview, pop_preview, store_preview
 from console.shared.queue_lock import queue_lock
 from console.shared.runner import run_command, run_model_then_export
@@ -58,6 +59,7 @@ from console.shared.wikipedia_queue import (
     progress,
     summarise,
 )
+from console.us.models import model_run_slot
 from core import backup
 from importers.polls.types import ScrapedPollRow
 from importers.polls.westminster.registry import IMPORTERS
@@ -200,7 +202,9 @@ def import_poll_confirm(token: str) -> ResponseReturnValue:
         run_model (str, optional): 'on' to trigger an automatic UNS model run after import.
 
     Returns:
-        Redirect to poll_detail on success, or to import_poll_form on error or expired token.
+        Redirect to poll_detail on success, or to import_poll_form on error or
+        expired token. If a background job holds the console's run slot, the
+        import is kept and the model run is skipped, with a flash saying so.
     """
     cached = get_preview(token)
     if cached is None or cached.get("type") != PREVIEW_TYPE:
@@ -234,13 +238,20 @@ def import_poll_confirm(token: str) -> ResponseReturnValue:
             f"Import complete. Poll #{result.poll_id}, inserted"
             f" {result.inserted_rows} rows{bases}."
         )
-        if run_model:
-            try:
-                if result.created_poll or result.inserted_rows or result.replaced_rows:
-                    for message in _run_model_and_export():
-                        flash(message)
-            except Exception as exc:
-                flash(f"Warning: UNS model run failed: {exc}")
+        if run_model and (
+            result.created_poll or result.inserted_rows or result.replaced_rows
+        ):
+            # The import above is already committed; only the model run waits
+            # for a free slot, and is refused (not queued) while a job runs.
+            with model_run_slot() as free:
+                if not free:
+                    jobs.flash_busy("UNS model not run")
+                else:
+                    try:
+                        for message in _run_model_and_export():
+                            flash(message)
+                    except Exception as exc:
+                        flash(f"Warning: UNS model run failed: {exc}")
 
     return redirect(url_for("polls.poll_detail", poll_id=result.poll_id))
 
@@ -439,7 +450,9 @@ def wikipedia_finish(token: str) -> ResponseReturnValue:
     Runs the UNS model and export once, if the run was started with that option
     and anything was actually imported. The run is recorded on the cached
     payload so refreshing the summary does not repeat it, and the queue is left
-    in the cache so the report survives a refresh.
+    in the cache so the report survives a refresh. While a background job holds
+    the console's run slot the model is not run and nothing is recorded, so the
+    summary says so and a later refresh runs it.
 
     Args:
         token: Token identifying the cached catch-up queue.
@@ -465,14 +478,20 @@ def wikipedia_finish(token: str) -> ResponseReturnValue:
 
         imported = any(item.status == "imported" for item in state.items)
         if state.run_model_at_end and imported and "model_output" not in payload:
-            try:
-                payload["model_output"] = _run_model_and_export()
-            except Exception as exc:
-                payload["model_output"] = []
-                payload["model_error"] = f"UNS model run failed: {exc}"
-            # A failed run may still have written. The app's after-request hook
-            # skips GETs, and this page is reached by one.
-            backup.request_backup()
+            # Nothing is recorded when the slot is busy, so a refresh once the
+            # job has ended still runs the model, once.
+            with model_run_slot() as free:
+                if not free:
+                    jobs.flash_busy("UNS model not run")
+                else:
+                    try:
+                        payload["model_output"] = _run_model_and_export()
+                    except Exception as exc:
+                        payload["model_output"] = []
+                        payload["model_error"] = f"UNS model run failed: {exc}"
+                    # A failed run may still have written. The app's after-request
+                    # hook skips GETs, and this page is reached by one.
+                    backup.request_backup()
 
         return render_template(
             "wikipedia_summary.html",

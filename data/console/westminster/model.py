@@ -10,8 +10,10 @@ from typing import cast
 from flask import (
     Blueprint,
     flash,
+    redirect,
     render_template,
     request,
+    url_for,
 )
 from flask.typing import ResponseReturnValue
 from pydantic import ValidationError
@@ -25,6 +27,7 @@ from console.paths import (
     UNS_MODEL_SCRIPT,
 )
 from console.sections import WESTMINSTER_MAP_NAME
+from console.shared import jobs
 from console.shared.run_form import (
     EXPORT_CHECKBOX_NAME,
     RunForm,
@@ -207,7 +210,9 @@ def model_run_execute() -> ResponseReturnValue:
             never exports.
 
     Returns:
-        Rendered model_run.html with run output, or redirects with flash on validation error.
+        A 303 redirect to the run's job page (``/runs/<job id>``), which shows the
+        run output; the form again, with a flash, on a validation error or when
+        another run holds the console's run slot.
     """
     raw_form = {key: (val or "").strip() for key, val in request.form.items()}
     form_values = {
@@ -256,57 +261,79 @@ def model_run_execute() -> ResponseReturnValue:
     if form.dry_run:
         command.append("--dry-run")
 
-    with section_context("westminster", "model"):
-        result = run_command(command, timeout=1800)
+    export_when_done = form.export_when_done
+    dry_run = form.dry_run
+    export_heading = _model_run_form(choices).export_heading
 
-    export_result = None
-    export_return_code: int | None = None
-    if form.export_when_done and not form.dry_run and result.returncode == 0:
-        if not EXPORT_ELECTION_SCRIPT.exists():
-            export_result = {
-                "command": "",
-                "stdout": "",
-                "stderr": f"Export script not found: {EXPORT_ELECTION_SCRIPT}",
-                "return_code": 1,
-            }
-            export_return_code = 1
-        else:
-            export_command = [
-                sys.executable,
-                str(EXPORT_ELECTION_SCRIPT),
-                "--current-simulation",
-                "--output-file",
-                str(PREDICTION_SIMULATION_OUTPUT),
-            ]
-            with section_context("westminster", "export"):
-                export_proc = run_command(export_command, timeout=900)
-            export_result = {
-                "command": shlex.join(export_command),
-                "stdout": export_proc.stdout,
-                "stderr": export_proc.stderr,
-                "return_code": export_proc.returncode,
-            }
-            export_return_code = export_proc.returncode
+    def work() -> jobs.JobOutcome:
+        with section_context("westminster", "model"):
+            result = run_command(command, timeout=1800)
 
-    run_result = {
-        "command": shlex.join(command),
-        "stdout": result.stdout,
-        "stderr": result.stderr,
-        "return_code": result.returncode,
-        "export_result": export_result,
-        "summary": run_summary(
-            dry_run=form.dry_run,
-            export=form.export_when_done,
-            return_code=result.returncode,
-            export_return_code=export_return_code,
-        ),
-    }
+        export_result = None
+        export_return_code: int | None = None
+        if export_when_done and not dry_run and result.returncode == 0:
+            if not EXPORT_ELECTION_SCRIPT.exists():
+                export_result = {
+                    "command": "",
+                    "stdout": "",
+                    "stderr": f"Export script not found: {EXPORT_ELECTION_SCRIPT}",
+                    "return_code": 1,
+                }
+                export_return_code = 1
+            else:
+                export_command = [
+                    sys.executable,
+                    str(EXPORT_ELECTION_SCRIPT),
+                    "--current-simulation",
+                    "--output-file",
+                    str(PREDICTION_SIMULATION_OUTPUT),
+                ]
+                with section_context("westminster", "export"):
+                    export_proc = run_command(export_command, timeout=900)
+                export_result = {
+                    "command": shlex.join(export_command),
+                    "stdout": export_proc.stdout,
+                    "stderr": export_proc.stderr,
+                    "return_code": export_proc.returncode,
+                }
+                export_return_code = export_proc.returncode
 
-    return render_template(
-        "model_run.html",
-        run_form=_model_run_form(choices),
-        choices=choices,
-        explanations=_model_arg_explanations(),
-        form_values=form_values,
-        run_result=run_result,
-    )
+        run_result = {
+            "command": shlex.join(command),
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "return_code": result.returncode,
+            "export_result": export_result,
+            "summary": run_summary(
+                dry_run=dry_run,
+                export=export_when_done,
+                return_code=result.returncode,
+                export_return_code=export_return_code,
+            ),
+        }
+        ok = result.returncode == 0 and export_return_code in (None, 0)
+        return jobs.JobOutcome(
+            {"run_result": run_result, "export_heading": export_heading}, ok=ok
+        )
+
+    try:
+        job = jobs.start_job(
+            label="Westminster model run",
+            section="westminster",
+            dry_run=dry_run,
+            work=work,
+            result_kind=jobs.KIND_MODEL,
+            back_endpoint="westminster.model_run_form",
+            back_label="Back to the model form",
+        )
+    except jobs.JobBusy as busy:
+        jobs.flash_busy("Westminster model not run", busy)
+        return render_template(
+            "model_run.html",
+            run_form=_model_run_form(choices),
+            choices=choices,
+            explanations=_model_arg_explanations(),
+            form_values=form_values,
+            run_result=None,
+        )
+    return redirect(url_for("runs.run_detail", run_id=job.id), 303)

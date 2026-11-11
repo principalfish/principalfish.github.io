@@ -305,7 +305,9 @@ class TestModelRunExecute:
             westminster_world, as_of_days_back="30", since_days_back="7"
         )
 
-        response = app.test_client().post("/westminster/model", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -324,7 +326,9 @@ class TestModelRunExecute:
     ) -> None:
         form = _valid_form(westminster_world, dry_run="true")
 
-        response = app.test_client().post("/westminster/model", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert recording_runner.scripts == ["run_uns_model.py"]
@@ -387,7 +391,9 @@ class TestModelRunExecute:
         )
         form = _valid_form(westminster_world, dry_run="false")
 
-        response = app.test_client().post("/westminster/model", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert recording_runner.scripts == ["run_uns_model.py", "export_elections.py"]
@@ -437,15 +443,15 @@ class TestModelRunExecute:
         form = _valid_form(westminster_world, dry_run="false")
         del form["export_when_done"]
 
-        response = app.test_client().post("/westminster/model", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert recording_runner.scripts == ["run_uns_model.py"]
         body = response.get_data(as_text=True)
         assert "Simulation JSON Export" not in body
         assert "Export when done was off, so nothing was exported." in body
-        # The unticked box is drawn unticked again.
-        assert '<input type="checkbox" name="export_when_done">' in body
 
     def test_a_dry_run_never_exports_even_with_the_box_ticked(
         self,
@@ -456,7 +462,9 @@ class TestModelRunExecute:
     ) -> None:
         form = _valid_form(westminster_world, dry_run="true", export_when_done="on")
 
-        response = app.test_client().post("/westminster/model", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert recording_runner.scripts == ["run_uns_model.py"]
         body = response.get_data(as_text=True)
@@ -488,7 +496,9 @@ class TestModelRunExecute:
         monkeypatch.setattr("console.westminster.model.run_command", runner)
         form = _valid_form(westminster_world, dry_run="false")
 
-        response = app.test_client().post("/westminster/model", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert len(runner.calls) == 1
@@ -513,7 +523,9 @@ class TestModelRunExecute:
         )
         form = _valid_form(westminster_world, dry_run="false")
 
-        response = app.test_client().post("/westminster/model", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         # run_command is never called for the missing export step.
@@ -538,7 +550,9 @@ class TestModelRunExecute:
         )
         form = _valid_form(westminster_world, dry_run="false")
 
-        response = app.test_client().post("/westminster/model", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         body = response.get_data(as_text=True)
         assert recording_runner.scripts == ["run_uns_model.py", "export_elections.py"]

@@ -6,8 +6,9 @@ from flask import Blueprint, flash, redirect, url_for
 from flask.typing import ResponseReturnValue
 
 from console.paths import REBUILD_DB_SCRIPT
+from console.shared import jobs
 from console.shared.run_log import run_context
-from console.shared.runner import render_command_result, run_python_script
+from console.shared.runner import run_python_script
 
 bp = Blueprint("site", __name__)
 
@@ -28,20 +29,42 @@ def rebuild_database() -> ResponseReturnValue:
     into those tables) are preserved. One failed importer does not abort the run;
     the per-step summary reports what succeeded.
 
+    The rebuild runs as a background job.
+
     Returns:
-        Rendered command_result.html, or a redirect to home if the script is
-        missing.
+        A 303 redirect to the job's page (``/runs/<job id>``), which shows the
+        command result; or a redirect to home if the script is missing, or to
+        the Admin page if another run holds the console's run slot.
     """
     if not REBUILD_DB_SCRIPT.exists():
         flash(f"Rebuild script not found: {REBUILD_DB_SCRIPT}")
         return redirect(url_for("home.home"))
 
-    with run_context(section=None, label="Rebuild database"):
-        result = run_python_script(REBUILD_DB_SCRIPT, timeout=REBUILD_DB_TIMEOUT)
-    return render_command_result(
-        title="Rebuild Database from Source",
-        command="rebuild_database.py (re-import all base data, then export)",
-        stdout=result.stdout,
-        stderr=result.stderr,
-        return_code=result.returncode,
-    )
+    def work() -> jobs.JobOutcome:
+        with run_context(section=None, label="Rebuild database"):
+            result = run_python_script(REBUILD_DB_SCRIPT, timeout=REBUILD_DB_TIMEOUT)
+        return jobs.JobOutcome(
+            {
+                "title": "Rebuild Database from Source",
+                "command": (
+                    "rebuild_database.py (re-import all base data, then export)"
+                ),
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "return_code": result.returncode,
+            },
+            ok=result.returncode == 0,
+        )
+
+    try:
+        job = jobs.start_job(
+            label="Rebuild database",
+            section=None,
+            dry_run=False,
+            work=work,
+            result_kind=jobs.KIND_COMMAND,
+        )
+    except jobs.JobBusy as busy:
+        jobs.flash_busy("Database not rebuilt", busy)
+        return redirect(url_for("admin.admin_page"))
+    return redirect(url_for("runs.run_detail", run_id=job.id), 303)

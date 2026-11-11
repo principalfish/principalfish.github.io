@@ -14,7 +14,7 @@ list/detail and delete pages are registered per chamber from
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Protocol
+from dataclasses import dataclass
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
@@ -23,8 +23,10 @@ from pydantic import ValidationError
 from console.db import get_db
 from console.forms import UsModelRunForm
 from console.paths import EXPORT_ELECTION_SCRIPT
+from console.shared import jobs
+from console.shared.jobs import JobBusy, JobOutcome
 from console.shared.run_form import run_summary
-from console.shared.runner import render_command_result, run_python_script
+from console.shared.runner import run_python_script
 from console.us.matchups import (
     MatchupChoiceError,
     apply_race_matchup_action,
@@ -51,8 +53,6 @@ from console.us.models import (
     UsModelOptions,
     UsModelRun,
     UsModelRunInterrupted,
-    busy_message,
-    model_run_slot,
     run_us_chamber_and_export,
     tracked_matchup_in_force,
 )
@@ -89,18 +89,14 @@ bp = Blueprint("us", __name__)
 register_outputs(bp)
 
 
-def _render_model_form(
-    chamber: UsChamber,
-    form_values: dict[str, str],
-    run_result: dict[str, object] | None = None,
-) -> str:
-    """Render ``chamber``'s model run page, with a run's result if it has one."""
+def _render_model_form(chamber: UsChamber, form_values: dict[str, str]) -> str:
+    """Render ``chamber``'s model run page."""
     return render_template(
         "model_run.html",
         run_form=us_run_form(chamber),
         explanations=us_arg_explanations(),
         form_values=form_values,
-        run_result=run_result,
+        run_result=None,
     )
 
 
@@ -134,23 +130,28 @@ def model_run(chamber: str) -> ResponseReturnValue:
     skipped with a note, and nothing is exported.
 
     With "rebuild history" ticked the runner recomputes the chamber's whole
-    trend history (``--rebuild-history``, under the long rebuild timeout): one
-    request that can take hours. Any run holds the console's one model-run slot
-    (:func:`~console.us.models.model_run_slot`), so it is refused with a flash
-    while another run or rebuild is in progress.
+    trend history (``--rebuild-history``, under the long rebuild timeout).
 
-    A step that times out or cannot be started renders a failed result saying
-    what it may have left behind, instead of a 500.
+    A step that times out or cannot be started ends the job with a failed result
+    saying what it may have left behind, instead of a 500.
+
+    The run is a background job (:func:`~console.shared.jobs.start_job`): this
+    request validates, starts it and redirects to its page, which shows the
+    output live and then the result. The job holds the console's one
+    model-run slot, so a run is refused with a flash (linking the running job)
+    while another run or rebuild is in progress.
 
     Args:
         chamber: The chamber slug from the path.
 
     Returns:
-        The form with the run's result below it, the form again with a flash
-        for an invalid value, or a redirect back to the form when the slot is
-        taken or a script is missing.
+        The form again with a flash for an invalid value, a redirect back to
+        the form when the slot is taken or a script is missing, otherwise a
+        redirect to the job's page.
     """
     spec = US_CHAMBERS_BY_SLUG[chamber]
+    # The shared database handle: its engine allows use from other threads (the
+    # dev server's request threads already share it), so the job can use it.
     db = get_db()
     raw_form = {key: (val or "").strip() for key, val in request.form.items()}
     form_values = us_form_values(raw_form)
@@ -192,46 +193,18 @@ def model_run(chamber: str) -> ResponseReturnValue:
     elif will_export:
         steps.append(EXPORT_ELECTION_SCRIPT.name)
 
-    def result_page(
-        *, stdout: str, stderr: str, return_code: int
-    ) -> ResponseReturnValue:
-        return _render_model_form(
-            spec,
-            form_values,
-            {
-                "command": " → ".join(steps),
-                "stdout": stdout,
-                "stderr": stderr,
-                "return_code": return_code,
-                "summary": NO_MATCHUP_NOTE
-                if skipped and return_code == 0
-                else run_summary(
-                    dry_run=form.dry_run,
-                    export=form.export_when_done,
-                    return_code=return_code,
-                ),
-            },
-        )
-
     if form.rebuild_history:
         note = REBUILD_INTERRUPTED_NOTE
     elif form.dry_run:
         note = DRY_RUN_INTERRUPTED_NOTE
     else:
         note = RUN_INTERRUPTED_NOTE
-    with model_run_slot() as free:
-        if not free:
-            flash(
-                busy_message(
-                    "History not rebuilt"
-                    if form.rebuild_history
-                    else f"{spec.label} model not run"
-                )
-            )
-            return redirect(back)
+    export_heading = us_run_form(spec).export_heading
+
+    def work() -> JobOutcome:
         # ``run_python_script`` is looked up here at call time, so tests can
         # monkeypatch it, as for :func:`_rebuild_history`.
-        return _guarded_run(
+        finished = _guarded_run(
             lambda: run_us_chamber_and_export(
                 db,
                 spec,
@@ -246,8 +219,47 @@ def model_run(chamber: str) -> ResponseReturnValue:
                 export=form.export_when_done and not skipped,
             ),
             note=note,
-            result_page=result_page,
         )
+        run_result: dict[str, object] = {
+            "command": " → ".join(steps),
+            "stdout": finished.stdout,
+            "stderr": finished.stderr,
+            "return_code": finished.return_code,
+            "summary": NO_MATCHUP_NOTE
+            if skipped and finished.return_code == 0
+            else run_summary(
+                dry_run=form.dry_run,
+                export=form.export_when_done,
+                return_code=finished.return_code,
+            ),
+        }
+        return JobOutcome(
+            {"run_result": run_result, "export_heading": export_heading},
+            ok=finished.return_code == 0,
+        )
+
+    try:
+        job = jobs.start_job(
+            label=f"{spec.label} history rebuild"
+            if form.rebuild_history
+            else f"{spec.label} model",
+            section=spec.slug,
+            dry_run=form.dry_run,
+            work=work,
+            result_kind=jobs.KIND_MODEL,
+            back_endpoint="us.model_run_form",
+            back_label="Back to the run form",
+            back_values={"chamber": chamber},
+        )
+    except JobBusy as busy:
+        jobs.flash_busy(
+            "History not rebuilt"
+            if form.rebuild_history
+            else f"{spec.label} model not run",
+            busy,
+        )
+        return redirect(back)
+    return redirect(url_for("runs.run_detail", run_id=job.id), 303)
 
 
 @bp.route("/president/matchup", methods=["GET", "POST"])
@@ -258,12 +270,12 @@ def president_matchup() -> ResponseReturnValue:
     latest fieldwork date each) as a choice, plus "None". POST saves the choice
     as a manual tracked matchup — only a stored label is accepted — or, for
     "None", deletes the national row. With "rebuild president history" ticked
-    and a matchup in force, it then runs the President model with its whole
-    trend history recomputed, and the export.
+    and a matchup in force, it then starts a background job that runs the
+    President model with its whole trend history recomputed, and the export.
 
     Returns:
-        The matchup page; after a POST, a redirect back to it, or the command
-        result of the rebuild.
+        The matchup page; after a POST, a redirect back to it, or to the page of
+        the rebuild job.
     """
     chamber = US_CHAMBERS_BY_SLUG["president"]
     map_name = chamber.tracked_matchup_map_name
@@ -348,8 +360,8 @@ def set_race_matchup(chamber: str, map_id: int, seat_id: int) -> ResponseReturnV
     be stored for this race), ``ignore`` (skip the race's polls) or ``auto``
     (drop the override and follow the importer's lead table again). Every
     refusal is flashed. With "rebuild history" ticked, a successful change is
-    followed by the chamber's model with its trend history recomputed, and the
-    export.
+    followed by a background job running the chamber's model with its trend
+    history recomputed, and the export.
 
     Args:
         chamber: The chamber slug from the path; it must be the chamber whose
@@ -358,8 +370,8 @@ def set_race_matchup(chamber: str, map_id: int, seat_id: int) -> ResponseReturnV
         seat_id: Primary key of the race's seat.
 
     Returns:
-        A redirect back to the chamber's race list, or the command result of
-        the rebuild.
+        A redirect back to the chamber's race list, or to the page of the
+        rebuild job.
     """
     db = get_db()
     back = url_for("us.race_matchups", chamber=chamber)
@@ -409,92 +421,96 @@ def _rebuild_history(
     back_endpoint: str,
     back_values: dict[str, str] | None = None,
 ) -> ResponseReturnValue:
-    """Rerun one chamber's model over its whole trend history, then export.
+    """Start a job that reruns one chamber's model over its whole trend history.
 
-    ``run_python_script`` is looked up on this module at call time, so tests
-    can monkeypatch it. A step that times out or cannot be started renders a
-    failed result saying the history may be partial, instead of a 500.
+    The job then exports. ``run_python_script`` is looked up on this module at
+    call time, so tests can monkeypatch it. A step that times out or cannot be
+    started ends the job with a failed result saying the history may be
+    partial, instead of a 500.
 
-    It holds the console's one model-run slot
-    (:func:`~console.us.models.model_run_slot`), so while another run
-    or rebuild is in progress it is refused with a flash and sent back.
+    :func:`~console.shared.jobs.start_job` takes the console's one model-run
+    slot, so while another run or rebuild is in progress this is refused with
+    a flash (linking the running job) and sent back.
 
     Args:
-        db: Active Database instance.
+        db: Active Database instance; the job reads tracked matchups with it
+            from its own thread, which the shared handle allows.
         chamber: The chamber to rebuild.
         back_endpoint: Endpoint the result page links back to.
         back_values: URL values for ``back_endpoint``.
 
     Returns:
-        The rendered command result, or a redirect back when another run is in
-        progress.
+        A redirect to the job's page, or back when another run is in progress.
     """
     command_args = " ".join((*chamber.model_args, chamber.rebuild_flag))
+    title = f"Rebuild {chamber.label} History"
+    command = f"{chamber.model_script.name} {command_args} → {EXPORT_STEP_LABEL}"
 
-    def result_page(*, stdout: str, stderr: str, return_code: int) -> ResponseReturnValue:
-        return render_command_result(
-            title=f"Rebuild {chamber.label} History",
-            command=f"{chamber.model_script.name} {command_args} → {EXPORT_STEP_LABEL}",
-            stdout=stdout,
-            stderr=stderr,
-            return_code=return_code,
-            back_endpoint=back_endpoint,
-            back_label="Back to matchups",
-            back_values=back_values,
-        )
-
-    with model_run_slot() as free:
-        if not free:
-            flash(busy_message("History not rebuilt"))
-            return redirect(url_for(back_endpoint, **(back_values or {})))
-        return _guarded_run(
+    def work() -> JobOutcome:
+        finished = _guarded_run(
             lambda: run_us_chamber_and_export(
                 db, chamber, runner=run_python_script, rebuild_history=True
             ),
             note=REBUILD_INTERRUPTED_NOTE,
-            result_page=result_page,
+        )
+        return JobOutcome(
+            {
+                "title": title,
+                "command": command,
+                "stdout": finished.stdout,
+                "stderr": finished.stderr,
+                "return_code": finished.return_code,
+            },
+            ok=finished.return_code == 0,
         )
 
+    try:
+        job = jobs.start_job(
+            label=title,
+            section=chamber.slug,
+            dry_run=False,
+            work=work,
+            result_kind=jobs.KIND_COMMAND,
+            back_endpoint=back_endpoint,
+            back_label="Back to matchups",
+            back_values=back_values,
+        )
+    except JobBusy as busy:
+        jobs.flash_busy("History not rebuilt", busy)
+        return redirect(url_for(back_endpoint, **(back_values or {})))
+    return redirect(url_for("runs.run_detail", run_id=job.id), 303)
 
-class _ResultPage(Protocol):
-    """Renders a model run's result page from its output and return code."""
 
-    def __call__(
-        self,
-        *,
-        stdout: str,
-        stderr: str,
-        return_code: int,
-    ) -> ResponseReturnValue: ...
+@dataclass(frozen=True)
+class _Finished:
+    """The output and exit code a guarded model sequence ended with."""
+
+    stdout: str
+    stderr: str
+    return_code: int
 
 
-def _guarded_run(
-    run: Callable[[], UsModelRun],
-    *,
-    note: str,
-    result_page: _ResultPage,
-) -> ResponseReturnValue:
-    """Run a model sequence and render its result, even if a step dies.
+def _guarded_run(run: Callable[[], UsModelRun], *, note: str) -> _Finished:
+    """Run a model sequence and report its result, even if a step dies.
 
     A step that times out or cannot be started raises out of the service. Here
-    that becomes a failed result page instead of a 500: ``note``, then every
-    finished step's output and whatever the dying step printed, so the page
+    that becomes a failed result instead of an exception: ``note``, then every
+    finished step's output and whatever the dying step printed, so the result
     shows which chambers finished before it. A step that exits non-zero stops
     the sequence the same way (before the export, after a rebuild may have
-    cleared its points), so its page leads with ``note`` too.
+    cleared its points), so its output leads with ``note`` too.
 
     Args:
         run: Runs the sequence and returns its combined outcome.
         note: What an interrupted run leaves behind, shown above its output.
-        result_page: Renders the page from the output and return code.
 
     Returns:
-        The rendered result page.
+        The output and return code to show.
     """
     try:
         outcome = run()
     except UsModelRunInterrupted as err:
-        return result_page(
+        return _Finished(
             stdout="\n".join(filter(None, (note, err.partial.stdout))),
             stderr="\n".join(filter(None, (err.partial.stderr, str(err)))),
             return_code=1,
@@ -502,8 +518,6 @@ def _guarded_run(
     stdout = outcome.stdout
     if outcome.return_code != 0:
         stdout = "\n".join(filter(None, (note, stdout)))
-    return result_page(
-        stdout=stdout,
-        stderr=outcome.stderr,
-        return_code=outcome.return_code,
+    return _Finished(
+        stdout=stdout, stderr=outcome.stderr, return_code=outcome.return_code
     )

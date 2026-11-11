@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros/forms.html" import select_field %}
-{% from "_macros/run_result.html" import run_result as run_result_block %}
+{% from "_macros/run_result.html" import model_result %}
 {% block content %}
   <section class="card">
     <h2>{{ run_form.title }}</h2>
@@ -25,13 +25,6 @@
   </section>
 
   {% if run_result %}
-    <section class="card">
-      {% if run_result.summary %}<p><strong>{{ run_result.summary }}</strong></p>{% endif %}
-      {{ run_result_block(run_result, "Run Result", 4) }}
-
-      {% if run_result.export_result %}
-        {{ run_result_block(run_result.export_result, run_form.export_heading, 5) }}
-      {% endif %}
-    </section>
+    {{ model_result(run_result, run_form.export_heading) }}
   {% endif %}
 {% endblock %}

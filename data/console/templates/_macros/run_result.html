@@ -24,3 +24,36 @@
 {{ stream("Stdout", result.stdout, "h" ~ level) }}
 {{ stream("Stderr", result.stderr, "h" ~ level) }}
 {% endmacro %}
+
+{# The cards of a script's finished run, as command_result.html draws them: the
+   title, command line and a link back, then each stream in its own card. #}
+{% macro command_result(title, command, return_code, stdout, stderr, back_url, back_label) %}
+  <section class="card">
+    <h2>{{ title }}</h2>
+    {{ command_line(command, return_code) }}
+    <p>
+      <a class="button" href="{{ back_url }}">{{ back_label }}</a>
+    </p>
+  </section>
+
+  <section class="card">
+    {{ stream("Stdout", stdout, "h3") }}
+  </section>
+
+  <section class="card">
+    {{ stream("Stderr", stderr, "h3") }}
+  </section>
+{% endmacro %}
+
+{# The card of a finished model run, as model_run.html draws it: the summary
+   sentence, the run's result, and the export's when one ran. #}
+{% macro model_result(result, export_heading) %}
+    <section class="card">
+      {% if result.summary %}<p><strong>{{ result.summary }}</strong></p>{% endif %}
+      {{ run_result(result, "Run Result", 4) }}
+
+      {% if result.export_result %}
+        {{ run_result(result.export_result, export_heading, 5) }}
+      {% endif %}
+    </section>
+{% endmacro %}

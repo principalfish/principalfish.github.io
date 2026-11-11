@@ -132,7 +132,7 @@ def test_the_old_export_urls_no_longer_exist(
     assert client.post(path).status_code == 404
 
 
-def test_the_run_log_has_exactly_two_get_only_rules(
+def test_the_run_log_has_exactly_three_get_only_rules(
     app: Flask,  # noqa: F811
 ) -> None:
     rules = {
@@ -147,10 +147,12 @@ def test_the_run_log_has_exactly_two_get_only_rules(
     assert rules == {
         "/runs": ("runs.run_list", ["GET"]),
         "/runs/<run_id>": ("runs.run_detail", ["GET"]),
+        "/runs/<run_id>/status": ("runs.run_status", ["GET"]),
     }
     with app.test_request_context():
         assert url_for("runs.run_list", section="house") == "/runs?section=house"
         assert url_for("runs.run_detail", run_id="abc") == "/runs/abc"
+        assert url_for("runs.run_status", run_id="abc") == "/runs/abc/status"
 
 
 def test_the_president_has_none_of_the_chamber_only_pages(

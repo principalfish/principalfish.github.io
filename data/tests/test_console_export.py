@@ -205,7 +205,9 @@ class TestRun:
         self, client: FlaskClient[Response], export: RecordingExport
     ) -> None:
         response = client.post(
-            "/export", data={"sections": ["house"], "content": ["results"]}
+            "/export",
+            data={"sections": ["house"], "content": ["results"]},
+            follow_redirects=True,
         )
 
         assert response.status_code == 200
@@ -246,6 +248,7 @@ class TestRun:
                 "content": ["metadata", "results"],
                 "dry_run": "false",
             },
+            follow_redirects=True,
         )
 
         assert response.status_code == 200
@@ -328,7 +331,9 @@ class TestRun:
         export.stderr = "export blew up"
 
         response = client.post(
-            "/export", data={"sections": ["house"], "content": ["results"]}
+            "/export",
+            data={"sections": ["house"], "content": ["results"]},
+            follow_redirects=True,
         )
 
         assert response.status_code == 200
@@ -355,6 +360,7 @@ class TestRun:
         response = client.post(
             "/export",
             data={"sections": ["house"], "content": ["results"], "dry_run": "false"},
+            follow_redirects=True,
         )
 
         assert response.status_code == 200
@@ -426,7 +432,7 @@ class TestRefusals:
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         [message] = flashes_on_page(body)
-        assert message.startswith("Export not run: another US model run")
+        assert message.startswith("Export not run: another run is in progress")
         assert _ticked(body, "sections") == ["house"]
         assert _ticked(body, "content") == ["results"]
         assert export.calls == []
@@ -488,14 +494,16 @@ class TestNavigation:
         assert bar.index('href="/export"') < bar.index('href="/admin"')
         assert ">Export</a>" in bar
 
-    def test_export_is_current_on_its_page_and_its_result(
+    def test_export_is_current_on_its_page_and_its_refusal(
         self, client: FlaskClient[Response], export: RecordingExport
     ) -> None:
+        # The result is on the job's own page under /runs; the form comes back
+        # when the post is refused.
         pages = [
             client.get("/export").get_data(as_text=True),
-            client.post(
-                "/export", data={"sections": ["house"], "content": ["results"]}
-            ).get_data(as_text=True),
+            client.post("/export", data={"sections": ["house"]}).get_data(
+                as_text=True
+            ),
         ]
 
         for body in pages:

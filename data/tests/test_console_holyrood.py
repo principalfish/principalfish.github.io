@@ -38,6 +38,7 @@ from console.holyrood.model import (
     _holyrood_model_arg_explanations,
 )
 from console.paths import HOLYROOD_MODEL_SCRIPT
+from console.us.models import MODEL_RUN_LOCK, model_run_slot
 from core.db import Database
 from core.schema import ElectionType
 from tests.console_fixtures import (
@@ -233,6 +234,49 @@ class TestHolyroodImportPolls:
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/")
         assert _flashes(client, response) == [f"Script not found: {missing_script}"]
+
+    def test_the_import_is_refused_while_the_run_slot_is_held(
+        self,
+        app: Flask,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        _patch_import_script(monkeypatch, tmp_path)
+        runner = _RecordingScriptRunner()
+        monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
+        client = app.test_client()
+
+        with model_run_slot():
+            response = client.post("/holyrood/polls/import")
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/holyrood"
+        [message] = _flashes(client, response)
+        assert message.startswith("Polls not imported: another run is in progress")
+        assert runner.calls == []
+
+    def test_the_import_holds_the_slot_while_it_runs_and_frees_it_after(
+        self,
+        app: Flask,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        _patch_import_script(monkeypatch, tmp_path)
+        held: list[bool] = []
+
+        def runner(
+            script: Path, *args: str, cwd: Path | None = None, timeout: int
+        ) -> subprocess.CompletedProcess[str]:
+            held.append(MODEL_RUN_LOCK.locked())
+            return subprocess.CompletedProcess([], 0, "ok", "")
+
+        monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
+
+        response = app.test_client().post("/holyrood/polls/import")
+
+        assert response.status_code == 200
+        assert held == [True, True]
+        assert not MODEL_RUN_LOCK.locked()
 
     def test_both_runs_succeed_with_stderr_produces_exact_combined_output(
         self,
@@ -511,7 +555,9 @@ class TestRunHolyroodModelExecute:
         # that validator is wired up.
         form = _valid_form(world, as_of_days_back="30", since_days_back="7")
 
-        response = app.test_client().post("/holyrood/model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -541,7 +587,9 @@ class TestRunHolyroodModelExecute:
         world = seed_holyrood_world(db)
         form = _valid_form(world, dry_run="true")
 
-        response = app.test_client().post("/holyrood/model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert recording_runner.scripts == ["run_holyrood_uns_model.py"]
@@ -578,7 +626,9 @@ class TestRunHolyroodModelExecute:
             dry_run="true",
         )
 
-        response = app.test_client().post("/holyrood/model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         expected_command = (
             sys.executable,
@@ -617,7 +667,9 @@ class TestRunHolyroodModelExecute:
         )
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert recording_runner.scripts == [
@@ -662,15 +714,15 @@ class TestRunHolyroodModelExecute:
         form = _valid_form(world, dry_run="false")
         del form["export_when_done"]
 
-        response = app.test_client().post("/holyrood/model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert recording_runner.scripts == ["run_holyrood_uns_model.py"]
         body = response.get_data(as_text=True)
         assert "Static Data Export" not in body
         assert "Export when done was off, so nothing was exported." in body
-        # The unticked box is drawn unticked again.
-        assert '<input type="checkbox" name="export_when_done">' in body
 
     def test_a_dry_run_never_exports_even_with_the_box_ticked(
         self,
@@ -681,7 +733,9 @@ class TestRunHolyroodModelExecute:
         world = seed_holyrood_world(db)
         form = _valid_form(world, dry_run="true", export_when_done="on")
 
-        response = app.test_client().post("/holyrood/model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert recording_runner.scripts == ["run_holyrood_uns_model.py"]
         body = response.get_data(as_text=True)
@@ -713,7 +767,9 @@ class TestRunHolyroodModelExecute:
         monkeypatch.setattr("console.holyrood.model.run_command", runner)
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert len(runner.calls) == 1
@@ -740,7 +796,9 @@ class TestRunHolyroodModelExecute:
         monkeypatch.setattr("console.holyrood.model.run_command", runner)
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert runner.scripts == ["run_holyrood_uns_model.py", "export_elections.py"]
@@ -768,7 +826,9 @@ class TestRunHolyroodModelExecute:
         )
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         # run_command is never called for the missing export step.
@@ -797,7 +857,9 @@ class TestRunHolyroodModelExecute:
         )
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         body = response.get_data(as_text=True)
         assert recording_runner.scripts == [

@@ -41,6 +41,7 @@ from console.us.poll_queue import (
     AUTO_TRACKING_KEY,
     CHAMBER_KEY,
     INDEX_KEY,
+    MODEL_BUSY_JOB_KEY,
     MODEL_ERROR_KEY,
     MODEL_RUN_KEY,
     PER_RACE_CUTOFF_NOTE,
@@ -79,6 +80,7 @@ from importers.polls.us.us_wikipedia_polls import (
     rows_for_page,
 )
 from tests.console_fixtures import confirm_text, onsubmit_handlers
+from tests.job_fixtures import job_holding_the_slot
 
 HOUSE_MAP = "US House Districts 2024"
 SENATE_MAP = "US Senate 2024"
@@ -1262,9 +1264,9 @@ class TestFinish:
         assert runner.calls == []
         assert payload[MODEL_RUN_KEY] is None
         assert payload[MODEL_ERROR_KEY] == (
-            "US Senate model not run: another US model run or history rebuild "
-            "was in progress. Run it from the US Senate section's Run model "
-            "page once it finishes."
+            "US Senate model not run: another run was in progress (a model run, "
+            "export or database rebuild). Run it from the US Senate section's "
+            "Run model page once it finishes."
         )
         assert not MODEL_RUN_LOCK.locked()
 
@@ -2727,15 +2729,57 @@ class TestChamberFinishRoute:
         client.get(f"/{chamber}/polls/import/{token}/finish")
 
         message = (
-            f"{label} model not run: another US model run or history rebuild "
-            f"was in progress. Run it from the {label} section's Run model "
-            "page once it finishes."
+            f"{label} model not run: another run was in progress (a model run, "
+            f"export or database rebuild). Run it from the {label} section's "
+            "Run model page once it finishes."
         )
         assert message in " ".join(body.split())
         assert model_runner.invocations == []
         assert PREVIEW_CACHE[token][MODEL_ERROR_KEY] == message
         assert PREVIEW_CACHE[token][MODEL_RUN_KEY] is None
         assert "Run US Models" not in body
+
+    @pytest.mark.parametrize("chamber", ["house", "senate", "president"])
+    def test_a_running_job_defers_the_model_and_links_it(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+        chamber: str,
+    ) -> None:
+        row = self._row_for(us_db, chamber)
+        token = _open_queue(client, monkeypatch, row, chamber=chamber)
+        self._approve_first(client, chamber, token)
+
+        with job_holding_the_slot() as job:
+            body = _body(client, f"/{chamber}/polls/import/{token}/finish")
+        # Recorded, not retried once the job has ended, and the link stays.
+        again = _body(client, f"/{chamber}/polls/import/{token}/finish")
+
+        link = f'<a href="/runs/{job.id}">See the running job.</a>'
+        assert link in body
+        assert link in again
+        assert model_runner.invocations == []
+        assert PREVIEW_CACHE[token][MODEL_BUSY_JOB_KEY] == job.id
+        assert PREVIEW_CACHE[token][MODEL_RUN_KEY] is None
+
+    def test_a_busy_slot_with_no_job_adds_no_link(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+    ) -> None:
+        row = self._row_for(us_db, "senate")
+        token = _open_queue(client, monkeypatch, row, chamber="senate")
+        self._approve_first(client, "senate", token)
+
+        with MODEL_RUN_LOCK:
+            body = _body(client, f"/senate/polls/import/{token}/finish")
+
+        assert "See the running job" not in body
+        assert MODEL_BUSY_JOB_KEY not in PREVIEW_CACHE[token]
 
 
 _TOKEN_ROUTES = [

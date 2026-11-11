@@ -31,6 +31,7 @@ from flask import Flask
 
 from console import create_app
 from console.sections import WESTMINSTER_MAP_NAME
+from console.shared import jobs
 from console.shared.preview import PREVIEW_CACHE, store_preview
 from console.shared.wikipedia_queue import (
     NO_CUTOFF,
@@ -1599,7 +1600,7 @@ class TestFinish:
         assert statuses == [200, 200]
         assert len(calls) == 1
 
-    def test_finishes_of_different_tokens_do_not_block_each_other(
+    def test_a_finish_of_another_token_is_not_blocked_but_is_refused_while_one_runs(
         self, app: Flask, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[int] = []
@@ -1609,8 +1610,7 @@ class TestFinish:
         def _fake_run(*, timeout: int = 0) -> list[str]:
             calls.append(len(calls))
             started.set()
-            if len(calls) == 1:
-                release.wait(timeout=10)
+            release.wait(timeout=10)
             return ["UNS model updated."]
 
         monkeypatch.setattr(
@@ -1628,20 +1628,81 @@ class TestFinish:
 
         holder = threading.Thread(target=_finish_blocked)
         holder.start()
-        assert started.wait(timeout=5)
+        try:
+            assert started.wait(timeout=5)
 
-        other = app.test_client().get(
-            f"/westminster/polls/import/wikipedia/{free}/finish"
-        )
+            other = app.test_client().get(
+                f"/westminster/polls/import/wikipedia/{free}/finish"
+            )
 
-        # The second token's whole request finished while the first still holds
-        # its own lock.
-        assert other.status_code == 200
-        assert len(calls) == 2
-        assert holder.is_alive()
-        release.set()
-        holder.join(timeout=10)
+            # The second token's whole request finished while the first still
+            # holds its own lock; the console runs one model at a time, so the
+            # second did not run the model.
+            assert other.status_code == 200
+            assert "UNS model not run: another" in other.get_data(as_text=True)
+            assert len(calls) == 1
+            assert holder.is_alive()
+        finally:
+            release.set()
+            holder.join(timeout=10)
         assert statuses == [200]
+
+    def test_a_finish_while_a_job_runs_is_refused_and_a_later_refresh_runs_it(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[int] = []
+        requests: list[str] = []
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(timeout)
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        token = _store(self._imported_state())
+        client = app.test_client()
+        url = f"/westminster/polls/import/wikipedia/{token}/finish"
+        release = threading.Event()
+        started = threading.Event()
+
+        def _work() -> jobs.JobOutcome:
+            started.set()
+            release.wait(timeout=10)
+            return jobs.JobOutcome({}, ok=True)
+
+        previous = jobs.set_executor(jobs.ThreadExecutor())
+        try:
+            job = jobs.start_job(
+                label="Export",
+                section=None,
+                dry_run=True,
+                work=_work,
+                result_kind=jobs.KIND_COMMAND,
+            )
+            try:
+                assert started.wait(timeout=5)
+                refused = client.get(url).get_data(as_text=True)
+            finally:
+                release.set()
+            assert job.wait(10)
+        finally:
+            jobs.set_executor(previous)
+
+        # Nothing ran and nothing was recorded; the page links to the job.
+        assert calls == [] and requests == []
+        assert "UNS model not run: another run is in progress" in refused
+        assert f'href="/runs/{job.id}"' in refused
+        assert "UNS model updated." not in refused
+        assert "Wikipedia Catch-Up Summary" in refused
+
+        # Once the slot is free a refresh runs the model, once.
+        again = client.get(url).get_data(as_text=True)
+        client.get(url)
+        assert len(calls) == 1
+        assert "UNS model updated." in again
+        assert requests == ["b"]
 
     def test_model_does_not_run_on_abandon(
         self, app: Flask, monkeypatch: pytest.MonkeyPatch

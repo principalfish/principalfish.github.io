@@ -35,7 +35,8 @@ all three at a temporary folder.
 
 Import and the Current Senate rebuild hold the console's one US model-run slot
 (:func:`~console.us.models.model_run_slot`), so a double-submitted confirm cannot
-import twice at once.
+import twice at once, and neither runs while a background job (a model run or a
+history rebuild) holds the slot: the refusal links the running job.
 """
 
 from __future__ import annotations
@@ -59,6 +60,7 @@ from flask import (
 from flask.typing import ResponseReturnValue
 
 from console.db import get_db
+from console.shared import jobs
 from console.shared.preview import (
     PREVIEW_CACHE,
     get_preview,
@@ -68,7 +70,6 @@ from console.shared.preview import (
 from console.shared.runner import render_command_result
 from console.us.models import (
     US_RACE_CHAMBER_CONVERTER,
-    busy_message,
     model_run_slot,
 )
 from core import config
@@ -430,7 +431,7 @@ def us_results_confirm(chamber: str, token: str) -> ResponseReturnValue:
     db = get_db()
     with model_run_slot() as free:
         if not free:
-            flash(busy_message("Results not imported"))
+            jobs.flash_busy("Results not imported")
             return redirect(form)
         # Read again now the slot is held: a double submit that got past the
         # check above while the first request was importing finds it gone.
@@ -496,7 +497,7 @@ def us_results_current_senate(chamber: str) -> ResponseReturnValue:
     election = _out_dir() / CURRENT_SENATE_ELECTION_FILE
     with model_run_slot() as free:
         if not free:
-            flash(busy_message("Current Senate not rebuilt"))
+            jobs.flash_busy("Current Senate not rebuilt")
             return redirect(url_for("us_results.us_results_form", chamber=chamber))
         try:
             report = rebuild_current_senate(snapshot_path=snapshot, election_path=election)

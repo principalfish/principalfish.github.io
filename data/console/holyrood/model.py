@@ -22,6 +22,7 @@ from console.paths import (
     HOLYROOD_IMPORT_SCRIPT,
     HOLYROOD_MODEL_SCRIPT,
 )
+from console.shared import jobs
 from console.shared.run_form import (
     EXPORT_CHECKBOX_NAME,
     RunForm,
@@ -40,6 +41,7 @@ from console.shared.runner import (
     run_command,
     run_python_script,
 )
+from console.us.models import model_run_slot
 from core.db import Database
 from core.schema import Election, ElectionType, Map
 
@@ -55,8 +57,13 @@ def holyrood_import_polls() -> ResponseReturnValue:
     importer skips polls already in the database. Running the projection model
     and exporting are now separate steps (see ``run_holyrood_model``).
 
+    The import holds the console's run slot while it runs, so it is refused,
+    not queued, while a background job runs.
+
     Returns:
-        Rendered command_result.html showing combined stdout, stderr, and return code.
+        Rendered command_result.html showing combined stdout, stderr, and return
+        code; a redirect to the Holyrood page with a flash if another run holds
+        the slot; or a redirect to home if the script is missing.
     """
     if not HOLYROOD_IMPORT_SCRIPT.exists():
         flash(f"Script not found: {HOLYROOD_IMPORT_SCRIPT}")
@@ -66,20 +73,24 @@ def holyrood_import_polls() -> ResponseReturnValue:
     combined_stderr: list[str] = []
     return_code = 0
 
-    for label, extra_args in [
-        ("Import Scottish constituency polls from Wikipedia", []),
-        ("Import Scottish list polls from Wikipedia", ["--ballot", "list"]),
-    ]:
-        with section_context("holyrood", "import"):
-            result = run_python_script(
-                HOLYROOD_IMPORT_SCRIPT, *extra_args, timeout=300
-            )
-        combined_stdout.append(f"=== {label} ===\n{result.stdout}")
-        if result.stderr:
-            combined_stderr.append(f"=== {label} ===\n{result.stderr}")
-        if result.returncode != 0:
-            return_code = result.returncode
-            break
+    with model_run_slot() as free:
+        if not free:
+            jobs.flash_busy("Polls not imported")
+            return redirect(url_for("sections.holyrood"))
+        for label, extra_args in [
+            ("Import Scottish constituency polls from Wikipedia", []),
+            ("Import Scottish list polls from Wikipedia", ["--ballot", "list"]),
+        ]:
+            with section_context("holyrood", "import"):
+                result = run_python_script(
+                    HOLYROOD_IMPORT_SCRIPT, *extra_args, timeout=300
+                )
+            combined_stdout.append(f"=== {label} ===\n{result.stdout}")
+            if result.stderr:
+                combined_stderr.append(f"=== {label} ===\n{result.stderr}")
+            if result.returncode != 0:
+                return_code = result.returncode
+                break
 
     return render_command_result(
         title="Import Scottish Polls",
@@ -225,7 +236,9 @@ def run_holyrood_model() -> ResponseReturnValue:
             never exports.
 
     Returns:
-        Rendered model_run.html with run output.
+        A 303 redirect to the run's job page (``/runs/<job id>``), which shows the
+        run output; the form again, with a flash, on a validation error or when
+        another run holds the console's run slot.
     """
     raw_form = {key: (val or "").strip() for key, val in request.form.items()}
     form_values = {
@@ -269,53 +282,75 @@ def run_holyrood_model() -> ResponseReturnValue:
         # Preview: write nothing (no DB rows, no prediction JSON).
         command += ["--dry-run", "--no-output"]
 
-    with section_context("holyrood", "model"):
-        result = run_command(command, timeout=1800)
+    export_when_done = form.export_when_done
+    dry_run = form.dry_run
+    export_heading = _holyrood_run_form(choices).export_heading
 
-    export_result = None
-    export_return_code: int | None = None
-    if form.export_when_done and not form.dry_run and result.returncode == 0:
-        if not EXPORT_ELECTION_SCRIPT.exists():
-            export_result = {
-                "command": "",
-                "stdout": "",
-                "stderr": f"Export script not found: {EXPORT_ELECTION_SCRIPT}",
-                "return_code": 1,
-            }
-            export_return_code = 1
-        else:
-            # Full static-data export refreshes every payload, including the
-            # preserved holyrood-prediction.json — no --current-simulation here.
-            export_command = [sys.executable, str(EXPORT_ELECTION_SCRIPT)]
-            with section_context("holyrood", "export"):
-                export_proc = run_command(export_command, timeout=900)
-            export_result = {
-                "command": shlex.join(export_command),
-                "stdout": export_proc.stdout,
-                "stderr": export_proc.stderr,
-                "return_code": export_proc.returncode,
-            }
-            export_return_code = export_proc.returncode
+    def work() -> jobs.JobOutcome:
+        with section_context("holyrood", "model"):
+            result = run_command(command, timeout=1800)
 
-    run_result = {
-        "command": shlex.join(command),
-        "stdout": result.stdout,
-        "stderr": result.stderr,
-        "return_code": result.returncode,
-        "export_result": export_result,
-        "summary": run_summary(
-            dry_run=form.dry_run,
-            export=form.export_when_done,
-            return_code=result.returncode,
-            export_return_code=export_return_code,
-        ),
-    }
+        export_result = None
+        export_return_code: int | None = None
+        if export_when_done and not dry_run and result.returncode == 0:
+            if not EXPORT_ELECTION_SCRIPT.exists():
+                export_result = {
+                    "command": "",
+                    "stdout": "",
+                    "stderr": f"Export script not found: {EXPORT_ELECTION_SCRIPT}",
+                    "return_code": 1,
+                }
+                export_return_code = 1
+            else:
+                # Full static-data export refreshes every payload, including the
+                # preserved holyrood-prediction.json — no --current-simulation here.
+                export_command = [sys.executable, str(EXPORT_ELECTION_SCRIPT)]
+                with section_context("holyrood", "export"):
+                    export_proc = run_command(export_command, timeout=900)
+                export_result = {
+                    "command": shlex.join(export_command),
+                    "stdout": export_proc.stdout,
+                    "stderr": export_proc.stderr,
+                    "return_code": export_proc.returncode,
+                }
+                export_return_code = export_proc.returncode
 
-    return render_template(
-        "model_run.html",
-        run_form=_holyrood_run_form(choices),
-        choices=choices,
-        explanations=_holyrood_model_arg_explanations(),
-        form_values=form_values,
-        run_result=run_result,
-    )
+        run_result = {
+            "command": shlex.join(command),
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "return_code": result.returncode,
+            "export_result": export_result,
+            "summary": run_summary(
+                dry_run=dry_run,
+                export=export_when_done,
+                return_code=result.returncode,
+                export_return_code=export_return_code,
+            ),
+        }
+        ok = result.returncode == 0 and export_return_code in (None, 0)
+        return jobs.JobOutcome(
+            {"run_result": run_result, "export_heading": export_heading}, ok=ok
+        )
+
+    try:
+        job = jobs.start_job(
+            label="Holyrood model run",
+            section="holyrood",
+            dry_run=dry_run,
+            work=work,
+            result_kind=jobs.KIND_MODEL,
+            back_endpoint="holyrood.run_holyrood_model_form",
+            back_label="Back to the model form",
+        )
+    except jobs.JobBusy as busy:
+        jobs.flash_busy("Holyrood model not run", busy)
+        return render_template(
+            "model_run.html",
+            run_form=_holyrood_run_form(choices),
+            choices=choices,
+            explanations=_holyrood_model_arg_explanations(),
+            form_values=form_values,
+            run_result=None,
+        )
+    return redirect(url_for("runs.run_detail", run_id=job.id), 303)

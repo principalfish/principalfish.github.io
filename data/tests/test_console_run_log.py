@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import io
 import json
 import os
 import subprocess
@@ -10,8 +11,8 @@ import sys
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import NoReturn
 from types import SimpleNamespace
+from typing import NoReturn
 
 import pytest
 from flask import Flask, Response
@@ -720,12 +721,7 @@ def test_a_westminster_dry_run_is_logged_under_westminster(
     folder: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def fake_run(
-        command: list[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(command, 0, "model output\n", "")
-
-    monkeypatch.setattr("console.shared.runner.subprocess.run", fake_run)
+    _fake_subprocess(monkeypatch, stdout="model output\n")
     form = {
         "map_name": westminster_world.map_name,
         "baseline_election_name": westminster_world.baseline_election_name,
@@ -738,7 +734,7 @@ def test_a_westminster_dry_run_is_logged_under_westminster(
     }
     client = seeded_app.test_client()
 
-    response = client.post("/westminster/model", data=form)
+    response = client.post("/westminster/model", data=form, follow_redirects=True)
 
     assert response.status_code == 200
     record, path = _only_record(folder)
@@ -993,7 +989,7 @@ def test_the_rebuild_route_logs_a_run_with_no_section(
     script.write_text("print('rebuilt')\n")
     monkeypatch.setattr("console.admin.site.REBUILD_DB_SCRIPT", script)
 
-    response = app.test_client().post("/site/rebuild-database")
+    response = app.test_client().post("/site/rebuild-database", follow_redirects=True)
 
     assert response.status_code == 200
     # The real runner runs the throwaway script, so it is logged by run_command.
@@ -1037,6 +1033,7 @@ def test_a_timestamp_with_an_offset_is_converted_to_utc() -> None:
 
     assert record.started_at == datetime(2026, 11, 10, 12, 0, tzinfo=timezone.utc)
     assert record.started_at.utcoffset() == timedelta(0)
+    assert record.finished_at is not None
     assert record.finished_at.utcoffset() == timedelta(0)
 
 
@@ -1158,19 +1155,47 @@ def test_a_pruning_failure_is_not_a_write_failure(
 # --- call sites -------------------------------------------------------------
 
 
+class _FakeProcess:
+    """A finished ``Popen`` whose stdout is canned and stderr empty."""
+
+    def __init__(
+        self, command: list[str], returncode: int, stdout: str, **kwargs: object
+    ) -> None:
+        self.args = command
+        self.returncode = returncode
+        self.stdout = io.BufferedReader(io.BytesIO(stdout.encode()))
+        self.stderr = io.BufferedReader(io.BytesIO(b""))
+
+    def wait(self, timeout: float | None = None) -> int:
+        return self.returncode
+
+    def poll(self) -> int:
+        return self.returncode
+
+
 def _fake_subprocess(
-    monkeypatch: pytest.MonkeyPatch, returncode: int = 0
+    monkeypatch: pytest.MonkeyPatch, returncode: int = 0, stdout: str = "out\n"
 ) -> list[list[str]]:
-    """Replace ``subprocess.run`` in the runner; returns the commands it saw."""
+    """Replace ``subprocess.run`` and ``Popen`` in the runner.
+
+    A command run in a request goes through ``run``, and one run inside a
+    background job (streamed) through ``Popen``; both are faked, so no process
+    ever starts. Returns the commands they saw.
+    """
     calls: list[list[str]] = []
 
     def fake_run(
         command: list[str], **kwargs: object
     ) -> subprocess.CompletedProcess[str]:
         calls.append(list(command))
-        return subprocess.CompletedProcess(command, returncode, "out\n", "")
+        return subprocess.CompletedProcess(command, returncode, stdout, "")
+
+    def fake_popen(command: list[str], **kwargs: object) -> _FakeProcess:
+        calls.append(list(command))
+        return _FakeProcess(list(command), returncode, stdout)
 
     monkeypatch.setattr("console.shared.runner.subprocess.run", fake_run)
+    monkeypatch.setattr("console.shared.runner.subprocess.Popen", fake_popen)
     return calls
 
 
@@ -1210,7 +1235,9 @@ def test_the_holyrood_model_and_its_export_are_logged_under_holyrood(
         "export_when_done": "on",
     }
 
-    response = app.test_client().post("/holyrood/model", data=form)
+    response = app.test_client().post(
+        "/holyrood/model", data=form, follow_redirects=True
+    )
 
     assert response.status_code == 200
     assert len(calls) == 2
@@ -1260,7 +1287,9 @@ def test_the_westminster_model_and_its_export_are_logged_under_westminster(
         "export_when_done": "on",
     }
 
-    response = seeded_app.test_client().post("/westminster/model", data=form)
+    response = seeded_app.test_client().post(
+        "/westminster/model", data=form, follow_redirects=True
+    )
 
     assert response.status_code == 200
     assert len(calls) == 2
@@ -1305,6 +1334,7 @@ def test_the_export_page_logs_a_run_with_no_section(
     response = app.test_client().post(
         "/export",
         data={"sections": ["westminster"], "content": ["results"], "dry_run": "true"},
+        follow_redirects=True,
     )
 
     assert response.status_code == 200
@@ -1345,3 +1375,421 @@ def test_run_model_then_export_logs_by_section(
         ("holyrood", "Outer"),
         ("holyrood", "Outer"),
     ]
+
+
+# --- running and interrupted records ----------------------------------------
+
+
+def _unfinished(folder: Path, run_id: str, status: str = "running") -> Path:
+    """A record folder for a run that has no end, as a started job leaves it."""
+    path = _make(folder, run_id, label="Unfinished")
+    data = json.loads((path / "record.json").read_text())
+    data.update(status=status, finished_at=None, duration_seconds=None, exit_code=None)
+    (path / "record.json").write_text(json.dumps(data))
+    return path
+
+
+@pytest.mark.parametrize("status", ["running", "interrupted"])
+def test_a_record_without_an_end_round_trips(status: str) -> None:
+    data = _valid_json()
+    data.update(status=status, finished_at=None, duration_seconds=None)
+
+    record = run_log.RunRecord.from_json(data)
+
+    assert record.finished_at is None and record.duration_seconds is None
+    assert record.to_json() == data
+
+
+@pytest.mark.parametrize("status", ["ok", "failed", "timeout", "crashed"])
+def test_a_finished_status_needs_its_end(status: str) -> None:
+    data = _valid_json()
+    data.update(status=status, finished_at=None, duration_seconds=None)
+
+    with pytest.raises(ValueError):
+        run_log.RunRecord.from_json(data)
+
+
+def test_a_running_record_with_only_half_an_end_is_refused() -> None:
+    data = _valid_json()
+    data.update(status="running", duration_seconds=None)
+
+    with pytest.raises(ValueError):
+        run_log.RunRecord.from_json(data)
+
+
+def test_open_running_makes_a_whole_running_record_that_grows(folder: Path) -> None:
+    start = run_log.begin_run()
+    running = run_log.open_running(start, ["x.py", "--dry-run"], cwd=folder, timeout=9)
+
+    assert running is not None
+    running.append("stdout.txt", "one ")
+    running.append("stdout.txt", "two")
+    record = run_log.read_record(start.id)
+    assert record is not None and record.status == "running"
+    assert record.dry_run is True and record.timeout_seconds == 9
+    assert run_log.read_output(start.id, "stdout.txt") == "one two"
+    assert run_log.read_output(start.id, "stderr.txt") == ""
+    assert not list(folder.glob(".tmp-*"))
+    running.close()
+
+
+def test_finishing_replaces_the_record_atomically(
+    folder: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    start = run_log.begin_run()
+    running = run_log.open_running(start, ["x.py"], cwd=folder, timeout=9)
+    assert running is not None
+    replaced: list[tuple[str, str]] = []
+    real_replace = os.replace
+
+    def spy(source: object, target: object) -> None:
+        replaced.append((Path(str(source)).name, Path(str(target)).name))
+        real_replace(source, target)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(os, "replace", spy)
+
+    run_log.finish_running(
+        running,
+        start,
+        ["x.py"],
+        cwd=folder,
+        timeout=9,
+        result=subprocess.CompletedProcess(["x.py"], 0, "", ""),
+    )
+
+    assert replaced == [("record.json.tmp", "record.json")]
+    record = run_log.read_record(start.id)
+    assert record is not None and record.status == "ok"
+    assert record.finished_at is not None and record.exit_code == 0
+    assert sorted(path.name for path in (folder / start.id).iterdir()) == [
+        "record.json",
+        "stderr.txt",
+        "stdout.txt",
+    ]
+
+
+def test_output_that_failed_to_append_is_written_whole_at_the_end(
+    folder: Path,
+) -> None:
+    start = run_log.begin_run()
+    running = run_log.open_running(start, ["x.py"], cwd=folder, timeout=9)
+    assert running is not None
+    running._files["stdout.txt"].close()  # the next append fails
+
+    running.append("stdout.txt", "lost")
+    run_log.finish_running(
+        running,
+        start,
+        ["x.py"],
+        cwd=folder,
+        timeout=9,
+        result=subprocess.CompletedProcess(["x.py"], 0, "lost", ""),
+    )
+
+    assert run_log.read_output(start.id, "stdout.txt") == "lost"
+
+
+def test_the_list_shows_running_and_interrupted_records(
+    client: FlaskClient[Response], folder: Path
+) -> None:
+    _unfinished(folder, _id(1), "running")
+    _unfinished(folder, _id(2), "interrupted")
+
+    body = client.get("/runs").get_data(as_text=True)
+
+    assert "<td>running</td>" in body
+    assert '<td class="text-error">interrupted</td>' in body
+    assert "unreadable" not in body
+
+
+def test_an_interrupted_record_shows_its_note(
+    client: FlaskClient[Response], folder: Path
+) -> None:
+    path = _unfinished(folder, _id(1), "interrupted")
+    data = json.loads((path / "record.json").read_text())
+    data["error"] = run_log.INTERRUPTED_NOTE
+    (path / "record.json").write_text(json.dumps(data))
+
+    body = client.get(f"/runs/{_id(1)}").get_data(as_text=True)
+
+    assert "<strong>Finished:</strong> unknown" in body
+    assert "<strong>Note:</strong> The console stopped while this run" in body
+    assert "check the output and the database before running again." in body
+
+
+# --- the startup sweep ------------------------------------------------------
+
+
+def test_the_sweep_marks_running_records_interrupted(folder: Path) -> None:
+    _unfinished(folder, _id(1))
+    _make(folder, _id(2), status="ok")
+
+    marked = run_log.sweep_interrupted()
+
+    assert marked == 1
+    swept = run_log.read_record(_id(1))
+    assert swept is not None and swept.status == "interrupted"
+    assert swept.finished_at is None and swept.duration_seconds is None
+    assert swept.error == run_log.INTERRUPTED_NOTE
+    assert "may still be writing the database" in run_log.INTERRUPTED_NOTE
+    untouched = run_log.read_record(_id(2))
+    assert untouched is not None and untouched.status == "ok"
+    assert untouched.finished_at is not None
+
+
+def test_the_sweep_is_idempotent_and_keeps_the_output(folder: Path) -> None:
+    path = _unfinished(folder, _id(1))
+    (path / "stdout.txt").write_text("partial")
+
+    assert run_log.sweep_interrupted() == 1
+    before = (path / "record.json").read_text()
+
+    assert run_log.sweep_interrupted() == 0
+    assert (path / "record.json").read_text() == before
+    assert (path / "stdout.txt").read_text() == "partial"
+
+
+def test_the_sweep_skips_corrupt_records_and_symlinks(folder: Path) -> None:
+    (folder / _id(1)).mkdir()
+    (folder / _id(1) / "record.json").write_text("{not json")
+    real = _unfinished(folder.parent / "elsewhere", _id(2))
+    (folder / _id(2)).symlink_to(real, target_is_directory=True)
+    _unfinished(folder, _id(3))
+
+    assert run_log.sweep_interrupted() == 1
+    assert (folder / _id(1) / "record.json").read_text() == "{not json"
+    assert json.loads((real / "record.json").read_text())["status"] == "running"
+
+
+def test_the_sweep_leaves_a_record_a_live_job_owns(
+    folder: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _unfinished(folder, _id(1))
+    _unfinished(folder, _id(2))
+    monkeypatch.setattr(run_log, "_live_ids", lambda: frozenset({_id(1)}))
+
+    assert run_log.sweep_interrupted() == 1
+
+    kept = run_log.read_record(_id(1))
+    assert kept is not None and kept.status == "running"
+
+
+def test_the_sweep_with_no_folder_marks_nothing() -> None:
+    assert run_log.sweep_interrupted() == 0
+
+
+# --- pruning and symlinks for running records -------------------------------
+
+
+def test_pruning_never_removes_a_running_record(
+    folder: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CONSOLE_RUN_LOG_KEEP", "1")
+    _unfinished(folder, _id(1), "running")
+    _make(folder, _id(2))
+    _make(folder, _id(3))
+
+    run_log.prune(folder)
+
+    assert (folder / _id(1)).exists()
+    assert not (folder / _id(2)).exists()
+    assert (folder / _id(3)).exists()
+
+
+def test_pruning_never_removes_a_record_a_live_job_owns(
+    folder: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CONSOLE_RUN_LOG_KEEP", "1")
+    _make(folder, _id(1))
+    _make(folder, _id(2))
+    monkeypatch.setattr(run_log, "_live_ids", lambda: frozenset({_id(1)}))
+
+    run_log.prune(folder)
+
+    # The one record over the limit is the live job's, so nothing is removed.
+    assert (folder / _id(1)).exists() and (folder / _id(2)).exists()
+
+
+def test_a_symlinked_id_folder_is_refused_for_records_and_output(
+    folder: Path,
+) -> None:
+    real = _make(folder.parent / "elsewhere", _id(1), stdout="secret")
+    (folder / _id(1)).symlink_to(real, target_is_directory=True)
+
+    assert run_log.read_record(_id(1)) is None
+    assert run_log.read_output(_id(1), "stdout.txt") is None
+    assert run_log.read_output_from(_id(1), "stdout.txt") is None
+
+
+def test_a_symlinked_id_folder_is_a_404_in_the_views(
+    client: FlaskClient[Response], folder: Path
+) -> None:
+    real = _make(folder.parent / "elsewhere", _id(1), stdout="secret")
+    (folder / _id(1)).symlink_to(real, target_is_directory=True)
+
+    assert client.get(f"/runs/{_id(1)}").status_code == 404
+    assert client.get(f"/runs/{_id(1)}/status").status_code == 404
+
+
+def test_read_output_from_returns_whole_characters_only(folder: Path) -> None:
+    path = _make(folder, _id(1))
+    (path / "stdout.txt").write_bytes("aé".encode()[:2])
+
+    assert run_log.read_output_from(_id(1), "stdout.txt") == ("a", 1)
+
+    (path / "stdout.txt").write_bytes("aéb".encode())
+
+    assert run_log.read_output_from(_id(1), "stdout.txt", 1) == ("éb", 4)
+    assert run_log.read_output_from(_id(1), "stdout.txt", 99) == ("", 4)
+    assert run_log.read_output_from(_id(1), "stdout.txt", -3) == ("aéb", 4)
+    assert run_log.read_output_from(_id(1), "record.json") is None
+    assert run_log.read_output_from(_id(9), "stdout.txt") is None
+
+
+# --- failures while a run is recorded in place --------------------------------
+
+
+def _deny_replace(monkeypatch: pytest.MonkeyPatch) -> None:
+    def refuse(source: object, target: object) -> NoReturn:
+        raise OSError("read-only")
+
+    monkeypatch.setattr(os, "replace", refuse)
+
+
+def test_a_failed_record_replacement_leaves_no_temporary_file(
+    folder: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = _unfinished(folder, _id(1))
+    record = run_log.read_record(_id(1))
+    assert record is not None
+    _deny_replace(monkeypatch)
+
+    with pytest.raises(OSError, match="read-only"):
+        run_log._replace_record(path, record)
+
+    assert sorted(item.name for item in path.iterdir()) == [
+        "record.json",
+        "stderr.txt",
+        "stdout.txt",
+    ]
+    assert json.loads((path / "record.json").read_text())["status"] == "running"
+
+
+def test_the_default_live_id_provider_owns_nothing(
+    folder: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _unfinished(folder, _id(1))
+    monkeypatch.setattr(run_log, "_live_ids", run_log._no_live_ids)
+
+    assert run_log._live_ids() == frozenset()
+    assert run_log.sweep_interrupted() == 1
+
+
+def test_appending_to_an_unknown_file_is_ignored(folder: Path) -> None:
+    start = run_log.begin_run()
+    running = run_log.open_running(start, ["x.py"], cwd=folder, timeout=9)
+    assert running is not None
+
+    running.append("other.txt", "text")
+    running.append("stdout.txt", "kept")
+
+    assert not running.damaged
+    assert run_log.read_output(start.id, "stdout.txt") == "kept"
+    assert (folder / start.id / "other.txt").exists() is False
+    running.close()
+
+
+def test_a_file_that_will_not_close_marks_the_run_damaged(folder: Path) -> None:
+    class Stubborn(io.StringIO):
+        def close(self) -> None:
+            if not self.closed:
+                super().close()
+                raise OSError("disk full")
+
+    handle = Stubborn()
+    running = run_log.RunningRun(folder, {"stdout.txt": handle})
+
+    running.close()
+
+    assert running.damaged
+    assert running._files == {}
+
+
+def test_a_running_record_that_cannot_open_its_output_is_not_made(
+    folder: Path, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real_create = run_log._create_folder
+
+    def create(record: run_log.RunRecord, stdout: str, stderr: str) -> Path:
+        made = real_create(record, stdout, stderr)
+        # A directory where the stderr file should be: opening it for append fails
+        # after stdout.txt has already been opened.
+        (made / "stderr.txt").unlink()
+        (made / "stderr.txt").mkdir()
+        return made
+
+    monkeypatch.setattr(run_log, "_create_folder", create)
+    start = run_log.begin_run()
+
+    running = run_log.open_running(start, ["x.py"], cwd=folder, timeout=9)
+
+    assert running is None
+    assert "Could not write the run log" in caplog.text
+
+
+def test_a_failure_finishing_a_running_record_leaves_it_running(
+    folder: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    start = run_log.begin_run()
+    running = run_log.open_running(start, ["x.py"], cwd=folder, timeout=9)
+    assert running is not None
+    _deny_replace(monkeypatch)
+
+    run_log.finish_running(
+        running,
+        start,
+        ["x.py"],
+        cwd=folder,
+        timeout=9,
+        result=subprocess.CompletedProcess(["x.py"], 0, "", ""),
+    )
+
+    record = run_log.read_record(start.id)
+    assert record is not None and record.status == "running"
+    assert "Could not write the run log" in caplog.text
+
+
+def test_the_sweep_keeps_going_when_a_record_cannot_be_marked(
+    folder: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    _unfinished(folder, _id(1))
+    _unfinished(folder, _id(2))
+    real_replace = run_log._replace_record
+
+    def replace(path: Path, record: run_log.RunRecord) -> None:
+        if record.id == _id(1):
+            raise OSError("read-only")
+        real_replace(path, record)
+
+    monkeypatch.setattr(run_log, "_replace_record", replace)
+
+    assert run_log.sweep_interrupted() == 1
+
+    first, second = run_log.read_record(_id(1)), run_log.read_record(_id(2))
+    assert first is not None and first.status == "running"
+    assert second is not None and second.status == "interrupted"
+    assert f"Could not mark {_id(1)} as interrupted" in caplog.text
+
+
+def test_a_folder_that_cannot_be_inspected_is_not_a_record(
+    folder: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _make(folder, _id(1))
+
+    def refuse(self: Path) -> bool:
+        raise OSError("stale handle")
+
+    monkeypatch.setattr(Path, "is_symlink", refuse)
+
+    assert run_log.read_record(_id(1)) is None
+    assert run_log.read_output(_id(1), "stdout.txt") is None

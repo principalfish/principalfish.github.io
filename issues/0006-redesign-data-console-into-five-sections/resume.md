@@ -1,6 +1,6 @@
 # Resume point — read this first
 
-State checks: piece 11 committed `7afd0b84` and pushed. Builder session `local_25f43011-ef61-46dc-9023-7e1b5918b096` is idle, waiting for the go-ahead and design for piece 12. Draft PR #85 is open. State is `building`.
+State checks: builder session `local_25f43011-ef61-46dc-9023-7e1b5918b096`, branch `claude/redesign-data-console-into-five-sections-e76f9c`, HEAD `7afd0b84` (piece 11/12 committed and pushed). Piece 12 (favicon) is built and staged but uncommitted (4 files). Draft PR #85 is open. State is `building`.
 
 ## The pending decision (exact)
-Piece 12 started on the user's design (bar chart, accent blue, orange corner dot); waiting on the review request.
+Manual review and approval of piece 12: look at the browser tab in a light and a dark browser theme, hard-refreshed. Then the builder commits and pushes, ticks piece 12, sets the issue state to `review` and tells the planner chat all pieces are done, so it can run `/review self`.

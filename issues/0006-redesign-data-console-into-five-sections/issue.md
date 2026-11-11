@@ -10,7 +10,7 @@ Every existing diagnostic number stays visible, along with the safeguards around
 
 ## Plan
 
-_2026-11-11 · 10 of 12 pieces done · now: piece 11 in progress_
+_2026-11-11 · 10 of 12 pieces done · now: waiting on review of piece 11_
 
 - [x] **1/12 Section registry and internal layout** · `0b98a7b1`
   Define the five sections in one place and reorganise the console's code, with no visible change.
@@ -32,7 +32,7 @@ _2026-11-11 · 10 of 12 pieces done · now: piece 11 in progress_
   Keep every run's output, viewable afterwards.
 - [x] **10/12 Background runs with live progress** · `c0700844`
   Runs stop blocking the page and show progress as they go.
-- [ ] **11/12 Docs** · in progress
+- [ ] **11/12 Docs** · waiting on you
   Document the new layout, export page and run log.
 - [ ] **12/12 Favicon** · not started, added 2026-11-09: the user asked for it as a final step
   Give the console its own icon in the browser tab.

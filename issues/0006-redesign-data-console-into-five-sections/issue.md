@@ -10,7 +10,7 @@ Every existing diagnostic number stays visible, along with the safeguards around
 
 ## Plan
 
-_2026-11-11 · 12 of 12 pieces done · now: review fixes (round 1) in progress_
+_2026-11-11 · 12 of 12 pieces done · now: re-checking the review fixes_
 
 - [x] **1/12 Section registry and internal layout** · `0b98a7b1`
   Define the five sections in one place and reorganise the console's code, with no visible change.
@@ -36,4 +36,4 @@ _2026-11-11 · 12 of 12 pieces done · now: review fixes (round 1) in progress_
   Document the new layout, export page and run log.
 - [x] **12/12 Favicon** · `58ce3da6`, added 2026-11-09: the user asked for it as a final step
   Give the console its own icon in the browser tab.
-- [ ] **Review fixes (round 1)** · approved, committing: 13 findings from the self review
+- [x] **Review fixes (round 1)** · `5644269f`

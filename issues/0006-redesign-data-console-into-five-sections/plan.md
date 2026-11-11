@@ -187,7 +187,7 @@ Rejected:
     - What: add a console topic page covering the five sections, URL shape, export page, run log location and retention, following the README's split into topic pages. Update the old URLs and the "Run US Models" instructions, which no longer exist after piece 5.
     - Depends on: 10.
     - Acceptance: docs name only pages and paths that exist; no doc mentions "Run US Models" or an old URL; relative links resolve.
-    - Tests: none worth writing; docs only.
+    - Tests: a test that every console path named in the docs matches a route in the URL map and every relative docs link resolves; the Holyrood run form shows its help line.
     - Model: claude-sonnet-5-5
 
 12. **Favicon**

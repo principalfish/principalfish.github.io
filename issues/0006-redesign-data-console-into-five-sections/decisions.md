@@ -72,6 +72,7 @@ Follows 0005 (GitHub #82), which reorganises `data/`. The route inventory and pa
 - A job's end requests a backup itself unless it was a dry run; tests run jobs inline through an injectable runner and follow the redirect, keeping their result-page assertions (user, 2026-11-10, by starting piece 10 on that recommendation)
 - The US one-chamber rebuild confirm and checkbox help are reworded to say the rebuild runs in the background, can take hours, and shows progress on its run page; the pinned test follows. Every other confirm text stays word for word (user, 2026-11-11, "Reword (Recommended)")
 - The app-wide backup hook stays exactly as it is, including on the POST that starts a dry-run job, where an unchanged database makes no new archive (user, 2026-11-11, "Leave it (Recommended)")
+- Restore (`/db/restore`) holds the run slot and is refused while a job runs, with a link to the job; its confirm text is unchanged and Backup stays unguarded (user, 2026-11-11, "Tried it, guard Restore", during piece 10's review)
 
 ## Open
 

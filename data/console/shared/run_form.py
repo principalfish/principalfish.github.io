@@ -75,14 +75,20 @@ class RunForm:
 EXPORT_CHECKBOX_NAME = "export_when_done"
 
 
-def export_checkbox() -> RunFormCheckbox:
-    """The "export when done" checkbox every model run form carries."""
-    return RunFormCheckbox(
-        EXPORT_CHECKBOX_NAME,
-        "Export when done",
+def export_checkbox(extra_help: str = "") -> RunFormCheckbox:
+    """The "export when done" checkbox every model run form carries.
+
+    Args:
+        extra_help: One more sentence for the help text, for a form whose run
+            writes something of its own regardless of this box.
+    """
+    help_text = (
         "Refreshes the static data files after a successful run. "
-        "A dry run never exports, whatever this says.",
+        "A dry run never exports, whatever this says."
     )
+    if extra_help:
+        help_text = f"{help_text} {extra_help}"
+    return RunFormCheckbox(EXPORT_CHECKBOX_NAME, "Export when done", help_text)
 
 
 def ticked(raw_form: Mapping[str, str], *names: str) -> dict[str, str]:

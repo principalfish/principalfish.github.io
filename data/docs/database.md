@@ -31,9 +31,13 @@ integrity-checks the copy:
   dropped on 2026-10-29.
 
 The data console backs up by itself after any request that could write (including
-the scripts it launches) and once on startup. Its **Backup now** button archives
-immediately; **Restore newest archive** restores from the newest local archive,
-keeping the replaced database as `<db>.prerestore`.
+the scripts it launches) and once on startup. That includes the POST that starts a
+background job, even a dry run; a non-dry-run job also asks for a backup when it
+ends. On the Admin page (`/admin`), **Backup now** archives immediately;
+**Restore newest archive** restores from the newest local archive, keeping the
+replaced database as `<db>.prerestore`. A restore is refused while a console run
+(a model run, export, rebuild or import) holds the console's one run slot; a backup
+is not.
 
 From a terminal in `data/` — after running a writing script directly, for example:
 
@@ -73,8 +77,10 @@ One command (from `data/`, environment active):
 ./election_data/bin/python scripts/rebuild_database.py --dry-run  # list steps only
 ```
 
-The data console exposes the same thing as a **"Rebuild Database"** button (Site
-card). Both are byte-idempotent: re-running produces no diff when the source data
+The data console exposes the same thing as a **Rebuild Database** button on the
+Admin page (`/admin`). It runs as a background job (progress at `/runs/<id>`) that
+holds the console's one run slot, so it is refused while another run is in progress.
+Both are byte-idempotent: re-running produces no diff when the source data
 hasn't changed.
 
 The rebuild bootstraps US electoral-vote allocations immediately after importing

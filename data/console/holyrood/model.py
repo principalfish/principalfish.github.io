@@ -178,6 +178,13 @@ def _holyrood_model_arg_explanations() -> list[dict[str, str]]:
     ]
 
 
+_FORECAST_FILE_HELP = (
+    "The Holyrood model run writes results/holyrood-prediction.json (and its "
+    "meta file) itself, even with this unticked; the export only keeps its "
+    "manifest entry."
+)
+
+
 def _holyrood_run_form(choices: dict[str, object]) -> RunForm:
     """Describe the Holyrood model run form's fields from the dropdown choices."""
     return RunForm(
@@ -191,7 +198,7 @@ def _holyrood_run_form(choices: dict[str, object]) -> RunForm:
             half_life_field(choices),
             dry_run_field(choices),
         ],
-        checkboxes=[export_checkbox()],
+        checkboxes=[export_checkbox(_FORECAST_FILE_HELP)],
     )
 
 
@@ -302,8 +309,8 @@ def run_holyrood_model() -> ResponseReturnValue:
                 }
                 export_return_code = 1
             else:
-                # Full static-data export refreshes every payload, including the
-                # preserved holyrood-prediction.json — no --current-simulation here.
+                # Full export; Holyrood's forecast keeps only its manifest entry.
+                # The export never writes holyrood-prediction.json.
                 export_command = [sys.executable, str(EXPORT_ELECTION_SCRIPT)]
                 with section_context("holyrood", "export"):
                     export_proc = run_command(export_command, timeout=900)

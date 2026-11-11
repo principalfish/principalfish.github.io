@@ -32,6 +32,7 @@ from typing import cast
 
 import pytest
 from flask import Flask
+from markupsafe import escape
 
 from console.holyrood.model import (
     _choices_for_holyrood_model_form,
@@ -49,6 +50,7 @@ from tests.console_fixtures import (
     flashes_on_page as _flashes_on_page,
     forbid_call,
     pre_after_heading as _pre_after_heading,
+    seeded_app,
     select_block as _select_block,
 )
 from tests.uk_fixtures import HolyroodWorld, seed_holyrood_world
@@ -749,6 +751,33 @@ class TestRunHolyroodModelExecute:
 
         assert '<input type="checkbox" name="export_when_done" checked>' in body
         assert "A dry run never exports" in body
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/holyrood/model",
+            "/westminster/model",
+            "/house/model",
+            "/senate/model",
+            "/president/model",
+        ],
+    )
+    def test_only_the_holyrood_form_says_the_run_writes_the_forecast_file(
+        self,
+        seeded_app: Flask,  # noqa: F811
+        path: str,
+    ) -> None:
+        note = escape(
+            "The Holyrood model run writes results/holyrood-prediction.json "
+            "(and its meta file) itself, even with this unticked; the export "
+            "only keeps its manifest entry."
+        )
+
+        body = seeded_app.test_client().get(path).get_data(as_text=True)
+
+        assert "A dry run never exports, whatever this says." in body
+        assert (str(note) in body) is (path == "/holyrood/model")
+        assert ("holyrood-prediction.json" in body) is (path == "/holyrood/model")
 
     def test_non_zero_exit_skips_export(
         self,

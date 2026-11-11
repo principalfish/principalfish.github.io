@@ -33,7 +33,7 @@ cd data
 ```
 
 Options: `--snapshot` (input), `--election-file` (default `senate-2026.json`), `--out`
-(default the snapshot). The console's US results page has the same action, **Rebuild Current
+(default the snapshot). The console's `/senate/results` page has the same action, **Rebuild Current
 Senate**; importing results never runs it, and the export is a separate step afterwards.
 The build refuses (non-zero exit, nothing written) if the election lacks a class 2 state or the
 Florida/Ohio special, a contested seat has no sitting senator, a snapshot member is malformed,

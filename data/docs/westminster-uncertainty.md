@@ -9,8 +9,9 @@ Run the offline acceptance harness from `data/`:
 This reads the configured SQLite database with `mode=ro` and `query_only`,
 uses the committed final-poll evidence, current uncertainty config and frozen
 22 October 2026 aggregate model inputs, and writes only `models/westminster/uncertainty_validation_report.json`. It does
-not rerun or persist a forecast. The console's Westminster Uncertainty →
-Validation page displays this saved report and flags a changed config.
+not rerun or persist a forecast. The console's Westminster → Uncertainty →
+Validation page (`/westminster/uncertainty/validation`) displays this saved report
+and flags a changed config.
 
 For an explicit input set and scratch output:
 

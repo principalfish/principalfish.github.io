@@ -7,6 +7,10 @@ follows a redirect.
 
 from __future__ import annotations
 
+import re
+import struct
+from xml.etree import ElementTree
+
 import pytest
 from flask import Flask
 
@@ -462,3 +466,61 @@ def test_a_sections_label_is_used_everywhere_it_is_named(
     assert f">{section.label}</a>" in landing  # the top bar entry
     assert f">{section.label}</a></h2>" in home  # the home card heading
     assert f'aria-label="{section.label}"' in landing  # the section nav
+
+
+# --- favicon ----------------------------------------------------------------------
+
+# The raster icon comes first and the SVG last: browsers that take the last suitable
+# icon then pick the SVG, and those that cannot read it use the PNG.
+ICON_LINKS = (
+    ("/static/favicon.png", "image/png"),
+    ("/static/favicon.svg", "image/svg+xml"),
+)
+
+
+PNG_ICON, SVG_ICON = (url for url, _ in ICON_LINKS)
+
+
+def test_every_crawled_page_links_both_icons(seeded_app: Flask) -> None:
+    pages = crawl(seeded_app.test_client())
+
+    assert len(pages) > 20
+    for key, body in pages.items():
+        icons = re.findall(r'<link rel="icon" href="([^"]+)" type="([^"]+)"', body)
+        assert icons == list(ICON_LINKS), key
+    assert 'sizes="32x32"' in next(iter(pages.values()))
+
+
+@pytest.mark.parametrize(("url", "content_type"), ICON_LINKS)
+def test_the_icons_are_served_with_an_image_type(
+    app: Flask,  # noqa: F811
+    url: str,
+    content_type: str,
+) -> None:
+    response = app.test_client().get(url)
+
+    assert response.status_code == 200
+    assert response.mimetype == content_type
+    assert len(response.data) > 100
+
+
+def test_the_svg_icon_is_self_contained(app: Flask) -> None:  # noqa: F811
+    root = ElementTree.fromstring(app.test_client().get(SVG_ICON).data)
+
+    assert root.tag == "{http://www.w3.org/2000/svg}svg"
+    assert root.get("viewBox") == "0 0 32 32"
+    tags = {element.tag.rpartition("}")[2] for element in root.iter()}
+    assert tags <= {"svg", "rect", "g", "circle"}
+    # Nothing may point at another file or host.
+    for element in root.iter():
+        for name, value in element.attrib.items():
+            assert "href" not in name, name
+            assert "url(" not in value and "//" not in value, (name, value)
+
+
+def test_the_png_icon_is_a_32_by_32_png(app: Flask) -> None:  # noqa: F811
+    data = app.test_client().get(PNG_ICON).data
+
+    assert data[:8] == b"\x89PNG\r\n\x1a\n"
+    width, height = struct.unpack(">II", data[16:24])
+    assert (width, height) == (32, 32)

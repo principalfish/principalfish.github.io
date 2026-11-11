@@ -10,7 +10,7 @@ Every existing diagnostic number stays visible, along with the safeguards around
 
 ## Plan
 
-_2026-11-11 · 12 of 12 pieces done · now: re-checking the review fixes_
+_2026-11-11 · 12 of 12 pieces done · now: all done, in review_
 
 - [x] **1/12 Section registry and internal layout** · `0b98a7b1`
   Define the five sections in one place and reorganise the console's code, with no visible change.

@@ -1,6 +1,3 @@
 # Resume point — read this first
 
-State checks: all 12 pieces committed and pushed, head `58ce3da6`. State `review`. Draft PR #85 open. Builder `local_25f43011-ef61-46dc-9023-7e1b5918b096`.
-
-## The pending decision (exact)
-`/review self` round 1: the user chose all 13 findings ("All 13"); the builder is applying them in its Review fixes step, then pauses for the user's review. After: re-run the checks that raised findings (correctness, coverage, style) with a fresh verifier.
+All twelve pieces are done and pushed (branch `claude/redesign-data-console-into-five-sections-e76f9c`, HEAD `58ce3da6`). State is `review`. Review fixes round 1 (all 13 verified findings chosen by the user) is built and staged but uncommitted (22 files, +997/-269), waiting for the user's approval of its diff. See `plan.md` Notes for the details and the loose ends.

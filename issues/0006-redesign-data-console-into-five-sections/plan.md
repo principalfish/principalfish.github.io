@@ -209,7 +209,7 @@ Rejected:
 - [x] 7: Admin page, confirms and small fixes
 - [x] 8: Looks and readability
 - [x] 9: Run log
-- [ ] 10: Background runs with live progress
+- [x] 10: Background runs with live progress
 - [ ] 11: Docs
 - [ ] 12: Favicon
 

@@ -39,12 +39,17 @@ downloading; `convert` always reads the cache), `--cache-dir`, `--out-dir`.
 Importing never exports: run `export/export_elections.py` afterwards. `scripts/rebuild_database.py`
 replays the committed `house-*`/`senate-*` files (specials right after their regular year).
 
-The data console has the same flow at `/us/results` (the **Import US Results (NYT)** button on
-the home page): choose year and chamber, preview every number (files and times, a row per
-race, the party mapping, warnings, the diff), confirm to import (existing elections are refreshed in place, as with `--refresh`), then press the separate
-**Export to site** button on the result page.
-**Rebuild Current Senate** (see [Current Senate snapshot](../../uselectionmaps/README.md#current-senate-snapshot)) is a third, separate
-button.
+The data console has the same flow at `/house/results` and `/senate/results` (**Results**
+in the US House and US Senate section bars): choose the cycle year and the source (fetch
+the latest NYT files, or use the newest cached snapshot), **Preview Import** to see every
+number (files and times, a row per race, the party mapping, warnings, the diff), then
+**Confirm: write files and import** (existing elections are refreshed in place, as with
+`--refresh`). Confirming never exports. The result page's **Export to site** button opens
+the [Export page](export.md#the-export-page) with that chamber and Results ticked and
+dry run on, so you can preview before writing any files. An import holds the console's
+one run slot while it runs, and is refused while another run is in progress.
+**Rebuild Current Senate** (on `/senate/results`; its action is `/senate/results/current-senate`; see [Current Senate snapshot](../../uselectionmaps/README.md#current-senate-snapshot)) is a third, separate
+button; it writes one file and never exports.
 
 **Refresh cadence**: manual. While counts finish, re-run the import for the cycle (`all
 ... --refresh`); each run replaces that election's votes and statuses in place. Re-export

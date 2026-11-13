@@ -1,10 +1,11 @@
 """Exercise the US results console routes with the real pipeline and a temp DB.
 
-Only NYT downloads and the export subprocess are replaced: downloads serve the
+Only NYT downloads and subprocesses are replaced: downloads serve the
 hand-made fixtures under ``tests/fixtures/nyt`` (which a test may edit first),
-and the export goes through a ``RecordingRunner``. The out-dir and the NYT
-cache are temporary folders set through the app config, and tripwires fail any
-test that would reach the network or run the export without opting in.
+and the ``export_runner`` records every script run, which none of these routes
+should make. The out-dir and the NYT cache are temporary folders set through
+the app config, and tripwires fail any test that would reach the network or run
+a script without opting in.
 """
 
 from __future__ import annotations
@@ -12,8 +13,6 @@ from __future__ import annotations
 import dataclasses
 import json
 import re
-import subprocess
-import sys
 from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
@@ -25,10 +24,10 @@ from flask import Flask, Response
 from flask.testing import FlaskClient
 from sqlalchemy.exc import OperationalError
 
-from console.blueprints import us_results
-from console.paths import EXPORT_ELECTION_SCRIPT
-from console.services.preview import PREVIEW_CACHE, store_preview
-from console.services.us_models import MODEL_RUN_LOCK, model_run_slot
+from console.shared import runner as script_runner
+from console.shared.preview import PREVIEW_CACHE, store_preview
+from console.us import results as us_results
+from console.us.models import MODEL_RUN_LOCK, model_run_slot
 from core.db import Database
 from core.schema import Election, ElectionType, Party
 from importers.results.us.import_senate_elections import import_senate
@@ -46,6 +45,7 @@ from tests.console_fixtures import (
     flashes_on_page,
     select_block,
 )
+from tests.job_fixtures import job_holding_the_slot
 from tests.senate_current_fixtures import senate_election
 
 FIXTURES = Path(__file__).parent / "fixtures" / "nyt"
@@ -83,8 +83,8 @@ def _isolate(
     dirs: tuple[Path, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> Generator[None, None, None]:
-    def unexpected_export(*_args: object, **_kwargs: object) -> NoReturn:
-        raise AssertionError("Export requires the export_runner fixture")
+    def unexpected_run(*_args: object, **_kwargs: object) -> NoReturn:
+        raise AssertionError("Running a script requires the export_runner fixture")
 
     def unexpected_download(url: str) -> NoReturn:
         raise AssertionError(f"Downloading {url} requires the nyt fixture")
@@ -95,7 +95,7 @@ def _isolate(
     # Never the committed Current Senate file: a test that rebuilds it opts in.
     app.config[us_results.SNAPSHOT_CONFIG] = out_dir.parent / "senate-current.json"
     monkeypatch.setattr(us_results, "get_db", lambda: db)
-    monkeypatch.setattr(us_results, "run_python_script", unexpected_export)
+    monkeypatch.setattr(script_runner, "run_command", unexpected_run)
     monkeypatch.setattr(fetch_module, "_download", unexpected_download)
     for name in PARTY_KEY_TO_NAME.values():
         db.add_party(name)
@@ -136,17 +136,9 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> Iterator[datetime]:
 
 @pytest.fixture()
 def export_runner(monkeypatch: pytest.MonkeyPatch) -> RecordingRunner:
+    """Record every subprocess the console would start instead of starting it."""
     runner = RecordingRunner()
-
-    def run_script(
-        script: Path,
-        *args: str,
-        cwd: Path | None = None,
-        timeout: int,
-    ) -> subprocess.CompletedProcess[str]:
-        return runner([sys.executable, str(script), *args], cwd=cwd, timeout=timeout)
-
-    monkeypatch.setattr(us_results, "run_python_script", run_script)
+    monkeypatch.setattr(script_runner, "run_command", runner)
     return runner
 
 
@@ -157,14 +149,14 @@ def _preview(
     source: str = "fetch",
 ) -> Response:
     return client.post(
-        "/us/results/preview",
-        data={"year": str(year), "chamber": chamber, "source": source},
+        f"/{chamber}/results/preview",
+        data={"year": str(year), "source": source},
     )
 
 
 def _token(response: Response) -> str:
     match = re.search(
-        r'action="/us/results/confirm/([0-9a-f]{32})"',
+        r'action="/(?:house|senate)/results/confirm/([0-9a-f]{32})"',
         response.get_data(as_text=True),
     )
     assert match is not None
@@ -173,7 +165,7 @@ def _token(response: Response) -> str:
 
 def _import(client: FlaskClient[Response], chamber: str = "house") -> None:
     token = _token(_preview(client, chamber=chamber))
-    assert client.post(f"/us/results/confirm/{token}").status_code == 200
+    assert client.post(f"/{chamber}/results/confirm/{token}").status_code == 200
 
 
 def _files(folder: Path) -> dict[Path, bytes]:
@@ -235,23 +227,23 @@ def _without_specials(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestForm:
-    def test_lists_years_chambers_and_sources(self, app: Flask) -> None:
-        response = app.test_client().get("/us/results")
+    @pytest.mark.parametrize("chamber", ["house", "senate"])
+    def test_lists_years_and_sources(self, app: Flask, chamber: str) -> None:
+        response = app.test_client().get(f"/{chamber}/results")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         years = re.findall(r'<option value="(\d+)"', select_block(body, "year"))
         assert years == [str(year) for year in sorted(supported_years(), reverse=True)]
         assert 'value="2026" selected' in select_block(body, "year")
-        chambers = re.findall(
-            r'<option value="(\w+)"[^>]*>(\w+)</option>', select_block(body, "chamber"),
-        )
-        assert chambers == [("house", "House"), ("senate", "Senate")]
+        # The office is the URL's: there is no chamber choice to make.
+        assert 'name="chamber"' not in body
         assert 'name="source" value="fetch" checked' in body
         assert 'name="source" value="cache"' in body
-        assert 'action="/us/results/preview"' in body
+        assert f'action="/{chamber}/results/preview"' in body
         assert "not cached" in body
-        assert "pending (not yet held)" in body
+        # Only the House has a source that is not yet held (a December runoff).
+        assert ("pending (not yet held)" in body) is (chamber == "house")
 
     def test_shows_cached_retrieval_times(
         self, app: Flask, nyt: FakeNyt, dirs: tuple[Path, Path]
@@ -259,10 +251,15 @@ class TestForm:
         _, cache_dir = dirs
         fetched = fetch_module.fetch(source_for(2026, "house"), cache_dir)
 
-        body = app.test_client().get("/us/results").get_data(as_text=True)
+        client = app.test_client()
+        body = client.get("/house/results").get_data(as_text=True)
 
         assert fetched.retrieved_at.isoformat() in body
         assert str(fetched.source_updated_at) in body
+        # Only the page's own office lists its sources.
+        assert str(fetched.source_updated_at) not in client.get(
+            "/senate/results"
+        ).get_data(as_text=True)
 
     def test_shows_why_a_pointer_is_unusable(
         self, app: Flask, nyt: FakeNyt, dirs: tuple[Path, Path]
@@ -276,16 +273,33 @@ class TestForm:
         data["url"] = "https://static01.nyt.com/elections-assets/old.json"
         pointer.write_text(json.dumps(data), encoding="utf-8")
 
-        body = app.test_client().get("/us/results").get_data(as_text=True)
+        client = app.test_client()
+        house_page = client.get("/house/results").get_data(as_text=True)
+        senate_page = client.get("/senate/results").get_data(as_text=True)
 
-        assert f"unusable: {cache_dir / '2026' / 'house-general-latest.json'}" in body
-        assert "which is missing" in body
-        assert "not the current" in body
+        missing = f"unusable: {cache_dir / '2026' / 'house-general-latest.json'}"
+        assert missing in house_page
+        assert "which is missing" in house_page
+        assert "not the current" not in house_page
+        assert "not the current" in senate_page
+        assert missing not in senate_page
 
-    def test_home_links_to_the_tool(self, app: Flask) -> None:
-        body = app.test_client().get("/").get_data(as_text=True)
+    @pytest.mark.parametrize("path", ["/house", "/senate"])
+    def test_landing_pages_link_to_their_own_tool(
+        self, app: Flask, path: str
+    ) -> None:
+        body = app.test_client().get(path).get_data(as_text=True)
 
-        assert 'href="/us/results"' in body
+        assert f'href="{path}/results"' in body
+
+    def test_the_president_has_no_results_page(self, app: Flask) -> None:
+        client = app.test_client()
+
+        assert client.get("/president/results").status_code == 404
+        assert client.post("/president/results/preview").status_code == 404
+        assert 'href="/president/results"' not in client.get("/president").get_data(
+            as_text=True
+        )
 
 
 class TestPreview:
@@ -331,7 +345,8 @@ class TestPreview:
             r"<td>DEM</td>\s*<td>democrat</td>\s*<td>Democratic</td>", body,
         )
         assert re.search(
-            r"<td>OTH</td>\s*<td>others</td>\s*<td>Others</td>\s*<td>1</td>", body,
+            r"<td>OTH</td>\s*<td>others</td>\s*<td>Others</td>\s*"
+            r'<td class="num">1</td>', body,
         )
         # Pipeline counts, source note, no diff yet.
         assert re.search(r"races parsed \(runoffs applied\)</th><td>6</td>", body)
@@ -520,7 +535,7 @@ class TestPreview:
         assert message.startswith(
             "Preview failed: nothing cached for 2026/house/general",
         )
-        assert 'action="/us/results/preview"' in body
+        assert 'action="/house/results/preview"' in body
         assert PREVIEW_CACHE == {}
         assert not out_dir.exists() and not cache_dir.exists()
 
@@ -536,7 +551,7 @@ class TestPreview:
         assert flashes_on_page(body) == [
             "Preview failed: file: 'races' should be a list",
         ]
-        assert 'value="senate" selected' in select_block(body, "chamber")
+        assert 'action="/senate/results/preview"' in body
         assert PREVIEW_CACHE == {}
 
     @pytest.mark.parametrize(
@@ -596,20 +611,57 @@ class TestPreview:
     @pytest.mark.parametrize(
         "data",
         [
-            {"year": "1999", "chamber": "house", "source": "fetch"},
-            {"year": "2026", "chamber": "governor", "source": "fetch"},
-            {"year": "2026", "chamber": "house", "source": "web"},
-            {"year": "x", "chamber": "house", "source": "fetch"},
+            {"year": "1999", "source": "fetch"},
+            {"year": "2026", "source": "web"},
+            {"year": "x", "source": "fetch"},
         ],
     )
     def test_invalid_choice_is_refused(self, app: Flask, data: dict[str, str]) -> None:
-        response = app.test_client().post("/us/results/preview", data=data)
+        response = app.test_client().post("/house/results/preview", data=data)
 
         assert response.status_code == 400
         assert flashes_on_page(response.get_data(as_text=True)) == [
-            "Choose a year, a chamber, and whether to fetch or use the cache."
+            "Choose a year, and whether to fetch or use the cache."
         ]
         assert PREVIEW_CACHE == {}
+
+    @pytest.mark.parametrize(
+        ("path_chamber", "posted"),
+        [("house", "senate"), ("senate", "house"), ("house", "governor")],
+    )
+    def test_another_office_in_the_form_is_refused(
+        self, app: Flask, nyt: FakeNyt, path_chamber: str, posted: str
+    ) -> None:
+        response = app.test_client().post(
+            f"/{path_chamber}/results/preview",
+            data={"year": "2026", "chamber": posted, "source": "fetch"},
+        )
+
+        assert response.status_code == 400
+        label = path_chamber.capitalize()
+        assert flashes_on_page(response.get_data(as_text=True)) == [
+            f"This page imports US {label} results only."
+        ]
+        assert nyt.requested == []
+        assert PREVIEW_CACHE == {}
+
+    def test_the_posted_office_may_repeat_the_urls(
+        self, app: Flask, nyt: FakeNyt
+    ) -> None:
+        response = app.test_client().post(
+            "/senate/results/preview",
+            data={"year": "2026", "chamber": "senate", "source": "fetch"},
+        )
+
+        assert response.status_code == 200
+        assert "Results Preview" in response.get_data(as_text=True)
+
+    def test_the_preview_is_for_the_urls_office(
+        self, app: Flask, nyt: FakeNyt
+    ) -> None:
+        token = _token(_preview(app.test_client(), chamber="senate"))
+
+        assert PREVIEW_CACHE[token]["chamber"] == "senate"
 
 
 class TestConfirm:
@@ -625,7 +677,7 @@ class TestConfirm:
         client = app.test_client()
         token = _token(_preview(client))
 
-        response = client.post(f"/us/results/confirm/{token}")
+        response = client.post(f"/house/results/confirm/{token}")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -640,17 +692,22 @@ class TestConfirm:
         written = json.loads((out_dir / "house-2026.json").read_text(encoding="utf-8"))
         assert written["TX-28"]["seatInfo"]["current"] == "democrat"
         cells = re.sub(r"\s+", " ", body)
-        assert f"<td>{_HOUSE}</td> <td>{election.id}</td> <td>24</td>" in cells
         assert (
-            "<td>6</td> <td>4</td> <td>democrat 3, republican 1</td> <td>6</td>"
+            f'<td>{_HOUSE}</td> <td class="num">{election.id}</td> '
+            '<td class="num">24</td>'
+        ) in cells
+        assert (
+            '<td class="num">6</td> <td class="num">4</td> '
+            '<td>democrat 3, republican 1</td> <td class="num">6</td>'
         ) in cells
         assert f"imported {_HOUSE}: 11 votes, election id {election.id}" in body
-        assert 'action="/us/results/export"' in body
+        assert 'href="/export?sections=house&amp;content=results"' in body
+        assert "/results/export" not in body
         assert token not in PREVIEW_CACHE
         assert export_runner.calls == []
 
         # The same token cannot be confirmed twice.
-        repeated = client.post(f"/us/results/confirm/{token}")
+        repeated = client.post(f"/house/results/confirm/{token}")
         assert flashes(client, repeated) == [_EXPIRED]
 
         # A second round refreshes the same election and finds nothing changed.
@@ -659,7 +716,7 @@ class TestConfirm:
         refresh = f"refreshes the existing election in place (id {election.id})"
         assert refresh in again_body
         assert "<td>unchanged</td>" in _row(again_body, "TX-28")
-        assert client.post(f"/us/results/confirm/{_token(again)}").status_code == 200
+        assert client.post(f"/house/results/confirm/{_token(again)}").status_code == 200
         refreshed = db.get_election_by_name(_HOUSE)
         assert refreshed is not None and refreshed.id == election.id
         assert export_runner.calls == []
@@ -671,7 +728,7 @@ class TestConfirm:
         client = app.test_client()
         token = _token(_preview(client, chamber="senate"))
 
-        response = client.post(f"/us/results/confirm/{token}")
+        response = client.post(f"/senate/results/confirm/{token}")
 
         assert response.status_code == 200
         regular = db.get_election_by_name("2026 US Senate Election")
@@ -689,7 +746,10 @@ class TestConfirm:
             "senate-2026.json",
         ]
         cells = re.sub(r"\s+", " ", response.get_data(as_text=True))
-        assert f"<td>{special.name}</td> <td>{special.id}</td> <td>23</td>" in cells
+        assert (
+            f'<td>{special.name}</td> <td class="num">{special.id}</td> '
+            '<td class="num">23</td>'
+        ) in cells
 
     def test_refused_import_writes_nothing_and_keeps_token(
         self, app: Flask, db: Database, nyt: FakeNyt, dirs: tuple[Path, Path]
@@ -700,10 +760,10 @@ class TestConfirm:
         other_map = db.add_map("Elsewhere", parliament="us_house")
         db.add_election(other_map.id, 2026, _HOUSE, ElectionType.us_house)
 
-        response = client.post(f"/us/results/confirm/{token}")
+        response = client.post(f"/house/results/confirm/{token}")
 
         assert response.status_code == 302
-        assert response.headers["Location"] == "/us/results"
+        assert response.headers["Location"] == "/house/results"
         [message] = flashes(client, response)
         assert message.startswith(
             f"Import failed: house-2026.json: Election '{_HOUSE}'",
@@ -736,7 +796,7 @@ class TestConfirm:
 
         monkeypatch.setattr(us_results, "import_files", locked)
 
-        response = client.post(f"/us/results/confirm/{token}")
+        response = client.post(f"/house/results/confirm/{token}")
 
         assert response.status_code == 302
         [message] = flashes(client, response)
@@ -774,7 +834,7 @@ class TestConfirm:
 
         monkeypatch.setattr(cli, "import_senate", special_fails)
 
-        response = client.post(f"/us/results/confirm/{token}")
+        response = client.post(f"/senate/results/confirm/{token}")
 
         [message] = flashes(client, response)
         assert message.startswith(
@@ -814,7 +874,7 @@ class TestConfirm:
 
         monkeypatch.setattr(us_results, "import_files", refuse)
 
-        response = client.post(f"/us/results/confirm/{token}")
+        response = client.post(f"/house/results/confirm/{token}")
 
         assert flashes(client, response) == [
             f"Import failed: Parent election not found. {_RESTORED}",
@@ -840,7 +900,7 @@ class TestConfirm:
 
         monkeypatch.setattr(us_results, "import_files", refuse)
 
-        response = client.post(f"/us/results/confirm/{token}")
+        response = client.post(f"/house/results/confirm/{token}")
 
         assert flashes(client, response) == [f"Import failed: refused. {_RESTORED}"]
         assert not (tmp_path / "a").exists()
@@ -882,7 +942,7 @@ class TestConfirm:
         monkeypatch.setattr(Path, method, broken)
         monkeypatch.setattr(us_results, "import_files", refuse)
 
-        response = client.post(f"/us/results/confirm/{token}")
+        response = client.post(f"/house/results/confirm/{token}")
 
         [message] = flashes(client, response)
         assert message == (
@@ -919,7 +979,7 @@ class TestConfirm:
             on_disk["meta"]["retrieved_at"] = retrieved_at
         path.write_text(json.dumps(on_disk), encoding="utf-8")
 
-        response = client.post(f"/us/results/confirm/{older}")
+        response = client.post(f"/house/results/confirm/{older}")
 
         assert response.status_code == 200
         written = json.loads(path.read_text(encoding="utf-8"))
@@ -949,7 +1009,7 @@ class TestConfirm:
 
         monkeypatch.setattr(us_results, "model_run_slot", slot_after_first_submit)
 
-        response = client.post(f"/us/results/confirm/{token}")
+        response = client.post(f"/house/results/confirm/{token}")
 
         assert flashes(client, response) == [_EXPIRED]
         assert not out_dir.exists()
@@ -974,7 +1034,7 @@ class TestConfirm:
         assert older not in PREVIEW_CACHE
         PREVIEW_CACHE[older] = older_payload
 
-        response = client.post(f"/us/results/confirm/{older}")
+        response = client.post(f"/house/results/confirm/{older}")
 
         [message] = flashes(client, response)
         assert message == (
@@ -993,29 +1053,49 @@ class TestConfirm:
         senate = _token(_preview(client, chamber="senate"))
         second = _token(_preview(client))
 
-        assert client.post(f"/us/results/confirm/{second}").status_code == 200
+        assert client.post(f"/house/results/confirm/{second}").status_code == 200
 
         assert first not in PREVIEW_CACHE and second not in PREVIEW_CACHE
         assert senate in PREVIEW_CACHE
-        assert flashes(client, client.post(f"/us/results/confirm/{first}")) == [
+        assert flashes(client, client.post(f"/house/results/confirm/{first}")) == [
             _EXPIRED,
         ]
 
     def test_unknown_token_is_expired(self, app: Flask) -> None:
         client = app.test_client()
 
-        response = client.post("/us/results/confirm/missing")
+        response = client.post("/house/results/confirm/missing")
 
         assert response.status_code == 302
-        assert response.headers["Location"] == "/us/results"
+        assert response.headers["Location"] == "/house/results"
         assert flashes(client, response) == [_EXPIRED]
+
+    @pytest.mark.parametrize(("made", "used"), [("house", "senate"), ("senate", "house")])
+    def test_a_token_made_under_the_other_chamber_is_expired(
+        self, app: Flask, db: Database, nyt: FakeNyt, dirs: tuple[Path, Path],
+        made: str, used: str,
+    ) -> None:
+        out_dir, _ = dirs
+        client = app.test_client()
+        token = _token(_preview(client, chamber=made))
+
+        response = client.post(f"/{used}/results/confirm/{token}")
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == f"/{used}/results"
+        assert flashes(client, response) == [_EXPIRED]
+        # Untouched: the preview is still good under its own chamber's URL.
+        assert token in PREVIEW_CACHE
+        assert not out_dir.exists()
+        assert _us_elections(db) == []
+        assert client.post(f"/{made}/results/confirm/{token}").status_code == 200
 
     @pytest.mark.parametrize("preview_type", ["by_election", "wikipedia_queue"])
     def test_other_flow_token_is_rejected(self, app: Flask, preview_type: str) -> None:
         token = store_preview({"type": preview_type})
         client = app.test_client()
 
-        response = client.post(f"/us/results/confirm/{token}")
+        response = client.post(f"/house/results/confirm/{token}")
 
         assert flashes(client, response) == [_EXPIRED]
         assert token in PREVIEW_CACHE
@@ -1027,81 +1107,30 @@ class TestConfirm:
         token = _token(_preview(client))
 
         with MODEL_RUN_LOCK:
-            response = client.post(f"/us/results/confirm/{token}")
+            response = client.post(f"/house/results/confirm/{token}")
 
         [message] = flashes(client, response)
-        assert message.startswith("Results not imported: another US model run")
+        assert message.startswith("Results not imported: another run is in progress")
         assert token in PREVIEW_CACHE
         assert db.get_election_by_name(_HOUSE) is None
 
-
-class TestExport:
-    @pytest.mark.parametrize("export_code", [0, 3])
-    def test_runs_the_site_export(
-        self, app: Flask, export_code: int, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        runner = RecordingRunner(
-            return_codes={EXPORT_ELECTION_SCRIPT.name: export_code},
-        )
-
-        def run_script(
-            script: Path, *, timeout: int
-        ) -> subprocess.CompletedProcess[str]:
-            return runner([sys.executable, str(script)], timeout=timeout)
-
-        monkeypatch.setattr(us_results, "run_python_script", run_script)
-
-        response = app.test_client().post("/us/results/export")
-
-        assert response.status_code == 200
-        body = response.get_data(as_text=True)
-        assert command_line(body) == "export_elections.py (rebuild site data)"
-        assert f"<strong>Exit code:</strong> {export_code}" in body
-        assert 'href="/us/results"' in body
-        assert runner.calls == [(sys.executable, str(EXPORT_ELECTION_SCRIPT))]
-        assert runner.timeouts == [900]
-
-    def test_timeout_renders_a_failed_result(
-        self, app: Flask, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        def time_out(script: Path, *, timeout: int) -> NoReturn:
-            raise subprocess.TimeoutExpired([str(script)], timeout)
-
-        monkeypatch.setattr(us_results, "run_python_script", time_out)
-
-        body = app.test_client().post("/us/results/export").get_data(as_text=True)
-
-        assert "<strong>Exit code:</strong> 1" in body
-        assert "TimeoutExpired" in body
-
-    def test_missing_script_is_reported(
-        self,
-        app: Flask,
-        export_runner: RecordingRunner,
-        monkeypatch: pytest.MonkeyPatch,
-        tmp_path: Path,
-    ) -> None:
-        missing = tmp_path / "absent_export.py"
-        monkeypatch.setattr(us_results, "EXPORT_ELECTION_SCRIPT", missing)
-        client = app.test_client()
-
-        response = client.post("/us/results/export")
-
-        assert response.headers["Location"] == "/us/results"
-        assert flashes(client, response) == [f"Export script not found: {missing}"]
-        assert export_runner.calls == []
-
-    def test_busy_slot_refuses_export(
-        self, app: Flask, export_runner: RecordingRunner
+    def test_a_running_job_refuses_import_and_is_linked(
+        self, app: Flask, db: Database, nyt: FakeNyt
     ) -> None:
         client = app.test_client()
+        token = _token(_preview(client))
 
-        with MODEL_RUN_LOCK:
-            response = client.post("/us/results/export")
+        with job_holding_the_slot() as job:
+            response = client.post(f"/house/results/confirm/{token}")
+            page = client.get(response.headers["Location"]).get_data(as_text=True)
 
-        [message] = flashes(client, response)
-        assert message.startswith("Not exported: another US model run")
-        assert export_runner.calls == []
+        assert "Results not imported: another run is in progress" in page
+        assert f'<a href="/runs/{job.id}">See the running job.</a>' in page
+        assert token in PREVIEW_CACHE
+        assert db.get_election_by_name(_HOUSE) is None
+        # Once the job has ended the same confirm goes through.
+        assert client.post(f"/house/results/confirm/{token}").status_code == 200
+        assert db.get_election_by_name(_HOUSE) is not None
 
 
 class TestCurrentSenate:
@@ -1128,7 +1157,7 @@ class TestCurrentSenate:
         snapshot_path, _, snapshot = files
         before = _us_elections(db)
 
-        response = app.test_client().post("/us/results/current-senate")
+        response = app.test_client().post("/senate/results/current-senate")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -1141,15 +1170,34 @@ class TestCurrentSenate:
         assert _us_elections(db) == before
         assert export_runner.calls == []
 
+    def test_it_lives_under_the_senate_only(self, app: Flask) -> None:
+        client = app.test_client()
+
+        assert client.post("/senate/results/current-senate").status_code != 404
+        for path in ("/house/results/current-senate", "/president/results/current-senate"):
+            assert client.post(path).status_code == 404
+        # A POST-only route: the page that offers it is the Senate results page.
+        assert client.get("/senate/results/current-senate").status_code == 405
+
+    def test_only_the_senate_page_offers_it(self, app: Flask) -> None:
+        client = app.test_client()
+
+        assert "Rebuild Current Senate" in client.get("/senate/results").get_data(
+            as_text=True
+        )
+        assert "current-senate" not in client.get("/house/results").get_data(
+            as_text=True
+        )
+
     def test_running_it_again_changes_nothing(
         self, app: Flask, files: tuple[Path, Path, dict[str, Any]]
     ) -> None:
         snapshot_path, _, _ = files
         client = app.test_client()
-        client.post("/us/results/current-senate")
+        client.post("/senate/results/current-senate")
         first = snapshot_path.read_bytes()
 
-        body = client.post("/us/results/current-senate").get_data(as_text=True)
+        body = client.post("/senate/results/current-senate").get_data(as_text=True)
 
         assert snapshot_path.read_bytes() == first
         assert f"unchanged {snapshot_path}" in body
@@ -1160,7 +1208,7 @@ class TestCurrentSenate:
         snapshot_path, election_path, snapshot = files
         election_path.unlink()
 
-        body = app.test_client().post("/us/results/current-senate").get_data(as_text=True)
+        body = app.test_client().post("/senate/results/current-senate").get_data(as_text=True)
 
         assert "<strong>Exit code:</strong> 1" in body
         assert "election file not found" in body
@@ -1174,7 +1222,7 @@ class TestCurrentSenate:
         del election["Georgia"]
         election_path.write_text(json.dumps(election), encoding="utf-8")
 
-        body = app.test_client().post("/us/results/current-senate").get_data(as_text=True)
+        body = app.test_client().post("/senate/results/current-senate").get_data(as_text=True)
 
         assert "<strong>Exit code:</strong> 1" in body
         assert "no class 2 race for: Georgia" in body
@@ -1187,11 +1235,30 @@ class TestCurrentSenate:
         client = app.test_client()
 
         with MODEL_RUN_LOCK:
-            response = client.post("/us/results/current-senate")
+            response = client.post("/senate/results/current-senate")
 
         [message] = flashes(client, response)
-        assert message.startswith("Current Senate not rebuilt: another US model run")
+        assert message.startswith(
+            "Current Senate not rebuilt: another run is in progress"
+        )
         assert snapshot_path.read_text(encoding="utf-8") == render(snapshot)
+
+    def test_a_running_job_refuses_the_rebuild_and_is_linked(
+        self, app: Flask, files: tuple[Path, Path, dict[str, Any]]
+    ) -> None:
+        snapshot_path, _, snapshot = files
+        client = app.test_client()
+
+        with job_holding_the_slot() as job:
+            response = client.post("/senate/results/current-senate")
+            page = client.get(response.headers["Location"]).get_data(as_text=True)
+
+        assert "Current Senate not rebuilt: another run is in progress" in page
+        assert f'<a href="/runs/{job.id}">See the running job.</a>' in page
+        assert snapshot_path.read_text(encoding="utf-8") == render(snapshot)
+        # Free again once the job has ended.
+        body = client.post("/senate/results/current-senate").get_data(as_text=True)
+        assert "<strong>Exit code:</strong> 0" in body
 
     def test_the_form_offers_it_and_importing_never_runs_it(
         self,
@@ -1202,10 +1269,10 @@ class TestCurrentSenate:
         snapshot_path, _, snapshot = files
         client = app.test_client()
 
-        form = client.get("/us/results").get_data(as_text=True)
+        form = client.get("/senate/results").get_data(as_text=True)
         _import(client, "senate")
 
-        assert 'action="/us/results/current-senate"' in form
+        assert 'action="/senate/results/current-senate"' in form
         assert "Rebuild Current Senate" in form
         assert snapshot_path.read_text(encoding="utf-8") == render(snapshot)
 
@@ -1225,16 +1292,15 @@ class TestCrossSite:
         nyt.requested.clear()
 
         preview = client.post(
-            "/us/results/preview",
-            data={"year": "2026", "chamber": "house", "source": "fetch"},
+            "/house/results/preview",
+            data={"year": "2026", "source": "fetch"},
             headers=_CROSS_SITE,
         )
-        confirm = client.post(f"/us/results/confirm/{token}", headers=_CROSS_SITE)
-        export = client.post("/us/results/export", headers=_CROSS_SITE)
-        senate = client.post("/us/results/current-senate", headers=_CROSS_SITE)
+        confirm = client.post(f"/house/results/confirm/{token}", headers=_CROSS_SITE)
+        senate = client.post("/senate/results/current-senate", headers=_CROSS_SITE)
 
-        statuses = [preview.status_code, confirm.status_code, export.status_code, senate.status_code]
-        assert statuses == [403, 403, 403, 403]
+        statuses = [preview.status_code, confirm.status_code, senate.status_code]
+        assert statuses == [403, 403, 403]
         assert nyt.requested == []
         assert token in PREVIEW_CACHE
         assert not out_dir.exists()

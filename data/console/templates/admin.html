@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero">
+    <h1>Admin</h1>
+    <p>Rebuild the database from source, and back up or restore it. To publish site data, use the Export page.</p>
+  </section>
+
+  <section class="card">
+    <h2>Rebuild</h2>
+    <div class="action-grid">
+      <form method="post" action="{{ url_for('site.rebuild_database') }}" class="inline-form button-form"
+            onsubmit="return confirm('Rebuild the DATABASE from source files? This re-imports parties, maps, geometry and every historical election result, and downloads live boundary/by-election data from the internet — it can take many minutes (up to an hour). Your polls and model runs are preserved.');">
+        <button type="submit" class="button button-block button-danger">Rebuild Database</button>
+        <small>Re-import all base data from source (preserves polls &amp; model runs), then export the site data. Slow; hits the network.</small>
+      </form>
+    </div>
+  </section>
+
+  <section class="card danger-zone">
+    <h2>Database <small>(admin)</small></h2>
+    <div class="action-grid action-grid-two">
+      <form method="post" action="{{ url_for('db_admin.backup_database') }}" class="inline-form button-form">
+        <button type="submit" class="button button-block">Backup now</button>
+        <small>Archive the database locally. Also runs automatically after console changes, and hourly before the off-machine (B2) backup.</small>
+      </form>
+      <form method="post" action="{{ url_for('db_admin.restore_database') }}" class="inline-form button-form"
+            onsubmit="return confirm('Restore the database from the newest archive? This overwrites the current local database (a .prerestore copy is kept).');">
+        <button type="submit" class="button button-block button-danger">Restore newest archive</button>
+        <small>Overwrite the local database with the newest local archive.</small>
+      </form>
+    </div>
+  </section>
+{% endblock %}

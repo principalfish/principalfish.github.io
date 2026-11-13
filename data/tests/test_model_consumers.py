@@ -7,7 +7,10 @@ from datetime import date
 from pathlib import Path
 
 import pytest
-from console.services.model_outputs import build_outputs_context
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
+
+from console.shared.model_outputs import build_outputs_context
 from core.db import Database
 from core.schema import ElectionType, Vote
 from export.payload import SeatRow, build_result_payload
@@ -19,8 +22,6 @@ from models.support.persistence import (
 )
 from models.support.trends import TREND_MODELS
 from scripts.rebuild_model_trends import main
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload
 from tests.us_ev_fixtures import seed_allocations
 
 

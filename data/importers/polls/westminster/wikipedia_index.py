@@ -8,7 +8,7 @@ resolved from the row's citation.
 It is **metadata only**: it never downloads a poll document, never touches the
 database, and never imports the console's importer registry. Deciding which rows
 have an importer, and which are already in the database, belongs to
-``console/services/wikipedia_queue.py``.
+``console/shared/wikipedia_queue.py``.
 
 Two details of Wikipedia's markup are easy to get wrong and are handled
 explicitly here:

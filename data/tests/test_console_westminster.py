@@ -19,11 +19,12 @@ from typing import cast
 import pytest
 from flask import Flask
 
-from console.blueprints.westminster import (
+from console.paths import PREDICTION_SIMULATION_OUTPUT, UNS_MODEL_SCRIPT
+from console.westminster.model import (
     _choices_for_model_form,
     _model_arg_explanations,
 )
-from console.paths import PREDICTION_SIMULATION_OUTPUT, UNS_MODEL_SCRIPT
+from core import backup
 from core.db import Database
 from core.schema import ElectionType
 from tests.console_fixtures import (
@@ -46,16 +47,17 @@ def uns_trend_json(
     tmp path.
 
     Autouse, applying to every test in this module: ``_flashes`` follows the
-    delete/not-found redirects back to ``/models/outputs``, and that route
+    delete/not-found redirects back to ``/westminster/outputs``, and that route
     always reads ``UNS_TREND_CACHE_JSON``. A test that only opted in for the
     two outputs-list tests still let those redirects open the real, tracked
     ``electionmaps/data/results/model_output_trends.json``. This fixture
     removes that hazard for the whole file, and the per-test
     ``monkeypatch.setattr(..., "get_db", ...)`` lines it used to require.
     """
-    monkeypatch.setattr("console.blueprints.westminster.get_db", lambda: db)
+    monkeypatch.setattr("console.westminster.model.get_db", lambda: db)
+    monkeypatch.setattr("console.westminster.outputs.get_db", lambda: db)
     path = tmp_path / "model_output_trends.json"
-    monkeypatch.setattr("console.blueprints.westminster.UNS_TREND_CACHE_JSON", path)
+    monkeypatch.setattr("console.westminster.outputs.UNS_TREND_CACHE_JSON", path)
     return path
 
 
@@ -68,7 +70,7 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     run or export.
     """
     forbid_call(
-        monkeypatch, "console.blueprints.westminster.run_command", "recording_runner"
+        monkeypatch, "console.westminster.model.run_command", "recording_runner"
     )
 
 
@@ -76,7 +78,7 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
 def recording_runner(monkeypatch: pytest.MonkeyPatch) -> _RecordingRunner:
     """Replace the Westminster blueprint's subprocess runner with a recorder."""
     runner = _RecordingRunner()
-    monkeypatch.setattr("console.blueprints.westminster.run_command", runner)
+    monkeypatch.setattr("console.westminster.model.run_command", runner)
     return runner
 
 
@@ -89,7 +91,7 @@ class _FixedDate(date):
 
 
 def _valid_form(world: WestminsterWorld, **overrides: str) -> dict[str, str]:
-    """Build a POST /models/run form that validates cleanly against ``world``."""
+    """Build a POST /westminster/model form that validates cleanly against ``world``."""
     form = {
         "map_name": world.map_name,
         "baseline_election_name": world.baseline_election_name,
@@ -98,6 +100,7 @@ def _valid_form(world: WestminsterWorld, **overrides: str) -> dict[str, str]:
         "half_life_days": "30.0",
         "output_csv": "",
         "dry_run": "true",
+        "export_when_done": "on",
     }
     form.update(overrides)
     return form
@@ -197,7 +200,7 @@ class TestChoicesForModelForm:
     def test_output_csv_option_uses_todays_date(
         self, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("console.blueprints.westminster.date", _FixedDate)
+        monkeypatch.setattr("console.westminster.model.date", _FixedDate)
 
         choices = _choices_for_model_form(db)
 
@@ -251,12 +254,12 @@ class TestModelArgExplanations:
 
 
 class TestModelRunFormRoute:
-    """GET /models/run renders the dropdown choices from the current DB state."""
+    """GET /westminster/model renders the dropdown choices from the current DB state."""
 
     def test_with_elections_lists_them(
         self, app: Flask, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        response = app.test_client().get("/models/run")
+        response = app.test_client().get("/westminster/model")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -270,7 +273,7 @@ class TestModelRunFormRoute:
     ) -> None:
         # The daily run and run_uns_model.py's backfill defaults use the same
         # weighting: a 60-day window and a 15-day half-life.
-        body = app.test_client().get("/models/run").get_data(as_text=True)
+        body = app.test_client().get("/westminster/model").get_data(as_text=True)
 
         assert '<option value="60" selected>' in _select_block(body, "since_days_back")
         assert '<option value="15.0" selected>' in _select_block(body, "half_life_days")
@@ -278,7 +281,7 @@ class TestModelRunFormRoute:
     def test_without_elections_renders_empty_dropdowns(
         self, app: Flask, db: Database
     ) -> None:
-        response = app.test_client().get("/models/run")
+        response = app.test_client().get("/westminster/model")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -287,7 +290,7 @@ class TestModelRunFormRoute:
 
 
 class TestModelRunExecute:
-    """POST /models/run validates the form, runs the model, and auto-exports."""
+    """POST /westminster/model validates the form, runs the model, and auto-exports."""
 
     def test_invalid_form_flashes_the_exact_validation_message(
         self,
@@ -303,7 +306,9 @@ class TestModelRunExecute:
             westminster_world, as_of_days_back="30", since_days_back="7"
         )
 
-        response = app.test_client().post("/models/run", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -322,7 +327,9 @@ class TestModelRunExecute:
     ) -> None:
         form = _valid_form(westminster_world, dry_run="true")
 
-        response = app.test_client().post("/models/run", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert recording_runner.scripts == ["run_uns_model.py"]
@@ -349,7 +356,7 @@ class TestModelRunExecute:
             dry_run="true",
         )
 
-        app.test_client().post("/models/run", data=form)
+        app.test_client().post("/westminster/model", data=form)
 
         assert recording_runner.calls == [
             (
@@ -381,11 +388,13 @@ class TestModelRunExecute:
         export_script = tmp_path / "export_elections.py"
         export_script.write_text("# stub for test", encoding="utf-8")
         monkeypatch.setattr(
-            "console.blueprints.westminster.EXPORT_ELECTION_SCRIPT", export_script
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", export_script
         )
         form = _valid_form(westminster_world, dry_run="false")
 
-        response = app.test_client().post("/models/run", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert recording_runner.scripts == ["run_uns_model.py", "export_elections.py"]
@@ -418,6 +427,59 @@ class TestModelRunExecute:
         assert _pre_after_heading(body, "h5", "Stdout") == "ran export_elections.py"
         assert _pre_after_heading(body, "h5", "Stderr") == "(no stderr)"
 
+    def test_export_off_runs_the_model_without_the_export(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        export_script = tmp_path / "export_elections.py"
+        export_script.write_text("# stub for test", encoding="utf-8")
+        monkeypatch.setattr(
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", export_script
+        )
+        form = _valid_form(westminster_world, dry_run="false")
+        del form["export_when_done"]
+
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
+
+        assert response.status_code == 200
+        assert recording_runner.scripts == ["run_uns_model.py"]
+        body = response.get_data(as_text=True)
+        assert "Simulation JSON Export" not in body
+        assert "Export when done was off, so nothing was exported." in body
+
+    def test_a_dry_run_never_exports_even_with_the_box_ticked(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        recording_runner: _RecordingRunner,
+    ) -> None:
+        form = _valid_form(westminster_world, dry_run="true", export_when_done="on")
+
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
+
+        assert recording_runner.scripts == ["run_uns_model.py"]
+        body = response.get_data(as_text=True)
+        assert "Simulation JSON Export" not in body
+        assert "nothing was exported" in body
+
+    def test_the_form_opens_with_the_export_box_ticked(
+        self, app: Flask, db: Database
+    ) -> None:
+        body = app.test_client().get("/westminster/model").get_data(as_text=True)
+
+        assert '<input type="checkbox" name="export_when_done" checked>' in body
+        assert "A dry run never exports" in body
+
     def test_non_zero_exit_skips_export(
         self,
         app: Flask,
@@ -429,13 +491,15 @@ class TestModelRunExecute:
         export_script = tmp_path / "export_elections.py"
         export_script.write_text("# stub for test", encoding="utf-8")
         monkeypatch.setattr(
-            "console.blueprints.westminster.EXPORT_ELECTION_SCRIPT", export_script
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", export_script
         )
         runner = _RecordingRunner(return_codes={"run_uns_model.py": 3})
-        monkeypatch.setattr("console.blueprints.westminster.run_command", runner)
+        monkeypatch.setattr("console.westminster.model.run_command", runner)
         form = _valid_form(westminster_world, dry_run="false")
 
-        response = app.test_client().post("/models/run", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert len(runner.calls) == 1
@@ -456,17 +520,45 @@ class TestModelRunExecute:
     ) -> None:
         missing_script = tmp_path / "does-not-exist.py"
         monkeypatch.setattr(
-            "console.blueprints.westminster.EXPORT_ELECTION_SCRIPT", missing_script
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", missing_script
         )
         form = _valid_form(westminster_world, dry_run="false")
 
-        response = app.test_client().post("/models/run", data=form)
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         # run_command is never called for the missing export step.
         assert recording_runner.scripts == ["run_uns_model.py"]
         body = response.get_data(as_text=True)
         assert f"Export script not found: {missing_script}" in body
+        assert "The run finished but the export failed with exit code 1" in body
+
+    def test_a_successful_export_keeps_the_export_requested_headline(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        export_script = tmp_path / "export_elections.py"
+        export_script.write_text("# stub for test", encoding="utf-8")
+        monkeypatch.setattr(
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", export_script
+        )
+        form = _valid_form(westminster_world, dry_run="false")
+
+        response = app.test_client().post(
+            "/westminster/model", data=form, follow_redirects=True
+        )
+
+        body = response.get_data(as_text=True)
+        assert recording_runner.scripts == ["run_uns_model.py", "export_elections.py"]
+        assert "The run finished and the export was requested" in body
+        assert "the export failed" not in body
 
     def test_output_csv_passed_through(
         self,
@@ -479,61 +571,85 @@ class TestModelRunExecute:
             westminster_world, output_csv="models/westminster/output/custom-witness.csv"
         )
 
-        app.test_client().post("/models/run", data=form)
+        app.test_client().post("/westminster/model", data=form)
 
         [command] = recording_runner.calls
         idx = command.index("--output-csv")
         assert command[idx + 1] == "models/westminster/output/custom-witness.csv"
 
-    def test_omitting_dry_run_defaults_to_a_real_run_pins_current_behaviour(
+    def test_omitting_dry_run_runs_as_a_dry_run(
         self,
         app: Flask,
         db: Database,
         westminster_world: WestminsterWorld,
         recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Pins a latent gap: ``ModelRunForm.dry_run`` defaults to ``False``, not
-        the "true" the GET form's own default value suggests, so a POST that
-        omits the field entirely triggers a real (non-dry-run) model run. Not
-        reachable through the rendered form today — the ``<select>`` always
-        submits a value — so this is latent, not exploitable via the UI.
-        """
+        """A POST without the field previews: the safe default, never a real run."""
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
         form = _valid_form(westminster_world)
         del form["dry_run"]
 
-        app.test_client().post("/models/run", data=form)
+        app.test_client().post("/westminster/model", data=form)
 
-        assert len(recording_runner.calls) >= 1
+        [command] = recording_runner.calls
+        assert "--dry-run" in command
+        assert recording_runner.scripts == ["run_uns_model.py"]
+        assert requests == []
+
+    def test_an_explicit_dry_run_false_still_runs_for_real(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        export_script = tmp_path / "export_elections.py"
+        export_script.write_text("# stub for test", encoding="utf-8")
+        monkeypatch.setattr(
+            "console.westminster.model.EXPORT_ELECTION_SCRIPT", export_script
+        )
+        form = _valid_form(westminster_world, dry_run="false")
+
+        app.test_client().post("/westminster/model", data=form)
+
         model_command = recording_runner.calls[0]
         assert "--dry-run" not in model_command
+        assert recording_runner.scripts == ["run_uns_model.py", "export_elections.py"]
+        assert requests == ["b"]
 
 
 class TestModelOutputsRoute:
-    """GET /models/outputs lists model-output elections, most-recent-first or all."""
+    """GET /westminster/outputs lists model outputs, most-recent-first or all."""
 
     def test_default_view_lists_recent_outputs(
         self, app: Flask, db: Database, westminster_world: WestminsterWorld
     ) -> None:
         output_id = _seed_model_output(db, westminster_world, name="UNS 2026-06-01")
 
-        response = app.test_client().get("/models/outputs")
+        response = app.test_client().get("/westminster/outputs")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         assert "Westminster Model Outputs" in body
         assert "UNS 2026-06-01" in body
-        assert f"/models/outputs/{output_id}" in body
+        assert f"/westminster/outputs/{output_id}" in body
         # Default view offers to switch to "show all"; it isn't showing all already.
         assert "Show All" in body
-        assert f'action="/models/outputs/{output_id}/delete"' in body
-        assert 'action="/models/outputs/delete-selected"' in body
+        assert f'action="/westminster/outputs/{output_id}/delete"' in body
+        assert 'action="/westminster/outputs/delete-selected"' in body
 
     def test_show_all_query_param(
         self, app: Flask, db: Database, westminster_world: WestminsterWorld
     ) -> None:
         _seed_model_output(db, westminster_world)
 
-        response = app.test_client().get("/models/outputs?show=all")
+        response = app.test_client().get("/westminster/outputs?show=all")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -571,7 +687,7 @@ class TestModelOutputsRoute:
             encoding="utf-8",
         )
 
-        response = app.test_client().get("/models/outputs")
+        response = app.test_client().get("/westminster/outputs")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -579,28 +695,28 @@ class TestModelOutputsRoute:
 
 
 class TestModelOutputDetailRoute:
-    """GET /models/outputs/<id> shows one output's seat/party breakdown, paginated."""
+    """GET /westminster/outputs/<id> shows one output's seat/party breakdown."""
 
     def test_found_renders_detail(
         self, app: Flask, db: Database, westminster_world: WestminsterWorld
     ) -> None:
         output_id = _seed_model_output(db, westminster_world)
 
-        response = app.test_client().get(f"/models/outputs/{output_id}")
+        response = app.test_client().get(f"/westminster/outputs/{output_id}")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         assert f"Model Output #{output_id}" in body
         assert "Holborn and St Pancras" in body
-        assert 'href="/models/outputs"' in body
+        assert 'href="/westminster/outputs"' in body
 
     def test_not_found_redirects(self, app: Flask, db: Database) -> None:
         client = app.test_client()
 
-        response = client.get("/models/outputs/99999")
+        response = client.get("/westminster/outputs/99999")
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/models/outputs")
+        assert response.headers["Location"].endswith("/westminster/outputs")
         assert _flashes(client, response) == ["Model output #99999 not found."]
 
     def test_pagination_splits_across_pages(
@@ -609,19 +725,21 @@ class TestModelOutputDetailRoute:
         output_id = _seed_many_seat_output(db, westminster_world, count=60)
         client = app.test_client()
 
-        page1 = client.get(f"/models/outputs/{output_id}").get_data(as_text=True)
+        page1 = client.get(f"/westminster/outputs/{output_id}").get_data(as_text=True)
         assert "Page 1 of 2" in page1
         assert "Bulk Seat 000" in page1
         assert "Bulk Seat 059" not in page1
 
-        page2 = client.get(f"/models/outputs/{output_id}?page=2").get_data(as_text=True)
+        page2 = client.get(f"/westminster/outputs/{output_id}?page=2").get_data(
+            as_text=True
+        )
         assert "Page 2 of 2" in page2
         assert "Bulk Seat 059" in page2
         assert "Bulk Seat 000" not in page2
 
 
 class TestDeleteModelOutput:
-    """POST /models/outputs/<id>/delete removes one output election and its votes."""
+    """POST /westminster/outputs/<id>/delete removes one output and its votes."""
 
     def test_found_deletes_and_flashes_count(
         self, app: Flask, db: Database, westminster_world: WestminsterWorld
@@ -629,10 +747,10 @@ class TestDeleteModelOutput:
         output_id = _seed_model_output(db, westminster_world)
         client = app.test_client()
 
-        response = client.post(f"/models/outputs/{output_id}/delete")
+        response = client.post(f"/westminster/outputs/{output_id}/delete")
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/models/outputs")
+        assert response.headers["Location"].endswith("/westminster/outputs")
         assert _flashes(client, response) == [
             f"Deleted model output #{output_id} and 4 vote rows."
         ]
@@ -641,19 +759,19 @@ class TestDeleteModelOutput:
     def test_not_found_flashes(self, app: Flask, db: Database) -> None:
         client = app.test_client()
 
-        response = client.post("/models/outputs/99999/delete")
+        response = client.post("/westminster/outputs/99999/delete")
 
         assert response.status_code == 302
         assert _flashes(client, response) == ["Model output #99999 not found."]
 
 
 class TestDeleteSelectedModelOutputs:
-    """POST /models/outputs/delete-selected bulk-deletes chosen output elections."""
+    """POST /westminster/outputs/delete-selected bulk-deletes chosen outputs."""
 
     def test_none_selected_flashes(self, app: Flask, db: Database) -> None:
         client = app.test_client()
 
-        response = client.post("/models/outputs/delete-selected", data={})
+        response = client.post("/westminster/outputs/delete-selected", data={})
 
         assert response.status_code == 302
         assert _flashes(client, response) == ["No model outputs selected."]
@@ -667,7 +785,7 @@ class TestDeleteSelectedModelOutputs:
         client = app.test_client()
 
         response = client.post(
-            "/models/outputs/delete-selected",
+            "/westminster/outputs/delete-selected",
             data={"election_ids": ["abc", ""]},
         )
 
@@ -681,7 +799,7 @@ class TestDeleteSelectedModelOutputs:
         client = app.test_client()
 
         response = client.post(
-            "/models/outputs/delete-selected",
+            "/westminster/outputs/delete-selected",
             data={"election_ids": ["not-a-number", str(output_id)]},
         )
 
@@ -699,7 +817,7 @@ class TestDeleteSelectedModelOutputs:
         client = app.test_client()
 
         response = client.post(
-            "/models/outputs/delete-selected",
+            "/westminster/outputs/delete-selected",
             data={"election_ids": [str(first_id), str(second_id)]},
         )
 

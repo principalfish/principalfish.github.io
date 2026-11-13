@@ -33,7 +33,7 @@
               <th>Candidate</th>
             {% endif %}
             {% for region_name in region_headers %}
-              <th>{{ region_name }}</th>
+              <th class="num">{{ region_name }}</th>
             {% endfor %}
           </tr>
         </thead>
@@ -45,7 +45,7 @@
                 <td>{{ row.candidate or "-" }}</td>
               {% endif %}
               {% for cell in row.cells %}
-                <td>
+                <td class="num">
                   {{- cell.share -}}
                   {%- if cell.moe is not none -%}
                     {{ " " }}<small>{{ "±%.1f" | format(cell.moe) }}</small>
@@ -67,7 +67,7 @@
               {% endif %}
               {% for cell in n_cells %}
                 {% set value = cell[attribute] %}
-                <td>
+                <td class="num">
                   {{- value if value is not none else "-" -}}
                   {%- if attribute == "source" and cell.split_from_macro -%}
                     {{ " (split)" }}
@@ -83,7 +83,7 @@
                 <td></td>
               {% endif %}
               {% for cell in effective_cells %}
-                <td>
+                <td class="num">
                   {{- "×%g" | format(cell.kind_factor) if cell is not none else "-" -}}
                 </td>
               {% endfor %}
@@ -94,7 +94,7 @@
                 <td></td>
               {% endif %}
               {% for cell in effective_cells %}
-                <td>
+                <td class="num">
                   {%- if cell is not none -%}
                     {{ "%.0f" | format(cell.n_eff) }}
                     {%- if cell.capped %} (capped){% endif -%}

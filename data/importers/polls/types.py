@@ -13,7 +13,7 @@ class ScrapedPollRow(BaseModel):
     This is the shape the review queue works in: metadata scraped from an index
     page, enough to date a poll, name its pollster and find its source. Each
     scraper subclasses it with whatever extra columns its page carries, and the
-    queue service (``console/services/wikipedia_queue.py``) only ever reads the
+    queue service (``console/shared/wikipedia_queue.py``) only ever reads the
     fields declared here.
 
     Attributes:

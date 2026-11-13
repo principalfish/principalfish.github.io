@@ -2,32 +2,34 @@
 {% block container_class %} container-wide{% endblock %}
 {% block content %}
   <section class="card">
-    <h2>All Polls</h2>
+    <h2>{{ title }}</h2>
     <p>
       n is the respondent count behind the national shares: the captured base
       (<code>base:&lt;kind&gt;</code>; <code>(weighted)</code> marks a pollster
       that prints only a weighted base, used as n), else the sample size.
       <a href="{{ url_for('polls.poll_coverage') }}">Base coverage by pollster</a>
     </p>
-    {% if config is not none %}
-      {% set ref_pct = "%g" | format(config.p_ref * 100) %}
-      <p>
-        Westminster polls also show n_eff, the effective sample size behind the
-        national shares (n &times; its kind adjustment &divide; design effect
-        {{ "%g" | format(config.design_effect) }}, capped at
-        {{ "%g" | format(config.n_eff_cap) }}), and the
-        {{ "%g" | format(config.interval * 100) }}% margin of error at that n_eff
-        for a party on {{ ref_pct }}%. Each share's own margin is on the poll's
-        page.
-      </p>
-    {% else %}
-      <p class="alert">
-        Westminster n_eff and margins of error are hidden: the uncertainty
-        settings are invalid ({{ config_error }}).
-      </p>
+    {% if show_n_eff %}
+      {% if config is not none %}
+        {% set ref_pct = "%g" | format(config.p_ref * 100) %}
+        <p>
+          Westminster polls also show n_eff, the effective sample size behind the
+          national shares (n &times; its kind adjustment &divide; design effect
+          {{ "%g" | format(config.design_effect) }}, capped at
+          {{ "%g" | format(config.n_eff_cap) }}), and the
+          {{ "%g" | format(config.interval * 100) }}% margin of error at that n_eff
+          for a party on {{ ref_pct }}%. Each share's own margin is on the poll's
+          page.
+        </p>
+      {% else %}
+        <p class="alert">
+          Westminster n_eff and margins of error are hidden: the uncertainty
+          settings are invalid ({{ config_error }}).
+        </p>
+      {% endif %}
     {% endif %}
     {% if not polls %}
-      <p>No polls have been imported yet.</p>
+      <p>No {{ section.label ~ " " if section else "" }}polls have been imported yet.</p>
     {% else %}
       <div class="table-wrap">
         <table>
@@ -36,14 +38,16 @@
               <th>Poll</th>
               <th>Pollster</th>
               <th>Fieldwork</th>
-              <th>Sample</th>
+              <th class="num">Sample</th>
               <th>Source URL</th>
-              <th>Rows</th>
-              <th scope="col">n</th>
+              <th class="num">Rows</th>
+              <th class="num" scope="col">n</th>
               <th scope="col">n source</th>
-              <th scope="col">Weighted n</th>
-              <th scope="col">n_eff</th>
-              <th scope="col">{% if config is not none %}MoE at {{ ref_pct }}%{% else %}MoE{% endif %}</th>
+              <th class="num" scope="col">Weighted n</th>
+              {% if show_n_eff %}
+                <th class="num" scope="col">n_eff</th>
+                <th class="num" scope="col">{% if config is not none %}MoE at {{ ref_pct }}%{% else %}MoE{% endif %}</th>
+              {% endif %}
               <th>Actions</th>
             </tr>
           </thead>
@@ -53,7 +57,7 @@
                 <td><a href="{{ url_for('polls.poll_detail', poll_id=poll.poll_id) }}">#{{ poll.poll_id }}</a></td>
                 <td>{{ poll.pollster_name }} ({{ poll.pollster_identifier }})</td>
                 <td>{{ poll.fieldwork_start }} to {{ poll.fieldwork_end }}</td>
-                <td>{{ poll.sample_size }}</td>
+                <td class="num">{{ poll.sample_size }}</td>
                 <td>
                   {% if poll.source_url %}
                     <a href="{{ poll.source_url }}" target="_blank" rel="noopener">Source</a>
@@ -61,23 +65,27 @@
                     -
                   {% endif %}
                 </td>
-                <td>{{ poll.row_count }}</td>
-                <td>{{ poll.n if poll.n is not none else "-" }}</td>
+                <td class="num">{{ poll.row_count }}</td>
+                <td class="num">{{ poll.n if poll.n is not none else "-" }}</td>
                 <td>{{ poll.n_source or "-" }}</td>
-                <td>{{ poll.weighted_n if poll.weighted_n is not none else "-" }}</td>
+                <td class="num">{{ poll.weighted_n if poll.weighted_n is not none else "-" }}</td>
+                {% if show_n_eff %}
+                  <td class="num">
+                    {%- if poll.effective is not none -%}
+                      {{ "%.0f" | format(poll.effective.n_eff) }}
+                      {%- if poll.effective.capped %} (capped){% endif -%}
+                    {%- else -%}
+                      -
+                    {%- endif -%}
+                  </td>
+                  <td class="num">
+                    {{- "±%.1f" | format(poll.moe) if poll.moe is not none else "-" -}}
+                  </td>
+                {% endif %}
                 <td>
-                  {%- if poll.effective is not none -%}
-                    {{ "%.0f" | format(poll.effective.n_eff) }}
-                    {%- if poll.effective.capped %} (capped){% endif -%}
-                  {%- else -%}
-                    -
-                  {%- endif -%}
-                </td>
-                <td>
-                  {{- "±%.1f" | format(poll.moe) if poll.moe is not none else "-" -}}
-                </td>
-                <td>
-                  <form method="post" action="{{ url_for('polls.delete_poll', poll_id=poll.poll_id) }}" class="inline-form">
+                  <form method="post" action="{{ url_for('polls.delete_poll', poll_id=poll.poll_id) }}" class="inline-form"
+                        onsubmit="return confirm({{ ('Delete poll #' ~ poll.poll_id ~ ' by ' ~ poll.pollster_name ~ ' (fieldwork ' ~ poll.fieldwork_start ~ ' to ' ~ poll.fieldwork_end ~ ') and its ' ~ poll.row_count ~ ' poll rows? This can\'t be undone from the console.') | tojson | forceescape }});">
+                    {% if section %}<input type="hidden" name="next_section" value="{{ section.slug }}">{% endif %}
                     <button type="submit" class="button button-danger">Delete</button>
                   </form>
                 </td>

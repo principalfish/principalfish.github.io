@@ -25,16 +25,17 @@ from pathlib import Path
 import pytest
 from flask import Flask
 
+from console.sections import SECTIONS, SECTIONS_BY_SLUG, Section
 from core.db import Database
 from core.schema import PollBase
-from tests.console_fixtures import app, flashes as _flashes
+from tests.console_fixtures import app, flashes as _flashes, seeded_app  # noqa: F401
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 
 
 @pytest.fixture(autouse=True)
 def _use_temp_db(db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
     """Route every test's ``get_db`` to the shared temp-DB fixture."""
-    monkeypatch.setattr("console.blueprints.polls.get_db", lambda: db)
+    monkeypatch.setattr("console.polls.views.get_db", lambda: db)
 
 
 @pytest.fixture(autouse=True)
@@ -62,7 +63,7 @@ def _table_rows(body: str) -> list[list[str]]:
     tbody_match = re.search(r"<tbody>(.*?)</tbody>", body, re.DOTALL)
     assert tbody_match is not None, "no <tbody> in body"
     return [
-        re.findall(r"<td>(.*?)</td>", row_html, re.DOTALL)
+        re.findall(r"<td(?: [^>]*)?>(.*?)</td>", row_html, re.DOTALL)
         for row_html in re.findall(r"<tr>(.*?)</tr>", tbody_match.group(1), re.DOTALL)
     ]
 
@@ -488,6 +489,313 @@ class TestDeletePoll:
         assert _flashes(client, response) == ["Poll #99999 not found."]
 
 
+def _seed_section_polls(db: Database, westminster_map_id: int) -> dict[str, int]:
+    """Add one poll per section, each on a map of that section's parliament.
+
+    Returns:
+        Section slug to the id of its poll.
+    """
+    map_ids = {"westminster": westminster_map_id}
+    for section in SECTIONS:
+        if section.slug not in map_ids:
+            map_ids[section.slug] = db.add_map(
+                f"{section.label} map", parliament=section.parliament
+            ).id
+    return {
+        slug: add_poll_with_rows(
+            db,
+            map_id=map_id,
+            pollster_identifier=f"{slug}_pollster",
+            fieldwork_end=date(2026, 3, 1),
+            national={},
+        ).id
+        for slug, map_id in map_ids.items()
+    }
+
+
+def _listed_poll_ids(body: str) -> list[int]:
+    """The poll ids in a poll list's first column, in display order."""
+    return [int(row[0].split("#")[1].split("<")[0]) for row in _table_rows(body)]
+
+
+class TestSectionPollList:
+    """GET /<section>/polls lists only that section's polls."""
+
+    @pytest.mark.parametrize("section", SECTIONS, ids=lambda s: s.slug)
+    def test_lists_only_its_own_polls(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        section: Section,
+    ) -> None:
+        ids = _seed_section_polls(db, westminster_world.map_id)
+
+        response = app.test_client().get(f"/{section.slug}/polls")
+
+        assert response.status_code == 200
+        body = response.get_data(as_text=True)
+        assert f"<h2>{section.label} polls</h2>" in body
+        assert _listed_poll_ids(body) == [ids[section.slug]]
+
+    def test_all_polls_still_lists_every_section(
+        self, app: Flask, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        ids = _seed_section_polls(db, westminster_world.map_id)
+
+        body = app.test_client().get("/polls").get_data(as_text=True)
+
+        assert "<h2>All Polls</h2>" in body
+        assert sorted(_listed_poll_ids(body)) == sorted(ids.values())
+
+    def test_same_columns_and_numbers_as_all_polls(
+        self, app: Flask, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        poll = add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="columns_pollster",
+            fieldwork_end=date(2026, 4, 1),
+            national={world.party_ids["Labour"]: 40.0},
+            sample_size=1500,
+        )
+        client = app.test_client()
+
+        everything = client.get("/polls").get_data(as_text=True)
+        section = client.get("/westminster/polls").get_data(as_text=True)
+
+        assert _table_headers(section) == _table_headers(everything)
+        # Everything but the Actions cell, whose form names the section.
+        assert [row[:-1] for row in _table_rows(section)] == [
+            row[:-1] for row in _table_rows(everything)
+        ]
+        assert _listed_poll_ids(section) == [poll.id]
+        n_eff = _table_rows(section)[0][9]
+        assert n_eff != "-"
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/polls",
+            *(f"/{section.slug}/polls" for section in SECTIONS),
+        ],
+    )
+    def test_n_eff_and_margins_only_on_westminster_lists_and_all_polls(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        config_path: Path,
+        path: str,
+    ) -> None:
+        _seed_section_polls(db, westminster_world.map_id)
+        westminster = path in ("/polls", "/westminster/polls")
+
+        body = app.test_client().get(path).get_data(as_text=True)
+
+        headers = _table_headers(body)
+        text = " ".join(body.split())
+        assert ("n_eff" in headers) is westminster
+        assert any(h.startswith("MoE") for h in headers) is westminster
+        assert ("Westminster polls also show n_eff" in text) is westminster
+        # n and its source stay on every list.
+        assert {"n", "n source", "Weighted n"} <= set(headers)
+        assert "the captured base" in text
+        for row in _table_rows(body):
+            assert len(row) == len(headers)
+            assert row[headers.index("n source")] == "sample_size"
+            assert row[headers.index("n")] == "1000"
+
+    @pytest.mark.parametrize("section", SECTIONS, ids=lambda s: s.slug)
+    def test_invalid_settings_alert_only_where_n_eff_is_shown(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        config_path: Path,
+        section: Section,
+    ) -> None:
+        config_path.write_text('{"design_effect": 0}', encoding="utf-8")
+        _seed_section_polls(db, westminster_world.map_id)
+        client = app.test_client()
+
+        listing = client.get(f"/{section.slug}/polls").get_data(as_text=True)
+        everything = client.get("/polls").get_data(as_text=True)
+
+        message = "the uncertainty settings are invalid"
+        assert message in " ".join(everything.split())
+        shown = " ".join(listing.split())
+        assert (message in shown) is (section.slug == "westminster")
+
+    def test_empty_section_names_itself(self, app: Flask, db: Database) -> None:
+        body = app.test_client().get("/senate/polls").get_data(as_text=True)
+
+        assert "No US Senate polls have been imported yet." in body
+        assert "<table>" not in body
+
+    def test_delete_forms_carry_the_section(
+        self, app: Flask, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        ids = _seed_section_polls(db, westminster_world.map_id)
+        client = app.test_client()
+
+        holyrood = client.get("/holyrood/polls").get_data(as_text=True)
+        everything = client.get("/polls").get_data(as_text=True)
+
+        assert f'action="/polls/{ids["holyrood"]}/delete"' in holyrood
+        assert '<input type="hidden" name="next_section" value="holyrood">' in holyrood
+        assert "next_section" not in everything
+
+    def test_unknown_section_is_not_found(self, app: Flask) -> None:
+        client = app.test_client()
+
+        assert client.get("/nope/polls").status_code == 404
+        assert client.get("/admin/polls").status_code == 404
+
+    def test_the_closed_converter_list_is_the_registry(self, app: Flask) -> None:
+        rules = [
+            r
+            for r in app.url_map.iter_rules()
+            if r.endpoint == "polls.section_poll_list"
+        ]
+
+        assert len(rules) == 1
+        match = re.fullmatch(r"/<any\((.*)\):section>/polls", rules[0].rule)
+        assert match is not None
+        assert match.group(1).split(",") == list(SECTIONS_BY_SLUG)
+
+    @pytest.mark.parametrize(
+        ("path", "endpoint"),
+        [
+            ("/westminster/polls", "polls.section_poll_list"),
+            ("/westminster/polls/import", "poll_import.import_poll_form"),
+            ("/westminster/polls/coverage", "polls.poll_coverage"),
+            ("/holyrood/polls", "polls.section_poll_list"),
+            ("/polls", "polls.poll_list"),
+        ],
+    )
+    def test_no_rule_collides_with_the_neighbouring_poll_paths(
+        self, app: Flask, path: str, endpoint: str
+    ) -> None:
+        adapter = app.url_map.bind("localhost")
+
+        assert adapter.match(path, method="GET")[0] == endpoint
+
+    def test_each_section_slug_matches_with_its_section_argument(
+        self, app: Flask
+    ) -> None:
+        adapter = app.url_map.bind("localhost")
+        for section in SECTIONS:
+            assert adapter.match(f"/{section.slug}/polls") == (
+                "polls.section_poll_list",
+                {"section": section.slug},
+            )
+
+    def test_url_for_needs_the_section(self, app: Flask) -> None:
+        from flask import url_for
+        from werkzeug.routing.exceptions import BuildError
+
+        with app.test_request_context():
+            assert url_for("polls.section_poll_list", section="house") == "/house/polls"
+            with pytest.raises(BuildError):
+                url_for("polls.section_poll_list")
+
+
+class TestSectionPollDelete:
+    """Deleting from a section's list returns to that list."""
+
+    def test_returns_to_the_sections_list(
+        self, app: Flask, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        ids = _seed_section_polls(db, westminster_world.map_id)
+        client = app.test_client()
+
+        response = client.post(
+            f"/polls/{ids['senate']}/delete", data={"next_section": "senate"}
+        )
+
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith("/senate/polls")
+        assert _flashes(client, response) == [
+            f"Deleted poll #{ids['senate']} and 0 poll rows."
+        ]
+        assert db.get_poll(ids["senate"]) is None
+        assert db.get_poll(ids["house"]) is not None
+
+    def test_a_missing_poll_also_returns_to_the_sections_list(
+        self, app: Flask, db: Database
+    ) -> None:
+        client = app.test_client()
+
+        response = client.post("/polls/99999/delete", data={"next_section": "house"})
+
+        assert response.headers["Location"].endswith("/house/polls")
+        assert _flashes(client, response) == ["Poll #99999 not found."]
+
+    @pytest.mark.parametrize(
+        "value",
+        ["", "nope", "House", "admin", "https://evil.example/", "//evil.example", "/x"],
+    )
+    def test_an_unknown_next_section_falls_back_to_all_polls(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        value: str,
+    ) -> None:
+        ids = _seed_section_polls(db, westminster_world.map_id)
+
+        response = app.test_client().post(
+            f"/polls/{ids['house']}/delete", data={"next_section": value}
+        )
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/polls"
+        assert db.get_poll(ids["house"]) is None
+
+    def test_the_delete_buttons_form_round_trips_through_the_page(
+        self, app: Flask, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        ids = _seed_section_polls(db, westminster_world.map_id)
+        client = app.test_client()
+        body = client.get("/holyrood/polls").get_data(as_text=True)
+        section = re.search(r'name="next_section" value="([^"]*)"', body)
+        assert section is not None
+
+        response = client.post(
+            f"/polls/{ids['holyrood']}/delete", data={"next_section": section.group(1)}
+        )
+
+        assert response.headers["Location"].endswith("/holyrood/polls")
+
+
+class TestSectionPollsNav:
+    """Every section's nav leads with a Polls link that resolves."""
+
+    @pytest.mark.parametrize("section", SECTIONS, ids=lambda s: s.slug)
+    def test_polls_is_the_first_link_and_resolves(
+        self,
+        seeded_app: Flask,  # noqa: F811
+        section: Section,
+    ) -> None:
+        client = seeded_app.test_client()
+
+        landing = client.get(f"/{section.slug}").get_data(as_text=True)
+        subnav = landing[landing.index('class="subnav"') :]
+
+        assert f'href="/{section.slug}/polls"' in landing
+        first_link = re.search(r"<a [^>]*>(.*?)</a>", subnav)
+        assert first_link is not None and first_link.group(1) == "Polls"
+        page = client.get(f"/{section.slug}/polls")
+        assert page.status_code == 200
+        body = page.get_data(as_text=True)
+        subnav = body[body.index('class="subnav"') :]
+        subnav = subnav[: subnav.index("</nav>")]
+        marked = re.findall(r'class="active" aria-current="page">(.*?)</a>', subnav)
+        assert marked == ["Polls"]
+
+
 class TestPollDetailCsv:
     """GET /polls/<id>/csv downloads the poll's rows as a CSV attachment."""
 
@@ -684,7 +992,7 @@ def _tfoot_rows(body: str) -> dict[str, list[str]]:
     for row_html in re.findall(r"<tr[^>]*>(.*?)</tr>", match.group(1), re.DOTALL):
         label = re.search(r'<th scope="row">(.*?)</th>', row_html, re.DOTALL)
         assert label is not None
-        cells = re.findall(r"<td>(.*?)</td>", row_html, re.DOTALL)
+        cells = re.findall(r"<td(?: [^>]*)?>(.*?)</td>", row_html, re.DOTALL)
         rows[html.unescape(label.group(1).strip())] = [
             html.unescape(cell.strip()) for cell in cells
         ]
@@ -756,7 +1064,7 @@ class TestPollListN:
             "968",
             "±2.4",
         ]
-        assert 'href="/polls/coverage"' in body
+        assert 'href="/westminster/polls/coverage"' in body
 
     def test_error_columns_only_for_westminster_polls(
         self, app: Flask, db: Database, westminster_world: WestminsterWorld
@@ -917,7 +1225,7 @@ class TestPollDetailN:
 
 
 class TestPollCoverage:
-    """GET /polls/coverage summarises captured bases per pollster."""
+    """GET /westminster/polls/coverage summarises captured bases per pollster."""
 
     def test_counts_per_pollster(
         self, app: Flask, db: Database, westminster_world: WestminsterWorld
@@ -939,7 +1247,9 @@ class TestPollCoverage:
         _add_base(db, based.id, 2310)
         _add_base(db, based.id, 241, region_id=london)
 
-        body = app.test_client().get("/polls/coverage").get_data(as_text=True)
+        body = (
+            app.test_client().get("/westminster/polls/coverage").get_data(as_text=True)
+        )
 
         assert _table_headers(body) == [
             "Pollster", "Polls", "With national base", "National %", "Crossbreaks",
@@ -951,7 +1261,9 @@ class TestPollCoverage:
     def test_no_westminster_map_shows_empty_message(
         self, app: Flask, db: Database
     ) -> None:
-        body = app.test_client().get("/polls/coverage").get_data(as_text=True)
+        body = (
+            app.test_client().get("/westminster/polls/coverage").get_data(as_text=True)
+        )
 
         assert "No polls on this map." in body
 

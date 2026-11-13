@@ -2,6 +2,7 @@
 {% block content %}
   <section class="card">
     <h2>Westminster Uncertainty</h2>
+    {% include "_uncertainty_nav.html" %}
     <p>
       Diagnostics for the polling-error model behind the projection's ranges
       and odds.
@@ -38,22 +39,22 @@
       {% if preview.basis %}
         <p>Basis label: <q class="uncertainty-export-basis">{{ preview.basis }}</q></p>
       {% endif %}
-      <table>
+      <div class="table-wrap"><table>
         <thead>
-          <tr><th scope="col">File</th><th scope="col">Size</th><th scope="col">Contents</th></tr>
+          <tr><th scope="col">File</th><th class="num" scope="col">Size</th><th scope="col">Contents</th></tr>
         </thead>
         <tbody>
           {% for file in preview.files %}
             <tr>
               <td><code>{{ file.name }}</code></td>
-              <td>{% if file.size is none %}-{% else %}{{ "{:,}".format(file.size) }} bytes{% endif %}</td>
+              <td class="num">{% if file.size is none %}-{% else %}{{ "{:,}".format(file.size) }} bytes{% endif %}</td>
               <td>
                 {% for line in file.details %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
               </td>
             </tr>
           {% endfor %}
         </tbody>
-      </table>
+      </table></div>
       {% if preview.withheld %}
         <p>Never published (stored for the console only):</p>
         <ul class="uncertainty-export-withheld">

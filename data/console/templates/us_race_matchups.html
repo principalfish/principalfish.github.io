@@ -63,8 +63,9 @@
                   {% endif %}
                 </td>
                 <td>
-                  <form method="post" action="{{ url_for('us.set_race_matchup', map_id=map_id, seat_id=race.seat_id) }}"
-                        class="inline-form">
+                  <form method="post" action="{{ url_for('us.set_race_matchup', chamber=chamber.slug, map_id=map_id, seat_id=race.seat_id) }}"
+                        class="inline-form"
+                        onsubmit="return !this.rebuild_history.checked || confirm({{ ('Rebuild ' ~ chamber.label ~ ' history? This re-runs the ' ~ chamber.label ~ ' model over its whole trend history, then the export. It takes a long time and can\'t be undone from the console.') | tojson | forceescape }});">
                     {% if race.labels %}
                       <select name="matchup" aria-label="Matchup for {{ race.seat_name }}">
                         {% for summary in race.labels %}

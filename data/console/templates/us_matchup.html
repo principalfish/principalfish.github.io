@@ -19,7 +19,8 @@
       {% endif %}
     </p>
 
-    <form method="post" action="{{ url_for('us.president_matchup') }}" class="form">
+    <form method="post" action="{{ url_for('us.president_matchup') }}" class="form"
+          onsubmit="return !this.rebuild_history.checked || confirm({{ 'Rebuild US President history? This re-runs the US President model over its whole trend history, then the export. It takes a long time and can\'t be undone from the console.' | tojson | forceescape }});">
       <fieldset>
         <legend>Matchup</legend>
         {% for summary in summaries %}
@@ -54,7 +55,7 @@
     <div class="actions">
       <a class="button" href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate race matchups</a>
       <a class="button" href="{{ url_for('us.race_matchups', chamber='house') }}">House race matchups</a>
-      <a class="button" href="{{ url_for('us_poll_import.import_form') }}">Import US Polls</a>
+      <a class="button" href="{{ url_for('us_poll_import.import_form', chamber='president') }}">Auto import President polls</a>
     </div>
   </section>
 {% endblock %}

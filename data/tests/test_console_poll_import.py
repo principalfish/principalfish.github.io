@@ -35,13 +35,13 @@ from flask import Flask, Response
 from flask.testing import FlaskClient
 from openpyxl import Workbook
 
-from console.blueprints.poll_import import _run_model_and_export
 from console.paths import (
     EXPORT_ELECTION_SCRIPT,
     PREDICTION_SIMULATION_OUTPUT,
     UNS_MODEL_SCRIPT,
 )
-from console.services.preview import PREVIEW_CACHE, store_preview
+from console.shared.preview import PREVIEW_CACHE, store_preview
+from console.westminster.poll_import import _run_model_and_export
 from core.db import Database
 from importers.polls.types import PollImportResult
 from importers.polls.westminster import survation_import
@@ -52,6 +52,7 @@ from tests.console_fixtures import (
     forbid_call,
     select_block,
 )
+from tests.job_fixtures import job_holding_the_slot
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows, build_workbook
 
 # One national figure per canonical party _parse_party_region_percentages
@@ -79,7 +80,7 @@ _SURVATION_PLANNED_ROW_COUNT = 104
 
 _DEFAULT_SOURCE_URL = "https://example.test/2026/01/witness-survation.xlsx"
 
-_TOKEN_RE = re.compile(r'action="/import/confirm/([0-9a-f]{32})"')
+_TOKEN_RE = re.compile(r'action="/westminster/polls/import/confirm/([0-9a-f]{32})"')
 _OPTION_RE = re.compile(r'<option value="([^"]*)">([^<]*)</option>')
 
 
@@ -87,14 +88,14 @@ _OPTION_RE = re.compile(r'<option value="([^"]*)">([^<]*)</option>')
 def _use_temp_db(db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
     """Route every test's ``get_db`` to the shared temp-DB fixture.
 
-    Also patches ``console.blueprints.polls.get_db``: a successful confirm
+    Also patches ``console.polls.views.get_db``: a successful confirm
     redirects to ``polls.poll_detail``, and ``_flashes`` follows that
     redirect to read the rendered flash messages, so that route's own
     ``get_db`` must resolve to the same temp database too, or it 500s
     against the unrelated (schema-less) default-guard database instead.
     """
-    monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
-    monkeypatch.setattr("console.blueprints.polls.get_db", lambda: db)
+    monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
+    monkeypatch.setattr("console.polls.views.get_db", lambda: db)
 
 
 @pytest.fixture(autouse=True)
@@ -106,7 +107,7 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     itself) fails here instead of running the real UNS model / export.
     """
     forbid_call(
-        monkeypatch, "console.blueprints.poll_import.run_command", "recording_runner"
+        monkeypatch, "console.westminster.poll_import.run_command", "recording_runner"
     )
 
 
@@ -114,7 +115,7 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
 def recording_runner(monkeypatch: pytest.MonkeyPatch) -> RecordingRunner:
     """Replace the poll_import blueprint's subprocess runner with a recorder."""
     runner = RecordingRunner()
-    monkeypatch.setattr("console.blueprints.poll_import.run_command", runner)
+    monkeypatch.setattr("console.westminster.poll_import.run_command", runner)
     return runner
 
 
@@ -189,7 +190,7 @@ def _preview_token(
         survation_import, "extract_workbook", lambda _url: _survation_workbook()
     )
     response = client.post(
-        "/import/preview",
+        "/westminster/polls/import/preview",
         data={"pollster_identifier": "survation", "source_url": source_url},
     )
     assert response.status_code == 200
@@ -226,10 +227,10 @@ def _poll_id_from_redirect(location: str) -> int:
 
 
 class TestImportPollForm:
-    """GET /import lists the configured pollster importers."""
+    """GET /westminster/polls/import lists the configured pollster importers."""
 
     def test_lists_configured_importers(self, app: Flask, db: Database) -> None:
-        response = app.test_client().get("/import")
+        response = app.test_client().get("/westminster/polls/import")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -251,7 +252,7 @@ class TestImportPollForm:
 
 
 class TestImportPollPreview:
-    """POST /import/preview builds and caches an import plan."""
+    """POST /westminster/polls/import/preview builds and caches an import plan."""
 
     @pytest.mark.parametrize(
         "form",
@@ -266,17 +267,17 @@ class TestImportPollPreview:
     ) -> None:
         client = app.test_client()
 
-        response = client.post("/import/preview", data=form)
+        response = client.post("/westminster/polls/import/preview", data=form)
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
         assert _flashes(client, response) == ["Pollster and URL are required."]
 
     def test_unknown_pollster_flashes_message(self, app: Flask, db: Database) -> None:
         client = app.test_client()
 
         response = client.post(
-            "/import/preview",
+            "/westminster/polls/import/preview",
             data={
                 "pollster_identifier": "not_a_real_pollster",
                 "source_url": "https://example.test/poll.xlsx",
@@ -284,7 +285,7 @@ class TestImportPollPreview:
         )
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
         assert _flashes(client, response) == [
             "No importer is configured for pollster 'not_a_real_pollster'."
         ]
@@ -303,7 +304,7 @@ class TestImportPollPreview:
         client = app.test_client()
 
         response = client.post(
-            "/import/preview",
+            "/westminster/polls/import/preview",
             data={
                 "pollster_identifier": "survation",
                 "source_url": "https://example.test/poll.xlsx",
@@ -311,7 +312,7 @@ class TestImportPollPreview:
         )
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
         assert _flashes(client, response) == [
             "Import preview failed: workbook is corrupt"
         ]
@@ -335,7 +336,7 @@ class TestImportPollPreview:
         client = app.test_client()
 
         response = client.post(
-            "/import/preview",
+            "/westminster/polls/import/preview",
             data={
                 "pollster_identifier": "survation",
                 "source_url": _DEFAULT_SOURCE_URL,
@@ -376,7 +377,7 @@ class TestImportPreviewBases:
         monkeypatch.setattr(survation_import, "extract_workbook", lambda _url: workbook)
 
         response = app.test_client().post(
-            "/import/preview",
+            "/westminster/polls/import/preview",
             data={
                 "pollster_identifier": "survation",
                 "source_url": _DEFAULT_SOURCE_URL,
@@ -387,7 +388,7 @@ class TestImportPreviewBases:
         assert "<h3>Respondent Bases</h3>" in body
         section = body.split("<h3>Respondent Bases</h3>", 1)[1]
         cells = [
-            re.findall(r"<td>(.*?)</td>", row, re.DOTALL)
+            re.findall(r"<td(?: [^>]*)?>(.*?)</td>", row, re.DOTALL)
             for row in re.findall(
                 r"<tr>(.*?)</tr>", section.split("</tbody>", 1)[0], re.DOTALL
             )
@@ -412,7 +413,7 @@ class TestImportPreviewBases:
         monkeypatch.setattr(survation_import, "extract_workbook", lambda _url: workbook)
         client = app.test_client()
         preview = client.post(
-            "/import/preview",
+            "/westminster/polls/import/preview",
             data={
                 "pollster_identifier": "survation",
                 "source_url": _DEFAULT_SOURCE_URL,
@@ -420,7 +421,7 @@ class TestImportPreviewBases:
         )
         token = _extract_token(preview.get_data(as_text=True))
 
-        response = client.post(f"/import/confirm/{token}", data={})
+        response = client.post(f"/westminster/polls/import/confirm/{token}", data={})
 
         poll_id = _poll_id_from_redirect(response.headers["Location"])
         assert _flashes(client, response) == [
@@ -441,7 +442,7 @@ class TestImportPreviewBases:
         )
 
         response = client.post(
-            "/import/preview",
+            "/westminster/polls/import/preview",
             data={
                 "pollster_identifier": "survation",
                 "source_url": _DEFAULT_SOURCE_URL,
@@ -452,15 +453,17 @@ class TestImportPreviewBases:
 
 
 class TestImportPollConfirm:
-    """POST /import/confirm/<token> commits a previewed plan to the database."""
+    """POST /westminster/polls/import/confirm/<token> commits a previewed plan."""
 
     def test_unknown_token_flashes_expired(self, app: Flask, db: Database) -> None:
         client = app.test_client()
 
-        response = client.post("/import/confirm/not-a-real-token", data={})
+        response = client.post(
+            "/westminster/polls/import/confirm/not-a-real-token", data={}
+        )
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
         assert _flashes(client, response) == [
             "Preview expired. Please preview again."
         ]
@@ -473,10 +476,10 @@ class TestImportPollConfirm:
         token = store_preview({"type": "wikipedia_queue", "state": object()})
         client = app.test_client()
 
-        response = client.post(f"/import/confirm/{token}", data={})
+        response = client.post(f"/westminster/polls/import/confirm/{token}", data={})
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
         assert _flashes(client, response) == [
             "Preview expired. Please preview again."
         ]
@@ -496,10 +499,10 @@ class TestImportPollConfirm:
 
         monkeypatch.setattr(survation_import, "commit_import_plan", _raise_commit)
 
-        response = client.post(f"/import/confirm/{token}", data={})
+        response = client.post(f"/westminster/polls/import/confirm/{token}", data={})
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
         assert _flashes(client, response) == ["Import commit failed: db is locked"]
 
     def test_skipped_existing_rows_flashes_message(
@@ -527,7 +530,7 @@ class TestImportPollConfirm:
         token = _preview_token(client, monkeypatch)
 
         response = client.post(
-            f"/import/confirm/{token}", data={"run_model": "on"}
+            f"/westminster/polls/import/confirm/{token}", data={"run_model": "on"}
         )
 
         assert response.status_code == 302
@@ -560,7 +563,7 @@ class TestImportPollConfirm:
         token = _preview_token(client, monkeypatch)
 
         response = client.post(
-            f"/import/confirm/{token}", data={"replace_rows": "on"}
+            f"/westminster/polls/import/confirm/{token}", data={"replace_rows": "on"}
         )
 
         assert response.status_code == 302
@@ -591,7 +594,7 @@ class TestImportPollConfirm:
         client = app.test_client()
         token = _preview_token(client, monkeypatch)
 
-        response = client.post(f"/import/confirm/{token}", data={})
+        response = client.post(f"/westminster/polls/import/confirm/{token}", data={})
 
         assert response.status_code == 302
         poll_id = _poll_id_from_redirect(response.headers["Location"])
@@ -611,10 +614,10 @@ class TestImportPollConfirm:
         assert poll.fieldwork_end == _SURVATION_FIELDWORK_END
         assert poll.sample_size == _SURVATION_SAMPLE_SIZE
 
-        repeated = client.post(f"/import/confirm/{token}", data={})
+        repeated = client.post(f"/westminster/polls/import/confirm/{token}", data={})
 
         assert repeated.status_code == 302
-        assert repeated.headers["Location"].endswith("/import")
+        assert repeated.headers["Location"].endswith("/westminster/polls/import")
         assert _flashes(client, repeated) == [
             "Preview expired. Please preview again."
         ]
@@ -632,7 +635,7 @@ class TestImportPollConfirm:
         token = _preview_token(client, monkeypatch)
 
         response = client.post(
-            f"/import/confirm/{token}", data={"run_model": "on"}
+            f"/westminster/polls/import/confirm/{token}", data={"run_model": "on"}
         )
 
         assert response.status_code == 302
@@ -654,6 +657,32 @@ class TestImportPollConfirm:
             "UNS model updated.",
             "Prediction simulation exported.",
         ]
+
+    def test_run_model_while_a_job_runs_keeps_the_import_and_skips_the_model(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+        recording_runner: RecordingRunner,
+    ) -> None:
+        client = app.test_client()
+        token = _preview_token(client, monkeypatch)
+
+        with job_holding_the_slot() as job:
+            response = client.post(
+                f"/westminster/polls/import/confirm/{token}",
+                data={"run_model": "on"},
+            )
+            body = client.get(response.headers["Location"]).get_data(as_text=True)
+
+        assert response.status_code == 302
+        poll_id = _poll_id_from_redirect(response.headers["Location"])
+        assert len(db.get_rows_for_poll(poll_id)) == _SURVATION_PLANNED_ROW_COUNT
+        assert recording_runner.calls == []
+        assert "UNS model not run: another" in body
+        assert f'href="/runs/{job.id}"' in body
+        assert "UNS model updated." not in body
 
     @pytest.mark.parametrize(
         "failed_script", [UNS_MODEL_SCRIPT, EXPORT_ELECTION_SCRIPT]
@@ -683,7 +712,7 @@ class TestImportPollConfirm:
         )
         cmd = list(expected_commands[-1])
         runner = RecordingRunner(return_codes={failed_script.name: 1})
-        monkeypatch.setattr("console.blueprints.poll_import.run_command", runner)
+        monkeypatch.setattr("console.westminster.poll_import.run_command", runner)
 
         # Derive the exact warning text from a real CalledProcessError built
         # the same way check_returncode() would, rather than hand-formatting
@@ -699,7 +728,7 @@ class TestImportPollConfirm:
             expected_detail = str(exc)
 
         response = client.post(
-            f"/import/confirm/{token}", data={"run_model": "on"}
+            f"/westminster/polls/import/confirm/{token}", data={"run_model": "on"}
         )
 
         assert response.status_code == 302
@@ -755,7 +784,7 @@ class TestImportPollConfirm:
         monkeypatch.setattr(survation_import, "commit_import_plan", _fake_commit)
 
         response = client.post(
-            f"/import/confirm/{token}", data={"run_model": "on"}
+            f"/westminster/polls/import/confirm/{token}", data={"run_model": "on"}
         )
 
         assert response.status_code == 302
@@ -778,9 +807,9 @@ class TestRunModelAndExport:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         runner = RecordingRunner()
-        monkeypatch.setattr("console.blueprints.poll_import.run_command", runner)
+        monkeypatch.setattr("console.westminster.poll_import.run_command", runner)
         monkeypatch.setattr(
-            "console.blueprints.poll_import.EXPORT_ELECTION_SCRIPT",
+            "console.westminster.poll_import.EXPORT_ELECTION_SCRIPT",
             Path("/nonexistent/export_elections.py"),
         )
 

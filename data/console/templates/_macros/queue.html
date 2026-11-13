@@ -1,0 +1,120 @@
+{# Pieces shared by the poll-import queue pages and their end-of-run summaries
+   (Wikipedia catch-up and US poll import). The forms keep each page's own
+   endpoints: callers pass the URLs in. #}
+
+{# "<lead> · N imported · N failed · N skipped[ · N no importer]". #}
+{% macro progress_line(lead, progress, show_no_importer=false) %}
+<p>
+  {{ lead }}
+  · {{ progress.imported }} imported
+  · {{ progress.failed }} failed
+  · {{ progress.skipped }} skipped
+  {% if show_no_importer %}
+  · {{ progress.no_importer }} no importer
+  {% endif %}
+</p>
+{% endmacro %}
+
+{# The `<a>` to a source document, or "-" when the poll has none. #}
+{% macro source_link(url, text=none) %}
+{% if url %}
+<a href="{{ url }}" target="_blank" rel="noopener">{{ text or url }}</a>
+{% else %}
+-
+{% endif %}
+{% endmacro %}
+
+{# A single alert box for an error message. #}
+{% macro error_alert(message) %}
+<div class="alerts">
+  <div class="alert">{{ message }}</div>
+</div>
+{% endmacro %}
+
+{# The alert boxes for an item's warnings, when it has any. #}
+{% macro warning_alerts(warnings) %}
+{% if warnings %}
+<div class="alerts">
+  {% for warning in warnings %}
+    <div class="alert">{{ warning }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{# The card shown when the current poll failed to import: its error, a note on
+   what Retry does, and a Retry form posting to the skip endpoint with
+   action=retry. #}
+{% macro failed_card(item, retry_note, skip_url, expected_index) %}
+<section class="card">
+  <h3>This poll could not be imported</h3>
+  <pre class="terminal-output">{{ item.detail }}</pre>
+  <p>{{ retry_note }}</p>
+  <form method="post" action="{{ skip_url }}" class="inline-form">
+    <input type="hidden" name="expected_index" value="{{ expected_index }}" />
+    <input type="hidden" name="action" value="retry" />
+    <button type="submit" class="button primary">Retry</button>
+  </form>
+</section>
+{% endmacro %}
+
+{# "Skip this poll" form. #}
+{% macro skip_form(skip_url, expected_index) %}
+<form method="post" action="{{ skip_url }}" class="inline-form">
+  <input type="hidden" name="expected_index" value="{{ expected_index }}" />
+  <button type="submit" class="button">Skip this poll</button>
+</form>
+{% endmacro %}
+
+{# "Abandon queue" form: always a POST to the finish endpoint, behind a confirm
+   whose text the caller words (`confirm_message`). #}
+{% macro abandon_form(finish_url, confirm_message) %}
+<form method="post" action="{{ finish_url }}" class="inline-form"
+      onsubmit="return confirm({{ confirm_message | tojson | forceescape }});">
+  <input type="hidden" name="abandon" value="on" />
+  <button type="submit" class="button button-danger">Abandon queue</button>
+</form>
+{% endmacro %}
+
+{# The "Back to home" / second-button row closing a summary's heading card. #}
+{% macro summary_actions(second_url, second_label) %}
+<div class="actions">
+  <a class="button primary" href="{{ url_for('home.home') }}">Back to home</a>
+  <a class="button" href="{{ second_url }}">{{ second_label }}</a>
+</div>
+{% endmacro %}
+
+{# A summary card titled "<title> (<count>)": an optional note, then the
+   caller's content, or `empty_message` when there is nothing to show. #}
+{% macro outcome_section(title, count, empty_message, note=none) %}
+<section class="card">
+  <h3>{{ title }} ({{ count }})</h3>
+  {% if note %}
+    <p>{{ note }}</p>
+  {% endif %}
+  {% if count %}
+    {{ caller() }}
+  {% else %}
+    <p>{{ empty_message }}</p>
+  {% endif %}
+</section>
+{% endmacro %}
+
+{# A table with the given column headings whose body rows are the caller's.
+   `scope` adds scope="col" to each heading. #}
+{% macro data_table(headings, scope=false) %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        {% for heading in headings %}
+          <th{% if scope %} scope="col"{% endif %}>{{ heading }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {{ caller() }}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}

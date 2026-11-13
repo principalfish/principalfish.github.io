@@ -6,7 +6,7 @@ Three layers are covered here, bottom-up:
   HTML fixture below, which replicates the page's current markup (per-year
   ``<section>`` elements, a ``<div class="mw-heading">`` wrapper around the
   heading, and a reference list carrying both numeric and *named* ids).
-- ``console/services/wikipedia_queue.py`` — driven against the shared temp-DB
+- ``console/shared/wikipedia_queue.py`` — driven against the shared temp-DB
   fixture, with no Flask client.
 - The five catch-up routes on the ``poll_import`` blueprint — driven through the
   test client with a stub importer registered into a copy of ``IMPORTERS``.
@@ -19,6 +19,8 @@ script, so pointing the path somewhere harmless would still launch python).
 
 from __future__ import annotations
 
+import re
+import threading
 from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
 from datetime import date
@@ -28,12 +30,9 @@ import pytest
 from flask import Flask
 
 from console import create_app
-from console.blueprints.poll_import import (
-    WESTMINSTER_MAP_NAME,
-    WIKIPEDIA_PREVIEW_TYPE,
-)
-from console.services.preview import PREVIEW_CACHE, store_preview
-from console.services.wikipedia_queue import (
+from console.sections import WESTMINSTER_MAP_NAME
+from console.shared.preview import PREVIEW_CACHE, store_preview
+from console.shared.wikipedia_queue import (
     NO_CUTOFF,
     QUEUE_STATUSES,
     QueueItem,
@@ -51,6 +50,11 @@ from console.services.wikipedia_queue import (
     progress,
     summarise,
 )
+from console.us.models import model_run_slot
+from console.westminster.poll_import import (
+    WIKIPEDIA_PREVIEW_TYPE,
+)
+from core import backup
 from core.db import Database
 from importers.polls.types import PollImportResult, ScrapedPollRow
 from importers.polls.westminster.registry import IMPORTERS, ImporterMeta
@@ -61,6 +65,8 @@ from importers.polls.westminster.wikipedia_index import (
     fetch_poll_index,
     normalize_pollster_name,
 )
+from tests.console_fixtures import confirm_text, onsubmit_handlers
+from tests.job_fixtures import job_holding_the_slot
 
 # ── HTML fixture ──────────────────────────────────────────────────────────────
 # Mirrors the live page's shape: <section> per heading level, the heading itself
@@ -980,7 +986,7 @@ def _install_stub_importer(
         "module": stub,
         "url_arg": "pdf_url",
     }
-    monkeypatch.setattr("console.blueprints.poll_import.IMPORTERS", registry)
+    monkeypatch.setattr("console.westminster.poll_import.IMPORTERS", registry)
 
 
 def _queue_state(
@@ -1028,11 +1034,11 @@ class TestWikipediaRoutesRegistered:
         methods = {
             str(rule): rule.methods or set() for rule in app.url_map.iter_rules()
         }
-        assert "POST" in methods["/import/wikipedia/start"]
-        assert "GET" in methods["/import/wikipedia/<token>"]
-        assert "POST" in methods["/import/wikipedia/<token>/confirm"]
-        assert "POST" in methods["/import/wikipedia/<token>/skip"]
-        finish = methods["/import/wikipedia/<token>/finish"]
+        assert "POST" in methods["/westminster/polls/import/wikipedia/start"]
+        assert "GET" in methods["/westminster/polls/import/wikipedia/<token>"]
+        assert "POST" in methods["/westminster/polls/import/wikipedia/<token>/confirm"]
+        assert "POST" in methods["/westminster/polls/import/wikipedia/<token>/skip"]
+        finish = methods["/westminster/polls/import/wikipedia/<token>/finish"]
         assert {"GET", "POST"} <= finish
 
     def test_endpoints_exist(self, app: Flask) -> None:
@@ -1050,10 +1056,10 @@ class TestTokenGuard:
         self, app: Flask, method: str, suffix: str
     ) -> None:
         client = app.test_client()
-        path = f"/import/wikipedia/deadbeef{suffix}"
+        path = f"/westminster/polls/import/wikipedia/deadbeef{suffix}"
         response = client.open(path, method=method)
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
 
         body = client.open(path, method=method, follow_redirects=True).get_data(
             as_text=True
@@ -1066,10 +1072,10 @@ class TestTokenGuard:
     ) -> None:
         token = store_preview({"type": "by_election", "plan": object()})
         client = app.test_client()
-        path = f"/import/wikipedia/{token}{suffix}"
+        path = f"/westminster/polls/import/wikipedia/{token}{suffix}"
         response = client.open(path, method=method)
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
 
         body = client.open(path, method=method, follow_redirects=True).get_data(
             as_text=True
@@ -1084,14 +1090,16 @@ class TestQueueStep:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         stub = _StubImporter(_stub_plan(seeded["map_id"]))
         _install_stub_importer(monkeypatch, stub)
         state = _queue_state()
         token = _store(state)
 
-        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
         )
 
         assert stub.build_calls == 1
@@ -1100,13 +1108,64 @@ class TestQueueStep:
         assert "Labour" in body
         assert state.items[0].plan is not None
 
+    def test_the_skip_and_abandon_forms_post_to_their_routes(
+        self, app: Flask
+    ) -> None:
+        state = _queue_state()
+        _mark(state.items[0], "failed", detail="404 Not Found")
+        token = _store(state)
+
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
+        )
+
+        assert re.search(
+            rf'<form method="post" '
+            rf'action="/westminster/polls/import/wikipedia/{token}/skip"'
+            r' class="inline-form">\s*'
+            r'<input type="hidden" name="expected_index" value="0" />\s*'
+            r'<button type="submit" class="button">Skip this poll</button>\s*'
+            r"</form>",
+            body,
+        )
+        assert re.search(
+            rf'<form method="post" '
+            rf'action="/westminster/polls/import/wikipedia/{token}/finish"'
+            r' class="inline-form"\s+onsubmit="return confirm\([^"]*\);">\s*'
+            r'<input type="hidden" name="abandon" value="on" />\s*'
+            r'<button type="submit" class="button button-danger">Abandon queue'
+            r"</button>\s*</form>",
+            body,
+        )
+
+    def test_the_abandon_form_confirms_what_is_kept_and_what_is_not(
+        self, app: Flask
+    ) -> None:
+        token = _store(_queue_state())
+
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
+        )
+
+        [handler] = onsubmit_handlers(body)
+        assert handler.startswith("return confirm(")
+        assert confirm_text(handler) == (
+            "Abandon this queue? Polls already imported stay; the rest are not "
+            "imported and the model is not run. This can't be undone from the "
+            "console."
+        )
+
     def test_date_disagreement_raises_a_warning(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # The only proof of the mis-citation check: a document whose own dates
         # do not match the Wikipedia row that cited it.
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         stub = _StubImporter(
             _stub_plan(
                 seeded["map_id"],
@@ -1117,8 +1176,10 @@ class TestQueueStep:
         _install_stub_importer(monkeypatch, stub)
         token = _store(_queue_state())
 
-        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
         )
 
         assert (
@@ -1130,13 +1191,15 @@ class TestQueueStep:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         stub = _StubImporter(_stub_plan(seeded["map_id"], sample_size=2205))
         _install_stub_importer(monkeypatch, stub)
         token = _store(_queue_state(sample_size_label="2,113"))
 
-        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
         )
 
         assert "Sample size differs: document 2205 vs Wikipedia 2113." in body
@@ -1147,12 +1210,14 @@ class TestQueueStep:
         # replace_rows deletes every existing row of the matched poll, so it must
         # not be offerable on a poll that is not there.
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         _install_stub_importer(monkeypatch, _StubImporter(_stub_plan(seeded["map_id"])))
         token = _store(_queue_state())
 
-        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
         )
 
         assert 'name="replace_rows"' not in body
@@ -1161,7 +1226,7 @@ class TestQueueStep:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         _install_stub_importer(
             monkeypatch,
             _StubImporter(
@@ -1170,8 +1235,10 @@ class TestQueueStep:
         )
         token = _store(_queue_state())
 
-        body = app.test_client().get(f"/import/wikipedia/{token}").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}")
+            .get_data(as_text=True)
         )
 
         assert 'name="replace_rows"' in body
@@ -1181,14 +1248,14 @@ class TestQueueStep:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         stub = _StubImporter(_stub_plan(seeded["map_id"]))
         stub.build_error = "404 Not Found: tables.pdf"
         _install_stub_importer(monkeypatch, stub)
         state = _queue_state()
         token = _store(state)
 
-        response = app.test_client().get(f"/import/wikipedia/{token}")
+        response = app.test_client().get(f"/westminster/polls/import/wikipedia/{token}")
         body = response.get_data(as_text=True)
 
         assert response.status_code == 200
@@ -1202,10 +1269,10 @@ class TestQueueStep:
         _mark(state.items[0], "skipped")
         state.index = 1
         token = _store(state)
-        response = app.test_client().get(f"/import/wikipedia/{token}")
+        response = app.test_client().get(f"/westminster/polls/import/wikipedia/{token}")
         assert response.status_code == 302
         assert response.headers["Location"].endswith(
-            f"/import/wikipedia/{token}/finish"
+            f"/westminster/polls/import/wikipedia/{token}/finish"
         )
 
 
@@ -1216,7 +1283,7 @@ class TestConfirm:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         stub = _StubImporter(_stub_plan(seeded["map_id"]))
         _install_stub_importer(monkeypatch, stub)
         state = _queue_state()
@@ -1224,7 +1291,8 @@ class TestConfirm:
         token = _store(state)
 
         response = app.test_client().post(
-            f"/import/wikipedia/{token}/confirm", data={"expected_index": "0"}
+            f"/westminster/polls/import/wikipedia/{token}/confirm",
+            data={"expected_index": "0"},
         )
 
         assert response.status_code == 302
@@ -1242,7 +1310,7 @@ class TestConfirm:
         # The back button and double submits both replay a decided step; acting
         # on one would advance the cursor past an unreviewed poll.
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         stub = _StubImporter(_stub_plan(seeded["map_id"]))
         _install_stub_importer(monkeypatch, stub)
         state = _queue_state(
@@ -1253,7 +1321,8 @@ class TestConfirm:
 
         client = app.test_client()
         response = client.post(
-            f"/import/wikipedia/{token}/confirm", data={"expected_index": "1"}
+            f"/westminster/polls/import/wikipedia/{token}/confirm",
+            data={"expected_index": "1"},
         )
 
         assert response.status_code == 302
@@ -1261,14 +1330,16 @@ class TestConfirm:
         assert state.index == 0
         assert state.items[0].status == "pending"
 
-        body = client.get(f"/import/wikipedia/{token}").get_data(as_text=True)
+        body = client.get(f"/westminster/polls/import/wikipedia/{token}").get_data(
+            as_text=True
+        )
         assert "That step has already been actioned." in body
 
     def test_non_numeric_expected_index_is_rejected(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         stub = _StubImporter(_stub_plan(seeded["map_id"]))
         _install_stub_importer(monkeypatch, stub)
         state = _queue_state()
@@ -1276,7 +1347,8 @@ class TestConfirm:
         token = _store(state)
 
         response = app.test_client().post(
-            f"/import/wikipedia/{token}/confirm", data={"expected_index": "first"}
+            f"/westminster/polls/import/wikipedia/{token}/confirm",
+            data={"expected_index": "first"},
         )
 
         assert response.status_code == 302
@@ -1287,7 +1359,7 @@ class TestConfirm:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         stub = _StubImporter(_stub_plan(seeded["map_id"]))
         _install_stub_importer(monkeypatch, stub)
         state = _queue_state()
@@ -1305,7 +1377,8 @@ class TestConfirm:
         )
 
         app.test_client().post(
-            f"/import/wikipedia/{token}/confirm", data={"expected_index": "0"}
+            f"/westminster/polls/import/wikipedia/{token}/confirm",
+            data={"expected_index": "0"},
         )
 
         assert stub.commit_calls == 0
@@ -1317,7 +1390,7 @@ class TestConfirm:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         stub = _StubImporter(_stub_plan(seeded["map_id"]))
         _install_stub_importer(monkeypatch, stub)
 
@@ -1330,7 +1403,8 @@ class TestConfirm:
         token = _store(state)
 
         app.test_client().post(
-            f"/import/wikipedia/{token}/confirm", data={"expected_index": "0"}
+            f"/westminster/polls/import/wikipedia/{token}/confirm",
+            data={"expected_index": "0"},
         )
 
         assert state.items[0].status == "failed"
@@ -1345,7 +1419,8 @@ class TestSkipAndRetry:
         state = _queue_state()
         token = _store(state)
         app.test_client().post(
-            f"/import/wikipedia/{token}/skip", data={"expected_index": "0"}
+            f"/westminster/polls/import/wikipedia/{token}/skip",
+            data={"expected_index": "0"},
         )
         assert state.items[0].status == "skipped"
         assert state.items[0].detail == "Skipped"
@@ -1356,7 +1431,8 @@ class TestSkipAndRetry:
         _mark(state.items[0], "failed", detail="404 Not Found")
         token = _store(state)
         app.test_client().post(
-            f"/import/wikipedia/{token}/skip", data={"expected_index": "0"}
+            f"/westminster/polls/import/wikipedia/{token}/skip",
+            data={"expected_index": "0"},
         )
         assert state.items[0].detail == "Skipped after failure: 404 Not Found"
 
@@ -1364,7 +1440,7 @@ class TestSkipAndRetry:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         seeded = _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         _install_stub_importer(monkeypatch, _StubImporter(_stub_plan(seeded["map_id"])))
         state = _queue_state()
         _mark(state.items[0], "failed", detail="404 Not Found")
@@ -1372,7 +1448,7 @@ class TestSkipAndRetry:
         token = _store(state)
 
         app.test_client().post(
-            f"/import/wikipedia/{token}/skip",
+            f"/westminster/polls/import/wikipedia/{token}/skip",
             data={"expected_index": "0", "action": "retry"},
         )
 
@@ -1405,18 +1481,290 @@ class TestFinish:
             return ["UNS model updated.", "Prediction simulation exported."]
 
         monkeypatch.setattr(
-            "console.blueprints.poll_import._run_model_and_export", _fake_run
+            "console.westminster.poll_import._run_model_and_export", _fake_run
         )
         token = _store(self._imported_state())
         client = app.test_client()
 
-        first = client.get(f"/import/wikipedia/{token}/finish").get_data(as_text=True)
-        client.get(f"/import/wikipedia/{token}/finish")
-        client.get(f"/import/wikipedia/{token}/finish")
+        first = client.get(
+            f"/westminster/polls/import/wikipedia/{token}/finish"
+        ).get_data(as_text=True)
+        client.get(f"/westminster/polls/import/wikipedia/{token}/finish")
+        client.get(f"/westminster/polls/import/wikipedia/{token}/finish")
 
         assert len(calls) == 1
         assert "UNS model updated." in first
         assert "Wikipedia Catch-Up Summary" in first
+
+    def test_a_get_finish_that_ran_the_model_requests_a_backup_once(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export",
+            lambda *, timeout=0: ["UNS model updated."],
+        )
+        token = _store(self._imported_state())
+        client = app.test_client()
+
+        client.get(f"/westminster/polls/import/wikipedia/{token}/finish")
+        assert len(requests) == 1
+
+        client.get(f"/westminster/polls/import/wikipedia/{token}/finish")
+        assert len(requests) == 1
+
+    def test_a_failed_model_run_still_requests_a_backup(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+
+        def _boom(*, timeout: int = 0) -> list[str]:
+            raise RuntimeError("model crashed")
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _boom
+        )
+        token = _store(self._imported_state())
+
+        app.test_client().get(f"/westminster/polls/import/wikipedia/{token}/finish")
+
+        assert len(requests) == 1
+
+    def test_a_finish_that_did_not_run_the_model_requests_no_backup(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export",
+            lambda *, timeout=0: [],
+        )
+        client = app.test_client()
+        nothing_imported = _queue_state()
+        _mark(nothing_imported.items[0], "skipped", detail="Skipped")
+        nothing_imported.index = 1
+        skipped = _store(nothing_imported)
+        abandoned = _store(self._imported_state())
+        model_off = self._imported_state()
+        model_off.run_model_at_end = False
+        off = _store(model_off)
+
+        client.get(f"/westminster/polls/import/wikipedia/{skipped}/finish")
+        client.post(
+            f"/westminster/polls/import/wikipedia/{abandoned}/finish",
+            data={"abandon": "on"},
+        )
+        client.get(f"/westminster/polls/import/wikipedia/{off}/finish")
+
+        assert requests == []
+
+    def test_concurrent_finishes_of_one_token_run_the_model_once(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[str] = []
+        second_arrived = threading.Event()
+
+        started = threading.Event()
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(threading.current_thread().name)
+            started.set()
+            if len(calls) == 1:
+                # Hold the first run open long enough for a second request to
+                # reach the route; with no lock it would start its own run.
+                second_arrived.wait(timeout=0.5)
+            else:
+                second_arrived.set()
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        token = _store(self._imported_state())
+        statuses: list[int] = []
+
+        def _finish() -> None:
+            response = app.test_client().get(
+                f"/westminster/polls/import/wikipedia/{token}/finish"
+            )
+            statuses.append(response.status_code)
+
+        threads = [threading.Thread(target=_finish, name=f"f{n}") for n in range(2)]
+        threads[0].start()
+        assert started.wait(timeout=5)
+        threads[1].start()
+        for thread in threads:
+            thread.join(timeout=10)
+
+        assert statuses == [200, 200]
+        assert len(calls) == 1
+
+    def test_a_finish_of_another_token_is_not_blocked_but_is_refused_while_one_runs(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[int] = []
+        release = threading.Event()
+        started = threading.Event()
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(len(calls))
+            started.set()
+            release.wait(timeout=10)
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        blocked = _store(self._imported_state())
+        free = _store(self._imported_state())
+        statuses: list[int] = []
+
+        def _finish_blocked() -> None:
+            response = app.test_client().get(
+                f"/westminster/polls/import/wikipedia/{blocked}/finish"
+            )
+            statuses.append(response.status_code)
+
+        holder = threading.Thread(target=_finish_blocked)
+        holder.start()
+        try:
+            assert started.wait(timeout=5)
+
+            other = app.test_client().get(
+                f"/westminster/polls/import/wikipedia/{free}/finish"
+            )
+
+            # The second token's whole request finished while the first still
+            # holds its own lock; the console runs one model at a time, so the
+            # second did not run the model.
+            assert other.status_code == 200
+            assert "UNS model not run: another" in other.get_data(as_text=True)
+            assert len(calls) == 1
+            assert holder.is_alive()
+        finally:
+            release.set()
+            holder.join(timeout=10)
+        assert statuses == [200]
+
+    def test_a_finish_while_a_job_runs_is_refused_and_records_the_refusal(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[int] = []
+        requests: list[str] = []
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(timeout)
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        token = _store(self._imported_state())
+        client = app.test_client()
+        url = f"/westminster/polls/import/wikipedia/{token}/finish"
+
+        with job_holding_the_slot() as job:
+            refused = client.get(url).get_data(as_text=True)
+
+        # Nothing ran and nothing needed backing up; the page names the busy
+        # refusal and links the job that holds the slot.
+        assert calls == [] and requests == []
+        assert "UNS model not run: another run was in progress" in refused
+        assert "Run it from the Westminster Run model page" in refused
+        assert f'href="/runs/{job.id}"' in refused
+        assert "See the running job." in refused
+        assert "UNS model updated." not in refused
+        assert "Wikipedia Catch-Up Summary" in refused
+
+    def test_a_refresh_after_a_refused_finish_still_shows_it_and_runs_nothing(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[int] = []
+        requests: list[str] = []
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(timeout)
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        token = _store(self._imported_state())
+        client = app.test_client()
+        url = f"/westminster/polls/import/wikipedia/{token}/finish"
+
+        with job_holding_the_slot() as job:
+            client.get(url)
+
+        # The slot is free again; the refusal stands, recorded, not retried.
+        again = client.get(url).get_data(as_text=True)
+        client.get(url)
+
+        assert calls == [] and requests == []
+        assert "UNS model not run: another run was in progress" in again
+        assert f'href="/runs/{job.id}"' in again
+        assert "UNS model updated." not in again
+
+    def test_a_finish_while_a_non_job_run_holds_the_slot_has_no_job_link(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[int] = []
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(timeout)
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        monkeypatch.setattr(backup, "request_backup", lambda: None)
+        token = _store(self._imported_state())
+        client = app.test_client()
+        url = f"/westminster/polls/import/wikipedia/{token}/finish"
+
+        with model_run_slot() as free:
+            assert free
+            refused = client.get(url).get_data(as_text=True)
+        again = client.get(url).get_data(as_text=True)
+
+        assert calls == []
+        for body in (refused, again):
+            assert "UNS model not run: another run was in progress" in body
+            assert "See the running job" not in body
+            assert "UNS model updated." not in body
+
+    def test_a_fresh_finish_on_a_new_queue_runs_the_model_once_when_free(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[int] = []
+        requests: list[str] = []
+
+        def _fake_run(*, timeout: int = 0) -> list[str]:
+            calls.append(timeout)
+            return ["UNS model updated."]
+
+        monkeypatch.setattr(
+            "console.westminster.poll_import._run_model_and_export", _fake_run
+        )
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        client = app.test_client()
+        refused_token = _store(self._imported_state())
+        with job_holding_the_slot():
+            client.get(f"/westminster/polls/import/wikipedia/{refused_token}/finish")
+
+        fresh = _store(self._imported_state())
+        url = f"/westminster/polls/import/wikipedia/{fresh}/finish"
+        body = client.get(url).get_data(as_text=True)
+        client.get(url)
+
+        assert len(calls) == 1
+        assert "UNS model updated." in body
+        assert "not run: another run" not in body
+        assert requests == ["b"]
 
     def test_model_does_not_run_on_abandon(
         self, app: Flask, monkeypatch: pytest.MonkeyPatch
@@ -1428,13 +1776,14 @@ class TestFinish:
             return []
 
         monkeypatch.setattr(
-            "console.blueprints.poll_import._run_model_and_export", _fake_run
+            "console.westminster.poll_import._run_model_and_export", _fake_run
         )
         state = self._imported_state()
         token = _store(state)
 
         response = app.test_client().post(
-            f"/import/wikipedia/{token}/finish", data={"abandon": "on"}
+            f"/westminster/polls/import/wikipedia/{token}/finish",
+            data={"abandon": "on"},
         )
 
         assert response.status_code == 200
@@ -1451,15 +1800,17 @@ class TestFinish:
             return []
 
         monkeypatch.setattr(
-            "console.blueprints.poll_import._run_model_and_export", _fake_run
+            "console.westminster.poll_import._run_model_and_export", _fake_run
         )
         state = _queue_state()
         _mark(state.items[0], "skipped", detail="Skipped")
         state.index = 1
         token = _store(state)
 
-        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
         )
 
         assert calls == []
@@ -1475,13 +1826,15 @@ class TestFinish:
             raise RuntimeError("model exited 1")
 
         monkeypatch.setattr(
-            "console.blueprints.poll_import._run_model_and_export", _fake_run
+            "console.westminster.poll_import._run_model_and_export", _fake_run
         )
         token = _store(self._imported_state())
         client = app.test_client()
 
-        body = client.get(f"/import/wikipedia/{token}/finish").get_data(as_text=True)
-        client.get(f"/import/wikipedia/{token}/finish")
+        body = client.get(
+            f"/westminster/polls/import/wikipedia/{token}/finish"
+        ).get_data(as_text=True)
+        client.get(f"/westminster/polls/import/wikipedia/{token}/finish")
 
         assert len(calls) == 1
         assert "UNS model run failed: model exited 1" in body
@@ -1493,13 +1846,136 @@ class TestFinish:
         state.unrecognised_areas = {"Area": 3, "TBA": 1}
         token = _store(state)
 
-        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
         )
 
         assert "3 row(s) in the window were already in the database" in body
         assert "2 Wikipedia row(s) could not be read" in body
         assert "TBA" in body
+
+    def _all_outcomes_state(self) -> QueueState:
+        """One item per status, each from a different pollster."""
+        rows = [
+            _row("yougov", date(2026, 8, 1), date(2026, 8, 2), label="YouGov"),
+            _row("opinium", date(2026, 8, 3), date(2026, 8, 4), label="Opinium"),
+            _row(
+                "survation",
+                date(2026, 8, 5),
+                date(2026, 8, 6),
+                label="Survation",
+                source_url="",
+            ),
+            _row("techne", date(2026, 8, 7), date(2026, 8, 8), label="Techne"),
+            _row("freshpoll", date(2026, 8, 9), date(2026, 8, 10), label="Fresh"),
+        ]
+        state = QueueState(
+            items=[QueueItem(row=row) for row in rows],
+            cutoff=date(2026, 7, 31),
+            run_model_at_end=False,
+        )
+        _mark(state.items[0], "imported", detail="Poll #4242, 104 rows inserted")
+        state.items[0].poll_id = 4242
+        _mark(state.items[1], "failed", detail="404 Not Found")
+        _mark(state.items[2], "skipped", detail="Skipped")
+        _mark(state.items[3], "no_importer", detail="No importer for Techne")
+        state.index = 4
+        return state
+
+    def test_summary_lists_every_outcome_with_its_count_and_links(
+        self, app: Flask
+    ) -> None:
+        token = _store(self._all_outcomes_state())
+
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
+        )
+
+        for heading in (
+            "Imported (1)",
+            "Failed (1)",
+            "Skipped (1)",
+            "No Importer Available (1)",
+            "Not Reviewed (1)",
+        ):
+            assert f"<h3>{heading}</h3>" in body
+        assert 'href="/polls/4242"' in body
+        assert ">#4242</a>" in body
+        assert "Poll #4242, 104 rows inserted" in body
+        assert "404 Not Found" in body
+        assert "Techne (techne)" in body
+        assert (
+            "The queue was abandoned before these polls were reached." in body
+        )
+        assert (
+            '<a href="https://example.test/doc.xlsx" target="_blank"'
+            ' rel="noopener">Source</a>'
+        ) in body
+        assert (
+            '<a class="button" href="/westminster/polls/import">Back to import</a>'
+            in body
+        )
+        for empty_message in (
+            "Nothing was imported.",
+            "No poll failed to import.",
+            "No poll was skipped.",
+            "Every queued poll had an importer.",
+        ):
+            assert empty_message not in body
+
+    def test_summary_shows_a_dash_for_a_poll_without_a_source_url(
+        self, app: Flask
+    ) -> None:
+        state = self._all_outcomes_state()
+        _mark(state.items[1], "failed", detail="404 Not Found")
+        state.items[1].row = _row(
+            "opinium", date(2026, 8, 3), date(2026, 8, 4), source_url=""
+        )
+        token = _store(state)
+
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
+        )
+        failed_section = body.split("<h3>Failed (1)</h3>")[1].split("</section>")[0]
+
+        assert "<a " not in failed_section
+        assert re.search(r"<td>\s*-\s*</td>", failed_section)
+
+    def test_summary_shows_the_fallback_message_for_each_empty_section(
+        self, app: Flask
+    ) -> None:
+        state = _queue_state()
+        _mark(state.items[0], "imported", detail="Poll #4242, 104 rows inserted")
+        state.items[0].poll_id = 4242
+        state.run_model_at_end = False
+        state.index = 1
+        token = _store(state)
+
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
+        )
+
+        assert "<h3>Imported (1)</h3>" in body
+        for heading, message in (
+            ("Failed (0)", "No poll failed to import."),
+            ("Skipped (0)", "No poll was skipped."),
+            (
+                "No Importer Available (0)",
+                "Every queued poll had an importer.",
+            ),
+        ):
+            assert f"<h3>{heading}</h3>" in body
+            assert f"<p>{message}</p>" in body
+        assert "Nothing was imported." not in body
+        assert "Not Reviewed" not in body
 
     def test_no_cutoff_renders_as_all_polls(self, app: Flask) -> None:
         state = self._imported_state()
@@ -1507,8 +1983,10 @@ class TestFinish:
         state.run_model_at_end = False
         token = _store(state)
 
-        body = app.test_client().get(f"/import/wikipedia/{token}/finish").get_data(
-            as_text=True
+        body = (
+            app.test_client()
+            .get(f"/westminster/polls/import/wikipedia/{token}/finish")
+            .get_data(as_text=True)
         )
 
         assert "all polls" in body
@@ -1522,14 +2000,14 @@ class TestStart:
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         monkeypatch.setattr(
-            "console.blueprints.poll_import.fetch_poll_index",
+            "console.westminster.poll_import.fetch_poll_index",
             lambda: fetch_poll_index(html=_INDEX_HTML),
         )
 
         response = app.test_client().post(
-            "/import/wikipedia/start",
+            "/westminster/polls/import/wikipedia/start",
             data={"cutoff_date": "2026-01-01", "run_model_at_end": "on"},
         )
 
@@ -1563,13 +2041,15 @@ class TestStart:
         # An unticked HTML checkbox posts nothing at all, so the route has to
         # coerce it rather than let the form model's True default stand.
         _seed_westminster(db)
-        monkeypatch.setattr("console.blueprints.poll_import.get_db", lambda: db)
+        monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         monkeypatch.setattr(
-            "console.blueprints.poll_import.fetch_poll_index",
+            "console.westminster.poll_import.fetch_poll_index",
             lambda: fetch_poll_index(html=_INDEX_HTML),
         )
 
-        response = app.test_client().post("/import/wikipedia/start", data={})
+        response = app.test_client().post(
+            "/westminster/polls/import/wikipedia/start", data={}
+        )
 
         token = response.headers["Location"].rsplit("/", 1)[-1]
         state: QueueState = PREVIEW_CACHE[token]["state"]
@@ -1583,10 +2063,10 @@ class TestStart:
             raise AssertionError("the page must not be fetched for a bad date")
 
         monkeypatch.setattr(
-            "console.blueprints.poll_import.fetch_poll_index", _never_called
+            "console.westminster.poll_import.fetch_poll_index", _never_called
         )
         body = app.test_client().post(
-            "/import/wikipedia/start",
+            "/westminster/polls/import/wikipedia/start",
             data={"cutoff_date": "31/08/2026"},
             follow_redirects=True,
         ).get_data(as_text=True)
@@ -1599,9 +2079,9 @@ class TestStart:
         def _raise() -> PollIndex:
             raise WikipediaIndexError("layout changed")
 
-        monkeypatch.setattr("console.blueprints.poll_import.fetch_poll_index", _raise)
+        monkeypatch.setattr("console.westminster.poll_import.fetch_poll_index", _raise)
         body = app.test_client().post(
-            "/import/wikipedia/start", data={}, follow_redirects=True
+            "/westminster/polls/import/wikipedia/start", data={}, follow_redirects=True
         ).get_data(as_text=True)
 
         assert "Wikipedia page could not be read: layout changed" in body

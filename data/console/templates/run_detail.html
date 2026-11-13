@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros/run_result.html" import stream %}
+{% block content %}
+  <section class="card">
+    <h2>{{ record.label }}</h2>
+    <p><strong>Section:</strong> {{ section_label }}</p>
+    <p><strong>Command:</strong> {{ command or 'none (no command ran)' }}</p>
+    <p><strong>Working directory:</strong> {{ record.cwd }}</p>
+    <p><strong>Started:</strong> {{ record.started_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
+    {% if record.finished_at %}
+      <p><strong>Finished:</strong> {{ record.finished_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC ({{ '%.1f' | format(record.duration_seconds) }} s)</p>
+    {% else %}
+      <p><strong>Finished:</strong> {{ 'not yet' if record.status == 'running' else 'unknown' }}</p>
+    {% endif %}
+    <p><strong>Status:</strong> <span{% if record.status not in ('ok', 'running') %} class="text-error"{% endif %}>{{ record.status }}</span></p>
+    <p><strong>Exit code:</strong> {{ 'none' if record.exit_code is none else record.exit_code }}</p>
+    <p><strong>Time limit:</strong> {{ 'none' if record.timeout_seconds is none else record.timeout_seconds ~ ' s' }}</p>
+    <p><strong>Dry run:</strong> {{ 'unknown' if record.dry_run is none else ('yes' if record.dry_run else 'no') }}</p>
+    {% if record.status == 'running' %}<p>This run is still in progress; reload for more output.</p>{% endif %}
+    {% if record.error %}<p><strong>{{ 'Note' if record.status == 'interrupted' else 'Error' }}:</strong> {{ record.error }}</p>{% endif %}
+    <p><a class="button" href="{{ url_for('runs.run_list') }}">Back to runs</a></p>
+  </section>
+
+  <section class="card">
+    {% if stdout is none %}<p class="text-warning">The standard output file could not be read.</p>{% endif %}
+    {{ stream("Stdout", stdout, "h3") }}
+  </section>
+
+  <section class="card">
+    {% if stderr is none %}<p class="text-warning">The standard error file could not be read.</p>{% endif %}
+    {{ stream("Stderr", stderr, "h3") }}
+  </section>
+{% endblock %}

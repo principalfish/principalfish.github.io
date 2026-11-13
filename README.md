@@ -68,15 +68,17 @@ npm run minify:electionmaps  # rebuild the bundles after editing electionmapslog
 ### Data
 
 SQLAlchemy models, poll and results importers, election models, the static export
-and a local web console, all on one SQLite database. Details:
-[data/README.md](data/README.md), which links a page for each topic. The `data/` virtualenv
+and a local web console (a section each for Westminster, Holyrood and the US House,
+Senate and President, plus the export, a run log and admin), all on one SQLite
+database. Details: [data/README.md](data/README.md), which links a page for each
+topic, including [the console](data/docs/console.md). The `data/` virtualenv
 needs a one-time editable install (`pip install --no-deps -e . --config-settings
 editable_mode=compat`, run in `data/`); without it a data script run by path (the
 backup job, the scripts the console launches) cannot import its modules.
 
 ```bash
 cd data
-./election_data/bin/python server.py                               # console: imports, models, backups
+./election_data/bin/python server.py                               # console: polls, models, export, backups
 ./election_data/bin/python export/export_elections.py --dry-run    # show the export plan
 ./election_data/bin/python export/export_elections.py              # write the site's data files
 ./election_data/bin/python scripts/rebuild_database.py --dry-run   # list the rebuild steps

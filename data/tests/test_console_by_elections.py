@@ -18,9 +18,9 @@ import pytest
 from flask import Flask, Response
 from flask.testing import FlaskClient
 
-from console.blueprints import by_elections
 from console.paths import EXPORT_ELECTION_SCRIPT
-from console.services.preview import PREVIEW_CACHE, store_preview
+from console.shared.preview import PREVIEW_CACHE, store_preview
+from console.westminster import by_elections
 from core.db import Database
 from core.schema import ElectionType
 from importers.results.westminster import by_election_import
@@ -33,8 +33,8 @@ from tests.console_fixtures import (
     pre_after_heading,
     select_block,
 )
+from tests.job_fixtures import job_holding_the_slot
 from tests.uk_fixtures import WestminsterWorld
-
 
 _SOURCE_URL = "https://example.test/2025_Hexham_by-election"
 _ELECTION_NAME = "2025 Hexham by-election"
@@ -104,7 +104,7 @@ def export_runner(monkeypatch: pytest.MonkeyPatch) -> RecordingRunner:
 
 def _preview(client: FlaskClient[Response], parent_name: str) -> Response:
     response = client.post(
-        "/by-elections/preview",
+        "/westminster/by-elections/preview",
         data={"source_url": _SOURCE_URL, "parent_election": parent_name},
     )
     assert response.status_code == 200
@@ -113,7 +113,7 @@ def _preview(client: FlaskClient[Response], parent_name: str) -> Response:
 
 def _token(response: Response) -> str:
     match = re.search(
-        r'action="/by-elections/confirm/([0-9a-f]{32})"',
+        r'action="/westminster/by-elections/confirm/([0-9a-f]{32})"',
         response.get_data(as_text=True),
     )
     assert match is not None
@@ -167,7 +167,7 @@ class TestByElectionForm:
             world.map_id, 2028, "Excluded US election", ElectionType.us_presidential
         )
 
-        response = app.test_client().get("/by-elections")
+        response = app.test_client().get("/westminster/by-elections")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -183,7 +183,7 @@ class TestByElectionForm:
         assert [value for value, attrs, _ in options if "selected" in attrs] == [
             "2024 General Election"
         ]
-        assert 'action="/by-elections/preview"' in body
+        assert 'action="/westminster/by-elections/preview"' in body
         assert 'name="source_url"' in body
 
 
@@ -191,10 +191,10 @@ class TestByElectionPreview:
     def test_missing_url_flashes_validation_error(self, app: Flask) -> None:
         client = app.test_client()
 
-        response = client.post("/by-elections/preview", data={})
+        response = client.post("/westminster/by-elections/preview", data={})
 
         assert response.status_code == 302
-        assert response.headers["Location"] == "/by-elections"
+        assert response.headers["Location"] == "/westminster/by-elections"
         assert flashes(client, response) == ["URL is required."]
         assert PREVIEW_CACHE == {}
 
@@ -208,11 +208,11 @@ class TestByElectionPreview:
         client = app.test_client()
 
         response = client.post(
-            "/by-elections/preview", data={"source_url": _SOURCE_URL}
+            "/westminster/by-elections/preview", data={"source_url": _SOURCE_URL}
         )
 
         assert response.status_code == 302
-        assert response.headers["Location"] == "/by-elections"
+        assert response.headers["Location"] == "/westminster/by-elections"
         assert flashes(client, response) == [
             "Import preview failed: unreadable results"
         ]
@@ -254,10 +254,10 @@ class TestByElectionConfirm:
     def test_unknown_token_flashes_expired(self, app: Flask) -> None:
         client = app.test_client()
 
-        response = client.post("/by-elections/confirm/missing")
+        response = client.post("/westminster/by-elections/confirm/missing")
 
         assert response.status_code == 302
-        assert response.headers["Location"] == "/by-elections"
+        assert response.headers["Location"] == "/westminster/by-elections"
         assert flashes(client, response) == [
             "Preview expired. Please preview again."
         ]
@@ -269,10 +269,10 @@ class TestByElectionConfirm:
         token = store_preview({"type": preview_type})
         client = app.test_client()
 
-        response = client.post(f"/by-elections/confirm/{token}")
+        response = client.post(f"/westminster/by-elections/confirm/{token}")
 
         assert response.status_code == 302
-        assert response.headers["Location"] == "/by-elections"
+        assert response.headers["Location"] == "/westminster/by-elections"
         assert flashes(client, response) == [
             "Preview expired. Please preview again."
         ]
@@ -296,16 +296,16 @@ class TestByElectionConfirm:
 
         with monkeypatch.context() as patches:
             patches.setattr(by_election_import, "commit_import_plan", fail)
-            response = client.post(f"/by-elections/confirm/{token}")
+            response = client.post(f"/westminster/by-elections/confirm/{token}")
 
         assert response.status_code == 302
-        assert response.headers["Location"] == "/by-elections"
+        assert response.headers["Location"] == "/westminster/by-elections"
         assert flashes(client, response) == ["Import failed: database is locked"]
         assert token in PREVIEW_CACHE
         assert db.get_election_by_name(_ELECTION_NAME) is None
         assert export_runner.calls == []
 
-        retried = client.post(f"/by-elections/confirm/{token}")
+        retried = client.post(f"/westminster/by-elections/confirm/{token}")
 
         assert retried.status_code == 200
         assert flashes_on_page(retried.get_data(as_text=True)) == [_IMPORT_MESSAGE]
@@ -337,24 +337,24 @@ class TestByElectionConfirm:
 
         monkeypatch.setattr(by_elections, "run_python_script", run_script)
 
-        response = client.post(f"/by-elections/confirm/{token}")
+        response = client.post(f"/westminster/by-elections/confirm/{token}")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         assert flashes_on_page(body) == [_IMPORT_MESSAGE]
-        assert command_line(body) == "export_elections.py (rebuild site data)"
+        assert command_line(body) == "export_elections.py (export site data)"
         assert f"<strong>Exit code:</strong> {export_code}" in body
         assert pre_after_heading(body, "h3", "Stdout") == "ran export_elections.py"
         assert pre_after_heading(body, "h3", "Stderr") == (
             "boom" if export_code else "(no stderr)"
         )
-        assert 'href="/by-elections"' in body
+        assert 'href="/westminster/by-elections"' in body
         assert result_runner.calls == [(sys.executable, str(EXPORT_ELECTION_SCRIPT))]
         assert result_runner.timeouts == [900]
         assert token not in PREVIEW_CACHE
         _assert_imported(db, world)
 
-        repeated = client.post(f"/by-elections/confirm/{token}")
+        repeated = client.post(f"/westminster/by-elections/confirm/{token}")
 
         assert repeated.status_code == 302
         assert flashes(client, repeated) == [
@@ -380,10 +380,10 @@ class TestByElectionConfirm:
         missing = tmp_path / "absent_export.py"
         monkeypatch.setattr(by_elections, "EXPORT_ELECTION_SCRIPT", missing)
 
-        response = client.post(f"/by-elections/confirm/{token}")
+        response = client.post(f"/westminster/by-elections/confirm/{token}")
 
         assert response.status_code == 302
-        assert response.headers["Location"] == "/by-elections"
+        assert response.headers["Location"] == "/westminster/by-elections"
         assert flashes(client, response) == [
             _IMPORT_MESSAGE,
             f"Imported, but export script not found: {missing}",
@@ -391,6 +391,34 @@ class TestByElectionConfirm:
         assert export_runner.calls == []
         assert token not in PREVIEW_CACHE
         assert fake_page == [_SOURCE_URL]
+        _assert_imported(db, world)
+
+    def test_export_is_refused_while_a_job_runs_but_the_import_is_kept(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        fake_page: list[str],
+        export_runner: RecordingRunner,
+    ) -> None:
+        world = westminster_world
+        client = app.test_client()
+        token = _token(_preview(client, world.baseline_election_name))
+
+        with job_holding_the_slot() as job:
+            response = client.post(f"/westminster/by-elections/confirm/{token}")
+            body = client.get(response.headers["Location"]).get_data(as_text=True)
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/westminster/by-elections"
+        assert _IMPORT_MESSAGE in flashes_on_page(body)
+        assert any(
+            message.startswith("Imported, but site data not exported: another")
+            for message in flashes_on_page(body)
+        )
+        assert f'href="/runs/{job.id}"' in body
+        assert export_runner.calls == []
+        assert token not in PREVIEW_CACHE
         _assert_imported(db, world)
 
     def test_reimport_rejected_even_with_crafted_refresh_field(
@@ -405,7 +433,7 @@ class TestByElectionConfirm:
         world = westminster_world
         client = app.test_client()
         first_token = _token(_preview(client, world.baseline_election_name))
-        first = client.post(f"/by-elections/confirm/{first_token}")
+        first = client.post(f"/westminster/by-elections/confirm/{first_token}")
         assert first.status_code == 200
         election = db.get_election_by_name(_ELECTION_NAME)
         assert election is not None
@@ -414,11 +442,11 @@ class TestByElectionConfirm:
         second_token = _token(response)
 
         repeated = client.post(
-            f"/by-elections/confirm/{second_token}", data={"refresh": "on"}
+            f"/westminster/by-elections/confirm/{second_token}", data={"refresh": "on"}
         )
 
         assert repeated.status_code == 302
-        assert repeated.headers["Location"] == "/by-elections"
+        assert repeated.headers["Location"] == "/westminster/by-elections"
         assert flashes(client, repeated) == [
             f"Import failed: Election '{_ELECTION_NAME}' already exists "
             f"(id={election.id})"

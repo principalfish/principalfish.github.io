@@ -6,84 +6,23 @@
   </section>
 
   <div class="console-columns console-columns-three">
-    <section class="card console-column">
-      <h2>Westminster</h2>
-      <div class="action-stack">
-        <a class="button primary button-block" href="{{ url_for('poll_import.import_poll_form') }}">Import Poll</a>
-        <a class="button primary button-block" href="{{ url_for('by_elections.by_election_form') }}">Import By-Election</a>
-        <a class="button button-block" href="{{ url_for('polls.poll_list') }}">View Polls</a>
-        <a class="button button-block" href="{{ url_for('westminster.model_run_form') }}">Run Westminster Model</a>
-        <a class="button button-block" href="{{ url_for('westminster.model_outputs') }}">View Westminster Outputs</a>
-        <a class="button button-block" href="{{ url_for('uncertainty.uncertainty_hub') }}">Uncertainty Diagnostics</a>
-      </div>
-    </section>
+    {% for section, items in cards %}
+      <section class="card console-column">
+        <h2><a href="{{ url_for('sections.' ~ section.slug) }}">{{ section.label }}</a></h2>
+        <div class="action-stack">
+          {% for item in items %}
+            <a class="button{% if item.primary %} primary{% endif %} button-block" href="{{ item.url }}">{{ item.label }}</a>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
 
     <section class="card console-column">
-      <h2>Holyrood</h2>
+      <h2>Polls and admin</h2>
       <div class="action-stack">
-        <form method="post" action="{{ url_for('holyrood.holyrood_import_polls') }}" class="inline-form button-form">
-          <button type="submit" class="button primary button-block">Import Scottish Polls</button>
-        </form>
-        <a class="button button-block" href="{{ url_for('holyrood.run_holyrood_model_form') }}">Run Holyrood Model</a>
-        <a class="button button-block" href="{{ url_for('holyrood.holyrood_outputs') }}">View Holyrood Outputs</a>
-      </div>
-    </section>
-
-    <section class="card console-column">
-      <h2>USA</h2>
-      <div class="action-stack">
-        <a class="button primary button-block" href="{{ url_for('us_poll_import.import_form') }}">Import US Polls</a>
-        <a class="button primary button-block" href="{{ url_for('us_results.us_results_form') }}">Import US Results (NYT)</a>
-        <form method="post" action="{{ url_for('us.run_us_models') }}" class="inline-form button-form"
-              onsubmit="return !this.rebuild_history.checked || confirm('Rebuild ALL US history? The House, President and Senate models each recompute their whole trend history, one after another, then the export runs. This page stays open and blocked until it finishes, which can take hours.');">
-          <label class="checkbox">
-            <input type="checkbox" name="rebuild_history">
-            Rebuild all US history (runs each chamber's model over its whole trend
-            history, then the export)
-          </label>
-          <button type="submit" class="button button-block">Run US Models</button>
-          <small>
-            With the box ticked this rebuilds all three chambers in one blocking
-            request; it can take hours.
-          </small>
-        </form>
-        <a class="button button-block" href="{{ url_for('us.president_matchup') }}">President Matchup</a>
-        <a class="button button-block" href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate Race Matchups</a>
-        <a class="button button-block" href="{{ url_for('us.race_matchups', chamber='house') }}">House Race Matchups</a>
-        <a class="button button-block" href="{{ url_for('us.house_outputs') }}">View House Outputs</a>
-        <a class="button button-block" href="{{ url_for('us.president_outputs') }}">View President Outputs</a>
-        <a class="button button-block" href="{{ url_for('us.senate_outputs') }}">View Senate Outputs</a>
+        <a class="button button-block" href="{{ url_for('polls.poll_list') }}">All polls</a>
+        <a class="button button-block" href="{{ url_for('admin.admin_page') }}">Admin</a>
       </div>
     </section>
   </div>
-
-  <section class="card">
-    <h2>Site</h2>
-    <div class="action-grid action-grid-two">
-      <form method="post" action="{{ url_for('site.rebuild_site_data') }}" class="inline-form button-form">
-        <button type="submit" class="button button-block">Rebuild Site Data</button>
-        <small>Regenerate the static map data (current parliament + all elections) from the database.</small>
-      </form>
-      <form method="post" action="{{ url_for('site.rebuild_database') }}" class="inline-form button-form"
-            onsubmit="return confirm('Rebuild the DATABASE from source files? This re-imports parties, maps, geometry and every historical election result, and downloads live boundary/by-election data from the internet — it can take many minutes (up to an hour). Your polls and model runs are preserved.');">
-        <button type="submit" class="button button-block button-danger">Rebuild Database</button>
-        <small>Re-import all base data from source (preserves polls &amp; model runs), then rebuild the site. Slow; hits the network.</small>
-      </form>
-    </div>
-  </section>
-
-  <section class="card danger-zone">
-    <h2>Database <small>(admin)</small></h2>
-    <div class="action-grid action-grid-two">
-      <form method="post" action="{{ url_for('db_admin.backup_database') }}" class="inline-form button-form">
-        <button type="submit" class="button button-block">Backup now</button>
-        <small>Archive the database locally. Also runs automatically after console changes, and hourly before the off-machine (B2) backup.</small>
-      </form>
-      <form method="post" action="{{ url_for('db_admin.restore_database') }}" class="inline-form button-form"
-            onsubmit="return confirm('Restore the database from the newest archive? This overwrites the current local database (a .prerestore copy is kept).');">
-        <button type="submit" class="button button-block button-danger">Restore newest archive</button>
-        <small>Overwrite the local database with the newest local archive.</small>
-      </form>
-    </div>
-  </section>
 {% endblock %}

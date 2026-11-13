@@ -2,6 +2,7 @@
 
 Python election-data pipeline: local setup and everyday operation. Everything else is by topic:
 
+- [The data console](docs/console.md)
 - [Database, backups and rebuild](docs/database.md)
 - [Models: UNS retrospective, input and output policies, history refresh](docs/models.md)
 - [Static election-map export](docs/export.md)
@@ -14,7 +15,7 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 | Path | What it is |
 |-|-|
 | `core/` | Shared modules: `schema.py` (SQLAlchemy tables), `db.py` (database access), `config.py` (settings; loads the repo-root `.env`), `backup.py`, `electoral_votes.py`, plus the US geography names and the SQLite migration helpers |
-| `console/` | Local web console for the data (`create_app`) |
+| `console/` | Local web console for the data (`create_app`): five sections (Westminster, Holyrood, US House, US Senate, US President), the Export page, the Runs log and Admin; see [the console](docs/console.md) |
 | `server.py` | Local data preview server (`:5055`) |
 | `archive/` | Finished one-offs and retired setup files (not maintained, not type-checked; see its README) |
 | `inputs/` | Committed source data files per jurisdiction (`westminster/`, `holyrood/`, `us/`) read by the importers |
@@ -81,8 +82,9 @@ and its scripts are not maintained).
 
 ## Import polls (Wikipedia-driven)
 
-Start the console ([Run local server](#run-local-server)), then open [Import Poll](http://127.0.0.1:5055/import)
-and use **Catch Up from Wikipedia** for Westminster polls.
+Start the console ([Run local server](#run-local-server)), open **Westminster** in
+the top bar, then **Import poll** (`/westminster/polls/import`) and use **Catch Up
+from Wikipedia** for Westminster polls.
 
 1. Optionally set **Only polls ending on or after**. The cutoff includes polls
    whose fieldwork ends on that date. Leaving it blank uses the latest stored
@@ -93,12 +95,18 @@ and use **Catch Up from Wikipedia** for Westminster polls.
    poll was imported.
 3. Click **Catch Up from Wikipedia**. The console fetches the Westminster
    voting-intention index, excludes polls already stored, and presents missing
-   polls oldest first for review and import or skip.
+   polls oldest first for review and import or skip (**Approve & Import**,
+   **Skip this poll**, or **Abandon queue**).
 4. Check the summary for failed imports, rows without an importer, and unreadable
    Wikipedia rows.
 
-The queue lives in memory. Restarting the console, including a development
-auto-reload, discards a catch-up in progress; confirmed polls remain stored.
+The same page also has **Import Poll**, for a single poll: pick the pollster, give the
+poll's source URL and **Preview Import**, then **Confirm Import**. The US sections have
+an **Auto import** queue of their own, and Holyrood a one-click **Import Scottish
+Polls** button on its landing page.
+
+The queue lives in memory. Restarting the console, or a code reload under
+`CONSOLE_DEBUG=1`, discards a catch-up in progress; confirmed polls remain stored.
 
 ## Run local server
 
@@ -110,6 +118,12 @@ From `data/`:
 
 Server URL:
 - `http://127.0.0.1:5055/`
+
+The console has five sections (Westminster, Holyrood, US House, US Senate, US
+President), each with its polls, imports, model run and outputs, plus **Export**,
+**Runs** (a log of every command it launched) and **Admin** (rebuild, backup, restore).
+Model runs, the export and the rebuild run in the background, one at a time. The
+details are in [the console](docs/console.md).
 
 It answers only `127.0.0.1` / `localhost`, and refuses a POST made from another
 site's page (`data/console/csrf.py`).

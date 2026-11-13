@@ -16,27 +16,27 @@
           <thead>
             <tr>
               <th scope="col">Pollster</th>
-              <th scope="col">Polls</th>
-              <th scope="col">With national base</th>
-              <th scope="col">National %</th>
-              <th scope="col">Crossbreaks</th>
-              <th scope="col">With base</th>
-              <th scope="col">Crossbreak %</th>
+              <th class="num" scope="col">Polls</th>
+              <th class="num" scope="col">With national base</th>
+              <th class="num" scope="col">National %</th>
+              <th class="num" scope="col">Crossbreaks</th>
+              <th class="num" scope="col">With base</th>
+              <th class="num" scope="col">Crossbreak %</th>
             </tr>
           </thead>
           <tbody>
             {% for row in coverage %}
               <tr>
                 <td>{{ row.name }} ({{ row.identifier }})</td>
-                <td>{{ row.polls }}</td>
-                <td>{{ row.polls_with_national_base }}</td>
-                <td>
+                <td class="num">{{ row.polls }}</td>
+                <td class="num">{{ row.polls_with_national_base }}</td>
+                <td class="num">
                   {{- "%.0f%%" | format(row.national_pct)
                       if row.national_pct is not none else "-" -}}
                 </td>
-                <td>{{ row.crossbreaks }}</td>
-                <td>{{ row.crossbreaks_with_base }}</td>
-                <td>
+                <td class="num">{{ row.crossbreaks }}</td>
+                <td class="num">{{ row.crossbreaks_with_base }}</td>
+                <td class="num">
                   {{- "%.0f%%" | format(row.crossbreak_pct)
                       if row.crossbreak_pct is not none else "-" -}}
                 </td>

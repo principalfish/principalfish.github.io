@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero">
+    <h1>{{ section.label }}</h1>
+    <p>Everything the console does for {{ section.label }}.</p>
+  </section>
+
+  <section class="card">
+    <div class="action-stack">
+      {% for item in nav.section_items %}
+        <a class="button{% if item.primary %} primary{% endif %} button-block" href="{{ item.url }}">{{ item.label }}</a>
+      {% endfor %}
+      <a class="button button-block" href="{{ url_for('runs.run_list', section=section.slug) }}">Recent runs</a>
+      {% if extra %}{% include extra %}{% endif %}
+    </div>
+  </section>
+{% endblock %}

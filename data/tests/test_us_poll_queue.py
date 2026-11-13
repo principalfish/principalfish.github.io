@@ -1,4 +1,4 @@
-"""Tests for the US poll review queue service (``console.services.us_poll_queue``).
+"""Tests for the US poll review queue service (``console.us.poll_queue``).
 
 Rows are built directly as ``UsPollRow``s (and once through ``rows_for_page``
 on fixture HTML), polls are seeded through the real commit path, and the model
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 import html
+import re
 import subprocess
 import threading
 from collections.abc import Generator
@@ -23,15 +24,24 @@ from flask.testing import FlaskClient
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from console import create_app
-from console.blueprints import us_poll_import
 from console.paths import EXPORT_ELECTION_SCRIPT
-from console.services import us_poll_queue
-from console.services.preview import PREVIEW_CACHE, store_preview
-from console.services.us_models import MODEL_RUN_LOCK, UsModelRun
-from console.services.us_poll_queue import (
+from console.shared import queue_lock
+from console.shared.preview import PREVIEW_CACHE, store_preview
+from console.shared.wikipedia_queue import (
+    NO_CUTOFF,
+    QueueItem,
+    QueueState,
+    advance,
+    current_item,
+)
+from console.us import poll_import as us_poll_import, poll_queue as us_poll_queue
+from console.us.models import MODEL_RUN_LOCK, US_CHAMBERS_BY_SLUG, UsModelRun
+from console.us.poll_queue import (
     AUTO_TRACKING_ERROR_KEY,
     AUTO_TRACKING_KEY,
+    CHAMBER_KEY,
     INDEX_KEY,
+    MODEL_BUSY_JOB_KEY,
     MODEL_ERROR_KEY,
     MODEL_RUN_KEY,
     PER_RACE_CUTOFF_NOTE,
@@ -47,13 +57,7 @@ from console.services.us_poll_queue import (
     prepare_us_item,
     tracking_changed,
 )
-from console.services.wikipedia_queue import (
-    NO_CUTOFF,
-    QueueItem,
-    QueueState,
-    advance,
-    current_item,
-)
+from core import backup
 from core.db import Database
 from importers.polls.us.us_polls_common import CandidateReading, pollster_identifier
 from importers.polls.us.us_wikipedia_polls import (
@@ -75,6 +79,8 @@ from importers.polls.us.us_wikipedia_polls import (
     commit_us_import_plan,
     rows_for_page,
 )
+from tests.console_fixtures import confirm_text, onsubmit_handlers
+from tests.job_fixtures import job_holding_the_slot
 
 HOUSE_MAP = "US House Districts 2024"
 SENATE_MAP = "US Senate 2024"
@@ -185,7 +191,7 @@ SHAPIRO_READINGS = _readings(
 
 _REBUILD_CAVEAT = (
     "Only today's trend point follows a moved matchup. To move the earlier "
-    "points, open that chamber's race matchups and press Use automatic on one "
+    "points, open the race matchups and press Use automatic on one "
     "of its races with Rebuild history ticked."
 )
 
@@ -243,6 +249,18 @@ def _president_row(db: Database, **overrides: Any) -> UsPollRow:
     return _row(db, **fields)
 
 
+def _house_row(db: Database, **overrides: Any) -> UsPollRow:
+    """A TX-02 district poll."""
+    fields: dict[str, Any] = {
+        "contest": "house_districts",
+        "seat": "TX-02",
+        "matchup": TEXAS_MATCHUP,
+        "readings": TEXAS_READINGS,
+    }
+    fields.update(overrides)
+    return _row(db, **fields)
+
+
 def _index(*rows: UsPollRow) -> UsPollIndex:
     return UsPollIndex(
         rows=tuple(rows),
@@ -292,12 +310,14 @@ class _RecordingRunner:
 
     def __init__(self, return_codes: dict[str, int] | None = None) -> None:
         self.calls: list[str] = []
+        self.invocations: list[tuple[str, tuple[str, ...]]] = []
         self._return_codes = return_codes or {}
 
     def __call__(
         self, script: Path, *args: str, timeout: int
     ) -> subprocess.CompletedProcess[str]:
         self.calls.append(script.name)
+        self.invocations.append((script.name, args))
         return subprocess.CompletedProcess(
             args=[str(script), *args],
             returncode=self._return_codes.get(script.name, 0),
@@ -885,13 +905,21 @@ class TestApproveGroup:
 
 
 def _imported_payload(
-    db: Database, *rows: UsPollRow, run_model_at_end: bool = True
+    db: Database,
+    *rows: UsPollRow,
+    run_model_at_end: bool = True,
+    chamber: str = "senate",
 ) -> dict[str, Any]:
     """Queue rows, approve them race by race, and wrap the state in a payload."""
     state = _queue(db, *rows, run_model_at_end=run_model_at_end)
     for key in dict.fromkeys(group_key(item.row) for item in state.items):
         approve_group(db, state, key)
-    return {"type": "us_wikipedia_queue", STATE_KEY: state, INDEX_KEY: _index(*rows)}
+    return {
+        "type": "us_wikipedia_queue",
+        CHAMBER_KEY: chamber,
+        STATE_KEY: state,
+        INDEX_KEY: _index(*rows),
+    }
 
 
 class _TrackingSpy:
@@ -965,7 +993,7 @@ class TestFinish:
         tracked = us_db.get_tracked_matchup(senate, texas_id)
         assert tracked is not None
         assert tracked.matchup == TEXAS_THREE_WAY
-        assert len(runner.calls) == 3
+        assert runner.calls == ["run_us_senate_model.py", "export_elections.py"]
 
     def test_a_relabelling_pass_that_raised_is_recorded(
         self, us_db: Database, monkeypatch: pytest.MonkeyPatch
@@ -985,7 +1013,7 @@ class TestFinish:
         assert payload[AUTO_TRACKING_KEY]["created"] == 1
         assert isinstance(payload[MODEL_RUN_KEY], UsModelRun)
 
-    def test_runs_the_models_once_when_something_was_imported(
+    def test_runs_the_model_once_when_something_was_imported(
         self, us_db: Database
     ) -> None:
         runner = _RecordingRunner()
@@ -996,10 +1024,8 @@ class TestFinish:
         run = payload[MODEL_RUN_KEY]
         assert isinstance(run, UsModelRun)
         assert run.return_code == 0
-        # No presidential matchup is set, so that chamber is skipped.
-        assert run.skipped == frozenset({"president"})
-        assert len(runner.calls) == 3
-        assert runner.calls[-1] == EXPORT_ELECTION_SCRIPT.name
+        assert run.skipped == frozenset()
+        assert runner.calls == ["run_us_senate_model.py", EXPORT_ELECTION_SCRIPT.name]
 
     def test_a_refresh_repeats_nothing(
         self, us_db: Database, monkeypatch: pytest.MonkeyPatch
@@ -1015,9 +1041,65 @@ class TestFinish:
         finish_us_queue(us_db, payload, runner=runner)
 
         assert spy.calls == 1
-        assert len(runner.calls) == 3
+        assert len(runner.calls) == 2
         assert payload[AUTO_TRACKING_KEY] is first_tracking
         assert payload[MODEL_RUN_KEY] is first_run
+
+    def test_it_reports_whether_this_call_wrote(self, us_db: Database) -> None:
+        runner = _RecordingRunner()
+        payload = _imported_payload(us_db, _row(us_db))
+
+        first = finish_us_queue(us_db, payload, runner=runner)
+        refresh = finish_us_queue(us_db, payload, runner=runner)
+
+        assert first is True
+        assert refresh is False
+
+    def test_a_finish_that_changed_nothing_reports_no_write(
+        self, us_db: Database
+    ) -> None:
+        # Nothing stored, so tracking skips the race; nothing imported or
+        # relabelled, so no model runs.
+        row = _row(us_db)
+        state = _queue(us_db, row)
+        state.items[0].status = "skipped"
+        payload: dict[str, Any] = {
+            CHAMBER_KEY: "senate",
+            STATE_KEY: state,
+            INDEX_KEY: _index(row),
+        }
+        runner = _RecordingRunner()
+
+        wrote = finish_us_queue(us_db, payload, runner=runner)
+
+        assert wrote is False
+        assert runner.calls == []
+
+    def test_a_tracking_only_finish_with_the_model_off_still_reports_a_write(
+        self, us_db: Database
+    ) -> None:
+        payload = _imported_payload(us_db, _row(us_db))
+        payload[STATE_KEY].run_model_at_end = False
+
+        wrote = finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+        assert payload[AUTO_TRACKING_KEY]["created"] == 1
+        assert wrote is True
+
+    def test_a_refused_model_run_with_nothing_else_changed_reports_no_write(
+        self, us_db: Database
+    ) -> None:
+        # Tracked and relabelled by an earlier call, so only the model remains;
+        # another run holds the slot, so it does not start.
+        payload = _imported_payload(us_db, _row(us_db))
+        payload[RELABEL_KEY] = 0
+        payload[AUTO_TRACKING_KEY] = {"unchanged": 1}
+
+        with MODEL_RUN_LOCK:
+            wrote = finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+        assert payload[MODEL_RUN_KEY] is None
+        assert wrote is False
 
     def _skipped_but_stored_payload(self, us_db: Database) -> dict[str, Any]:
         """A run that imported nothing: its one row was stored beforehand."""
@@ -1027,7 +1109,7 @@ class TestFinish:
         _store(us_db, row)
         confirm_us_item(us_db, state.items[0])
         assert state.items[0].status == "skipped"
-        return {STATE_KEY: state, INDEX_KEY: _index(row)}
+        return {CHAMBER_KEY: "senate", STATE_KEY: state, INDEX_KEY: _index(row)}
 
     def test_a_tracking_only_run_runs_the_models_once(self, us_db: Database) -> None:
         payload = self._skipped_but_stored_payload(us_db)
@@ -1040,7 +1122,7 @@ class TestFinish:
         # the forecast must move onto it — once, however often it is refreshed.
         assert payload[AUTO_TRACKING_KEY]["created"] == 1
         assert isinstance(payload[MODEL_RUN_KEY], UsModelRun)
-        assert len(runner.calls) == 3
+        assert len(runner.calls) == 2
 
     def test_unchanged_tracking_with_nothing_imported_runs_no_models(
         self, us_db: Database
@@ -1088,11 +1170,42 @@ class TestFinish:
         payload = self._skipped_but_stored_payload(us_db)
         runner = _RecordingRunner()
 
-        finish_us_queue(us_db, payload, runner=runner)
+        wrote = finish_us_queue(us_db, payload, runner=runner)
 
         assert AUTO_TRACKING_ERROR_KEY in payload
         assert runner.calls == []
         assert MODEL_RUN_KEY not in payload
+        # The failed pass may have written part of its work.
+        assert wrote is True
+
+    def test_a_relabel_pass_that_raised_reports_a_write(
+        self, us_db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def failing(db: Database, rows: list[UsPollRow]) -> int:
+            raise UsImportError("boom")
+
+        monkeypatch.setattr(us_poll_queue, "apply_relabelled_polls", failing)
+        payload = _imported_payload(us_db, _row(us_db), run_model_at_end=False)
+        payload[AUTO_TRACKING_KEY] = {"unchanged": 1}
+
+        wrote = finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+        assert RELABEL_ERROR_KEY in payload
+        assert wrote is True
+
+    def test_relabelled_polls_report_a_write_with_the_model_off(
+        self, us_db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            us_poll_queue, "apply_relabelled_polls", lambda db, rows: 2
+        )
+        payload = _imported_payload(us_db, _row(us_db), run_model_at_end=False)
+        payload[AUTO_TRACKING_KEY] = {"unchanged": 1}
+
+        wrote = finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+        assert payload[RELABEL_KEY] == 2
+        assert wrote is True
 
     def test_tracking_from_an_earlier_request_still_counts(
         self, us_db: Database
@@ -1105,7 +1218,7 @@ class TestFinish:
 
         finish_us_queue(us_db, payload, runner=runner)
 
-        assert len(runner.calls) == 3
+        assert len(runner.calls) == 2
 
     def test_the_model_option_off_runs_no_models(self, us_db: Database) -> None:
         runner = _RecordingRunner()
@@ -1130,9 +1243,9 @@ class TestFinish:
         run = payload[MODEL_RUN_KEY]
         assert isinstance(run, UsModelRun)
         assert run.return_code == 1
-        assert run.stdout.startswith("=== Run US House model ===")
+        assert run.stdout.startswith("=== Run US Senate model ===")
         assert payload[MODEL_ERROR_KEY].startswith(
-            "US model run failed: Run US House model did not finish: TimeoutExpired"
+            "US model run failed: Run US Senate model did not finish: TimeoutExpired"
         )
 
     def test_a_run_in_progress_defers_the_models_and_says_so(
@@ -1144,14 +1257,16 @@ class TestFinish:
         with MODEL_RUN_LOCK:
             finish_us_queue(us_db, payload, runner=runner)
         # Recorded, not retried: a refresh once the other run has ended does
-        # not start a surprise run; the summary points at the home page.
+        # not start a surprise run; the summary points at the chamber's
+        # Run model page.
         finish_us_queue(us_db, payload, runner=runner)
 
         assert runner.calls == []
         assert payload[MODEL_RUN_KEY] is None
         assert payload[MODEL_ERROR_KEY] == (
-            "US models not run: another US model run or history rebuild was in "
-            "progress. Run US Models from the home page once it finishes."
+            "US Senate model not run: another run was in progress (a model run, "
+            "export or database rebuild). Run it from the US Senate section's "
+            "Run model page once it finishes."
         )
         assert not MODEL_RUN_LOCK.locked()
 
@@ -1242,7 +1357,7 @@ class TestFinish:
         message = payload[AUTO_TRACKING_ERROR_KEY]
         assert message.startswith("Automatic matchup tracking failed: ")
         assert fragment in message
-        assert len(runner.calls) == 3
+        assert len(runner.calls) == 2
 
     def test_a_payload_without_a_queue_is_rejected(self, us_db: Database) -> None:
         with pytest.raises(TypeError, match="no queue state"):
@@ -1253,6 +1368,53 @@ class TestFinish:
 
         with pytest.raises(TypeError, match="no scraped index"):
             finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+    @pytest.mark.parametrize("chamber", [None, "congress", 3])
+    def test_a_payload_without_a_known_chamber_is_rejected(
+        self, us_db: Database, chamber: object
+    ) -> None:
+        row = _row(us_db)
+        payload: dict[str, Any] = {
+            STATE_KEY: _queue(us_db, row),
+            INDEX_KEY: _index(row),
+            CHAMBER_KEY: chamber,
+        }
+        runner = _RecordingRunner()
+
+        with pytest.raises(TypeError, match="no known chamber"):
+            finish_us_queue(us_db, payload, runner=runner)
+
+        assert runner.calls == []
+        assert RELABEL_KEY not in payload and AUTO_TRACKING_KEY not in payload
+
+    def test_each_chamber_runs_only_its_own_model_then_the_export(
+        self, us_db: Database
+    ) -> None:
+        us_db.set_tracked_matchup(
+            _map_id(us_db, PRESIDENT_MAP), None, NEWSOM_MATCHUP, source="manual"
+        )
+        rows = {
+            "house": _house_row(us_db),
+            "senate": _row(us_db),
+            "president": _president_row(us_db),
+        }
+        expected = {
+            "house": "run_us_house_model.py",
+            "senate": "run_us_senate_model.py",
+            "president": "run_us_presidential_model.py",
+        }
+        for chamber, row in rows.items():
+            runner = _RecordingRunner()
+            payload = _imported_payload(us_db, row, chamber=chamber)
+
+            finish_us_queue(us_db, payload, runner=runner)
+
+            args = US_CHAMBERS_BY_SLUG[chamber].model_args
+            assert runner.invocations == [
+                (expected[chamber], args),
+                (EXPORT_ELECTION_SCRIPT.name, ()),
+            ], chamber
+            assert "--rebuild-history" not in args
 
 
 def _us_seat(item: QueueItem) -> str | None:
@@ -1278,11 +1440,12 @@ class TestTrackingChanged:
         assert tracking_changed(counts) is changed
 
 
-# ── Routes (console.blueprints.us_poll_import) ────────────────────────────────
+# ── Routes (console.us.poll_import) ────────────────────────────────
 
-BLUEPRINT = "console.blueprints.us_poll_import"
+BLUEPRINT = "console.us.poll_import"
 
 ALL_CONTESTS = [contest.slug for contest in US_CONTESTS]
+SENATE_CONTESTS = list(US_CHAMBERS_BY_SLUG["senate"].contest_slugs)
 
 
 class _FakeFetch:
@@ -1339,17 +1502,21 @@ def _open_queue(
     monkeypatch: pytest.MonkeyPatch,
     *rows: UsPollRow,
     index: UsPollIndex | None = None,
+    chamber: str = "senate",
     **form: Any,
 ) -> str:
-    """Start a queue through the start route and return its token."""
+    """Start a queue through the chamber's start route and return its token."""
     fetch = _FakeFetch(index if index is not None else _index(*rows))
     monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
-    data: dict[str, Any] = {"contests": ALL_CONTESTS, "run_model_at_end": "on"}
+    data: dict[str, Any] = {
+        "contests": list(US_CHAMBERS_BY_SLUG[chamber].contest_slugs),
+        "run_model_at_end": "on",
+    }
     data.update(form)
-    response = client.post("/us/import/start", data=data)
+    response = client.post(f"/{chamber}/polls/import/start", data=data)
     assert response.status_code == 302
     location = response.headers["Location"]
-    assert location.startswith("/us/import/")
+    assert location.startswith(f"/{chamber}/polls/import/")
     return str(location).rsplit("/", 1)[-1]
 
 
@@ -1386,14 +1553,15 @@ class TestStartRoute:
         us_db: Database,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        fetch = _FakeFetch(_index(_row(us_db), _president_row(us_db)))
+        fetch = _FakeFetch(_index(_row(us_db), _row(us_db, seat="Texas",
+            matchup=TEXAS_MATCHUP, readings=TEXAS_READINGS)))
         monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
 
         response = client.post(
-            "/us/import/start",
+            "/senate/polls/import/start",
             data={
-                # Submitted out of order and repeated; the form canonicalises.
-                "contests": ["president", "senate_races", "president"],
+                # Repeated; the form canonicalises.
+                "contests": ["senate_races", "senate_races"],
                 "states": "tx, Michigan",
                 "include_collapsed_for_uncovered": "on",
             },
@@ -1404,6 +1572,7 @@ class TestStartRoute:
         payload = PREVIEW_CACHE[token]
         assert payload["type"] == "us_wikipedia_queue"
         assert payload["index"] is fetch.index
+        assert payload[CHAMBER_KEY] == "senate"
         state = _state(token)
         assert len(state.items) == 2
         assert state.index == 0
@@ -1413,7 +1582,7 @@ class TestStartRoute:
 
         (call,) = fetch.calls
         assert call["db"] is us_db
-        assert call["contests"] == [SENATE_RACES, PRESIDENT]
+        assert call["contests"] == [SENATE_RACES]
         assert call["states"] == ["Texas", "Michigan"]
         assert call["include_collapsed_for_uncovered"] is True
 
@@ -1426,7 +1595,7 @@ class TestStartRoute:
         monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
 
         client.post(
-            "/us/import/start", data={"contests": ["senate_races"], "states": " "}
+            "/senate/polls/import/start", data={"contests": ["senate_races"], "states": " "}
         )
 
         assert fetch.calls[0]["states"] is None
@@ -1473,12 +1642,12 @@ class TestStartRoute:
         fetch = _FakeFetch()
         monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
 
-        response = client.post("/us/import/start", data=form)
+        response = client.post("/senate/polls/import/start", data=form)
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/us/import")
+        assert response.headers["Location"].endswith("/senate/polls/import")
         assert fetch.calls == []
-        body = _body(client, "/us/import")
+        body = _body(client, "/senate/polls/import")
         assert "Could not read the import options" in body
         assert message in body
         assert PREVIEW_CACHE == {}
@@ -1493,11 +1662,11 @@ class TestStartRoute:
 
         monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", broken)
 
-        response = client.post("/us/import/start", data={"contests": ALL_CONTESTS})
+        response = client.post("/senate/polls/import/start", data={"contests": SENATE_CONTESTS})
 
-        assert response.headers["Location"].endswith("/us/import")
-        assert "Could not start the US import: parser exploded" in _body(
-            client, "/us/import"
+        assert response.headers["Location"].endswith("/senate/polls/import")
+        assert "Could not start the US Senate import: parser exploded" in _body(
+            client, "/senate/polls/import"
         )
         assert PREVIEW_CACHE == {}
 
@@ -1515,29 +1684,151 @@ class TestStartRoute:
         )
         monkeypatch.setattr(f"{BLUEPRINT}.build_us_queue", locked)
 
-        response = client.post("/us/import/start", data={"contests": ALL_CONTESTS})
+        response = client.post("/senate/polls/import/start", data={"contests": SENATE_CONTESTS})
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/us/import")
-        body = _body(client, "/us/import")
-        assert "Could not start the US import:" in body
+        assert response.headers["Location"].endswith("/senate/polls/import")
+        body = _body(client, "/senate/polls/import")
+        assert "Could not start the US Senate import:" in body
         assert "database is locked" in body
         assert PREVIEW_CACHE == {}
 
-    def test_the_start_page_offers_every_contest(
-        self, client: FlaskClient[Any]
+    @pytest.mark.parametrize("chamber", ["house", "senate", "president"])
+    def test_the_start_page_offers_only_the_chambers_contests(
+        self, client: FlaskClient[Any], chamber: str
     ) -> None:
-        body = client.get("/us/import").get_data(as_text=True)
+        spec = US_CHAMBERS_BY_SLUG[chamber]
+        body = client.get(f"/{chamber}/polls/import").get_data(as_text=True)
 
         for contest in US_CONTESTS:
-            assert f'value="{contest.slug}"' in body
-            assert contest.label in body
-        assert 'name="states"' in body
+            offered = contest.slug in spec.contest_slugs
+            assert (f'value="{contest.slug}"' in body) is offered, contest.slug
+            assert (contest.label in body) is offered, contest.slug
+        assert f'action="/{chamber}/polls/import/start"' in body
         assert 'name="cutoff_date"' in body
         assert 'name="include_collapsed_for_uncovered"' in body
+        # The copy names this section only.
+        assert f"Run the {spec.label} model and the export" in body
+        assert "US models" not in body
+        for other in US_CHAMBERS_BY_SLUG.values():
+            if other is not spec:
+                assert f"Run the {other.label} model" not in body
+
+    @pytest.mark.parametrize(
+        ("chamber", "scope"),
+        [
+            ("house", "The state filter applies to House district pages"),
+            ("senate", "The state filter applies to Senate race pages"),
+            ("president", None),
+        ],
+    )
+    def test_only_the_per_state_chambers_offer_a_state_filter(
+        self, client: FlaskClient[Any], chamber: str, scope: str | None
+    ) -> None:
+        body = client.get(f"/{chamber}/polls/import").get_data(as_text=True)
+
+        assert ('name="states"' in body) is (scope is not None)
+        assert ("The state filter applies" in body) is (scope is not None)
+        if scope is not None:
+            assert scope in body
+        for other in ("House district pages", "Senate race pages"):
+            if scope is None or other not in scope:
+                assert other not in body
+
+    def test_the_president_start_without_a_states_field_still_validates(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        fetch = _FakeFetch(_index())
+        monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
+
+        response = client.post(
+            "/president/polls/import/start", data={"contests": ["president"]}
+        )
+
+        assert response.status_code == 302
+        assert fetch.calls[0]["states"] is None
+
+    @pytest.mark.parametrize(
+        ("chamber", "foreign"),
+        [
+            ("house", ["senate_races"]),
+            ("house", ["house_national", "president"]),
+            ("senate", ["house_districts"]),
+            ("senate", ["senate_races", "president"]),
+            ("president", ["senate_races"]),
+            ("president", ["house_national", "president"]),
+        ],
+    )
+    def test_a_contest_of_another_chamber_is_rejected_before_any_fetch(
+        self,
+        client: FlaskClient[Any],
+        monkeypatch: pytest.MonkeyPatch,
+        chamber: str,
+        foreign: list[str],
+    ) -> None:
+        fetch = _FakeFetch()
+        monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
+
+        response = client.post(
+            f"/{chamber}/polls/import/start", data={"contests": foreign}
+        )
+
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith(f"/{chamber}/polls/import")
+        assert fetch.calls == []
+        body = _body(client, f"/{chamber}/polls/import")
+        assert "Could not read the import options" in body
+        owned = set(US_CHAMBERS_BY_SLUG[chamber].contest_slugs)
+        assert (
+            "contest(s) not part of this section: "
+            + ", ".join(slug for slug in foreign if slug not in owned)
+        ) in body
+        assert PREVIEW_CACHE == {}
+
+    @pytest.mark.parametrize("chamber", ["house", "senate", "president"])
+    def test_a_start_with_the_chambers_own_contests_stores_the_chamber(
+        self,
+        client: FlaskClient[Any],
+        monkeypatch: pytest.MonkeyPatch,
+        chamber: str,
+    ) -> None:
+        fetch = _FakeFetch()
+        monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
+        own = list(US_CHAMBERS_BY_SLUG[chamber].contest_slugs)
+
+        response = client.post(
+            f"/{chamber}/polls/import/start", data={"contests": own}
+        )
+
+        token = response.headers["Location"].rsplit("/", 1)[-1]
+        assert response.headers["Location"] == f"/{chamber}/polls/import/{token}"
+        assert PREVIEW_CACHE[token][CHAMBER_KEY] == chamber
+        assert [contest.slug for contest in fetch.calls[0]["contests"]] == own
 
 
 class TestStepPage:
+    def test_the_abandon_form_confirms_what_is_kept_and_what_is_not(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, _row(us_db))
+
+        body = client.get(f"/senate/polls/import/{token}").get_data(as_text=True)
+
+        [handler] = [h for h in onsubmit_handlers(body) if "Abandon" in h]
+        assert handler.startswith("return confirm(")
+        assert confirm_text(handler) == (
+            "Abandon this queue? Polls already imported stay; the rest are not "
+            "imported and the US Senate model is not run. Automatic matchup "
+            "tracking and relabelling onto renamed matchups are still applied for "
+            "the polls already stored. This can't be undone from the console."
+        )
+
     def test_renders_the_matchup_candidates_and_warnings(
         self,
         client: FlaskClient[Any],
@@ -1548,7 +1839,7 @@ class TestStepPage:
         rows[0] = _row(us_db, pollster="Glengariff Group", pollster_tags=("R",))
         token = _open_queue(client, monkeypatch, *rows)
 
-        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+        body = client.get(f"/senate/polls/import/{token}").get_data(as_text=True)
 
         assert "Poll 1 of 3" in body
         assert "Senate race polls" in body
@@ -1570,7 +1861,7 @@ class TestStepPage:
             "44",
         )
         for cell in cells:
-            assert f"<td>{cell}</td>" in body
+            assert re.search(rf"<td(?: [^>]*)?>{cell}</td>", body), cell
         assert "This will create a new pollster: Glengariff Group (US Senate)." in body
         assert "Partisan poll: the pollster is tagged (R)." in body
         assert "Race tracked:</strong> none yet" in body
@@ -1596,7 +1887,7 @@ class TestStepPage:
         )
         token = _open_queue(client, monkeypatch, _row(us_db))
 
-        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+        body = client.get(f"/senate/polls/import/{token}").get_data(as_text=True)
 
         assert f"Race tracked:</strong> {MICHIGAN_MATCHUP} (auto)" in body
 
@@ -1612,7 +1903,7 @@ class TestStepPage:
         nevada = _president_row(us_db, seat="Nevada")
         token = _open_queue(client, monkeypatch, nevada)
 
-        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+        body = client.get(f"/senate/polls/import/{token}").get_data(as_text=True)
 
         assert f"Race tracked:</strong> {NEWSOM_MATCHUP} (manual)" in body
         assert "Approve all 1 remaining in Nevada" in body
@@ -1636,7 +1927,7 @@ class TestStepPage:
         )
         token = _open_queue(client, monkeypatch, generic)
 
-        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+        body = client.get(f"/senate/polls/import/{token}").get_data(as_text=True)
 
         assert "<strong>Party voting intention</strong>" in body
         assert "Race tracked" not in body
@@ -1650,7 +1941,7 @@ class TestStepPage:
     ) -> None:
         token = _open_queue(client, monkeypatch, _row(us_db, readings=UNPLANNABLE))
 
-        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+        body = client.get(f"/senate/polls/import/{token}").get_data(as_text=True)
 
         assert "This poll could not be imported" in body
         assert 'name="action" value="retry"' in body
@@ -1664,10 +1955,10 @@ class TestStepPage:
     ) -> None:
         token = _open_queue(client, monkeypatch)
 
-        response = client.get(f"/us/import/{token}")
+        response = client.get(f"/senate/polls/import/{token}")
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith(f"/us/import/{token}/finish")
+        assert response.headers["Location"].endswith(f"/senate/polls/import/{token}/finish")
 
 
 class TestConfirmRoute:
@@ -1678,13 +1969,13 @@ class TestConfirmRoute:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
-        client.get(f"/us/import/{token}")
+        client.get(f"/senate/polls/import/{token}")
 
         response = client.post(
-            f"/us/import/{token}/confirm", data={"expected_index": "0"}
+            f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"}
         )
 
-        assert response.headers["Location"].endswith(f"/us/import/{token}")
+        assert response.headers["Location"].endswith(f"/senate/polls/import/{token}")
         state = _state(token)
         assert state.items[0].status == "imported"
         assert state.items[0].poll_id is not None
@@ -1698,21 +1989,43 @@ class TestConfirmRoute:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
-        client.get(f"/us/import/{token}")
+        client.get(f"/senate/polls/import/{token}")
 
         for stale in ("1", "", "abc"):
             response = client.post(
-                f"/us/import/{token}/confirm", data={"expected_index": stale}
+                f"/senate/polls/import/{token}/confirm", data={"expected_index": stale}
             )
-            assert response.headers["Location"].endswith(f"/us/import/{token}")
+            assert response.headers["Location"].endswith(f"/senate/polls/import/{token}")
 
         state = _state(token)
         assert state.index == 0
         assert state.items[0].status == "pending"
         assert _polls_on(us_db, SENATE_MAP) == 0
         assert "That step has already been actioned." in _body(
-            client, f"/us/import/{token}"
+            client, f"/senate/polls/import/{token}"
         )
+
+    @pytest.mark.parametrize("suffix", ["/confirm", "/skip", "/approve-race"])
+    def test_a_step_posted_after_the_queue_is_exhausted_goes_to_finish(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        suffix: str,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, _row(us_db))
+        state = _state(token)
+        state.index = len(state.items)
+
+        response = client.post(
+            f"/senate/polls/import/{token}{suffix}",
+            data={"expected_index": str(state.index), "action": "skip"},
+        )
+
+        assert response.headers["Location"].endswith(
+            f"/senate/polls/import/{token}/finish"
+        )
+        assert _polls_on(us_db, SENATE_MAP) == 0
 
     def test_an_item_never_shown_is_not_committed(
         self,
@@ -1722,7 +2035,7 @@ class TestConfirmRoute:
     ) -> None:
         token = _open_queue(client, monkeypatch, _row(us_db))
 
-        client.post(f"/us/import/{token}/confirm", data={"expected_index": "0"})
+        client.post(f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"})
 
         assert _state(token).items[0].status == "pending"
         assert _polls_on(us_db, SENATE_MAP) == 0
@@ -1734,21 +2047,21 @@ class TestConfirmRoute:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
-        client.get(f"/us/import/{token}")
+        client.get(f"/senate/polls/import/{token}")
 
         def failing_commit(*_args: Any) -> None:
             raise UsImportError("disk full")
 
         monkeypatch.setattr(us_poll_queue, "commit_us_import_plan", failing_commit)
-        client.post(f"/us/import/{token}/confirm", data={"expected_index": "0"})
+        client.post(f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"})
         # A second submit of the same form must not advance past the failure.
-        client.post(f"/us/import/{token}/confirm", data={"expected_index": "0"})
+        client.post(f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"})
 
         state = _state(token)
         assert state.index == 0
         assert state.items[0].status == "failed"
         assert state.items[0].detail == "disk full"
-        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+        body = client.get(f"/senate/polls/import/{token}").get_data(as_text=True)
         assert "disk full" in body
         assert 'name="action" value="retry"' in body
 
@@ -1761,9 +2074,9 @@ class TestSkipRoute:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
-        client.get(f"/us/import/{token}")
+        client.get(f"/senate/polls/import/{token}")
 
-        client.post(f"/us/import/{token}/skip", data={"expected_index": "0"})
+        client.post(f"/senate/polls/import/{token}/skip", data={"expected_index": "0"})
 
         state = _state(token)
         assert state.items[0].status == "skipped"
@@ -1778,7 +2091,7 @@ class TestSkipRoute:
     ) -> None:
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
 
-        client.post(f"/us/import/{token}/skip", data={"expected_index": "1"})
+        client.post(f"/senate/polls/import/{token}/skip", data={"expected_index": "1"})
 
         assert _state(token).index == 0
         assert _state(token).items[0].status == "pending"
@@ -1800,18 +2113,18 @@ class TestSkipRoute:
             return real_plan(db, row)
 
         monkeypatch.setattr(us_poll_queue, "build_us_import_plan", flaky_plan)
-        client.get(f"/us/import/{token}")
+        client.get(f"/senate/polls/import/{token}")
         assert _state(token).items[0].status == "failed"
 
         client.post(
-            f"/us/import/{token}/skip",
+            f"/senate/polls/import/{token}/skip",
             data={"expected_index": "0", "action": "retry"},
         )
         item = _state(token).items[0]
         assert item.status == "pending"
         assert _state(token).index == 0
 
-        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+        body = client.get(f"/senate/polls/import/{token}").get_data(as_text=True)
         assert "Approve &amp; Import" in body
         assert item.plan is not None
         assert len(attempts) == 2
@@ -1823,9 +2136,9 @@ class TestSkipRoute:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         token = _open_queue(client, monkeypatch, _row(us_db, readings=UNPLANNABLE))
-        client.get(f"/us/import/{token}")
+        client.get(f"/senate/polls/import/{token}")
 
-        client.post(f"/us/import/{token}/skip", data={"expected_index": "0"})
+        client.post(f"/senate/polls/import/{token}/skip", data={"expected_index": "0"})
 
         item = _state(token).items[0]
         assert item.status == "skipped"
@@ -1847,13 +2160,13 @@ class TestApproveGroupRoute:
             readings=TEXAS_READINGS,
         )
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 3), texas)
-        client.get(f"/us/import/{token}")
+        client.get(f"/senate/polls/import/{token}")
 
         response = client.post(
-            f"/us/import/{token}/approve-race", data={"expected_index": "0"}
+            f"/senate/polls/import/{token}/approve-race", data={"expected_index": "0"}
         )
 
-        assert response.headers["Location"].endswith(f"/us/import/{token}")
+        assert response.headers["Location"].endswith(f"/senate/polls/import/{token}")
         state = _state(token)
         assert [item.status for item in state.items] == [
             "imported",
@@ -1863,7 +2176,7 @@ class TestApproveGroupRoute:
         ]
         assert state.index == 3
         assert _polls_on(us_db, SENATE_MAP) == 3
-        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+        body = client.get(f"/senate/polls/import/{token}").get_data(as_text=True)
         assert "Michigan: 3 imported, 0 already stored, 0 failed." in body
         assert "UT Tyler" in body
 
@@ -1882,9 +2195,9 @@ class TestApproveGroupRoute:
         # Stored after the queue was built, so the batch finds it present.
         _store(us_db, stored)
 
-        client.post(f"/us/import/{token}/approve-race", data={"expected_index": "0"})
+        client.post(f"/senate/polls/import/{token}/approve-race", data={"expected_index": "0"})
 
-        body = client.get(f"/us/import/{token}", follow_redirects=True).get_data(
+        body = client.get(f"/senate/polls/import/{token}", follow_redirects=True).get_data(
             as_text=True
         )
         assert "Michigan: 2 imported, 1 already stored, 1 failed." in body
@@ -1897,7 +2210,7 @@ class TestApproveGroupRoute:
     ) -> None:
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
 
-        client.post(f"/us/import/{token}/approve-race", data={"expected_index": "1"})
+        client.post(f"/senate/polls/import/{token}/approve-race", data={"expected_index": "1"})
 
         assert _state(token).index == 0
         assert _polls_on(us_db, SENATE_MAP) == 0
@@ -1914,11 +2227,11 @@ class TestFinishRoute:
         **form: Any,
     ) -> str:
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, count), **form)
-        client.get(f"/us/import/{token}")
-        client.post(f"/us/import/{token}/confirm", data={"expected_index": "0"})
+        client.get(f"/senate/polls/import/{token}")
+        client.post(f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"})
         return token
 
-    def test_runs_the_models_once_after_an_import(
+    def test_runs_the_chambers_model_once_after_an_import(
         self,
         client: FlaskClient[Any],
         us_db: Database,
@@ -1927,20 +2240,22 @@ class TestFinishRoute:
     ) -> None:
         token = self._import_one(client, us_db, monkeypatch)
 
-        first = client.get(f"/us/import/{token}", follow_redirects=True)
-        client.get(f"/us/import/{token}/finish")
+        first = client.get(f"/senate/polls/import/{token}", follow_redirects=True)
+        client.get(f"/senate/polls/import/{token}/finish")
 
-        # The president has no tracked matchup, so only its step is skipped.
+        # Only the Senate's model: neither the House's nor the President's.
         assert model_runner.calls == [
-            "run_us_house_model.py",
             "run_us_senate_model.py",
             EXPORT_ELECTION_SCRIPT.name,
         ]
         body = first.get_data(as_text=True)
-        assert "US Poll Import Summary" in body
-        assert "Models and Export" in body
-        assert "SKIPPED: no tracked presidential matchup set" in body
-        assert "skipped: president" in body
+        assert "US Senate Poll Import Summary" in body
+        assert "Model and Export" in body
+        assert "SKIPPED" not in body
+        assert "· skipped:" not in body
+        assert 'href="/senate/matchups"' in body
+        assert 'href="/house/matchups"' not in body
+        assert 'href="/president/matchup"' not in body
         assert "1 races tracked for the first time" in body
         # Tracking moved and the models ran, so the older points are flagged.
         assert _REBUILD_CAVEAT in " ".join(html.unescape(body).split())
@@ -1966,14 +2281,68 @@ class TestFinishRoute:
         )
         token = _open_queue(client, monkeypatch, renamed)
 
-        body = " ".join(_body(client, f"/us/import/{token}").split())
+        body = " ".join(_body(client, f"/senate/polls/import/{token}").split())
 
         assert "1 poll(s) in the window were already in the database" in body
         assert (
             "1 stored poll(s) were moved onto their race's renamed matchup"
             in html.unescape(body)
         )
-        assert len(model_runner.calls) == 3
+        assert len(model_runner.calls) == 2
+
+    def test_a_get_finish_that_wrote_requests_a_backup_and_a_refresh_does_not(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+        token = self._import_one(client, us_db, monkeypatch)
+        requests.clear()
+
+        client.get(f"/senate/polls/import/{token}/finish")
+        assert len(requests) == 1
+
+        client.get(f"/senate/polls/import/{token}/finish")
+        assert len(requests) == 1
+
+    def test_a_finish_that_raises_after_writing_still_requests_a_backup(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+
+        def write_then_fail(*args: Any, **kwargs: Any) -> bool:
+            raise RuntimeError("model blew up")
+
+        monkeypatch.setattr(us_poll_import, "finish_us_queue", write_then_fail)
+        token = self._import_one(client, us_db, monkeypatch)
+        requests.clear()
+
+        with pytest.raises(RuntimeError, match="model blew up"):
+            client.get(f"/senate/polls/import/{token}/finish")
+
+        assert len(requests) == 1
+
+    def test_a_get_finish_that_wrote_nothing_requests_no_backup(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("x"))
+        token = _open_queue(client, monkeypatch, _row(us_db))
+        client.post(f"/senate/polls/import/{token}/skip", data={"expected_index": "0"})
+
+        response = client.get(f"/senate/polls/import/{token}/finish")
+
+        assert response.status_code == 200
+        assert requests == []
 
     def test_nothing_imported_runs_no_models(
         self,
@@ -1983,13 +2352,13 @@ class TestFinishRoute:
         model_runner: _RecordingRunner,
     ) -> None:
         token = _open_queue(client, monkeypatch, _row(us_db))
-        client.post(f"/us/import/{token}/skip", data={"expected_index": "0"})
+        client.post(f"/senate/polls/import/{token}/skip", data={"expected_index": "0"})
 
-        body = _body(client, f"/us/import/{token}")
+        body = _body(client, f"/senate/polls/import/{token}")
 
         assert model_runner.calls == []
         assert "Nothing was imported." in body
-        assert "Models and Export" not in body
+        assert "Model and Export" not in body
         assert "move the earlier points" not in body
 
     def test_the_model_option_off_runs_no_models(
@@ -2001,7 +2370,7 @@ class TestFinishRoute:
     ) -> None:
         token = self._import_one(client, us_db, monkeypatch, run_model_at_end="")
 
-        body = _body(client, f"/us/import/{token}/finish")
+        body = _body(client, f"/senate/polls/import/{token}/finish")
 
         assert model_runner.calls == []
         # Tracking moved, but no model ran, so no trend point follows it yet.
@@ -2020,7 +2389,7 @@ class TestFinishRoute:
         monkeypatch.setattr(f"{BLUEPRINT}.run_python_script", runner)
         token = self._import_one(client, us_db, monkeypatch)
 
-        body = _body(client, f"/us/import/{token}/finish")
+        body = _body(client, f"/senate/polls/import/{token}/finish")
 
         assert "1 races tracked for the first time" in body
         assert "Return code 1" in body
@@ -2035,8 +2404,8 @@ class TestFinishRoute:
     ) -> None:
         token = self._import_one(client, us_db, monkeypatch, count=2)
 
-        response = client.post(f"/us/import/{token}/finish", data={"abandon": "on"})
-        client.get(f"/us/import/{token}/finish")
+        response = client.post(f"/senate/polls/import/{token}/finish", data={"abandon": "on"})
+        client.get(f"/senate/polls/import/{token}/finish")
 
         assert model_runner.calls == []
         assert _state(token).run_model_at_end is False
@@ -2056,7 +2425,7 @@ class TestFinishRoute:
         monkeypatch.setattr(f"{BLUEPRINT}.run_python_script", timed_out)
         token = self._import_one(client, us_db, monkeypatch)
 
-        body = client.get(f"/us/import/{token}/finish").get_data(as_text=True)
+        body = client.get(f"/senate/polls/import/{token}/finish").get_data(as_text=True)
 
         assert "US model run failed:" in body
 
@@ -2080,8 +2449,8 @@ class TestFinishRoute:
         monkeypatch.setattr(us_poll_queue, "apply_auto_tracked_matchups", colliding)
         token = self._import_one(client, us_db, monkeypatch)
 
-        first = client.get(f"/us/import/{token}/finish")
-        second = client.get(f"/us/import/{token}/finish")
+        first = client.get(f"/senate/polls/import/{token}/finish")
+        second = client.get(f"/senate/polls/import/{token}/finish")
 
         assert first.status_code == second.status_code == 200
         assert calls == [1]
@@ -2090,7 +2459,7 @@ class TestFinishRoute:
         assert "UNIQUE constraint failed" in body
         assert "No race&#39;s tracked matchup changed." not in body
         # The polls are stored, so the models still ran, once.
-        assert len(model_runner.calls) == 3
+        assert len(model_runner.calls) == 2
 
     def test_the_summary_groups_statuses_and_shows_the_diagnostics(
         self,
@@ -2144,14 +2513,14 @@ class TestFinishRoute:
             summary_rows_skipped=1,
         )
         token = _open_queue(client, monkeypatch, index=index)
-        client.get(f"/us/import/{token}")
-        client.post(f"/us/import/{token}/confirm", data={"expected_index": "0"})
-        client.get(f"/us/import/{token}")
-        client.post(f"/us/import/{token}/skip", data={"expected_index": "1"})
+        client.get(f"/senate/polls/import/{token}")
+        client.post(f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"})
+        client.get(f"/senate/polls/import/{token}")
+        client.post(f"/senate/polls/import/{token}/skip", data={"expected_index": "1"})
         # The broken row fails as it is shown, and the user finishes there.
-        client.get(f"/us/import/{token}")
+        client.get(f"/senate/polls/import/{token}")
 
-        body = _body(client, f"/us/import/{token}/finish")
+        body = _body(client, f"/senate/polls/import/{token}/finish")
 
         progress_line = "3 polls queued · 1 imported · 1 failed · 1 skipped"
         assert progress_line in " ".join(body.split())
@@ -2201,12 +2570,12 @@ class TestFinishRoute:
         )
         token = _open_queue(client, monkeypatch, index=index)
 
-        body = _body(client, f"/us/import/{token}/finish")
+        body = _body(client, f"/senate/polls/import/{token}/finish")
 
         assert "Tables with no matchup (1)" in body
         assert "General election › Polling › Hinson" in body
         assert "Iowa</td>" in body
-        assert "<td>5</td>" in body
+        assert '<td class="num">5</td>' in body
         assert "Oversized tables (1)" in body
         assert "https://en.wikipedia.org/wiki/Huge" in body
         assert "[District 7 › Polling]" in body
@@ -2218,10 +2587,199 @@ class TestFinishRoute:
     ) -> None:
         token = _open_queue(client, monkeypatch)
 
-        body = _body(client, f"/us/import/{token}/finish")
+        body = _body(client, f"/senate/polls/import/{token}/finish")
 
         assert "Tables with no matchup (0)" in body
         assert "Oversized tables (0)" in body
+
+
+class TestChamberFinishRoute:
+    """The finish step runs one chamber's model, however the run ends."""
+
+    @staticmethod
+    def _row_for(db: Database, chamber: str) -> UsPollRow:
+        if chamber == "house":
+            return _house_row(db)
+        if chamber == "president":
+            db.set_tracked_matchup(
+                _map_id(db, PRESIDENT_MAP), None, NEWSOM_MATCHUP, source="manual"
+            )
+            return _president_row(db)
+        return _row(db)
+
+    @staticmethod
+    def _approve_first(client: FlaskClient[Any], chamber: str, token: str) -> None:
+        client.get(f"/{chamber}/polls/import/{token}")
+        client.post(
+            f"/{chamber}/polls/import/{token}/confirm", data={"expected_index": "0"}
+        )
+
+    @pytest.mark.parametrize(
+        ("chamber", "script"),
+        [
+            ("house", "run_us_house_model.py"),
+            ("senate", "run_us_senate_model.py"),
+            ("president", "run_us_presidential_model.py"),
+        ],
+    )
+    def test_only_that_chambers_model_and_the_export_run(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+        chamber: str,
+        script: str,
+    ) -> None:
+        row = self._row_for(us_db, chamber)
+        token = _open_queue(client, monkeypatch, row, chamber=chamber)
+        self._approve_first(client, chamber, token)
+
+        body = _body(client, f"/{chamber}/polls/import/{token}")
+        client.get(f"/{chamber}/polls/import/{token}/finish")
+
+        assert model_runner.invocations == [
+            (script, US_CHAMBERS_BY_SLUG[chamber].model_args),
+            (EXPORT_ELECTION_SCRIPT.name, ()),
+        ]
+        assert f"{US_CHAMBERS_BY_SLUG[chamber].label} Poll Import Summary" in body
+        assert "Return code 0" in body
+
+    @pytest.mark.parametrize("chamber", ["house", "senate", "president"])
+    def test_with_the_option_off_nothing_runs(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+        chamber: str,
+    ) -> None:
+        row = self._row_for(us_db, chamber)
+        token = _open_queue(
+            client, monkeypatch, row, chamber=chamber, run_model_at_end=""
+        )
+        self._approve_first(client, chamber, token)
+
+        body = _body(client, f"/{chamber}/polls/import/{token}/finish")
+
+        assert model_runner.invocations == []
+        assert "Model and Export" not in body
+        assert PREVIEW_CACHE[token].get(MODEL_RUN_KEY) is None
+
+    def test_abandoning_still_relabels_and_tracks_but_runs_no_model(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+    ) -> None:
+        senate = _map_id(us_db, SENATE_MAP)
+        texas_id = _seat_id(us_db, SENATE_MAP, "Texas")
+        two_way = _row(
+            us_db, seat="Texas", matchup=TEXAS_MATCHUP, readings=TEXAS_READINGS
+        )
+        poll_id = _store(us_db, two_way)
+        us_db.set_tracked_matchup(senate, texas_id, TEXAS_MATCHUP, source="auto")
+        renamed = two_way.model_copy(
+            update={"matchup": TEXAS_THREE_WAY, "readings": TEXAS_THREE_WAY_READINGS}
+        )
+        token = _open_queue(client, monkeypatch, renamed, _row(us_db))
+        client.get(f"/senate/polls/import/{token}")
+
+        response = client.post(
+            f"/senate/polls/import/{token}/finish", data={"abandon": "on"}
+        )
+
+        assert response.status_code == 200
+        assert model_runner.invocations == []
+        payload = PREVIEW_CACHE[token]
+        assert MODEL_RUN_KEY not in payload and MODEL_ERROR_KEY not in payload
+        assert _state(token).run_model_at_end is False
+        poll = us_db.get_poll(poll_id)
+        assert poll is not None
+        assert poll.matchup == TEXAS_THREE_WAY
+        tracked = us_db.get_tracked_matchup(senate, texas_id)
+        assert tracked is not None
+        assert (tracked.matchup, tracked.source) == (TEXAS_THREE_WAY, "auto")
+        assert payload[RELABEL_KEY] == 1
+        assert payload[AUTO_TRACKING_KEY]["updated"] == 1
+        # The refresh repeats nothing and still runs no model.
+        client.get(f"/senate/polls/import/{token}/finish")
+        assert model_runner.invocations == []
+
+    @pytest.mark.parametrize("chamber", ["house", "senate", "president"])
+    def test_a_busy_slot_defers_the_model_and_names_the_chambers_page(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+        chamber: str,
+    ) -> None:
+        label = US_CHAMBERS_BY_SLUG[chamber].label
+        row = self._row_for(us_db, chamber)
+        token = _open_queue(client, monkeypatch, row, chamber=chamber)
+        self._approve_first(client, chamber, token)
+
+        with MODEL_RUN_LOCK:
+            body = html.unescape(
+                _body(client, f"/{chamber}/polls/import/{token}/finish")
+            )
+        # Recorded, not retried once the other run has ended.
+        client.get(f"/{chamber}/polls/import/{token}/finish")
+
+        message = (
+            f"{label} model not run: another run was in progress (a model run, "
+            f"export or database rebuild). Run it from the {label} section's "
+            "Run model page once it finishes."
+        )
+        assert message in " ".join(body.split())
+        assert model_runner.invocations == []
+        assert PREVIEW_CACHE[token][MODEL_ERROR_KEY] == message
+        assert PREVIEW_CACHE[token][MODEL_RUN_KEY] is None
+        assert "Run US Models" not in body
+
+    @pytest.mark.parametrize("chamber", ["house", "senate", "president"])
+    def test_a_running_job_defers_the_model_and_links_it(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+        chamber: str,
+    ) -> None:
+        row = self._row_for(us_db, chamber)
+        token = _open_queue(client, monkeypatch, row, chamber=chamber)
+        self._approve_first(client, chamber, token)
+
+        with job_holding_the_slot() as job:
+            body = _body(client, f"/{chamber}/polls/import/{token}/finish")
+        # Recorded, not retried once the job has ended, and the link stays.
+        again = _body(client, f"/{chamber}/polls/import/{token}/finish")
+
+        link = f'<a href="/runs/{job.id}">See the running job.</a>'
+        assert link in body
+        assert link in again
+        assert model_runner.invocations == []
+        assert PREVIEW_CACHE[token][MODEL_BUSY_JOB_KEY] == job.id
+        assert PREVIEW_CACHE[token][MODEL_RUN_KEY] is None
+
+    def test_a_busy_slot_with_no_job_adds_no_link(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+    ) -> None:
+        row = self._row_for(us_db, "senate")
+        token = _open_queue(client, monkeypatch, row, chamber="senate")
+        self._approve_first(client, "senate", token)
+
+        with MODEL_RUN_LOCK:
+            body = _body(client, f"/senate/polls/import/{token}/finish")
+
+        assert "See the running job" not in body
+        assert MODEL_BUSY_JOB_KEY not in PREVIEW_CACHE[token]
 
 
 _TOKEN_ROUTES = [
@@ -2239,20 +2797,21 @@ class TestTokenGuard:
     def test_an_unknown_token_redirects_to_the_start_page(
         self, client: FlaskClient[Any], method: str, suffix: str
     ) -> None:
-        path = f"/us/import/deadbeef{suffix}"
+        path = f"/senate/polls/import/deadbeef{suffix}"
 
         response = client.open(path, method=method)
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/us/import")
+        assert response.headers["Location"].endswith("/senate/polls/import")
         body = client.open(path, method=method, follow_redirects=True).get_data(
             as_text=True
         )
         assert "Queue expired or not found" in body
 
+    @pytest.mark.parametrize("chamber", ["house", "senate", "president"])
     @pytest.mark.parametrize(("method", "suffix"), _TOKEN_ROUTES)
     def test_a_westminster_token_is_rejected(
-        self, client: FlaskClient[Any], method: str, suffix: str
+        self, client: FlaskClient[Any], method: str, suffix: str, chamber: str
     ) -> None:
         token = store_preview(
             {
@@ -2261,10 +2820,65 @@ class TestTokenGuard:
             }
         )
 
-        response = client.open(f"/us/import/{token}{suffix}", method=method)
+        response = client.open(f"/{chamber}/polls/import/{token}{suffix}", method=method)
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/us/import")
+        assert response.headers["Location"].endswith(f"/{chamber}/polls/import")
+
+    @pytest.mark.parametrize(
+        ("made", "used"),
+        [
+            ("senate", "house"),
+            ("senate", "president"),
+            ("house", "senate"),
+            ("president", "senate"),
+            ("president", "house"),
+        ],
+    )
+    @pytest.mark.parametrize(("method", "suffix"), _TOKEN_ROUTES)
+    def test_another_chambers_token_behaves_as_expired(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+        method: str,
+        suffix: str,
+        made: str,
+        used: str,
+    ) -> None:
+        rows = {
+            "house": _house_row(us_db),
+            "senate": _row(us_db),
+            "president": _president_row(us_db),
+        }
+        token = _open_queue(client, monkeypatch, rows[made], chamber=made)
+        path = f"/{used}/polls/import/{token}{suffix}"
+        data = {"expected_index": "0", "abandon": "on"}
+
+        response = client.open(path, method=method, data=data)
+
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith(f"/{used}/polls/import")
+        body = client.open(
+            path, method=method, data=data, follow_redirects=True
+        ).get_data(as_text=True)
+        assert "Queue expired or not found" in body
+        # Nothing moved, imported, tracked or run.
+        state = _state(token)
+        assert [item.status for item in state.items] == ["pending"]
+        assert state.index == 0 and state.run_model_at_end is True
+        assert all(
+            key not in PREVIEW_CACHE[token]
+            for key in (RELABEL_KEY, AUTO_TRACKING_KEY, MODEL_RUN_KEY)
+        )
+        assert model_runner.invocations == []
+        assert all(
+            _polls_on(us_db, name) == 0 for name in (HOUSE_MAP, SENATE_MAP, PRESIDENT_MAP)
+        )
+        # The token is still good under its own chamber's URL.
+        own = client.get(f"/{made}/polls/import/{token}")
+        assert own.status_code == 200
 
     @pytest.mark.parametrize(
         ("method", "suffix"),
@@ -2285,10 +2899,12 @@ class TestTokenGuard:
     ) -> None:
         token = _open_queue(client, monkeypatch, _row(us_db))
 
-        response = client.open(f"/import/wikipedia/{token}{suffix}", method=method)
+        response = client.open(
+            f"/westminster/polls/import/wikipedia/{token}{suffix}", method=method
+        )
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith("/import")
+        assert response.headers["Location"].endswith("/westminster/polls/import")
         assert _state(token).items[0].status == "pending"
 
     def test_a_payload_missing_its_index_is_rejected(
@@ -2297,9 +2913,9 @@ class TestTokenGuard:
         state = _queue(us_db, _row(us_db))
         token = store_preview({"type": "us_wikipedia_queue", STATE_KEY: state})
 
-        response = client.get(f"/us/import/{token}")
+        response = client.get(f"/senate/polls/import/{token}")
 
-        assert response.headers["Location"].endswith("/us/import")
+        assert response.headers["Location"].endswith("/senate/polls/import")
 
 
 
@@ -2313,7 +2929,7 @@ class TestConcurrentSubmits:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
-        client.get(f"/us/import/{token}")
+        client.get(f"/senate/polls/import/{token}")
 
         # Hold the first commit until a second one arrives (or a second has
         # passed), so two submits that both got past the cursor check are
@@ -2339,7 +2955,7 @@ class TestConcurrentSubmits:
 
         def submit(submitter: FlaskClient[Any]) -> None:
             response = submitter.post(
-                f"/us/import/{token}/confirm", data={"expected_index": "0"}
+                f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"}
             )
             statuses.append(response.status_code)
 
@@ -2361,7 +2977,7 @@ class TestConcurrentSubmits:
         # Each client carries its own flash messages.
         stale = [
             "That step has already been actioned."
-            in _body(submitter, f"/us/import/{token}")
+            in _body(submitter, f"/senate/polls/import/{token}")
             for submitter in clients
         ]
         assert sorted(stale) == [False, True]
@@ -2373,12 +2989,12 @@ class TestConcurrentSubmits:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         gone = _open_queue(client, monkeypatch, _row(us_db))
-        client.get(f"/us/import/{gone}")
-        assert gone in us_poll_import._QUEUE_LOCKS
+        client.get(f"/senate/polls/import/{gone}")
+        assert gone in queue_lock.QUEUE_LOCKS
         PREVIEW_CACHE.pop(gone)
         live = _open_queue(client, monkeypatch, _row(us_db))
 
-        client.get(f"/us/import/{live}")
+        client.get(f"/senate/polls/import/{live}")
 
-        assert gone not in us_poll_import._QUEUE_LOCKS
-        assert live in us_poll_import._QUEUE_LOCKS
+        assert gone not in queue_lock.QUEUE_LOCKS
+        assert live in queue_lock.QUEUE_LOCKS

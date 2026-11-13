@@ -4,19 +4,43 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ title or "Election Data Console" }}</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" type="image/png" sizes="32x32" />
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   </head>
   <body>
     <header class="topbar">
       <a href="{{ url_for('home.home') }}" class="brand">Election Data Console</a>
+      <nav class="topnav" aria-label="Sections">
+        {% for item in nav.top %}
+          <a href="{{ item.url }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label }}</a>
+        {% endfor %}
+      </nav>
     </header>
 
+    {% if nav.section_items %}
+      <nav class="subnav" aria-label="{{ nav.section.label }}">
+        {% for item in nav.section_items %}
+          <a href="{{ item.url }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label }}</a>
+        {% endfor %}
+      </nav>
+    {% endif %}
+
     <main class="container{% block container_class %}{% endblock %}">
-      {% with messages = get_flashed_messages() %}
+      {% if nav.breadcrumbs %}
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          {% for crumb in nav.breadcrumbs %}
+            {% if crumb.url %}<a href="{{ crumb.url }}">{{ crumb.label }}</a>{% else %}<span aria-current="page">{{ crumb.label }}</span>{% endif %}
+            {% if not loop.last %}<span class="crumb-sep" aria-hidden="true">›</span>{% endif %}
+          {% endfor %}
+        </nav>
+      {% endif %}
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           <div class="alerts">
-            {% for message in messages %}
-              <div class="alert">{{ message }}</div>
+            {% for category, message in messages %}
+              <div class="alert">{{ message }}{% if category.startswith(BUSY_CATEGORY_PREFIX) %} <a href="{{ url_for('runs.run_detail', run_id=category[BUSY_CATEGORY_PREFIX|length:]) }}">See the running job.</a>{% endif %}</div>
             {% endfor %}
           </div>
         {% endif %}

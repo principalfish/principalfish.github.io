@@ -15,7 +15,7 @@
       {% endif %}
     </p>
     <p><a class="button" href="{{ url_for(outputs_endpoint) }}">Back to Model Outputs</a></p>
-    {% if outputs_endpoint.startswith('westminster.') %}<p><a href="{{ url_for('uncertainty_runs.results', election_id=election.id) }}">Uncertainty results</a> · <a href="{{ url_for('uncertainty_runs.budget', election_id=election.id) }}">Error budget</a></p>{% endif %}
+    {% if show_uncertainty_links %}<p><a href="{{ url_for('uncertainty_runs.results', election_id=election.id) }}">Uncertainty results</a> · <a href="{{ url_for('uncertainty_runs.budget', election_id=election.id) }}">Error budget</a></p>{% endif %}
   </section>
 
   <section class="card">
@@ -26,15 +26,15 @@
           <tr>
             <th>Party</th>
             {% if shows_electoral_votes %}
-              <th>Electoral Votes</th>
-              <th>EV diff vs base</th>
-              <th>States/Units Won</th>
+              <th class="num">Electoral Votes</th>
+              <th class="num">EV diff vs base</th>
+              <th class="num">States/Units Won</th>
             {% else %}
-              <th>Seats Won</th>
+              <th class="num">Seats Won</th>
             {% endif %}
-            <th>Diff vs base election</th>
-            <th>Vote %</th>
-            <th>Vote % diff vs base</th>
+            <th class="num">Diff vs base election</th>
+            <th class="num">Vote %</th>
+            <th class="num">Vote % diff vs base</th>
           </tr>
         </thead>
         <tbody>
@@ -42,13 +42,13 @@
             <tr>
               <td>{{ row.party_name }}</td>
               {% if shows_electoral_votes %}
-                <td>{{ row.electoral_votes }}</td>
-                <td>{% if row.ev_diff_vs_base > 0 %}+{% endif %}{{ row.ev_diff_vs_base }}</td>
+                <td class="num">{{ row.electoral_votes }}</td>
+                <td class="num">{% if row.ev_diff_vs_base > 0 %}+{% endif %}{{ row.ev_diff_vs_base }}</td>
               {% endif %}
-              <td>{{ row.seats_won }}</td>
-              <td>{% if row.seats_diff_vs_base > 0 %}+{% endif %}{{ row.seats_diff_vs_base }}</td>
-              <td>{{ row.vote_pct }}</td>
-              <td>{% if row.vote_pct_diff_vs_base > 0 %}+{% endif %}{{ row.vote_pct_diff_vs_base }}</td>
+              <td class="num">{{ row.seats_won }}</td>
+              <td class="num">{% if row.seats_diff_vs_base > 0 %}+{% endif %}{{ row.seats_diff_vs_base }}</td>
+              <td class="num">{{ row.vote_pct }}</td>
+              <td class="num">{% if row.vote_pct_diff_vs_base > 0 %}+{% endif %}{{ row.vote_pct_diff_vs_base }}</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -64,7 +64,7 @@
           <tr>
             <th>Party</th>
             {% for region_name in region_diff_headers %}
-              <th>{{ region_name }}</th>
+              <th class="num">{{ region_name }}</th>
             {% endfor %}
           </tr>
         </thead>
@@ -73,7 +73,7 @@
             <tr>
               <td>{{ row.party_name }}</td>
               {% for value in row.cells %}
-                <td>{% if value > 0 %}+{% endif %}{{ value }}</td>
+                <td class="num">{% if value > 0 %}+{% endif %}{{ value }}</td>
               {% endfor %}
             </tr>
           {% endfor %}
@@ -95,7 +95,7 @@
           <tr>
             <th>Seat</th>
             <th>Projected Winner</th>
-            <th>Vote Total (rounded)</th>
+            <th class="num">Vote Total (rounded)</th>
             <th>Change vs base election</th>
           </tr>
         </thead>
@@ -104,7 +104,7 @@
             <tr>
               <td>{{ row.seat_name }}</td>
               <td>{{ row.winner_party }}</td>
-              <td>{{ row.winner_vote_total }}</td>
+              <td class="num">{{ row.winner_vote_total }}</td>
               <td>{{ row.change_status }}</td>
             </tr>
           {% endfor %}

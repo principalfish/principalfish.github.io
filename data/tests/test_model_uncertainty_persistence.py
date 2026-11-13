@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from console.services.model_outputs import (
+from console.shared.model_outputs import (
     delete_model_output,
     delete_selected_model_outputs,
 )

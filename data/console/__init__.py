@@ -11,6 +11,8 @@ import os
 from flask import Flask, Response, request
 
 from console.csrf import same_origin_only
+from console.nav import nav_context
+from console.shared import jobs
 from core import backup
 
 
@@ -25,24 +27,34 @@ def create_app() -> Flask:
     app.config["SECRET_KEY"] = os.environ.get("POLLS_SECRET_KEY", "local-polls-dev-key")
     app.config["TRUSTED_HOSTS"] = ["127.0.0.1", "localhost"]
     app.before_request(same_origin_only)
+    app.context_processor(nav_context)
+    app.jinja_env.globals["BUSY_CATEGORY_PREFIX"] = jobs.BUSY_CATEGORY_PREFIX
 
-    from console.blueprints.by_elections import bp as by_elections_bp
-    from console.blueprints.db_admin import bp as db_admin_bp
-    from console.blueprints.holyrood import bp as holyrood_bp
-    from console.blueprints.home import bp as home_bp
-    from console.blueprints.poll_import import bp as poll_import_bp
-    from console.blueprints.polls import bp as polls_bp
-    from console.blueprints.site import bp as site_bp
-    from console.blueprints.uncertainty import bp as uncertainty_bp
-    from console.blueprints.uncertainty_explorer import bp as uncertainty_explorer_bp
-    from console.blueprints.uncertainty_runs import bp as uncertainty_runs_bp
-    from console.blueprints.us import bp as us_bp
-    from console.blueprints.us_poll_import import bp as us_poll_import_bp
-    from console.blueprints.us_results import bp as us_results_bp
-    from console.blueprints.westminster import bp as westminster_bp
+    from console.admin.db_admin import bp as db_admin_bp
+    from console.admin.export import bp as export_bp
+    from console.admin.pages import bp as admin_bp
+    from console.admin.runs import bp as runs_bp
+    from console.admin.site import bp as site_bp
+    from console.holyrood.model import bp as holyrood_bp
+    from console.home import bp as home_bp
+    from console.polls.views import bp as polls_bp
+    from console.section_pages import bp as sections_bp
+    from console.us.poll_import import bp as us_poll_import_bp
+    from console.us.results import bp as us_results_bp
+    from console.us.views import bp as us_bp
+    from console.westminster.by_elections import bp as by_elections_bp
+    from console.westminster.model import bp as westminster_bp
+    from console.westminster.poll_import import bp as poll_import_bp
+    from console.westminster.uncertainty.explorer import bp as uncertainty_explorer_bp
+    from console.westminster.uncertainty.hub import bp as uncertainty_bp
+    from console.westminster.uncertainty.runs import bp as uncertainty_runs_bp
 
     for blueprint in (
         home_bp,
+        sections_bp,
+        admin_bp,
+        export_bp,
+        runs_bp,
         poll_import_bp,
         polls_bp,
         westminster_bp,

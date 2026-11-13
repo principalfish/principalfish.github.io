@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero">
+    <h1>Runs</h1>
+    <p>Every command the console has launched, newest first.</p>
+  </section>
+
+  <section class="card">
+    <div class="table-actions">
+      <a class="button{% if selected is none %} primary{% endif %}" href="{{ url_for('runs.run_list') }}">All</a>
+      {% for value, label in filters %}
+        <a class="button{% if value == selected %} primary{% endif %}" href="{{ url_for('runs.run_list', section=value) }}">{{ label }}</a>
+      {% endfor %}
+    </div>
+
+    {% if unreadable %}
+      <p class="text-warning">{{ unreadable }} unreadable run record{{ '' if unreadable == 1 else 's' }} {{ 'was' if unreadable == 1 else 'were' }} skipped.</p>
+    {% endif %}
+
+    {% if records %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Started (UTC)</th>
+              <th>Section</th>
+              <th>Run</th>
+              <th>Status</th>
+              <th class="num">Duration</th>
+              <th class="num">Exit code</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for record in records %}
+              <tr>
+                <td><a href="{{ url_for('runs.run_detail', run_id=record.id) }}">{{ record.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</a></td>
+                <td>{{ section_label(record.section) }}</td>
+                <td>{{ record.label }}{% if record.dry_run %} (dry run){% endif %}</td>
+                <td{% if record.status not in ('ok', 'running') %} class="text-error"{% endif %}>{{ record.status }}</td>
+                <td class="num">{% if record.duration_seconds is not none %}{{ '%.1f' | format(record.duration_seconds) }} s{% endif %}</td>
+                <td class="num">{{ '' if record.exit_code is none else record.exit_code }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>No runs recorded{% if selected is not none %} for this filter{% endif %}.</p>
+    {% endif %}
+  </section>
+{% endblock %}

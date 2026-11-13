@@ -1,0 +1,9 @@
+<nav class="uncertainty-nav">
+  <a href="{{ url_for('uncertainty.uncertainty_hub') }}">Overview</a> ·
+  <a href="{{ url_for('uncertainty.uncertainty_calibration') }}">Calibration</a> ·
+  <a href="{{ url_for('uncertainty.uncertainty_validation') }}">Validation</a> ·
+  <a href="{{ url_for('uncertainty_runs.budget', election_id=run.election_id if run else none) }}">Error budget</a> ·
+  <a href="{{ url_for('uncertainty_runs.results', election_id=run.election_id if run else none) }}">Results</a> ·
+  <a href="{{ url_for('uncertainty_runs.history') }}">Odds history</a> ·
+  <a href="{{ url_for('uncertainty_explorer.simulations', election_id=run.election_id if run else none) }}">Explore simulations</a>
+</nav>

@@ -1,3 +1,96 @@
+/* Colours and spacing are tokens on :root; the dark block below overrides the
+   colours when the browser asks for a dark scheme. Spacing is one scale
+   (4/8/12/16/24px); a few older values off the scale are kept as they are. */
+:root {
+  color-scheme: light dark;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  --radius: 8px;
+
+  --bg: #f6f7fb;
+  --surface: #fff;
+  --text: #1f2430;
+  --muted: #6b7280;
+  --muted-strong: #475569;
+  --breadcrumb: #4b5563;
+  --border: #d0d4df;
+  --input-border: #c9cfdb;
+  --row-border: #e7eaf1;
+  --table-head: #f5f7fc;
+  --shadow: rgba(0, 0, 0, 0.08);
+
+  --accent: #2563eb;
+  --accent-contrast: #fff;
+  --focus: #2563eb;
+  --chart-bar: #2563eb;
+
+  --danger: #dc2626;
+  --danger-contrast: #fff;
+  --danger-text: #b91c1c;
+  --danger-border: #f3c5c5;
+  --error-text: red;
+  --warning-text: orange;
+
+  --alert-bg: #fff4d6;
+  --alert-border: #f3d98f;
+  --alert-text: #6b4f00;
+
+  --nav-bg: #111827;
+  --nav-text: #fff;
+  --nav-active-bg: #374151;
+  --subnav-bg: #e5e7eb;
+  --subnav-border: #d1d5db;
+  --subnav-text: #1f2430;
+  --subnav-active-bg: #111827;
+  --subnav-active-text: #fff;
+
+  --terminal-bg: #0f172a;
+  --terminal-text: #e2e8f0;
+  --terminal-edge: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1117;
+    --surface: #181b24;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --muted-strong: #b4bdcc;
+    --breadcrumb: #9ca3af;
+    --border: #3a4152;
+    --input-border: #3a4152;
+    --row-border: #2a2f3d;
+    --table-head: #1f2430;
+    --shadow: rgba(0, 0, 0, 0.5);
+
+    --focus: #8ab4ff;
+    --chart-bar: #60a5fa;
+
+    --danger-text: #f87171;
+    --danger-border: #7f1d1d;
+    --error-text: #f87171;
+    --warning-text: #fbbf24;
+
+    --alert-bg: #3a2f0b;
+    --alert-border: #6b5614;
+    --alert-text: #f3d98f;
+
+    --nav-bg: #0b0d13;
+    --nav-active-bg: #2b3345;
+    --subnav-bg: #1a1e29;
+    --subnav-border: #2a2f3d;
+    --subnav-text: #e5e7eb;
+    --subnav-active-bg: #3b4256;
+
+    --terminal-edge: #2a2f3d;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -5,23 +98,50 @@
 body {
   margin: 0;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background: #f6f7fb;
-  color: #1f2430;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+pre {
+  max-width: 100%;
+  overflow: auto;
 }
 
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 24px;
-  background: #111827;
-  color: #fff;
+  gap: var(--space-2) var(--space-4);
+  padding: 14px var(--space-5);
+  background: var(--nav-bg);
+  color: var(--nav-text);
 }
 
 .topbar a {
-  color: #fff;
+  color: var(--nav-text);
   text-decoration: none;
   margin-left: 14px;
+}
+
+.topbar :focus-visible {
+  outline-color: var(--nav-text);
 }
 
 .brand {
@@ -30,8 +150,8 @@ body {
 
 .container {
   max-width: 1000px;
-  margin: 24px auto;
-  padding: 0 16px 24px;
+  margin: var(--space-5) auto;
+  padding: 0 var(--space-4) var(--space-5);
 }
 
 /* Wide data tables (e.g. the poll list) use the full window. */
@@ -41,17 +161,17 @@ body {
 
 .hero,
 .card {
-  background: #fff;
+  background: var(--surface);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 20px var(--shadow);
   margin-bottom: 18px;
 }
 
 .actions {
-  margin-top: 16px;
+  margin-top: var(--space-4);
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
@@ -62,11 +182,7 @@ body {
 .action-grid {
   margin-top: 14px;
   display: grid;
-  gap: 12px;
-}
-
-.action-grid-three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
 }
 
 .action-grid-two {
@@ -85,22 +201,22 @@ body {
 
 .console-column h2 small {
   font-weight: 500;
-  color: #6b7280;
+  color: var(--muted);
   font-size: 14px;
 }
 
 .action-stack {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .danger-zone {
-  border: 1px solid #f3c5c5;
+  border: 1px solid var(--danger-border);
 }
 
 .danger-zone h2 small {
   font-weight: 500;
-  color: #b91c1c;
+  color: var(--danger-text);
   font-size: 14px;
 }
 
@@ -113,10 +229,10 @@ body {
   align-items: center;
   justify-content: center;
   padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid #d0d4df;
-  background: #fff;
-  color: #1f2430;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
   text-decoration: none;
   cursor: pointer;
   min-height: 42px;
@@ -128,15 +244,20 @@ body {
 }
 
 .button.primary {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .button-danger {
-  background: #dc2626;
-  border-color: #dc2626;
-  color: #fff;
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--danger-contrast);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .form {
@@ -147,13 +268,13 @@ body {
 .form select,
 .form input {
   padding: 10px;
-  border: 1px solid #c9cfdb;
-  border-radius: 8px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
   font-size: 14px;
 }
 
 .arg-flag {
-  color: #6b7280;
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -167,41 +288,51 @@ body {
 
 .checkbox {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
 }
 
 .alerts {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .alert {
-  background: #fff4d6;
-  border: 1px solid #f3d98f;
-  color: #6b4f00;
+  background: var(--alert-bg);
+  border: 1px solid var(--alert-border);
+  color: var(--alert-text);
   padding: 10px;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  border-radius: var(--radius);
+  margin-bottom: var(--space-2);
 }
 
+.text-error {
+  color: var(--error-text);
+}
+
+.text-warning {
+  color: var(--warning-text);
+}
+
+/* Every table sits in a .table-wrap, which scrolls sideways when the table is
+   wider than the window. */
 .table-wrap {
   overflow: auto;
 }
 
 .table-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .bulk-actions {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   display: flex;
   justify-content: flex-end;
 }
 
 .outputs-toolbar {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -211,20 +342,21 @@ body {
 
 .outputs-meta {
   margin: 0;
-  color: #475569;
+  color: var(--muted-strong);
 }
 
 .pagination-controls {
-  margin-top: 12px;
+  margin-top: var(--space-3);
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 .chart-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .chart-container {
@@ -238,11 +370,13 @@ body {
   height: 100% !important;
 }
 
+/* Dark in both colour schemes. */
 .terminal-output {
-  background: #0f172a;
-  color: #e2e8f0;
-  border-radius: 8px;
-  padding: 12px;
+  background: var(--terminal-bg);
+  color: var(--terminal-text);
+  box-shadow: 0 0 0 1px var(--terminal-edge);
+  border-radius: var(--radius);
+  padding: var(--space-3);
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
@@ -260,17 +394,42 @@ th,
 td {
   text-align: left;
   padding: 10px;
-  border-bottom: 1px solid #e7eaf1;
+  border-bottom: 1px solid var(--row-border);
   font-size: 14px;
 }
 
 th {
-  background: #f5f7fc;
+  background: var(--table-head);
   font-weight: 600;
 }
 
+/* Numeric cells and their headings: right-aligned in tabular figures so the
+   digits line up down a column. */
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A table of numbers (the calibration tables): every cell and column heading
+   is a number unless marked .text, except the first column, which labels the
+   row. */
+.table-numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.table-numeric td,
+.table-numeric th[scope="col"] {
+  text-align: right;
+}
+
+.table-numeric th:first-child,
+.table-numeric th.text,
+.table-numeric .text,
+.table-numeric .hist-cell {
+  text-align: left;
+}
+
 @media (max-width: 860px) {
-  .action-grid-three,
   .action-grid-two,
   .console-columns {
     grid-template-columns: 1fr;
@@ -288,7 +447,7 @@ th {
 .hist-bar {
   display: inline-block;
   height: 0.8em;
-  background: #2563eb;
+  background: var(--chart-bar);
 }
 
 /* Text for screen readers only (e.g. a header over a column of bars). */
@@ -308,9 +467,88 @@ th {
 }
 
 .uncertainty-histogram__bar {
-  fill: #2563eb;
+  fill: var(--chart-bar);
 }
 
 .uncertainty-nav {
   line-height: 2;
+}
+
+/* Navigation */
+.topnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) 6px;
+}
+
+.topnav a {
+  margin-left: 0;
+  padding: var(--space-1) 10px;
+  border-radius: 6px;
+}
+
+.topnav a.active {
+  background: var(--nav-active-bg);
+}
+
+.subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) 6px;
+  padding: var(--space-2) var(--space-5);
+  background: var(--subnav-bg);
+  border-bottom: 1px solid var(--subnav-border);
+}
+
+.subnav a {
+  padding: var(--space-1) 10px;
+  border-radius: 6px;
+  color: var(--subnav-text);
+  text-decoration: none;
+}
+
+.subnav a.active {
+  background: var(--subnav-active-bg);
+  color: var(--subnav-active-text);
+}
+
+.breadcrumbs {
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+  color: var(--breadcrumb);
+}
+
+.breadcrumbs a {
+  color: inherit;
+}
+
+.crumb-sep {
+  margin: 0 6px;
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .subnav {
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .container {
+    margin: var(--space-4) auto;
+    padding: 0 var(--space-3) var(--space-4);
+  }
+
+  .hero,
+  .card {
+    padding: var(--space-4);
+  }
+
+  .chart-container {
+    height: 260px;
+  }
 }

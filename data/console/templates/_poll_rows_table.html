@@ -3,7 +3,8 @@
     heading   — the column header;
     attribute — the row attribute shown in it;
     blank     — shown when the attribute is missing, None or "" (default: empty);
-    format    — optional printf-style format for the value, e.g. "%g".
+    format    — optional printf-style format for the value, e.g. "%g";
+    numeric   — optional; true right-aligns the column as numbers.
 #}
 
 {# The UK queue and import preview show an import plan's rows. #}
@@ -11,15 +12,16 @@
   {"heading": "Party", "attribute": "party_name"},
   {"heading": "Macro Region", "attribute": "macro_region"},
   {"heading": "Region", "attribute": "region_name"},
-  {"heading": "Percentage", "attribute": "percentage"},
+  {"heading": "Percentage", "attribute": "percentage", "numeric": true},
 ] %}
 
 {# ...and the respondent bases planned beside them (Westminster importers). #}
 {% set plan_base_columns = [
   {"heading": "Region", "attribute": "region_name"},
   {"heading": "Unweighted n", "attribute": "unweighted_n",
-   "blank": "- (weighted only)"},
-  {"heading": "Weighted n", "attribute": "weighted_n", "blank": "-"},
+   "blank": "- (weighted only)", "numeric": true},
+  {"heading": "Weighted n", "attribute": "weighted_n", "blank": "-",
+   "numeric": true},
   {"heading": "Kind", "attribute": "kind"},
   {"heading": "Split from macro", "attribute": "split_from_macro"},
 ] %}
@@ -41,7 +43,7 @@
       <thead>
         <tr>
           {% for column in columns %}
-            <th scope="col">{{ column.heading }}</th>
+            <th{% if column.numeric %} class="num"{% endif %} scope="col">{{ column.heading }}</th>
           {% endfor %}
         </tr>
       </thead>
@@ -50,7 +52,7 @@
           <tr>
             {% for column in columns %}
               {% set value = row[column.attribute] %}
-              <td>
+              <td{% if column.numeric %} class="num"{% endif %}>
                 {%- if value is not defined or value is none or value == "" -%}
                   {{ column.blank | default("") }}
                 {%- elif column.format -%}

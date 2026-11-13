@@ -25,25 +25,41 @@ Usage:
     python data/export/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
     python data/export/export_elections.py --current-simulation --output-root /tmp/uk-data
     python data/export/export_elections.py --metadata-only
+    python data/export/export_elections.py --sections house,senate --content results
+    python data/export/export_elections.py --content forecast --dry-run
+
+``--sections`` (westminster, holyrood, house, senate, president) and ``--content``
+(results, forecast, metadata) narrow a full export; see :class:`ExportScope`.
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import re
 import shutil
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Collection, Mapping, Sequence
 
 from sqlalchemy import inspect, select
 from sqlalchemy.orm import joinedload, Session
 
 from core.db import Database, SeatStatus
 from core.electoral_votes import allocation_year, get_electoral_votes
-from core.schema import Election, ElectionSeatStatus, ElectionType, Party, Region, Seat, Vote
+from core.schema import (
+    Election,
+    ElectionSeatStatus,
+    ElectionType,
+    Map,
+    Party,
+    Region,
+    Seat,
+    Vote,
+)
 from export.legacy import (
     SUPPLEMENTAL_LEGACY_ELECTIONS,
     SUPPLEMENTAL_LEGACY_ELECTION_NAMES,
@@ -139,6 +155,307 @@ def drop_disabled_forecasts(elections: Sequence[Election]) -> list[Election]:
     return [e for e in elections if e.type not in US_CHAMBER_FORECAST_TYPES]
 
 
+# The console's section slugs and the ``Map.parliament`` value each one exports. Kept
+# here (the console registry is ``console.sections.SECTIONS``) so the export does not
+# import the web app; a test pins the two together.
+SECTION_PARLIAMENTS: dict[str, str] = {
+    "westminster": "westminster",
+    "holyrood": "holyrood",
+    "house": "us_house",
+    "senate": "us_senate",
+    "president": "us_presidential",
+}
+CONTENT_KINDS: tuple[str, ...] = ("results", "forecast", "metadata")
+
+# Election types whose files and manifest entries are the forecast content; every
+# other exported election is a past result.
+FORECAST_ELECTION_TYPES: frozenset[str] = frozenset(
+    election_type.value
+    for election_type in (
+        ElectionType.model_uns,
+        ElectionType.holyrood_uns,
+        ElectionType.us_house_model,
+        ElectionType.us_presidential_model,
+        ElectionType.us_senate_model,
+    )
+)
+
+_MAP_FILE_NAME = re.compile(r"map-(\d+)\.topo\.json")
+
+# Manifest entry types the preservation pass re-inserts from the existing manifest,
+# and the id of the by-election composite. A full export may add these late, after
+# its first comparison pass, so a filtered export holds them back (see _added_late).
+PRESERVE_ENTRY_TYPES = (
+    "holyrood_uns",
+    "model_uns",
+    "eu_referendum",
+    "holyrood_general",
+)
+COMPOSITE_ENTRY_ID = "current-parliament"
+
+
+def exportable_forecast_parliaments() -> frozenset[str]:
+    """Return the parliaments whose forecast this script writes.
+
+    Westminster's ``model_uns`` run and the presidential forecast are exported;
+    the House and Senate forecasts only while :data:`EXPORT_US_CHAMBER_FORECASTS`
+    is on (read at call time). Holyrood's forecast is never exported: the Holyrood
+    model runner writes ``results/holyrood-prediction.json`` itself and the export
+    only keeps its manifest entry from one run to the next.
+    """
+    parliaments = {"westminster", "us_presidential"}
+    if EXPORT_US_CHAMBER_FORECASTS:
+        parliaments |= {"us_house", "us_senate"}
+    return frozenset(parliaments)
+
+
+@dataclass(frozen=True)
+class ExportScope:
+    """Which sections and which content kinds a filtered export covers.
+
+    Content kinds partition what the full export writes. ``results`` is every
+    past-election result file, map and manifest entry; ``forecast`` is the model
+    elections' files and entries; ``metadata`` is the ``regions`` (and derived
+    keys) of the selected sections' map modes, plus ``parties``. The page's
+    ``parties`` list is page-wide and is refreshed whenever the manifest is
+    written, whichever kinds are selected.
+    Forecast content only counts for the parliaments that
+    :func:`exportable_forecast_parliaments` lists: the others are reported by
+    :meth:`notes` and left alone.
+
+    Attributes:
+        sections: Selected section slugs in registry order.
+        parliaments: The ``Map.parliament`` values of ``sections``.
+        content: Selected content kinds.
+        forecast_parliaments: Selected parliaments whose forecast is exportable.
+    """
+
+    sections: tuple[str, ...]
+    parliaments: frozenset[str]
+    content: frozenset[str]
+    forecast_parliaments: frozenset[str]
+
+    @property
+    def results(self) -> bool:
+        """Whether past-election results are selected."""
+        return "results" in self.content
+
+    @property
+    def metadata(self) -> bool:
+        """Whether parties and regions are selected."""
+        return "metadata" in self.content
+
+    @property
+    def results_parliaments(self) -> frozenset[str]:
+        """Parliaments whose past-election results this scope exports."""
+        return self.parliaments if self.results else frozenset()
+
+    @property
+    def effective_parliaments(self) -> frozenset[str]:
+        """Parliaments where the scope does anything (results, metadata or forecast)."""
+        if self.results or self.metadata:
+            return self.parliaments | self.forecast_parliaments
+        return self.forecast_parliaments
+
+    @property
+    def exports_elections(self) -> bool:
+        """Whether any election file or manifest entry is written, not just metadata."""
+        return bool(self.results_parliaments or self.forecast_parliaments)
+
+    @property
+    def is_everything(self) -> bool:
+        """Whether this scope is the full export (every section, every content kind)."""
+        return (
+            self.parliaments == frozenset(SECTION_PARLIAMENTS.values())
+            and self.content == frozenset(CONTENT_KINDS)
+        )
+
+    def covers(self, parliament: str, *, forecast: bool) -> bool:
+        """Whether election content of this kind and parliament is in scope."""
+        if forecast:
+            return parliament in self.forecast_parliaments
+        return parliament in self.results_parliaments
+
+    def covers_election(self, election: Election) -> bool:
+        """Whether ``election`` is exported under this scope."""
+        parliament = getattr(election.map, "parliament", "westminster")
+        return self.covers(
+            parliament, forecast=election.type.value in FORECAST_ELECTION_TYPES
+        )
+
+    def covers_entry(self, entry: Mapping[str, Any]) -> bool:
+        """Whether a manifest election entry is rebuilt (not held back) here."""
+        is_forecast = entry.get("type") in FORECAST_ELECTION_TYPES or bool(
+            entry.get("model")
+        )
+        return self.covers(
+            str(entry.get("parliament", "westminster")), forecast=is_forecast
+        )
+
+    def touches_page(self, page_parliaments: Collection[str]) -> bool:
+        """Whether the scope does anything on a page with these parliaments."""
+        return any(
+            parliament in page_parliaments
+            for parliament in self.effective_parliaments
+        )
+
+    def plan_line(self) -> str:
+        """Return the one-line description printed at the start of a filtered run."""
+        kinds = [kind for kind in CONTENT_KINDS if kind in self.content]
+        return (
+            f"Export scope: sections={','.join(self.sections)} "
+            f"content={','.join(kinds)}"
+        )
+
+    def notes(self) -> list[str]:
+        """Return a line per selected forecast the export cannot write."""
+        if "forecast" not in self.content:
+            return []
+        lines: list[str] = []
+        for slug in self.sections:
+            parliament = SECTION_PARLIAMENTS[slug]
+            if parliament in self.forecast_parliaments:
+                continue
+            if parliament == "holyrood":
+                lines.append(
+                    "Note: the Holyrood forecast is written by the Holyrood model "
+                    "runner (results/holyrood-prediction.json); the export only keeps "
+                    "its manifest entry, so there is nothing to export for it."
+                )
+            else:
+                lines.append(
+                    f"Note: the {slug} forecast export is switched off "
+                    "(EXPORT_US_CHAMBER_FORECASTS); there is nothing to export for it."
+                )
+        return lines
+
+
+def build_export_scope(
+    sections: Sequence[str] | None, content: Sequence[str] | None
+) -> ExportScope:
+    """Build the scope for ``--sections`` / ``--content`` values.
+
+    Args:
+        sections: Section slugs, or None for every section.
+        content: Content kinds, or None for all of them.
+
+    Returns:
+        The scope, with slugs in registry order and kinds in
+        :data:`CONTENT_KINDS` order.
+
+    Raises:
+        ValueError: If a slug or kind is unknown, or a selection is empty.
+    """
+    chosen_sections = (
+        tuple(SECTION_PARLIAMENTS) if sections is None else tuple(sections)
+    )
+    chosen_content = frozenset(CONTENT_KINDS if content is None else content)
+    unknown = [s for s in chosen_sections if s not in SECTION_PARLIAMENTS]
+    if unknown:
+        raise ValueError(
+            f"unknown section {', '.join(unknown)} "
+            f"(choose from {', '.join(SECTION_PARLIAMENTS)})"
+        )
+    unknown = sorted(chosen_content - set(CONTENT_KINDS))
+    if unknown:
+        raise ValueError(
+            f"unknown content {', '.join(unknown)} "
+            f"(choose from {', '.join(CONTENT_KINDS)})"
+        )
+    if not chosen_sections or not chosen_content:
+        raise ValueError("the selection is empty")
+    ordered = tuple(slug for slug in SECTION_PARLIAMENTS if slug in chosen_sections)
+    parliaments = frozenset(SECTION_PARLIAMENTS[slug] for slug in ordered)
+    forecast = (
+        parliaments & exportable_forecast_parliaments()
+        if "forecast" in chosen_content
+        else frozenset()
+    )
+    return ExportScope(ordered, parliaments, chosen_content, forecast)
+
+
+def _added_late(entry: Mapping[str, Any]) -> bool:
+    """Whether a full export may add this manifest entry after its first comparison.
+
+    True for the by-election composite and the preserved types. Holding them back
+    from the first pass does no harm: a held-back entry is restored verbatim.
+    """
+    return entry.get("id") == COMPOSITE_ENTRY_ID or (
+        entry.get("type") in PRESERVE_ENTRY_TYPES
+    )
+
+
+def restore_held_back_entries(
+    entries: list[dict[str, Any]], held_back: Sequence[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Put the existing manifest's out-of-scope entries back exactly as they were.
+
+    A filtered export assembles the page with copies of the entries it does not
+    rebuild, so ordering and comparison logic sees the whole page. Those copies may
+    have been touched on the way; this swaps the originals back in and re-lays them
+    in their existing relative order in the slots they occupy.
+
+    Args:
+        entries: The assembled page entries.
+        held_back: The existing manifest's out-of-scope entries, in existing order.
+
+    Returns:
+        A new list with the originals in place of their copies.
+    """
+    originals = {entry["id"]: entry for entry in held_back}
+    restored = [originals.get(entry.get("id"), entry) for entry in entries]
+    slots = [i for i, entry in enumerate(restored) if entry.get("id") in originals]
+    present = {restored[i]["id"] for i in slots}
+    for slot, original in zip(slots, [e for e in held_back if e["id"] in present]):
+        restored[slot] = original
+    return restored
+
+
+def scope_map_modes(
+    rebuilt: dict[str, Any],
+    existing: Mapping[str, Any],
+    in_scope_map_ids: Collection[str],
+    *,
+    refresh_metadata: bool,
+) -> dict[str, Any]:
+    """Merge rebuilt map modes with an existing manifest's for a filtered export.
+
+    A map outside the scope keeps its existing mode verbatim (and is left out when the
+    existing manifest has none). A map in scope takes the rebuilt mode, except that
+    without ``refresh_metadata`` its ``regions`` and :data:`DERIVED_MODE_KEYS` stay as
+    the existing mode has them. Existing modes the shell no longer lists survive only
+    outside the scope, as a full export would drop the others.
+
+    Args:
+        rebuilt: Modes from :func:`export.manifest.build_map_modes_with_regions`.
+        existing: The existing manifest's ``mapModes``.
+        in_scope_map_ids: String map ids of the selected parliaments' maps.
+        refresh_metadata: Whether regions and derived keys are being refreshed.
+
+    Returns:
+        The merged modes, in the rebuilt order followed by any leftover existing ones.
+    """
+    merged: dict[str, Any] = {}
+    for map_id, mode in rebuilt.items():
+        old = existing.get(map_id)
+        if map_id not in in_scope_map_ids:
+            if old is not None:
+                merged[map_id] = old
+            continue
+        if old is not None and not refresh_metadata:
+            mode = dict(mode)
+            for key in ("regions", *DERIVED_MODE_KEYS):
+                if key in old:
+                    mode[key] = old[key]
+                else:
+                    mode.pop(key, None)
+        merged[map_id] = mode
+    for map_id, old in existing.items():
+        if map_id not in rebuilt and map_id not in in_scope_map_ids:
+            merged[map_id] = old
+    return merged
+
+
 # mapMode keys that the shell doesn't hold verbatim: ``build_map_modes_with_regions`` derives
 # each one at export time (the Senate class cycle resolved to concrete years; the special
 # elections filtered to the ones the next Senate election holds; the per-seat baseline
@@ -156,6 +473,7 @@ def refresh_manifest_modes(
     manifest: dict[str, Any],
     rebuilt_modes: dict[str, Any],
     regions_by_map_id: dict[str, list[dict[str, Any]]],
+    only_map_ids: Collection[str] | None = None,
 ) -> None:
     """Refresh an existing manifest's mapModes in place from freshly rebuilt ones.
 
@@ -171,8 +489,12 @@ def refresh_manifest_modes(
             keyed by string map id.
         regions_by_map_id: Raw DB region lists keyed by string map id, used as the fallback
             when a mapMode has no rebuilt counterpart.
+        only_map_ids: When given, only the mapModes with these string map ids are
+            refreshed; the others are left untouched.
     """
     for map_id_str, mode in manifest.get("mapModes", {}).items():
+        if only_map_ids is not None and map_id_str not in only_map_ids:
+            continue
         rebuilt = rebuilt_modes.get(map_id_str)
         if rebuilt is None:
             if map_id_str in regions_by_map_id:
@@ -186,7 +508,9 @@ def refresh_manifest_modes(
                 mode.pop(key, None)
 
 
-def resolve_page_roots(output_base: Path | None) -> dict[str, Path]:
+def resolve_page_roots(
+    output_base: Path | None, pages: Collection[str] | None = None
+) -> dict[str, Path]:
     """Return each page's data directory for this export.
 
     Without ``output_base`` these are :data:`PAGE_OUTPUT_ROOTS` (the repository). With
@@ -198,14 +522,21 @@ def resolve_page_roots(output_base: Path | None) -> dict[str, Path]:
 
     Args:
         output_base: The scratch base directory, or None for the repository.
+        pages: The pages to resolve (and seed), or None for every page.
 
     Returns:
         Page name -> its data directory.
     """
     if output_base is None:
-        return dict(PAGE_OUTPUT_ROOTS)
+        return {
+            page: root
+            for page, root in PAGE_OUTPUT_ROOTS.items()
+            if pages is None or page in pages
+        }
     roots: dict[str, Path] = {}
     for page, source in PAGE_OUTPUT_ROOTS.items():
+        if pages is not None and page not in pages:
+            continue
         destination = output_base.resolve() / page / "data"
         if not destination.exists():
             if source.is_dir():
@@ -353,6 +684,91 @@ def earlier_senate_results(
     return results
 
 
+def refresh_manifest_metadata(
+    page_roots: Mapping[str, Path],
+    *,
+    dry_run: bool,
+    scope: ExportScope | None = None,
+) -> None:
+    """Refresh ``parties`` and per-map ``regions`` in every existing page manifest.
+
+    Each page's manifest carries the full party lookup (results may reference any
+    party id) and only the mapModes for that page, so the regions refresh limits
+    itself to the page's maps. With ``scope``, ``parties`` is still refreshed whole
+    (it is page-wide), but regions and derived keys change only for the maps of the
+    scope's parliaments, and pages with none of them are skipped.
+
+    Args:
+        page_roots: Page name -> data directory.
+        dry_run: Print the plan instead of writing.
+        scope: The sections to refresh, or None for every map on every page.
+
+    Raises:
+        FileNotFoundError: If no page has a ``map-modes.json``.
+    """
+    db = Database()
+    with db.session() as session:
+        parties = session.execute(select(Party)).scalars().all()
+        regions = session.execute(select(Region)).scalars().all()
+        map_parliaments = {
+            str(map_id): parliament
+            for map_id, parliament in session.execute(select(Map.id, Map.parliament))
+        }
+    manifest_parties = build_manifest_party_settings(parties)
+    manifest_regions_by_map_id = build_manifest_regions_by_map_id(regions)
+    wrote_any = False
+    for page_name, page_root in page_roots.items():
+        only_map_ids: set[str] | None = None
+        if scope is not None:
+            if not scope.touches_page(PAGE_PARLIAMENTS[page_name]):
+                continue
+            only_map_ids = {
+                map_id
+                for map_id, parliament in map_parliaments.items()
+                if parliament in scope.parliaments
+            }
+        manifest_path = page_root / "map-modes.json"
+        if not manifest_path.exists():
+            continue
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["parties"] = manifest_parties
+        # Rebuild regions the way a full export does so the two paths stay consistent:
+        # apply each map's shell ``regionNameOverride``, re-resolve the durable
+        # ``senateClassCycle`` and re-filter ``senateSpecialElections``. Without this, a
+        # metadata-only refresh silently regressed curated labels (e.g. the shortened
+        # Holyrood-2026 names) to raw DB names and left the Senate's derived keys stale.
+        # Falls back to raw regions with no shell.
+        shell_path = page_root / "map-modes-shell.json"
+        shell = (
+            json.loads(shell_path.read_text(encoding="utf-8"))
+            if shell_path.exists()
+            else {}
+        )
+        rebuilt_modes = build_map_modes_with_regions(
+            shell.get("mapModes", {}),
+            manifest_regions_by_map_id,
+            parliament_features=shell.get("parliamentFeatures", {}),
+        )
+        refresh_manifest_modes(
+            manifest, rebuilt_modes, manifest_regions_by_map_id, only_map_ids
+        )
+        if dry_run:
+            print(f"Would write manifest metadata: {manifest_path}")
+            refreshed_maps = (
+                len(manifest_regions_by_map_id)
+                if only_map_ids is None
+                else len(only_map_ids & manifest_regions_by_map_id.keys())
+            )
+            print(f"parties={len(manifest_parties)} maps={refreshed_maps}")
+        else:
+            write_manifest(manifest_path, manifest)
+            print(f"Wrote manifest metadata: {manifest_path}")
+        wrote_any = True
+    if not wrote_any:
+        roots = [str(root) for root in page_roots.values()]
+        raise FileNotFoundError(f"No map-modes.json found under any page root: {roots}")
+
+
 def parse_args() -> argparse.Namespace:
     """Parse and validate command-line arguments.
 
@@ -374,6 +790,10 @@ def parse_args() -> argparse.Namespace:
     - ``--dry-run``: print planned actions without writing any files.
     - ``--output-file PATH``: write a single election result payload to this
       path; requires ``--election-name`` or ``--current-simulation``.
+    - ``--sections A,B`` / ``--content X,Y``: narrow the full export to some
+      sections and/or content kinds (see :class:`ExportScope`); stored on the
+      namespace as lists, or None when not given. Not combinable with the
+      single-target flags above or ``--output-file``.
 
     Returns:
         Parsed ``argparse.Namespace`` object.
@@ -382,7 +802,9 @@ def parse_args() -> argparse.Namespace:
         SystemExit: If ``--output-file`` is given without ``--election-name``
             or ``--current-simulation``, or ``--output-root`` without
             ``--current-simulation``, or both ``--output-root`` and
-            ``--output-base``.
+            ``--output-base``, or ``--sections`` / ``--content`` with a
+            single-target flag or ``--output-file``, an unknown name or an
+            empty selection.
     """
     parser = argparse.ArgumentParser(description="Export non-simulation elections to electionmaps/data")
     target_group = parser.add_mutually_exclusive_group()
@@ -440,8 +862,56 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Write a single exported election payload to this JSON file",
     )
+    parser.add_argument(
+        "--sections",
+        default=None,
+        metavar="A,B",
+        help=(
+            "Comma-separated sections to export (" + ", ".join(SECTION_PARLIAMENTS)
+            + "); the others' files and manifest entries are left as they are"
+        ),
+    )
+    parser.add_argument(
+        "--content",
+        default=None,
+        metavar="X,Y",
+        help=(
+            "Comma-separated content to export (" + ", ".join(CONTENT_KINDS)
+            + "); the other kinds' files and manifest entries are left as they are"
+        ),
+    )
 
     args = parser.parse_args()
+
+    for flag, attribute, choices in (
+        ("--sections", "sections", tuple(SECTION_PARLIAMENTS)),
+        ("--content", "content", CONTENT_KINDS),
+    ):
+        raw = getattr(args, attribute)
+        if raw is None:
+            continue
+        if (
+            args.election_name
+            or args.current_simulation
+            or args.metadata_only
+            or args.output_file
+        ):
+            parser.error(
+                f"{flag} cannot be combined with --election-name, "
+                "--current-simulation, --metadata-only or --output-file"
+            )
+        names = [name.strip() for name in raw.split(",") if name.strip()]
+        if not names:
+            parser.error(
+                f"{flag} selected nothing (choose from {', '.join(choices)})"
+            )
+        unknown = [name for name in names if name not in choices]
+        if unknown:
+            parser.error(
+                f"{flag}: unknown {', '.join(unknown)} "
+                f"(choose from {', '.join(choices)})"
+            )
+        setattr(args, attribute, list(dict.fromkeys(names)))
 
     if args.output_file and not (args.election_name or args.current_simulation):
         parser.error("--output-file requires --election-name or --current-simulation")
@@ -477,50 +947,38 @@ def main() -> None:
     """
     args = parse_args()
     single_election_mode = bool(args.election_name or args.current_simulation)
-    page_roots = resolve_page_roots(args.output_base)
+    # A filtered run narrows the full export. Selecting everything is the full export,
+    # so that case takes the unfiltered path (scope None) and writes the same files.
+    # (getattr: callers that build the namespace by hand predate the two flags.)
+    sections = getattr(args, "sections", None)
+    content = getattr(args, "content", None)
+    scope: ExportScope | None = None
+    if sections is not None or content is not None:
+        requested = build_export_scope(sections, content)
+        print(requested.plan_line())
+        if not requested.is_everything:
+            scope = requested
+            for note in scope.notes():
+                print(note)
+            if not scope.effective_parliaments:
+                print("Nothing to export for this selection.")
+                return
+    page_roots = resolve_page_roots(
+        args.output_base,
+        None
+        if scope is None
+        else [
+            page
+            for page, page_parliaments in PAGE_PARLIAMENTS.items()
+            if scope.touches_page(page_parliaments)
+        ],
+    )
 
     if args.metadata_only:
-        # Refresh parties + per-map regions in every page manifest that exists. Each page's
-        # manifest carries the full party lookup (results may reference any party id) and only
-        # the mapModes for that page, so the regions refresh self-limits to the page's maps.
-        db = Database()
-        with db.session() as session:
-            parties = session.execute(select(Party)).scalars().all()
-            regions = session.execute(select(Region)).scalars().all()
-        manifest_parties = build_manifest_party_settings(parties)
-        manifest_regions_by_map_id = build_manifest_regions_by_map_id(regions)
-        wrote_any = False
-        for page_root in page_roots.values():
-            manifest_path = page_root / "map-modes.json"
-            if not manifest_path.exists():
-                continue
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            manifest["parties"] = manifest_parties
-            # Rebuild regions the way a full export does so the two paths stay consistent:
-            # apply each map's shell ``regionNameOverride``, re-resolve the durable
-            # ``senateClassCycle`` and re-filter ``senateSpecialElections``. Without this, a
-            # metadata-only refresh silently regressed curated labels (e.g. the shortened
-            # Holyrood-2026 names) to raw DB names and left the Senate's derived keys stale.
-            # Falls back to raw regions with no shell.
-            shell_path = page_root / "map-modes-shell.json"
-            shell = json.loads(shell_path.read_text(encoding="utf-8")) if shell_path.exists() else {}
-            rebuilt_modes = build_map_modes_with_regions(
-                shell.get("mapModes", {}),
-                manifest_regions_by_map_id,
-                parliament_features=shell.get("parliamentFeatures", {}),
-            )
-            refresh_manifest_modes(manifest, rebuilt_modes, manifest_regions_by_map_id)
-            if args.dry_run:
-                print(f"Would write manifest metadata: {manifest_path}")
-                print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")
-            else:
-                write_manifest(manifest_path, manifest)
-                print(f"Wrote manifest metadata: {manifest_path}")
-            wrote_any = True
-        if not wrote_any:
-            raise FileNotFoundError(
-                f"No map-modes.json found under any page root: {[str(r) for r in page_roots.values()]}"
-            )
+        refresh_manifest_metadata(page_roots, dry_run=args.dry_run)
+        return
+    if scope is not None and not scope.exports_elections:
+        refresh_manifest_metadata(page_roots, dry_run=args.dry_run, scope=scope)
         return
 
     db = Database()
@@ -684,6 +1142,11 @@ def main() -> None:
             if latest_us_models:
                 elections = [*latest_us_models, *elections]
 
+        if scope is not None:
+            elections = [
+                election for election in elections if scope.covers_election(election)
+            ]
+
         if args.output_file and len(elections) != 1:
             raise RuntimeError("--output-file supports exactly one target election")
 
@@ -714,6 +1177,7 @@ def main() -> None:
             has_electorate=has_electorate,
             single_election_mode=single_election_mode,
             model_uncertainty=model_uncertainty,
+            scope=scope,
         )
 
 
@@ -723,6 +1187,7 @@ def missing_export_inputs(
     legacy_files_dir: Path,
     *,
     single_election_mode: bool,
+    scope: ExportScope | None = None,
 ) -> list[str]:
     """List every input the page exports need on disk but cannot find.
 
@@ -744,6 +1209,8 @@ def missing_export_inputs(
         page_roots: Output root per page to check; pages not listed are skipped.
         legacy_files_dir: Directory holding the Westminster templates and legacy sources.
         single_election_mode: True for ``--election-name``, which writes no supplementals.
+        scope: The filtered export's scope; supplementals are checked only for the
+            parliaments whose results it exports. None checks them all.
 
     Returns:
         One description per missing file, empty when nothing is missing: map files
@@ -775,6 +1242,10 @@ def missing_export_inputs(
         for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS:
             if supplemental.get("parliament", "westminster") not in PAGE_PARLIAMENTS[page_name]:
                 continue
+            if scope is not None and not scope.covers(
+                supplemental.get("parliament", "westminster"), forecast=False
+            ):
+                continue
             if supplemental.get("prebuilt"):
                 source_path = page_root / "results" / str(supplemental["resultFile"])
             elif supplemental.get("sourceFile"):
@@ -797,11 +1268,15 @@ def export_pages(
     has_electorate: bool,
     single_election_mode: bool,
     model_uncertainty: ModelUncertaintyExport | None = None,
+    scope: ExportScope | None = None,
 ) -> None:
     """Check every page's inputs up front, then export each page in ``page_roots``.
 
     ``main`` passes :func:`resolve_page_roots`'s result, so every page is exported; tests
     pass temp roots. ``model_uncertainty`` goes to every page: see :func:`_export_page`.
+    ``scope`` makes the export a filtered one: ``elections`` must already be the
+    in-scope ones, and pages the scope does nothing on are not touched (see
+    :class:`ExportScope`).
 
     Raises:
         RuntimeError: If a single-election export names a folded Senate special,
@@ -832,6 +1307,7 @@ def export_pages(
             page_roots,
             args.legacy_files_dir,
             single_election_mode=single_election_mode,
+            scope=scope,
         )
         if missing and not args.dry_run:
             raise FileNotFoundError(
@@ -841,6 +1317,8 @@ def export_pages(
             print(f"Missing (a real export would fail): {item}")
 
     for page_name, page_root in page_roots.items():
+        if scope is not None and not scope.touches_page(PAGE_PARLIAMENTS[page_name]):
+            continue
         _export_page(
             session=session,
             elections=elections_by_page[page_name],
@@ -852,6 +1330,7 @@ def export_pages(
             has_electorate=has_electorate,
             single_election_mode=single_election_mode,
             model_uncertainty=model_uncertainty,
+            scope=scope,
         )
 
 
@@ -866,6 +1345,7 @@ def _export_page(
     has_electorate: bool,
     single_election_mode: bool,
     model_uncertainty: ModelUncertaintyExport | None = None,
+    scope: ExportScope | None = None,
 ) -> None:
     """Build and write one page's results, maps, and map-modes.json manifest.
 
@@ -879,6 +1359,22 @@ def _export_page(
     it has no document, a stale uncertainty file is removed instead (see
     :func:`export.uncertainty.sync_uncertainty_file`). None leaves the model
     run's file without ``u`` and removes a stale uncertainty file.
+
+    ``scope`` (None for the full export) makes this a filtered export of a page that
+    may be shared with sections outside it. ``elections`` are then only the in-scope
+    ones. The page is assembled as a full export would be, with copies of the
+    existing manifest's out-of-scope entries (and their file references) standing in
+    for the elections that were not exported, so comparison and ordering rules see
+    the whole page; those entries are then restored exactly as the existing manifest
+    has them, as are the map modes of maps outside the scope. Result and map files of
+    out-of-scope sections are never written or removed. ``files.elections.mapsById``
+    is pruned only of stale maps of the selected sections (maps their results own
+    that were not rebuilt and that no held-back entry uses). The in-scope maps'
+    ``regions`` (with
+    :data:`DERIVED_MODE_KEYS`) change only when the scope selects metadata. The
+    page-wide ``parties`` list is refreshed on every manifest write, because a result
+    file may reference a party the old list lacks. A page without a manifest yet is
+    written with just what the scope exports.
     """
     maps_dir = output_root / "maps"
     results_dir = output_root / "results"
@@ -1162,7 +1658,55 @@ def _export_page(
         print("Skipping manifest write for single-election export mode")
         return
 
-    if "us_presidential" in parliaments and not args.dry_run:
+    manifest_path = output_root / "map-modes.json"
+    existing = (
+        json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest_path.exists()
+        else {}
+    )
+
+    held_back: list[dict[str, Any]] = []
+    map_parliaments: dict[str, str] = {}
+    if scope is not None:
+        map_parliaments = {
+            str(map_id): parliament
+            for map_id, parliament in session.execute(select(Map.id, Map.parliament))
+        }
+        held_back = [
+            entry
+            for entry in existing.get("elections", [])
+            if "id" in entry and not scope.covers_entry(entry)
+        ]
+        # The entries a full export may add late (the composite and the preserved
+        # types) are held back here and added below; this does no harm because
+        # held-back entries are restored verbatim.
+        manifest_entries.extend(
+            copy.deepcopy(entry) for entry in held_back if not _added_late(entry)
+        )
+        existing_files = existing.get("files", {}).get("elections", {})
+        # Maps the scope's results own are rebuilt from the elections exported now, so
+        # one whose elections are gone drops out as it would in a full export; the
+        # others, and any map a held-back entry still shows, are kept.
+        held_map_ids = {
+            str(entry["mapId"]) for entry in held_back if entry.get("mapId") is not None
+        }
+        map_files_by_id = {
+            **{
+                map_id: relpath
+                for map_id, relpath in existing_files.get("mapsById", {}).items()
+                if map_parliaments.get(map_id) not in scope.results_parliaments
+                or map_id in held_map_ids
+            },
+            **map_files_by_id,
+        }
+        held_ids = {entry["id"] for entry in held_back}
+        for entry_id, data_file in existing_files.get("electionsById", {}).items():
+            if entry_id in held_ids:
+                data_files_by_election_id.setdefault(entry_id, data_file)
+
+    if "us_presidential" in parliaments and (
+        scope is None or scope.covers("us_presidential", forecast=False)
+    ) and not args.dry_run:
         for series in state_trends.values():
             series.sort(key=lambda entry: entry["year"])
         write_json(
@@ -1179,10 +1723,14 @@ def _export_page(
         dry_run=args.dry_run,
         manifest_parties=manifest_parties,
         manifest_regions_by_map_id=manifest_regions_by_map_id,
-        parliaments=parliaments,
+        parliaments=(
+            parliaments
+            if scope is None
+            else set(scope.results_parliaments & parliaments)
+        ),
     )
 
-    if default_election_id is None:
+    if default_election_id is None and (scope is None or manifest_entries):
         default_election_id = manifest_entries[0]["id"]
 
     assign_comparison_elections(manifest_entries)
@@ -1241,7 +1789,7 @@ def _export_page(
 
             composite_filename = "current-parliament.json"
             composite_path = results_dir / composite_filename
-            composite_manifest_id = "current-parliament"
+            composite_manifest_id = COMPOSITE_ENTRY_ID
 
             if args.dry_run:
                 print(f"Would write composite: {composite_path} ({len(composite_seats)} seats, {len(all_changes)} overrides)")
@@ -1270,18 +1818,34 @@ def _export_page(
             insert_current_parliament_entry(manifest_entries, composite_entry)
             default_election_id = composite_manifest_id
 
+    if scope is not None:
+        # The entries a full export may add late: the composite where this run did
+        # not build it, then the preserved ones.
+        present = {entry.get("id") for entry in manifest_entries}
+        for entry in held_back:
+            if not _added_late(entry) or entry["id"] in present:
+                continue
+            if entry["id"] == COMPOSITE_ENTRY_ID:
+                insert_current_parliament_entry(manifest_entries, copy.deepcopy(entry))
+            else:
+                insert_preserved_entry(manifest_entries, copy.deepcopy(entry))
+
     expected_map_filenames = {Path(path).name for path in map_files_by_id.values()}
     if maps_dir.exists():
         for existing_map in maps_dir.glob("*.topo.json"):
             if existing_map.name not in expected_map_filenames:
+                if scope is not None:
+                    # Only maps the scope's results own can be stale; any other file
+                    # (or one that does not name a known map) stays.
+                    named = _MAP_FILE_NAME.fullmatch(existing_map.name)
+                    owner = map_parliaments.get(named.group(1)) if named else None
+                    if owner is None or owner not in scope.results_parliaments:
+                        continue
                 if args.dry_run:
                     print(f"Would remove stale map: {existing_map}")
                 else:
                     existing_map.unlink()
                     print(f"Removed stale map: {existing_map}")
-
-    manifest_path = output_root / "map-modes.json"
-    existing = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
 
     # map-modes-shell.json is the hand-authored source of truth for the carried-over,
     # non-generated config (misc, parliamentFeatures, mapModes structure, defaultElection).
@@ -1323,10 +1887,9 @@ def _export_page(
     # disk by the main loop but excluded from manifest_entries by the standard-name filter.
     existing_by_id = {e.get("id"): e for e in existing.get("elections", [])}
     existing_data_files = existing.get("files", {}).get("elections", {}).get("electionsById", {})
-    PRESERVE_TYPES = ("holyrood_uns", "model_uns", "eu_referendum", "holyrood_general")
     for entry_id, entry in existing_by_id.items():
         entry_type = entry.get("type")
-        if entry_type not in PRESERVE_TYPES:
+        if entry_type not in PRESERVE_ENTRY_TYPES:
             continue
         if entry_id in {e["id"] for e in manifest_entries}:
             continue  # already present
@@ -1380,6 +1943,40 @@ def _export_page(
         manifest_regions_by_map_id,
         parliament_features=config.get("parliamentFeatures", {}),
     )
+    if scope is not None:
+        manifest_entries = restore_held_back_entries(manifest_entries, held_back)
+        final_ids = {entry.get("id") for entry in manifest_entries}
+        file_order = {entry_id: i for i, entry_id in enumerate(existing_data_files)}
+        files["elections"]["electionsById"] = {
+            entry_id: data_file
+            for entry_id, data_file in sorted(
+                data_files_by_election_id.items(),
+                key=lambda item: file_order.get(item[0], len(file_order)),
+            )
+            if entry_id in final_ids
+        }
+        map_order = {
+            map_id: i
+            for i, map_id in enumerate(
+                existing.get("files", {}).get("elections", {}).get("mapsById", {})
+            )
+        }
+        files["elections"]["mapsById"] = dict(
+            sorted(
+                map_files_by_id.items(),
+                key=lambda item: map_order.get(item[0], len(map_order)),
+            )
+        )
+        map_modes = scope_map_modes(
+            map_modes,
+            existing.get("mapModes", {}),
+            {
+                map_id
+                for map_id, parliament in map_parliaments.items()
+                if parliament in scope.effective_parliaments
+            },
+            refresh_metadata=scope.metadata,
+        )
     unmoded_map_ids = sorted(
         {
             int(entry["mapId"])

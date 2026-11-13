@@ -11,12 +11,12 @@
     <thead>
       <tr>
         <th scope="col">Run</th>
-        <th scope="col">Hung</th>
+        <th class="num" scope="col">Hung</th>
         <th scope="col">Party</th>
-        <th scope="col">Majority</th>
-        <th scope="col">Largest</th>
-        <th scope="col">Vote interval</th>
-        <th scope="col">Seat interval</th>
+        <th class="num" scope="col">Majority</th>
+        <th class="num" scope="col">Largest</th>
+        <th class="num" scope="col">Vote interval</th>
+        <th class="num" scope="col">Seat interval</th>
         <th scope="col">Config</th>
       </tr>
     </thead>
@@ -25,12 +25,12 @@
 {% for party, item in ordered_parties(record.stored.national.get('parties'), seat_totals.get(record.election_id, {})) %}
       <tr>
         <td><a href="{{ url_for('uncertainty_runs.results', election_id=record.election_id) }}">{{ record.name }}</a></td>
-        <td>{{ fmt(record.stored.national.get('hung', 0) * 100, '.1f') }}%</td>
+        <td class="num">{{ fmt(record.stored.national.get('hung', 0) * 100, '.1f') }}%</td>
         <td>{{ labels.parties.get(party, party) }}</td>
-        <td>{{ fmt(item.get('pm', 0) * 100, '.1f') }}%</td>
-        <td>{{ fmt(item.get('pl', 0) * 100, '.1f') }}%</td>
-        <td>{{ item.get('v', '-')|round_display }}</td>
-        <td>{{ item.get('s', '-')|round_display }}</td>
+        <td class="num">{{ fmt(item.get('pm', 0) * 100, '.1f') }}%</td>
+        <td class="num">{{ fmt(item.get('pl', 0) * 100, '.1f') }}%</td>
+        <td class="num">{{ item.get('v', '-')|round_display }}</td>
+        <td class="num">{{ item.get('s', '-')|round_display }}</td>
         <td><small>{{ record.stored.national.get('config_hash', '-') }}</small></td>
       </tr>
 {% endfor %}

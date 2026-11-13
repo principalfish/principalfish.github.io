@@ -32,12 +32,15 @@ from typing import cast
 
 import pytest
 from flask import Flask
+from markupsafe import escape
 
-from console.blueprints.holyrood import (
+from console.holyrood.model import (
     _choices_for_holyrood_model_form,
     _holyrood_model_arg_explanations,
 )
 from console.paths import HOLYROOD_MODEL_SCRIPT
+from console.us.models import MODEL_RUN_LOCK, model_run_slot
+from core import backup
 from core.db import Database
 from core.schema import ElectionType
 from tests.console_fixtures import (
@@ -48,6 +51,7 @@ from tests.console_fixtures import (
     flashes_on_page as _flashes_on_page,
     forbid_call,
     pre_after_heading as _pre_after_heading,
+    seeded_app,
     select_block as _select_block,
 )
 from tests.uk_fixtures import HolyroodWorld, seed_holyrood_world
@@ -64,9 +68,10 @@ def holyrood_trend_json(
     for why an opt-in fixture is unsafe here (the ``_flashes`` redirect helper
     reaches ``/holyrood/outputs`` from delete/not-found tests too).
     """
-    monkeypatch.setattr("console.blueprints.holyrood.get_db", lambda: db)
+    monkeypatch.setattr("console.holyrood.model.get_db", lambda: db)
+    monkeypatch.setattr("console.holyrood.outputs.get_db", lambda: db)
     path = tmp_path / "holyrood_trends.json"
-    monkeypatch.setattr("console.blueprints.holyrood.HOLYROOD_TREND_CACHE_JSON", path)
+    monkeypatch.setattr("console.holyrood.outputs.HOLYROOD_TREND_CACHE_JSON", path)
     return path
 
 
@@ -82,11 +87,11 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     export, or poll import.
     """
     forbid_call(
-        monkeypatch, "console.blueprints.holyrood.run_command", "recording_runner"
+        monkeypatch, "console.holyrood.model.run_command", "recording_runner"
     )
     forbid_call(
         monkeypatch,
-        "console.blueprints.holyrood.run_python_script",
+        "console.holyrood.model.run_python_script",
         "a locally constructed _RecordingScriptRunner",
     )
 
@@ -95,12 +100,12 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
 def recording_runner(monkeypatch: pytest.MonkeyPatch) -> _RecordingRunner:
     """Replace the Holyrood blueprint's model/export subprocess runner."""
     runner = _RecordingRunner()
-    monkeypatch.setattr("console.blueprints.holyrood.run_command", runner)
+    monkeypatch.setattr("console.holyrood.model.run_command", runner)
     return runner
 
 
 class _RecordingScriptRunner:
-    """Stand-in for ``console.services.runner.run_python_script`` matching its
+    """Stand-in for ``console.shared.runner.run_python_script`` matching its
     exact ``(script, *args, cwd=None, timeout)`` signature.
 
     Each call pops the next queued result off ``results`` (defaulting to a
@@ -132,13 +137,14 @@ class _RecordingScriptRunner:
 
 
 def _valid_form(world: HolyroodWorld, **overrides: str) -> dict[str, str]:
-    """Build a POST /holyrood/run-model form that validates against ``world``."""
+    """Build a POST /holyrood/model form that validates against ``world``."""
     form = {
         "election_name": world.constituency_election_name,
         "as_of_days_back": "0",
         "since_days_back": "30",
         "half_life_days": "30.0",
         "dry_run": "true",
+        "export_when_done": "on",
     }
     form.update(overrides)
     return form
@@ -206,12 +212,12 @@ def _patch_import_script(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Pat
     """
     script = tmp_path / "holyrood_wikipedia_import.py"
     script.write_text("# stub for test", encoding="utf-8")
-    monkeypatch.setattr("console.blueprints.holyrood.HOLYROOD_IMPORT_SCRIPT", script)
+    monkeypatch.setattr("console.holyrood.model.HOLYROOD_IMPORT_SCRIPT", script)
     return script
 
 
 class TestHolyroodImportPolls:
-    """POST /holyrood/import-polls runs both the constituency and list imports."""
+    """POST /holyrood/polls/import runs both the constituency and list imports."""
 
     def test_script_missing_redirects_with_flash(
         self,
@@ -222,15 +228,58 @@ class TestHolyroodImportPolls:
     ) -> None:
         missing_script = tmp_path / "does-not-exist.py"
         monkeypatch.setattr(
-            "console.blueprints.holyrood.HOLYROOD_IMPORT_SCRIPT", missing_script
+            "console.holyrood.model.HOLYROOD_IMPORT_SCRIPT", missing_script
         )
         client = app.test_client()
 
-        response = client.post("/holyrood/import-polls")
+        response = client.post("/holyrood/polls/import")
 
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/")
         assert _flashes(client, response) == [f"Script not found: {missing_script}"]
+
+    def test_the_import_is_refused_while_the_run_slot_is_held(
+        self,
+        app: Flask,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        _patch_import_script(monkeypatch, tmp_path)
+        runner = _RecordingScriptRunner()
+        monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
+        client = app.test_client()
+
+        with model_run_slot():
+            response = client.post("/holyrood/polls/import")
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/holyrood"
+        [message] = _flashes(client, response)
+        assert message.startswith("Polls not imported: another run is in progress")
+        assert runner.calls == []
+
+    def test_the_import_holds_the_slot_while_it_runs_and_frees_it_after(
+        self,
+        app: Flask,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        _patch_import_script(monkeypatch, tmp_path)
+        held: list[bool] = []
+
+        def runner(
+            script: Path, *args: str, cwd: Path | None = None, timeout: int
+        ) -> subprocess.CompletedProcess[str]:
+            held.append(MODEL_RUN_LOCK.locked())
+            return subprocess.CompletedProcess([], 0, "ok", "")
+
+        monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
+
+        response = app.test_client().post("/holyrood/polls/import")
+
+        assert response.status_code == 200
+        assert held == [True, True]
+        assert not MODEL_RUN_LOCK.locked()
 
     def test_both_runs_succeed_with_stderr_produces_exact_combined_output(
         self,
@@ -250,9 +299,9 @@ class TestHolyroodImportPolls:
                 ),
             ]
         )
-        monkeypatch.setattr("console.blueprints.holyrood.run_python_script", runner)
+        monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
 
-        response = app.test_client().post("/holyrood/import-polls")
+        response = app.test_client().post("/holyrood/polls/import")
 
         assert response.status_code == 200
         assert runner.calls == [
@@ -301,9 +350,9 @@ class TestHolyroodImportPolls:
                 ),
             ]
         )
-        monkeypatch.setattr("console.blueprints.holyrood.run_python_script", runner)
+        monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
 
-        response = app.test_client().post("/holyrood/import-polls")
+        response = app.test_client().post("/holyrood/polls/import")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -328,9 +377,9 @@ class TestHolyroodImportPolls:
                 ),
             ]
         )
-        monkeypatch.setattr("console.blueprints.holyrood.run_python_script", runner)
+        monkeypatch.setattr("console.holyrood.model.run_python_script", runner)
 
-        response = app.test_client().post("/holyrood/import-polls")
+        response = app.test_client().post("/holyrood/polls/import")
 
         assert response.status_code == 200
         # Only the constituency import ran; the list import never fired.
@@ -443,7 +492,7 @@ class TestHolyroodModelArgExplanations:
 
 
 class TestRunHolyroodModelFormRoute:
-    """GET /holyrood/run-model picks a default election from the current DB."""
+    """GET /holyrood/model picks a default election from the current DB."""
 
     def test_with_elections_defaults_to_the_first_option(
         self, app: Flask, db: Database
@@ -457,7 +506,7 @@ class TestRunHolyroodModelFormRoute:
             world.map_id, 2031, "Witness Election", ElectionType.holyrood_general
         )
 
-        response = app.test_client().get("/holyrood/run-model")
+        response = app.test_client().get("/holyrood/model")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -467,7 +516,7 @@ class TestRunHolyroodModelFormRoute:
     def test_without_elections_renders_empty_dropdown(
         self, app: Flask, db: Database
     ) -> None:
-        response = app.test_client().get("/holyrood/run-model")
+        response = app.test_client().get("/holyrood/model")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -477,10 +526,10 @@ class TestRunHolyroodModelFormRoute:
         """The GET form's other defaults matter as much as the election
         pick — in particular ``dry_run="true"``, since a form submitted
         untouched (or a POST that omits the field, see
-        ``HolyroodModelRunForm.dry_run``'s own default of ``False``) must
+        ``HolyroodModelRunForm.dry_run``'s own default, also true) must
         preview rather than silently write to the DB and run the export.
         """
-        response = app.test_client().get("/holyrood/run-model")
+        response = app.test_client().get("/holyrood/model")
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -495,7 +544,7 @@ class TestRunHolyroodModelFormRoute:
 
 
 class TestRunHolyroodModelExecute:
-    """POST /holyrood/run-model validates the form, runs the model, and exports."""
+    """POST /holyrood/model validates the form, runs the model, and exports."""
 
     def test_invalid_form_flashes_the_exact_validation_message(
         self,
@@ -509,7 +558,9 @@ class TestRunHolyroodModelExecute:
         # that validator is wired up.
         form = _valid_form(world, as_of_days_back="30", since_days_back="7")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
@@ -539,7 +590,9 @@ class TestRunHolyroodModelExecute:
         world = seed_holyrood_world(db)
         form = _valid_form(world, dry_run="true")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert recording_runner.scripts == ["run_holyrood_uns_model.py"]
@@ -576,7 +629,9 @@ class TestRunHolyroodModelExecute:
             dry_run="true",
         )
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         expected_command = (
             sys.executable,
@@ -611,11 +666,13 @@ class TestRunHolyroodModelExecute:
         export_script = tmp_path / "export_elections.py"
         export_script.write_text("# stub for test", encoding="utf-8")
         monkeypatch.setattr(
-            "console.blueprints.holyrood.EXPORT_ELECTION_SCRIPT", export_script
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", export_script
         )
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert recording_runner.scripts == [
@@ -643,6 +700,135 @@ class TestRunHolyroodModelExecute:
         assert _pre_after_heading(body, "h5", "Stdout") == "ran export_elections.py"
         assert _pre_after_heading(body, "h5", "Stderr") == "(no stderr)"
 
+    def test_export_off_runs_the_model_without_the_export(
+        self,
+        app: Flask,
+        db: Database,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        world = seed_holyrood_world(db)
+        export_script = tmp_path / "export_elections.py"
+        export_script.write_text("# stub for test", encoding="utf-8")
+        monkeypatch.setattr(
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", export_script
+        )
+        form = _valid_form(world, dry_run="false")
+        del form["export_when_done"]
+
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
+
+        assert response.status_code == 200
+        assert recording_runner.scripts == ["run_holyrood_uns_model.py"]
+        body = response.get_data(as_text=True)
+        assert "Static Data Export" not in body
+        assert "Export when done was off, so nothing was exported." in body
+
+    def test_omitting_dry_run_runs_as_a_dry_run(
+        self,
+        app: Flask,
+        db: Database,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A POST without the field previews: the safe default, never a real run."""
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        world = seed_holyrood_world(db)
+        form = _valid_form(world)
+        del form["dry_run"]
+
+        app.test_client().post("/holyrood/model", data=form)
+
+        [command] = recording_runner.calls
+        assert "--dry-run" in command
+        assert "--no-output" in command
+        assert recording_runner.scripts == ["run_holyrood_uns_model.py"]
+        assert requests == []
+
+    def test_an_explicit_dry_run_false_still_runs_for_real(
+        self,
+        app: Flask,
+        db: Database,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        requests: list[str] = []
+        monkeypatch.setattr(backup, "request_backup", lambda: requests.append("b"))
+        world = seed_holyrood_world(db)
+        export_script = tmp_path / "export_elections.py"
+        export_script.write_text("# stub for test", encoding="utf-8")
+        monkeypatch.setattr(
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", export_script
+        )
+        form = _valid_form(world, dry_run="false")
+
+        app.test_client().post("/holyrood/model", data=form)
+
+        assert "--dry-run" not in recording_runner.calls[0]
+        assert recording_runner.scripts == [
+            "run_holyrood_uns_model.py",
+            "export_elections.py",
+        ]
+        assert requests == ["b"]
+
+    def test_a_dry_run_never_exports_even_with_the_box_ticked(
+        self,
+        app: Flask,
+        db: Database,
+        recording_runner: _RecordingRunner,
+    ) -> None:
+        world = seed_holyrood_world(db)
+        form = _valid_form(world, dry_run="true", export_when_done="on")
+
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
+
+        assert recording_runner.scripts == ["run_holyrood_uns_model.py"]
+        body = response.get_data(as_text=True)
+        assert "Static Data Export" not in body
+        assert "nothing was exported" in body
+
+    def test_the_form_opens_with_the_export_box_ticked(
+        self, app: Flask, db: Database
+    ) -> None:
+        body = app.test_client().get("/holyrood/model").get_data(as_text=True)
+
+        assert '<input type="checkbox" name="export_when_done" checked>' in body
+        assert "A dry run never exports" in body
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/holyrood/model",
+            "/westminster/model",
+            "/house/model",
+            "/senate/model",
+            "/president/model",
+        ],
+    )
+    def test_only_the_holyrood_form_says_the_run_writes_the_forecast_file(
+        self,
+        seeded_app: Flask,  # noqa: F811
+        path: str,
+    ) -> None:
+        note = escape(
+            "The Holyrood model run writes results/holyrood-prediction.json "
+            "(and its meta file) itself, even with this unticked; the export "
+            "only keeps its manifest entry."
+        )
+
+        body = seeded_app.test_client().get(path).get_data(as_text=True)
+
+        assert "A dry run never exports, whatever this says." in body
+        assert (str(note) in body) is (path == "/holyrood/model")
+        assert ("holyrood-prediction.json" in body) is (path == "/holyrood/model")
+
     def test_non_zero_exit_skips_export(
         self,
         app: Flask,
@@ -654,13 +840,15 @@ class TestRunHolyroodModelExecute:
         export_script = tmp_path / "export_elections.py"
         export_script.write_text("# stub for test", encoding="utf-8")
         monkeypatch.setattr(
-            "console.blueprints.holyrood.EXPORT_ELECTION_SCRIPT", export_script
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", export_script
         )
         runner = _RecordingRunner(return_codes={"run_holyrood_uns_model.py": 3})
-        monkeypatch.setattr("console.blueprints.holyrood.run_command", runner)
+        monkeypatch.setattr("console.holyrood.model.run_command", runner)
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert len(runner.calls) == 1
@@ -681,13 +869,15 @@ class TestRunHolyroodModelExecute:
         export_script = tmp_path / "export_elections.py"
         export_script.write_text("# stub for test", encoding="utf-8")
         monkeypatch.setattr(
-            "console.blueprints.holyrood.EXPORT_ELECTION_SCRIPT", export_script
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", export_script
         )
         runner = _RecordingRunner(return_codes={"export_elections.py": 4})
-        monkeypatch.setattr("console.blueprints.holyrood.run_command", runner)
+        monkeypatch.setattr("console.holyrood.model.run_command", runner)
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         assert runner.scripts == ["run_holyrood_uns_model.py", "export_elections.py"]
@@ -711,11 +901,13 @@ class TestRunHolyroodModelExecute:
         world = seed_holyrood_world(db)
         missing_script = tmp_path / "does-not-exist.py"
         monkeypatch.setattr(
-            "console.blueprints.holyrood.EXPORT_ELECTION_SCRIPT", missing_script
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", missing_script
         )
         form = _valid_form(world, dry_run="false")
 
-        response = app.test_client().post("/holyrood/run-model", data=form)
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
 
         assert response.status_code == 200
         # run_command is never called for the missing export step.
@@ -726,6 +918,35 @@ class TestRunHolyroodModelExecute:
         assert _pre_after_heading(
             body, "h5", "Stderr"
         ) == f"Export script not found: {missing_script}"
+        assert "The run finished but the export failed with exit code 1" in body
+
+    def test_a_successful_export_keeps_the_export_requested_headline(
+        self,
+        app: Flask,
+        db: Database,
+        recording_runner: _RecordingRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        world = seed_holyrood_world(db)
+        export_script = tmp_path / "export_elections.py"
+        export_script.write_text("# stub for test", encoding="utf-8")
+        monkeypatch.setattr(
+            "console.holyrood.model.EXPORT_ELECTION_SCRIPT", export_script
+        )
+        form = _valid_form(world, dry_run="false")
+
+        response = app.test_client().post(
+            "/holyrood/model", data=form, follow_redirects=True
+        )
+
+        body = response.get_data(as_text=True)
+        assert recording_runner.scripts == [
+            "run_holyrood_uns_model.py",
+            "export_elections.py",
+        ]
+        assert "The run finished and the export was requested" in body
+        assert "the export failed" not in body
 
 
 class TestHolyroodOutputsRoute:

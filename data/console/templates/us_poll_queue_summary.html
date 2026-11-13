@@ -1,77 +1,54 @@
 {% extends "base.html" %}
+{% from "_macros/queue.html" import
+  data_table, error_alert, outcome_section, progress_line, summary_actions %}
 
 {% macro race(item) -%}
   {{ contest_labels.get(item.row.contest, item.row.contest) }} · {{ item.row.seat_name or "National" }}
 {%- endmacro %}
 
 {% macro status_table(items, last_column) %}
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">Race</th>
-          <th scope="col">Matchup</th>
-          <th scope="col">Pollster</th>
-          <th scope="col">Fieldwork</th>
-          <th scope="col">{{ last_column }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in items %}
-          <tr>
-            <td>{{ race(item) }}</td>
-            <td>{{ item.row.matchup or "Party voting intention" }}</td>
-            <td>{{ item.row.pollster_label }}</td>
-            <td>{{ item.row.fieldwork_start }} to {{ item.row.fieldwork_end }}</td>
-            <td>
-              {% if item.poll_id %}
-                <a href="{{ url_for('polls.poll_detail', poll_id=item.poll_id) }}">#{{ item.poll_id }}</a>
-              {% endif %}
-              {{ item.detail }}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  {% call data_table(["Race", "Matchup", "Pollster", "Fieldwork", last_column], true) %}
+    {% for item in items %}
+      <tr>
+        <td>{{ race(item) }}</td>
+        <td>{{ item.row.matchup or "Party voting intention" }}</td>
+        <td>{{ item.row.pollster_label }}</td>
+        <td>{{ item.row.fieldwork_start }} to {{ item.row.fieldwork_end }}</td>
+        <td>
+          {% if item.poll_id %}
+            <a href="{{ url_for('polls.poll_detail', poll_id=item.poll_id) }}">#{{ item.poll_id }}</a>
+          {% endif %}
+          {{ item.detail }}
+        </td>
+      </tr>
+    {% endfor %}
+  {% endcall %}
 {% endmacro %}
 
 {% block content %}
   <section class="card">
-    <h2>US Poll Import Summary</h2>
-    <p>
-      {{ progress.total }} polls queued
-      · {{ progress.imported }} imported
-      · {{ progress.failed }} failed
-      · {{ progress.skipped }} skipped
-    </p>
+    <h2>{{ chamber.label }} Poll Import Summary</h2>
+    {{ progress_line("%s polls queued"|format(progress.total), progress) }}
     <p><strong>Window:</strong> {{ cutoff_label }}</p>
     <p>
       {{ state.skipped_present }} poll(s) in the window were already in the database and never
       entered the queue. {{ index.pages_fetched }} Wikipedia page(s) read.
     </p>
     {% if relabel_error %}
-      <div class="alerts">
-        <div class="alert">{{ relabel_error }}</div>
-      </div>
+      {{ error_alert(relabel_error) }}
     {% elif relabelled %}
       <p>
         {{ relabelled }} stored poll(s) were moved onto their race's renamed matchup
         instead of being imported again.
       </p>
     {% endif %}
-    <div class="actions">
-      <a class="button primary" href="{{ url_for('home.home') }}">Back to home</a>
-      <a class="button" href="{{ url_for('us_poll_import.import_form') }}">Import again</a>
-    </div>
+    {{ summary_actions(url_for('us_poll_import.import_form', chamber=chamber.slug), "Import again") }}
   </section>
 
   <section class="card">
     <h3>Matchup Tracking</h3>
     {% if auto_tracking_error %}
-      <div class="alerts">
-        <div class="alert">{{ auto_tracking_error }}</div>
-      </div>
+      {{ error_alert(auto_tracking_error) }}
       <p>The polls imported above are stored; set any race's matchup on the pages below.</p>
     {% elif auto_tracking %}
       <ul>
@@ -82,7 +59,7 @@
       {% if tracking_changed and model_run and model_run.return_code == 0 %}
         <p>
           Only today's trend point follows a moved matchup. To move the earlier
-          points, open that chamber's race matchups and press Use automatic on one
+          points, open the race matchups and press Use automatic on one
           of its races with Rebuild history ticked.
         </p>
       {% endif %}
@@ -90,21 +67,24 @@
       <p>No race's tracked matchup changed.</p>
     {% endif %}
     <div class="actions">
-      <a class="button" href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate race matchups</a>
-      <a class="button" href="{{ url_for('us.race_matchups', chamber='house') }}">House race matchups</a>
-      <a class="button" href="{{ url_for('us.president_matchup') }}">President matchup</a>
+      {% if chamber.slug == "president" %}
+        <a class="button" href="{{ url_for('us.president_matchup') }}">President matchup</a>
+      {% else %}
+        <a class="button" href="{{ url_for('us.race_matchups', chamber=chamber.slug) }}">{{ chamber.label }} race matchups</a>
+      {% endif %}
     </div>
   </section>
 
   {% if model_error %}
-    <div class="alerts">
-      <div class="alert">{{ model_error }}</div>
-    </div>
+    {{ error_alert(model_error) }}
+    {% if model_busy_job %}
+      <p><a href="{{ url_for('runs.run_detail', run_id=model_busy_job) }}">See the running job.</a></p>
+    {% endif %}
   {% endif %}
 
   {% if model_run %}
     <section class="card">
-      <h3>Models and Export</h3>
+      <h3>Model and Export</h3>
       <p>
         Return code {{ model_run.return_code }}{% if model_run.skipped %}
         · skipped: {{ model_run.skipped|sort|join(", ") }}{% endif %}
@@ -116,39 +96,22 @@
     </section>
   {% endif %}
 
-  <section class="card">
-    <h3>Imported ({{ grouped.imported|length }})</h3>
-    {% if grouped.imported %}
-      {{ status_table(grouped.imported, "Poll") }}
-    {% else %}
-      <p>Nothing was imported.</p>
-    {% endif %}
-  </section>
+  {% call outcome_section("Imported", grouped.imported|length, "Nothing was imported.") %}
+    {{ status_table(grouped.imported, "Poll") }}
+  {% endcall %}
 
-  <section class="card">
-    <h3>Failed ({{ grouped.failed|length }})</h3>
-    {% if grouped.failed %}
-      {{ status_table(grouped.failed, "Error") }}
-    {% else %}
-      <p>No poll failed to import.</p>
-    {% endif %}
-  </section>
+  {% call outcome_section("Failed", grouped.failed|length, "No poll failed to import.") %}
+    {{ status_table(grouped.failed, "Error") }}
+  {% endcall %}
 
-  <section class="card">
-    <h3>Skipped ({{ grouped.skipped|length }})</h3>
-    {% if grouped.skipped %}
-      {{ status_table(grouped.skipped, "Detail") }}
-    {% else %}
-      <p>No poll was skipped.</p>
-    {% endif %}
-  </section>
+  {% call outcome_section("Skipped", grouped.skipped|length, "No poll was skipped.") %}
+    {{ status_table(grouped.skipped, "Detail") }}
+  {% endcall %}
 
   {% if grouped.pending %}
-    <section class="card">
-      <h3>Not Reviewed ({{ grouped.pending|length }})</h3>
-      <p>The queue was abandoned before these polls were reached.</p>
+    {% call outcome_section("Not Reviewed", grouped.pending|length, none, "The queue was abandoned before these polls were reached.") %}
       {{ status_table(grouped.pending, "Detail") }}
-    </section>
+    {% endcall %}
   {% endif %}
 
   <section class="card">
@@ -233,7 +196,7 @@
               <th scope="col">Section</th>
               <th scope="col">Seat</th>
               <th scope="col">Reason</th>
-              <th scope="col">Rows dropped</th>
+              <th class="num" scope="col">Rows dropped</th>
             </tr>
           </thead>
           <tbody>
@@ -243,7 +206,7 @@
                 <td>{{ seat.heading_path }}</td>
                 <td>{{ seat.seat_name or "-" }}</td>
                 <td>{{ seat.reason }}</td>
-                <td>{{ seat.dropped_rows }}</td>
+                <td class="num">{{ seat.dropped_rows }}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -277,7 +240,7 @@
               <th scope="col">Page</th>
               <th scope="col">Section</th>
               <th scope="col">Race</th>
-              <th scope="col">Rows dropped</th>
+              <th class="num" scope="col">Rows dropped</th>
             </tr>
           </thead>
           <tbody>
@@ -286,7 +249,7 @@
                 <td><a href="{{ table.page_url }}" target="_blank" rel="noopener">{{ table.page_url }}</a></td>
                 <td>{{ table.heading_path }}</td>
                 <td>{{ contest_labels.get(table.contest, table.contest) }} · {{ table.seat_name or "National" }}</td>
-                <td>{{ table.dropped_rows }}</td>
+                <td class="num">{{ table.dropped_rows }}</td>
               </tr>
             {% endfor %}
           </tbody>

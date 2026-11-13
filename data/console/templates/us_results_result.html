@@ -3,12 +3,12 @@
   <section class="card">
     <h2>{{ year }} US {{ chamber_label }} Results Imported</h2>
     <p>The site has not been exported. Export when you want these results published.</p>
-    <form method="post" action="{{ url_for('us_results.us_results_export') }}" class="inline-form button-form">
-      <button type="submit" class="button primary">Export to site</button>
-      <small>Runs export_elections.py, which rewrites every map's static data.</small>
-    </form>
     <p>
-      <a class="button" href="{{ url_for('us_results.us_results_form') }}">Back to US results</a>
+      <a class="button primary" href="{{ url_for('export.export_form', sections=chamber, content='results') }}">Export to site</a>
+      <small>Opens the export page with US {{ chamber_label }} and Results ticked and dry run on, so you can preview before writing any files.</small>
+    </p>
+    <p>
+      <a class="button" href="{{ url_for('us_results.us_results_form', chamber=chamber) }}">Back to US {{ chamber_label }} results</a>
     </p>
   </section>
 
@@ -19,13 +19,13 @@
         <thead>
           <tr>
             <th scope="col">Election</th>
-            <th scope="col">Id</th>
-            <th scope="col">Map</th>
+            <th class="num" scope="col">Id</th>
+            <th class="num" scope="col">Map</th>
             <th scope="col">File</th>
-            <th scope="col">Seats</th>
-            <th scope="col">Called</th>
+            <th class="num" scope="col">Seats</th>
+            <th class="num" scope="col">Called</th>
             <th scope="col">Elected per party</th>
-            <th scope="col">Status rows</th>
+            <th class="num" scope="col">Status rows</th>
             <th scope="col">Source note</th>
           </tr>
         </thead>
@@ -33,13 +33,13 @@
           {% for election in elections %}
             <tr>
               <td>{{ election.name }}</td>
-              <td>{{ election.election_id }}</td>
-              <td>{{ election.map_id }}</td>
+              <td class="num">{{ election.election_id }}</td>
+              <td class="num">{{ election.map_id }}</td>
               <td><code>{{ election.file }}</code></td>
-              <td>{{ election.seats }}</td>
-              <td>{{ election.called }}</td>
+              <td class="num">{{ election.seats }}</td>
+              <td class="num">{{ election.called }}</td>
               <td>{% for party, count in election.elected %}{{ party }} {{ count }}{{ ", " if not loop.last }}{% endfor %}</td>
-              <td>{{ election.status_rows }}</td>
+              <td class="num">{{ election.status_rows }}</td>
               <td>{{ election.source_note or "" }}</td>
             </tr>
           {% endfor %}

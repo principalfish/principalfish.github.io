@@ -1,4 +1,4 @@
-"""Tests for console.services.model_outputs against a real (temp) database.
+"""Tests for console.shared.model_outputs against a real (temp) database.
 
 Exercises the list/detail context builders and the delete helpers using the
 shared ``db`` fixture (a fresh SQLite database per test).
@@ -6,7 +6,7 @@ shared ``db`` fixture (a fresh SQLite database per test).
 
 from __future__ import annotations
 
-from console.services.model_outputs import (
+from console.shared.model_outputs import (
     build_output_detail_context,
     build_outputs_context,
     delete_model_output,

@@ -59,7 +59,7 @@ def test_the_guard_is_app_wide(
 ) -> None:
     # A blueprint that never registered the hook itself: the hour-long rebuild.
     tripwire = _Tripwire()
-    monkeypatch.setattr("console.blueprints.site.run_python_script", tripwire)
+    monkeypatch.setattr("console.admin.site.run_python_script", tripwire)
 
     response = app.test_client().post("/site/rebuild-database", headers=headers)
 
@@ -69,7 +69,7 @@ def test_the_guard_is_app_wide(
 
 @pytest.mark.parametrize("host", ["127.0.0.1:5055", "localhost:5055", "localhost"])
 def test_the_console_answers_its_own_host_names(app: Flask, host: str) -> None:
-    response = app.test_client().get("/us/import", headers={"Host": host})
+    response = app.test_client().get("/house/polls/import", headers={"Host": host})
 
     assert response.status_code == 200
 
@@ -81,10 +81,10 @@ def test_another_host_name_is_not_answered(
     # A hostile domain re-pointed at 127.0.0.1 would otherwise be same-origin
     # with its own page, and its POSTs would pass the header check.
     tripwire = _Tripwire()
-    monkeypatch.setattr("console.blueprints.us.get_db", tripwire)
+    monkeypatch.setattr("console.us.views.get_db", tripwire)
 
     response = app.test_client().post(
-        "/us/run-models",
+        "/house/model",
         headers={"Host": "evil.example:5055", "Sec-Fetch-Site": "same-origin"},
     )
 
@@ -93,7 +93,7 @@ def test_another_host_name_is_not_answered(
 
 
 @pytest.mark.parametrize("headers", CROSS_SITE)
-@pytest.mark.parametrize("route", ["/us/run-models", "/us/import/start"])
+@pytest.mark.parametrize("route", ["/house/model", "/house/polls/import/start"])
 def test_a_cross_site_post_is_refused_before_the_route_runs(
     app: Flask,
     monkeypatch: pytest.MonkeyPatch,
@@ -103,9 +103,9 @@ def test_a_cross_site_post_is_refused_before_the_route_runs(
     # Each route's first real step: the run's database handle, and the start
     # form's validation (which runs before the start route touches the DB).
     tripwire = _Tripwire()
-    monkeypatch.setattr("console.blueprints.us.get_db", tripwire)
+    monkeypatch.setattr("console.us.views.get_db", tripwire)
     monkeypatch.setattr(
-        "console.blueprints.us_poll_import.UsQueueStartForm",
+        "console.us.poll_import.UsQueueStartForm",
         SimpleNamespace(model_validate=tripwire),
     )
 
@@ -115,7 +115,7 @@ def test_a_cross_site_post_is_refused_before_the_route_runs(
     assert tripwire.calls == 0
 
 
-@pytest.mark.parametrize("route", ["/us/run-models", "/us/import/start"])
+@pytest.mark.parametrize("route", ["/house/model", "/house/polls/import/start"])
 def test_the_tripwire_is_reached_without_the_cross_site_header(
     app: Flask,
     monkeypatch: pytest.MonkeyPatch,
@@ -123,9 +123,9 @@ def test_the_tripwire_is_reached_without_the_cross_site_header(
 ) -> None:
     # Proves the refusal test above would notice a missing guard.
     tripwire = _Tripwire()
-    monkeypatch.setattr("console.blueprints.us.get_db", tripwire)
+    monkeypatch.setattr("console.us.views.get_db", tripwire)
     monkeypatch.setattr(
-        "console.blueprints.us_poll_import.UsQueueStartForm",
+        "console.us.poll_import.UsQueueStartForm",
         SimpleNamespace(model_validate=tripwire),
     )
 
@@ -142,17 +142,17 @@ def test_a_same_origin_post_reaches_the_route(
     headers: dict[str, str],
 ) -> None:
     tripwire = _Tripwire()
-    monkeypatch.setattr("console.blueprints.us.get_db", tripwire)
+    monkeypatch.setattr("console.us.views.get_db", tripwire)
 
     with pytest.raises(RuntimeError, match="reached the route body"):
-        app.test_client().post("/us/run-models", headers=headers)
+        app.test_client().post("/house/model", headers=headers)
 
     assert tripwire.calls == 1
 
 
 def test_a_cross_site_get_is_not_refused(app: Flask) -> None:
     response = app.test_client().get(
-        "/us/import",
+        "/house/polls/import",
         headers={"Sec-Fetch-Site": "cross-site"},
     )
 
@@ -173,15 +173,15 @@ def test_only_a_post_that_passes_the_guard_asks_for_a_backup(
     requested: list[bool] = []
     monkeypatch.setattr(backup, "request_backup", lambda: requested.append(True))
     monkeypatch.setattr(
-        "console.blueprints.us_poll_import.UsQueueStartForm",
+        "console.us.poll_import.UsQueueStartForm",
         SimpleNamespace(model_validate=_raise_validation_error),
     )
 
-    app.test_client().post("/us/import/start", headers=headers)
+    app.test_client().post("/house/polls/import/start", headers=headers)
 
     assert len(requested) == backups
 
 
-def _raise_validation_error(data: object) -> None:
+def _raise_validation_error(data: object, **_options: object) -> None:
     """A start form that always fails validation, so the route only redirects."""
     UsQueueStartForm.model_validate({})

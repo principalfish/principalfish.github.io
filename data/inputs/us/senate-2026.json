@@ -4,14 +4,14 @@
     "source_urls": [
       "https://static01.nyt.com/elections-assets/pages/data/2026-11-03/results-senate.json"
     ],
-    "retrieved_at": "2026-11-11T13:52:24.179824+00:00",
-    "source_updated_at": "2026-11-11T13:47:19.314Z",
+    "retrieved_at": "2026-11-13T09:36:48.859533+00:00",
+    "source_updated_at": "2026-11-13T04:01:57.592Z",
     "sources": [
       {
         "kind": "general",
         "url": "https://static01.nyt.com/elections-assets/pages/data/2026-11-03/results-senate.json",
-        "retrieved_at": "2026-11-11T13:52:24.179824+00:00",
-        "source_updated_at": "2026-11-11T13:47:19.314Z"
+        "retrieved_at": "2026-11-13T09:36:48.859533+00:00",
+        "source_updated_at": "2026-11-13T04:01:57.592Z"
       }
     ],
     "year": 2026,
@@ -51,7 +51,7 @@
     "seatInfo": {
       "current": null,
       "called": false,
-      "pct": 84.32,
+      "pct": 88.17,
       "sameParty": false,
       "round": null,
       "uncontested": false,
@@ -62,15 +62,15 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 118926,
+        "total": 125157,
         "name": "Mary Peltola"
       },
       "republican": {
-        "total": 119994,
+        "total": 124847,
         "name": "Dan Sullivan"
       },
       "others": {
-        "total": 4027,
+        "total": 4199,
         "name": "Daniel Sullivan"
       }
     }
@@ -107,7 +107,7 @@
     "seatInfo": {
       "current": "democrat",
       "called": true,
-      "pct": 98.09,
+      "pct": 98.1,
       "sameParty": false,
       "round": null,
       "uncontested": false,
@@ -118,19 +118,19 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 1613608,
+        "total": 1613632,
         "name": "John Hickenlooper"
       },
       "republican": {
-        "total": 935147,
+        "total": 935166,
         "name": "Mark Baisley"
       },
       "others": {
-        "total": 87871,
+        "total": 87875,
         "name": "Bob Chew"
       },
       "libertarian": {
-        "total": 32656,
+        "total": 32658,
         "name": "Blake Huber"
       }
     }
@@ -156,6 +156,10 @@
       "republican": {
         "total": 137837,
         "name": "Mike Katz"
+      },
+      "others": {
+        "total": 1330,
+        "name": "Total Write-ins"
       }
     }
   },
@@ -230,15 +234,15 @@
     },
     "partyInfo": {
       "republican": {
-        "total": 401778,
+        "total": 402983,
         "name": "Jim Risch"
       },
       "independent": {
-        "total": 288270,
+        "total": 289556,
         "name": "Todd Achilles"
       },
       "libertarian": {
-        "total": 20676,
+        "total": 20742,
         "name": "Matt Loesby"
       }
     }
@@ -247,7 +251,7 @@
     "seatInfo": {
       "current": "democrat",
       "called": true,
-      "pct": 96.96,
+      "pct": 97.98,
       "sameParty": false,
       "round": null,
       "uncontested": false,
@@ -258,15 +262,15 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 2536598,
+        "total": 2583698,
         "name": "Juliana Stratton"
       },
       "republican": {
-        "total": 1520609,
+        "total": 1526355,
         "name": "Don Tracy"
       },
       "others": {
-        "total": 65238,
+        "total": 66250,
         "name": "Whitfield Harrington"
       }
     }
@@ -286,11 +290,11 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 688615,
+        "total": 688622,
         "name": "Josh Turek"
       },
       "republican": {
-        "total": 631439,
+        "total": 631445,
         "name": "Ashley Hinson"
       },
       "libertarian": {
@@ -303,7 +307,7 @@
     "seatInfo": {
       "current": "democrat",
       "called": true,
-      "pct": 98.53,
+      "pct": 98.67,
       "sameParty": false,
       "round": null,
       "uncontested": false,
@@ -314,15 +318,15 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 561353,
+        "total": 561978,
         "name": "Adam Hamilton"
       },
       "republican": {
-        "total": 505810,
+        "total": 506588,
         "name": "Roger Marshall"
       },
       "libertarian": {
-        "total": 33222,
+        "total": 33311,
         "name": "David Graham"
       }
     }
@@ -426,19 +430,19 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 1652355,
+        "total": 1653828,
         "name": "Edward Markey"
       },
       "republican": {
-        "total": 837376,
+        "total": 838035,
         "name": "John Deaton"
       },
       "independent": {
-        "total": 59863,
+        "total": 59919,
         "name": "Shiva Ayyadurai"
       },
       "others": {
-        "total": 56622,
+        "total": 56669,
         "name": "Joe Tache"
       }
     }
@@ -517,9 +521,9 @@
   },
   "Mississippi": {
     "seatInfo": {
-      "current": null,
-      "called": false,
-      "pct": 97.81,
+      "current": "democrat",
+      "called": true,
+      "pct": 99.0,
       "sameParty": false,
       "round": null,
       "uncontested": false,
@@ -530,15 +534,15 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 470074,
+        "total": 476120,
         "name": "Scott Colom"
       },
       "republican": {
-        "total": 467084,
+        "total": 470179,
         "name": "Cindy Hyde-Smith"
       },
       "independent": {
-        "total": 20118,
+        "total": 20349,
         "name": "Ty Pinkins"
       }
     }
@@ -579,7 +583,7 @@
     "seatInfo": {
       "current": "republican",
       "called": true,
-      "pct": 97.15,
+      "pct": 97.69,
       "sameParty": false,
       "round": null,
       "uncontested": false,
@@ -590,15 +594,15 @@
     },
     "partyInfo": {
       "republican": {
-        "total": 378369,
+        "total": 379514,
         "name": "Pete Ricketts"
       },
       "independent": {
-        "total": 347554,
+        "total": 349318,
         "name": "Dan Osborn"
       },
       "others": {
-        "total": 28648,
+        "total": 28864,
         "name": "Robin Richards"
       }
     }
@@ -635,7 +639,7 @@
     "seatInfo": {
       "current": "democrat",
       "called": true,
-      "pct": 97.03,
+      "pct": 97.69,
       "sameParty": false,
       "round": null,
       "uncontested": false,
@@ -646,15 +650,15 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 1828296,
+        "total": 1841923,
         "name": "Cory Booker"
       },
       "republican": {
-        "total": 1025625,
+        "total": 1029247,
         "name": "Justin Murphy"
       },
       "others": {
-        "total": 76108,
+        "total": 76905,
         "name": "Veronica Fernandez"
       }
     }
@@ -698,19 +702,19 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 2480707,
+        "total": 2481056,
         "name": "Roy Cooper"
       },
       "republican": {
-        "total": 1648593,
+        "total": 1648965,
         "name": "Michael Whatley"
       },
       "libertarian": {
-        "total": 56074,
+        "total": 56092,
         "name": "Shannon Bray"
       },
       "usgreen": {
-        "total": 36710,
+        "total": 36716,
         "name": "Michael Dublin"
       }
     }
@@ -719,7 +723,7 @@
     "seatInfo": {
       "current": "democrat",
       "called": true,
-      "pct": 97.75,
+      "pct": 97.8,
       "sameParty": false,
       "round": null,
       "uncontested": false,
@@ -730,19 +734,19 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 2301078,
+        "total": 2301918,
         "name": "Sherrod Brown"
       },
       "republican": {
-        "total": 2077855,
+        "total": 2078670,
         "name": "Jon Husted"
       },
       "libertarian": {
-        "total": 128280,
+        "total": 128333,
         "name": "William Redpath"
       },
       "independent": {
-        "total": 94515,
+        "total": 94567,
         "name": "Greg Levy"
       }
     }
@@ -751,30 +755,30 @@
     "seatInfo": {
       "current": "republican",
       "called": true,
-      "pct": 99.0,
+      "pct": 100.0,
       "sameParty": false,
       "round": null,
       "uncontested": false,
-      "certified": false,
+      "certified": true,
       "votesSource": "nyt",
       "special": false,
       "senateClass": 2
     },
     "partyInfo": {
       "republican": {
-        "total": 639510,
+        "total": 639860,
         "name": "Kevin Hern"
       },
       "democrat": {
-        "total": 439109,
+        "total": 439522,
         "name": "N’Kiyla Thomas"
       },
       "independent": {
-        "total": 29114,
+        "total": 29139,
         "name": "Curtis Stinnett"
       },
       "libertarian": {
-        "total": 10199,
+        "total": 10209,
         "name": "Sevier White"
       }
     }
@@ -815,7 +819,7 @@
     "seatInfo": {
       "current": "democrat",
       "called": true,
-      "pct": 98.38,
+      "pct": 99.0,
       "sameParty": false,
       "round": null,
       "uncontested": false,
@@ -826,15 +830,15 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 240686,
+        "total": 240694,
         "name": "Jack Reed"
       },
       "republican": {
-        "total": 105453,
+        "total": 105454,
         "name": "Raymond McKay"
       },
       "independent": {
-        "total": 13562,
+        "total": 13563,
         "name": "Michael Bahry"
       },
       "others": {
@@ -847,30 +851,30 @@
     "seatInfo": {
       "current": "democrat",
       "called": true,
-      "pct": 99.0,
+      "pct": 100.0,
       "sameParty": false,
       "round": null,
       "uncontested": false,
-      "certified": false,
+      "certified": true,
       "votesSource": "nyt",
       "special": false,
       "senateClass": 2
     },
     "partyInfo": {
       "democrat": {
-        "total": 1044008,
+        "total": 1044001,
         "name": "Annie Andrews"
       },
       "republican": {
-        "total": 952199,
+        "total": 952191,
         "name": "Darline Graham"
       },
       "libertarian": {
-        "total": 23594,
+        "total": 23585,
         "name": "Kasie Whitener"
       },
       "others": {
-        "total": 21719,
+        "total": 21710,
         "name": "Mark Hackett"
       }
     }
@@ -959,7 +963,7 @@
     "seatInfo": {
       "current": "democrat",
       "called": true,
-      "pct": 98.99,
+      "pct": 99.0,
       "sameParty": false,
       "round": null,
       "uncontested": false,
@@ -970,15 +974,15 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 2215838,
+        "total": 2234930,
         "name": "Mark Warner"
       },
       "republican": {
-        "total": 1385571,
+        "total": 1391025,
         "name": "Bert Mizusawa"
       },
       "others": {
-        "total": 9621,
+        "total": 9716,
         "name": "Total Write-ins"
       }
     }
@@ -1032,6 +1036,10 @@
       "democrat": {
         "total": 65105,
         "name": "James Byrd"
+      },
+      "others": {
+        "total": 1039,
+        "name": "Total Write-ins"
       }
     }
   }

@@ -128,7 +128,7 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
 ## Checkpoints
 - [x] 1. Tools pinned; ruff, Biome and shellcheck settings picked up
 - [x] 2. Python formatting-only commit; `ruff format --check` clean
-- [ ] 3. JS formatting-only commit with bundles; `biome format` clean
+- [x] 3. JS formatting-only commit with bundles; `biome format` clean
 - [ ] 4. `ruff check` clean in `data/tests/`; fixtures registered; `.git-blame-ignore-revs` lists pieces 2 and 3
 - [ ] 5. `ruff check` clean everywhere; strict mypy still clean
 - [ ] 6. `biome ci` clean; bundles in sync
@@ -155,3 +155,4 @@ After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh`
 - Piece 3 (2026-11-14): `npx biome format --write .` changed 128 of 139 files (+13773/−6894). Same-meaning check (planner's decision): esbuild `transformSync` with minifySyntax + minifyWhitespace, HEAD copy vs formatted copy, 128 of 128 identical; a negative control (`ms = 1000` → `1001`) is reported DIFFERENT. Review re-ran it whitespace-only: the only extra differences are `render.js` numeric keys `"0":` → `0:` and `suggest.js` `a && (b && c)` → `a && b && c`, both the same meaning. `npm run minify:electionmaps` leaves every `.min.js`/`.min.css` byte-identical, so the commit has no bundles.
 - Piece 3, deviation from "no hand edits": `referdle-solver/benchmarks/tests/harness.test.mjs` patched `daily-mode.js` with `.replace("buildOverlay, renderWordLists", …)`, which stopped matching once Biome put that import one name per line, so the test's `rejects.toThrow("missingRenderExport")` failed. It's now `/buildOverlay,(\s+)renderWordLists/`, which matches either layout. Builder decision under the standing instruction, following piece 2's precedent: kept in the formatting commit and named in its body. Other code that reads JS as text was checked (harness `replaceOnce` and the suggest counter markers throw when a marker is missing; `test_console_templates.py`'s JS_STRING handles all three quotes).
 - Piece 3 review: correctness, security and coverage all clean. Changed-lines coverage (JS, against HEAD) 67%, 576 of 1748 lines uncovered; accepted reason for all: reformatted only, already uncovered on master (the referdle solver files read 0% because tests load them through esbuild data: URL bundles that V8 coverage doesn't map).
+- Piece 3 committed 36dfaf34 (2026-11-14), approved under the standing instruction with the harness.test.mjs edit kept in the formatting commit. `npm run vendor:d3 && npm run minify:electionmaps` after the commit leaves `git status` clean. This is the second SHA piece 4 lists in `.git-blame-ignore-revs`.

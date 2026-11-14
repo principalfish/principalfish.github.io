@@ -3,13 +3,13 @@
   "slug": "add-lint-and-format-checks",
   "title": "Add lint and format checks",
   "mode": "build",
-  "state": "planned",
-  "branch": "add-lint-and-format-checks",
+  "state": "building",
+  "branch": "claude/add-lint-and-format-checks-15b52f",
   "base": "master",
   "gh_issue": 86,
   "build_model": null,
   "created": "2026-11-14 06:57",
-  "updated": "2026-11-14 07:15",
+  "updated": "2026-11-14 07:16",
   "done": null,
   "local": [
     {
@@ -17,6 +17,16 @@
       "name": "local_6f405315-09d0-4980-937c-86eb98187dae",
       "added": "2026-11-14 07:15",
       "note": "builder: add-lint-and-format-checks"
+    },
+    {
+      "kind": "worktree",
+      "name": "/home/philiph/workspace/principalfish.github.io/.claude/worktrees/add-lint-and-format-checks-15b52f",
+      "added": "2026-11-14 07:16"
+    },
+    {
+      "kind": "branch",
+      "name": "claude/add-lint-and-format-checks-15b52f",
+      "added": "2026-11-14 07:16"
     }
   ]
 }

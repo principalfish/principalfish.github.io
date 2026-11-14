@@ -128,3 +128,8 @@ After every piece: `cd data && ./run_tests.sh` (strict mypy then pytest; note th
 After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh` (`--fix` applies fixes) as its first item.
 
 ## Notes
+- Piece 1 (2026-11-14): `biome.json` uses `"linter": {"rules": {"preset": "recommended"}}`, not `"recommended": true`, which Biome 2.6.7 reports as deprecated (a notice that made `biome ci` count biome.json as a 140th file).
+- Piece 1: `biome.json` sets `"assist": {"enabled": false}`. With Biome 2's default assist on, `biome ci` also enforces organizeImports: 89 import-sorting errors the plan didn't measure or schedule (piece 3 runs only `biome format`, piece 6 only lint), and reordering ESM imports can change side-effect order. Put to the user at the piece 1 review.
+- Piece 1: `data/pyproject.toml` `requires-python` bumped `>=3.10` → `>=3.12` (verified review finding) so it agrees with ruff's py312 target, mypy.ini and CI; the code already needed 3.11+ (StrEnum, Self, datetime.UTC). The explicit `target-version = "py312"` stays, so guesstheyear's `extend` doesn't rely on inference.
+- Piece 1 measurements with the pins: ruff from `data/` 698 findings (659 + 39 N/PTH/C4), 164 safe fixes; format 151 of 309; guesstheyear 8 findings (the 6 defaults + PTH123 + N806), 3 to reformat; `biome ci .` covers exactly the 139 tracked JS files, 128 to format, 138 lint diagnostics (41 errors, 85 warnings, 12 infos; Context said 137/40); shellcheck clean.
+- Piece 1: the first `planner.py setup` raced the `requirements.txt` edit and didn't install ruff/shellcheck; a re-run did (acceptance met).

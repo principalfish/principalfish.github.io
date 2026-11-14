@@ -461,7 +461,6 @@ class TestPresence:
         assert _queued(state) == [elsewhere]
         assert state.skipped_present == 1
 
-
     def test_a_stored_poll_under_a_renamed_matchup_is_dropped(
         self, us_db: Database
     ) -> None:
@@ -1196,9 +1195,7 @@ class TestFinish:
     def test_relabelled_polls_report_a_write_with_the_model_off(
         self, us_db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(
-            us_poll_queue, "apply_relabelled_polls", lambda db, rows: 2
-        )
+        monkeypatch.setattr(us_poll_queue, "apply_relabelled_polls", lambda db, rows: 2)
         payload = _imported_payload(us_db, _row(us_db), run_model_at_end=False)
         payload[AUTO_TRACKING_KEY] = {"unchanged": 1}
 
@@ -1553,8 +1550,14 @@ class TestStartRoute:
         us_db: Database,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        fetch = _FakeFetch(_index(_row(us_db), _row(us_db, seat="Texas",
-            matchup=TEXAS_MATCHUP, readings=TEXAS_READINGS)))
+        fetch = _FakeFetch(
+            _index(
+                _row(us_db),
+                _row(
+                    us_db, seat="Texas", matchup=TEXAS_MATCHUP, readings=TEXAS_READINGS
+                ),
+            )
+        )
         monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
 
         response = client.post(
@@ -1595,7 +1598,8 @@ class TestStartRoute:
         monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
 
         client.post(
-            "/senate/polls/import/start", data={"contests": ["senate_races"], "states": " "}
+            "/senate/polls/import/start",
+            data={"contests": ["senate_races"], "states": " "},
         )
 
         assert fetch.calls[0]["states"] is None
@@ -1662,7 +1666,9 @@ class TestStartRoute:
 
         monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", broken)
 
-        response = client.post("/senate/polls/import/start", data={"contests": SENATE_CONTESTS})
+        response = client.post(
+            "/senate/polls/import/start", data={"contests": SENATE_CONTESTS}
+        )
 
         assert response.headers["Location"].endswith("/senate/polls/import")
         assert "Could not start the US Senate import: parser exploded" in _body(
@@ -1684,7 +1690,9 @@ class TestStartRoute:
         )
         monkeypatch.setattr(f"{BLUEPRINT}.build_us_queue", locked)
 
-        response = client.post("/senate/polls/import/start", data={"contests": SENATE_CONTESTS})
+        response = client.post(
+            "/senate/polls/import/start", data={"contests": SENATE_CONTESTS}
+        )
 
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/senate/polls/import")
@@ -1799,9 +1807,7 @@ class TestStartRoute:
         monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
         own = list(US_CHAMBERS_BY_SLUG[chamber].contest_slugs)
 
-        response = client.post(
-            f"/{chamber}/polls/import/start", data={"contests": own}
-        )
+        response = client.post(f"/{chamber}/polls/import/start", data={"contests": own})
 
         token = response.headers["Location"].rsplit("/", 1)[-1]
         assert response.headers["Location"] == f"/{chamber}/polls/import/{token}"
@@ -1958,7 +1964,9 @@ class TestStepPage:
         response = client.get(f"/senate/polls/import/{token}")
 
         assert response.status_code == 302
-        assert response.headers["Location"].endswith(f"/senate/polls/import/{token}/finish")
+        assert response.headers["Location"].endswith(
+            f"/senate/polls/import/{token}/finish"
+        )
 
 
 class TestConfirmRoute:
@@ -1995,7 +2003,9 @@ class TestConfirmRoute:
             response = client.post(
                 f"/senate/polls/import/{token}/confirm", data={"expected_index": stale}
             )
-            assert response.headers["Location"].endswith(f"/senate/polls/import/{token}")
+            assert response.headers["Location"].endswith(
+                f"/senate/polls/import/{token}"
+            )
 
         state = _state(token)
         assert state.index == 0
@@ -2035,7 +2045,9 @@ class TestConfirmRoute:
     ) -> None:
         token = _open_queue(client, monkeypatch, _row(us_db))
 
-        client.post(f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"})
+        client.post(
+            f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"}
+        )
 
         assert _state(token).items[0].status == "pending"
         assert _polls_on(us_db, SENATE_MAP) == 0
@@ -2053,9 +2065,13 @@ class TestConfirmRoute:
             raise UsImportError("disk full")
 
         monkeypatch.setattr(us_poll_queue, "commit_us_import_plan", failing_commit)
-        client.post(f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"})
+        client.post(
+            f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"}
+        )
         # A second submit of the same form must not advance past the failure.
-        client.post(f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"})
+        client.post(
+            f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"}
+        )
 
         state = _state(token)
         assert state.index == 0
@@ -2195,11 +2211,13 @@ class TestApproveGroupRoute:
         # Stored after the queue was built, so the batch finds it present.
         _store(us_db, stored)
 
-        client.post(f"/senate/polls/import/{token}/approve-race", data={"expected_index": "0"})
-
-        body = client.get(f"/senate/polls/import/{token}", follow_redirects=True).get_data(
-            as_text=True
+        client.post(
+            f"/senate/polls/import/{token}/approve-race", data={"expected_index": "0"}
         )
+
+        body = client.get(
+            f"/senate/polls/import/{token}", follow_redirects=True
+        ).get_data(as_text=True)
         assert "Michigan: 2 imported, 1 already stored, 1 failed." in body
 
     def test_a_stale_approval_imports_nothing(
@@ -2210,7 +2228,9 @@ class TestApproveGroupRoute:
     ) -> None:
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
 
-        client.post(f"/senate/polls/import/{token}/approve-race", data={"expected_index": "1"})
+        client.post(
+            f"/senate/polls/import/{token}/approve-race", data={"expected_index": "1"}
+        )
 
         assert _state(token).index == 0
         assert _polls_on(us_db, SENATE_MAP) == 0
@@ -2228,7 +2248,9 @@ class TestFinishRoute:
     ) -> str:
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, count), **form)
         client.get(f"/senate/polls/import/{token}")
-        client.post(f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"})
+        client.post(
+            f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"}
+        )
         return token
 
     def test_runs_the_chambers_model_once_after_an_import(
@@ -2404,7 +2426,9 @@ class TestFinishRoute:
     ) -> None:
         token = self._import_one(client, us_db, monkeypatch, count=2)
 
-        response = client.post(f"/senate/polls/import/{token}/finish", data={"abandon": "on"})
+        response = client.post(
+            f"/senate/polls/import/{token}/finish", data={"abandon": "on"}
+        )
         client.get(f"/senate/polls/import/{token}/finish")
 
         assert model_runner.calls == []
@@ -2514,7 +2538,9 @@ class TestFinishRoute:
         )
         token = _open_queue(client, monkeypatch, index=index)
         client.get(f"/senate/polls/import/{token}")
-        client.post(f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"})
+        client.post(
+            f"/senate/polls/import/{token}/confirm", data={"expected_index": "0"}
+        )
         client.get(f"/senate/polls/import/{token}")
         client.post(f"/senate/polls/import/{token}/skip", data={"expected_index": "1"})
         # The broken row fails as it is shown, and the user finishes there.
@@ -2820,7 +2846,9 @@ class TestTokenGuard:
             }
         )
 
-        response = client.open(f"/{chamber}/polls/import/{token}{suffix}", method=method)
+        response = client.open(
+            f"/{chamber}/polls/import/{token}{suffix}", method=method
+        )
 
         assert response.status_code == 302
         assert response.headers["Location"].endswith(f"/{chamber}/polls/import")
@@ -2874,7 +2902,8 @@ class TestTokenGuard:
         )
         assert model_runner.invocations == []
         assert all(
-            _polls_on(us_db, name) == 0 for name in (HOUSE_MAP, SENATE_MAP, PRESIDENT_MAP)
+            _polls_on(us_db, name) == 0
+            for name in (HOUSE_MAP, SENATE_MAP, PRESIDENT_MAP)
         )
         # The token is still good under its own chamber's URL.
         own = client.get(f"/{made}/polls/import/{token}")
@@ -2916,7 +2945,6 @@ class TestTokenGuard:
         response = client.get(f"/senate/polls/import/{token}")
 
         assert response.headers["Location"].endswith("/senate/polls/import")
-
 
 
 class TestConcurrentSubmits:

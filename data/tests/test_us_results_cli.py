@@ -18,7 +18,14 @@ FIXTURES = Path(__file__).parent / "fixtures" / "nyt"
 
 
 def _seed_us_parties(db: Database) -> None:
-    for name in ("Democratic", "Republican", "Libertarian", "US Green", "Independent", "Others"):
+    for name in (
+        "Democratic",
+        "Republican",
+        "Libertarian",
+        "US Green",
+        "Independent",
+        "Others",
+    ):
         db.add_party(name)
 
 
@@ -46,7 +53,9 @@ def _files(folder: Path) -> list[Path]:
     return sorted(path for path in folder.rglob("*") if path.is_file())
 
 
-def _args(command: str, year: int, chamber: str, tmp_path: Path, *extra: str) -> list[str]:
+def _args(
+    command: str, year: int, chamber: str, tmp_path: Path, *extra: str
+) -> list[str]:
     return [
         command,
         "--year", str(year),
@@ -191,7 +200,10 @@ def test_dry_runs_write_nothing(
     assert main(_args("fetch", 2026, "house", tmp_path)) == 0
     cached = _files(tmp_path / "cache")
     assert main(_args("convert", 2026, "house", tmp_path, "--dry-run"), db=db) == 0
-    assert main(_args("all", 2026, "house", tmp_path, "--dry-run", "--offline"), db=db) == 0
+    assert (
+        main(_args("all", 2026, "house", tmp_path, "--dry-run", "--offline"), db=db)
+        == 0
+    )
     assert not (tmp_path / "out").exists()
     assert _files(tmp_path / "cache") == cached
 
@@ -214,7 +226,9 @@ def test_import_dry_run_reports_changes_against_the_db(
     assert main(_args("all", 2026, "house", tmp_path), db=db) == 0
     path = tmp_path / "out" / "house-2026.json"
     data = json.loads(path.read_text(encoding="utf-8"))
-    data["AZ-06"]["seatInfo"].update({"current": "democrat", "called": True, "pct": 99.0})
+    data["AZ-06"]["seatInfo"].update(
+        {"current": "democrat", "called": True, "pct": 99.0}
+    )
     data["AZ-06"]["partyInfo"]["democrat"]["total"] += 5000
     path.write_text(json.dumps(data), encoding="utf-8")
     capsys.readouterr()
@@ -238,12 +252,21 @@ def test_convert_compares_with_the_committed_file(
 ) -> None:
     out_dir = tmp_path / "out"
     out_dir.mkdir()
-    (out_dir / "senate-2020.json").write_text(json.dumps({
-        "Alabama": {"seatInfo": {"current": "democrat"},
-                    "partyInfo": {"democrat": {"total": 1, "name": "D"}}},
-        "Maine": {"seatInfo": {"current": "republican"},
-                  "partyInfo": {"republican": {"total": 1, "name": "R"}}},
-    }), encoding="utf-8")
+    (out_dir / "senate-2020.json").write_text(
+        json.dumps(
+            {
+                "Alabama": {
+                    "seatInfo": {"current": "democrat"},
+                    "partyInfo": {"democrat": {"total": 1, "name": "D"}},
+                },
+                "Maine": {
+                    "seatInfo": {"current": "republican"},
+                    "partyInfo": {"republican": {"total": 1, "name": "R"}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     assert main(_args("all", 2020, "senate", tmp_path, "--dry-run"), db=db) == 0
 
@@ -299,15 +322,21 @@ def test_import_without_converted_file_exits_non_zero(
 def _seat(current: str | None, totals: dict[str, int], **status: Any) -> dict[str, Any]:
     return {
         "seatInfo": {"current": current, **status},
-        "partyInfo": {party: {"total": total, "name": party} for party, total in totals.items()},
+        "partyInfo": {
+            party: {"total": total, "name": party} for party, total in totals.items()
+        },
     }
 
 
 def test_diff_against_file_and_db() -> None:
     new = {
         "meta": {"year": 2026},
-        "A-01": _seat("democrat", {"democrat": 60, "republican": 40}, called=True, pct=100.0),
-        "A-02": _seat("republican", {"democrat": 40, "republican": 60}, called=True, pct=95.0),
+        "A-01": _seat(
+            "democrat", {"democrat": 60, "republican": 40}, called=True, pct=100.0
+        ),
+        "A-02": _seat(
+            "republican", {"democrat": 40, "republican": 60}, called=True, pct=95.0
+        ),
         "A-03": _seat(None, {"democrat": 50, "republican": 49}, called=False, pct=70.0),
         "A-04": _seat("democrat", {"democrat": 10}, called=True, pct=None),
     }
@@ -318,10 +347,27 @@ def test_diff_against_file_and_db() -> None:
         "A-05": _seat("democrat", {"democrat": 1}),
     }
     db_snapshot = {
-        "A-01": SeatResult(winner=None, called=False, pct=80.0, totals={"democrat": 50.0, "republican": 40.0}),
-        "A-02": SeatResult(winner="republican", called=True, pct=95.0, totals={"democrat": 40.0, "republican": 60.0}),
-        "A-03": SeatResult(winner=None, called=False, pct=60.0, totals={"democrat": 45.0, "republican": 49.0}),
-        "A-04": SeatResult(winner="democrat", called=True, pct=None, totals={"democrat": 10.0}),
+        "A-01": SeatResult(
+            winner=None,
+            called=False,
+            pct=80.0,
+            totals={"democrat": 50.0, "republican": 40.0},
+        ),
+        "A-02": SeatResult(
+            winner="republican",
+            called=True,
+            pct=95.0,
+            totals={"democrat": 40.0, "republican": 60.0},
+        ),
+        "A-03": SeatResult(
+            winner=None,
+            called=False,
+            pct=60.0,
+            totals={"democrat": 45.0, "republican": 49.0},
+        ),
+        "A-04": SeatResult(
+            winner="democrat", called=True, pct=None, totals={"democrat": 10.0}
+        ),
     }
 
     report = diff_against_existing(new, old_file, db_snapshot)
@@ -330,7 +376,9 @@ def test_diff_against_file_and_db() -> None:
     assert vs_file.label == "committed file"
     assert vs_file.added == ("A-04",)
     assert vs_file.removed == ("A-05",)
-    assert [(c.seat, c.old, c.new) for c in vs_file.winner_changes] == [("A-01", "republican", "democrat")]
+    assert [(c.seat, c.old, c.new) for c in vs_file.winner_changes] == [
+        ("A-01", "republican", "democrat")
+    ]
     assert vs_file.newly_uncalled == ("A-03",)
     assert vs_file.newly_called == ()
     # The 538-style file has no % counted, so nothing to compare.
@@ -342,7 +390,10 @@ def test_diff_against_file_and_db() -> None:
     assert (vs_db.added, vs_db.removed) == ((), ())
     assert vs_db.winner_changes == ()
     assert vs_db.newly_called == ("A-01",)
-    assert [(c.seat, c.old, c.new) for c in vs_db.pct_changes] == [("A-01", 80.0, 100.0), ("A-03", 60.0, 70.0)]
+    assert [(c.seat, c.old, c.new) for c in vs_db.pct_changes] == [
+        ("A-01", 80.0, 100.0),
+        ("A-03", 60.0, 70.0),
+    ]
     assert [(d.seat, d.party_deltas) for d in vs_db.vote_deltas] == [
         ("A-01", (("democrat", 10.0),)),
         ("A-03", (("democrat", 5.0),)),
@@ -360,7 +411,9 @@ def test_diff_against_file_and_db() -> None:
 def test_diff_lists_backfilled_and_nominal_seats() -> None:
     new = {
         "A-01": _seat("democrat", {"democrat": 900}, called=True, votesSource="538"),
-        "A-02": _seat("democrat", {"democrat": 100}, called=True, votesSource="nominal"),
+        "A-02": _seat(
+            "democrat", {"democrat": 100}, called=True, votesSource="nominal"
+        ),
         "A-03": _seat("democrat", {"democrat": 5}, called=True, votesSource="nyt"),
     }
 
@@ -380,10 +433,19 @@ def test_convert_backfills_from_the_file_in_out_dir(
 ) -> None:
     out_dir = tmp_path / "out"
     out_dir.mkdir()
-    (out_dir / "house-2026.json").write_text(json.dumps({
-        "FL-10": {"seatInfo": {"current": "democrat"},
-                  "partyInfo": {"democrat": {"total": 180000, "name": "Maxwell Frost"}}},
-    }), encoding="utf-8")
+    (out_dir / "house-2026.json").write_text(
+        json.dumps(
+            {
+                "FL-10": {
+                    "seatInfo": {"current": "democrat"},
+                    "partyInfo": {
+                        "democrat": {"total": 180000, "name": "Maxwell Frost"}
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     assert main(_args("fetch", 2026, "house", tmp_path)) == 0
 
     assert main(_args("convert", 2026, "house", tmp_path), db=db) == 0
@@ -397,12 +459,16 @@ def test_convert_backfills_from_the_file_in_out_dir(
 
 
 def test_diff_with_nothing_to_compare() -> None:
-    report = diff_against_existing({"A-01": _seat("democrat", {"democrat": 1})}, None, None)
+    report = diff_against_existing(
+        {"A-01": _seat("democrat", {"democrat": 1})}, None, None
+    )
     assert report.comparisons == ()
     assert report.summary().startswith("no earlier file")
 
 
-def test_snapshot_reads_db_rows(nyt: dict[str, bytes], db: Database, tmp_path: Path) -> None:
+def test_snapshot_reads_db_rows(
+    nyt: dict[str, bytes], db: Database, tmp_path: Path
+) -> None:
     _seed_us_parties(db)
     assert main(_args("all", 2026, "house", tmp_path), db=db) == 0
 
@@ -410,13 +476,22 @@ def test_snapshot_reads_db_rows(nyt: dict[str, bytes], db: Database, tmp_path: P
 
     assert snapshot is not None
     assert snapshot["AZ-06"] == SeatResult(
-        winner=None, called=False, pct=80.5, totals={"democrat": 91000.0, "republican": 90000.0},
+        winner=None,
+        called=False,
+        pct=80.5,
+        totals={"democrat": 91000.0, "republican": 90000.0},
     )
     assert snapshot["TX-28"].winner == "democrat"
     assert cli.snapshot_election(db, "1999 US House Election") is None
-    data = json.loads((tmp_path / "out" / "house-2026.json").read_text(encoding="utf-8"))
+    data = json.loads(
+        (tmp_path / "out" / "house-2026.json").read_text(encoding="utf-8")
+    )
     no_change = diff_against_existing(data, None, snapshot).comparisons[0]
-    assert (no_change.winner_changes, no_change.newly_called, no_change.vote_deltas) == ((), (), ())
+    assert (
+        no_change.winner_changes,
+        no_change.newly_called,
+        no_change.vote_deltas,
+    ) == ((), (), ())
 
 
 def test_importer_errors_exit_non_zero(
@@ -442,7 +517,9 @@ def _stale_special(tmp_path: Path) -> Path:
     out_dir = tmp_path / "out"
     out_dir.mkdir(exist_ok=True)
     stale = out_dir / "senate-2026-special.json"
-    stale.write_text(json.dumps({"Texas": _seat("democrat", {"democrat": 1})}), encoding="utf-8")
+    stale.write_text(
+        json.dumps({"Texas": _seat("democrat", {"democrat": 1})}), encoding="utf-8"
+    )
     return stale
 
 
@@ -500,7 +577,9 @@ def test_stale_special_file_is_refused_by_all_and_convert(
 
     # Without Minnesota's same-day special, 2026 Senate has no specials file.
     fixture = json.loads((FIXTURES / "schema-a.json").read_text(encoding="utf-8"))
-    fixture["races"] = [race for race in fixture["races"] if race["nyt_id"] != "MN-S_W-S-2026-11-03"]
+    fixture["races"] = [
+        race for race in fixture["races"] if race["nyt_id"] != "MN-S_W-S-2026-11-03"
+    ]
     body = json.dumps(fixture).encode()
     nyt[str(source_for(2026, "senate").url)] = body
     capsys.readouterr()
@@ -515,7 +594,9 @@ def test_stale_special_file_is_refused_by_all_and_convert(
     assert "left over" in capsys.readouterr().err
     assert not (tmp_path / "out" / "senate-2026.json").exists()
     assert main(_args("convert", 2026, "senate", tmp_path, "--dry-run"), db=db) == 0
-    warning = "warning: senate-2026-special.json exists but this conversion has no specials"
+    warning = (
+        "warning: senate-2026-special.json exists but this conversion has no specials"
+    )
     assert warning in capsys.readouterr().out
     assert stale.exists()
 
@@ -530,7 +611,10 @@ def test_house_all_ignores_a_senate_special(
     from core.schema import ElectionType
 
     db.add_election(
-        senate_map.id, 2026, "2026 US Senate Special Election", ElectionType.us_senate,
+        senate_map.id,
+        2026,
+        "2026 US Senate Special Election",
+        ElectionType.us_senate,
     )
 
     assert main(_args("all", 2026, "house", tmp_path), db=db) == 0
@@ -553,15 +637,39 @@ def _converted_house(nyt: dict[str, bytes], db: Database, tmp_path: Path) -> Pat
 @pytest.mark.parametrize(
     ("mutate", "message"),
     [
-        (lambda d: d["TX-28"]["seatInfo"].update(pct="99"), "pct must be a number 0-100 or null, got '99'"),
+        (
+            lambda d: d["TX-28"]["seatInfo"].update(pct="99"),
+            "pct must be a number 0-100 or null, got '99'",
+        ),
         (lambda d: d["TX-28"]["seatInfo"].update(pct=101), "got 101"),
-        (lambda d: d["TX-28"]["partyInfo"]["democrat"].update(total="x"), "democrat: total must be a number >= 0"),
-        (lambda d: d["TX-28"]["partyInfo"]["democrat"].pop("name"), "democrat: name must be a string"),
-        (lambda d: d.update({"ZZ-01": d.pop("TX-28")}), "'ZZ-01': not a known state or district key"),
-        (lambda d: d.update({"Texas": d.pop("TX-28")}), "'Texas': not a known state or district key"),
-        (lambda d: d["TX-28"]["seatInfo"].update(called="yes"), "called/sameParty must be true or false"),
-        (lambda d: d["TX-28"]["seatInfo"].update(round="third"), "unknown round 'third'"),
-        (lambda d: d["TX-28"]["seatInfo"].update(current="whig"), "current 'whig' must be a party key"),
+        (
+            lambda d: d["TX-28"]["partyInfo"]["democrat"].update(total="x"),
+            "democrat: total must be a number >= 0",
+        ),
+        (
+            lambda d: d["TX-28"]["partyInfo"]["democrat"].pop("name"),
+            "democrat: name must be a string",
+        ),
+        (
+            lambda d: d.update({"ZZ-01": d.pop("TX-28")}),
+            "'ZZ-01': not a known state or district key",
+        ),
+        (
+            lambda d: d.update({"Texas": d.pop("TX-28")}),
+            "'Texas': not a known state or district key",
+        ),
+        (
+            lambda d: d["TX-28"]["seatInfo"].update(called="yes"),
+            "called/sameParty must be true or false",
+        ),
+        (
+            lambda d: d["TX-28"]["seatInfo"].update(round="third"),
+            "unknown round 'third'",
+        ),
+        (
+            lambda d: d["TX-28"]["seatInfo"].update(current="whig"),
+            "current 'whig' must be a party key",
+        ),
         (lambda d: d["TX-28"].update(seatInfo=[]), "needs seatInfo and partyInfo"),
         (lambda d: d.update(meta=[]), "'meta' must be an object"),
         (lambda d: d["meta"].update(special_file=3), "special_file must be"),
@@ -643,7 +751,9 @@ def test_unexpected_data_errors_become_error_lines(
 
     monkeypatch.setattr(cli, "import_house", broken_import)
     assert main(_args("import", 2026, "house", tmp_path), db=db) == 1
-    assert capsys.readouterr().err.startswith("error: house-2026.json is malformed: KeyError")
+    assert capsys.readouterr().err.startswith(
+        "error: house-2026.json is malformed: KeyError"
+    )
 
     def broken_convert(*args: object, **kwargs: object) -> object:
         raise ValueError("bad")
@@ -700,7 +810,9 @@ def test_bad_specials_file_stops_the_whole_import(
     assert main(_args("import", 2026, "senate", tmp_path), db=db) == 0
     regular = db.get_election_by_name("2026 US Senate Election")
     assert regular is not None
-    votes_before = [(v.seat_id, v.vote_total) for v in db.get_votes_for_election(regular.id)]
+    votes_before = [
+        (v.seat_id, v.vote_total) for v in db.get_votes_for_election(regular.id)
+    ]
 
     main_path = out_dir / "senate-2026.json"
     main_data = json.loads(main_path.read_text(encoding="utf-8"))

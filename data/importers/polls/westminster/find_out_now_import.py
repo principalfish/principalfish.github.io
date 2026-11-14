@@ -95,7 +95,9 @@ class ParsedPoll(BaseModel):
         return national_shares_from(self.party_region_percentages, NATIONAL_KEY)
 
 
-def _maybe_adjust_fieldwork_year_from_url(parsed: ParsedPoll, url_year: int | None) -> ParsedPoll:
+def _maybe_adjust_fieldwork_year_from_url(
+    parsed: ParsedPoll, url_year: int | None
+) -> ParsedPoll:
     """Correct a fieldwork year that appears to be off by one due to a year-boundary edge case.
 
     When the URL contains a year and the parsed fieldwork dates fall in the final
@@ -273,9 +275,7 @@ def parse_fieldwork(value: str, *, year_hint: int | None = None) -> tuple[date, 
     range_same_month_no_year_pattern = re.compile(
         r"(\d{1,2})(?:st|nd|rd|th)?\s*-\s*(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)"
     )
-    single_day_no_year_pattern = re.compile(
-        r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)"
-    )
+    single_day_no_year_pattern = re.compile(r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)")
 
     match = cross_month_pattern.search(normalized)
     if match:
@@ -287,7 +287,9 @@ def parse_fieldwork(value: str, *, year_hint: int | None = None) -> tuple[date, 
         if month_start is None or month_end is None:
             raise ValueError(f"Could not parse fieldwork string: {value!r}")
         year_start = year_end - 1 if month_start > month_end else year_end
-        return date(year_start, month_start, day_start), date(year_end, month_end, day_end)
+        return date(year_start, month_start, day_start), date(
+            year_end, month_end, day_end
+        )
 
     match = range_same_month_pattern.search(normalized)
     if match:
@@ -492,15 +494,23 @@ def parse_poll(workbook: Any, *, fieldwork_year_hint: int | None = None) -> Pars
             ``"Headline VI"`` nor a ``"Q2"`` sheet exists, or if any of the
             required party rows are absent from the parsed data.
     """
-    cover_sheet_name = "Cover page" if "Cover page" in workbook.sheetnames else workbook.sheetnames[0]
+    cover_sheet_name = (
+        "Cover page" if "Cover page" in workbook.sheetnames else workbook.sheetnames[0]
+    )
     cover = workbook[cover_sheet_name]
 
-    fieldwork_raw = _find_label_value(cover, "Fieldwork date") or _cell_text(cover["C5"].value)
+    fieldwork_raw = _find_label_value(cover, "Fieldwork date") or _cell_text(
+        cover["C5"].value
+    )
     if not fieldwork_raw:
         raise ValueError("Fieldwork date not found in workbook")
-    fieldwork_start, fieldwork_end = parse_fieldwork(fieldwork_raw, year_hint=fieldwork_year_hint)
+    fieldwork_start, fieldwork_end = parse_fieldwork(
+        fieldwork_raw, year_hint=fieldwork_year_hint
+    )
 
-    sample_raw = _find_label_value(cover, "Sample size") or _cell_text(cover["C6"].value)
+    sample_raw = _find_label_value(cover, "Sample size") or _cell_text(
+        cover["C6"].value
+    )
     if not sample_raw:
         raise ValueError("Sample size not found in workbook")
     sample_size = _as_int(sample_raw)
@@ -524,7 +534,9 @@ def parse_poll(workbook: Any, *, fieldwork_year_hint: int | None = None) -> Pars
                 header_row = row
                 break
         if header_row is None:
-            raise ValueError("Could not locate regional header row in Headline VI sheet")
+            raise ValueError(
+                "Could not locate regional header row in Headline VI sheet"
+            )
 
         region_columns: dict[int, str] = {}
         national_column: int | None = None
@@ -537,7 +549,9 @@ def parse_poll(workbook: Any, *, fieldwork_year_hint: int | None = None) -> Pars
         if national_column is None:
             raise ValueError("Could not locate 'All' (national) column in Headline VI")
         if len(region_columns) < 6:
-            raise ValueError("Could not resolve sufficient region columns in Headline VI")
+            raise ValueError(
+                "Could not resolve sufficient region columns in Headline VI"
+            )
 
         for row in range(header_row + 1, header_row + 40):
             party_label = _cell_text(sheet.cell(row, 1).value)
@@ -550,9 +564,13 @@ def parse_poll(workbook: Any, *, fieldwork_year_hint: int | None = None) -> Pars
                 continue
 
             region_values: dict[str, float] = {}
-            region_values[NATIONAL_KEY] = _to_percentage(sheet.cell(row, national_column).value)
+            region_values[NATIONAL_KEY] = _to_percentage(
+                sheet.cell(row, national_column).value
+            )
             for col, internal_region in region_columns.items():
-                region_values[internal_region] = _to_percentage(sheet.cell(row, col).value)
+                region_values[internal_region] = _to_percentage(
+                    sheet.cell(row, col).value
+                )
             party_region_percentages[canonical_party] = region_values
         bases = _parse_filtered_n(sheet, header_row, national_column, region_columns)
     else:
@@ -782,8 +800,7 @@ def build_import_plan(
     ]
     if missing_parties:
         raise ValueError(
-            "Missing parties in database (run party importer first): "
-            f"{missing_parties}"
+            f"Missing parties in database (run party importer first): {missing_parties}"
         )
 
     rows: list[PlannedPollRow] = []
@@ -874,7 +891,10 @@ def commit_import_plan(
             raise ValueError("Pollster lookup failed during commit")
         with db.session() as session:
             db_pollster = session.get(Pollster, pollster.id)
-            if db_pollster is not None and db_pollster.regions_mapping != plan.regions_mapping:
+            if (
+                db_pollster is not None
+                and db_pollster.regions_mapping != plan.regions_mapping
+            ):
                 db_pollster.regions_mapping = plan.regions_mapping
         pollster_id = pollster.id
         created_pollster = False
@@ -909,9 +929,11 @@ def commit_import_plan(
         created_poll_row = False
 
     with db.session() as session:
-        existing_rows = session.execute(
-            select(PollRow).where(PollRow.poll_id == poll_id)
-        ).scalars().all()
+        existing_rows = (
+            session.execute(select(PollRow).where(PollRow.poll_id == poll_id))
+            .scalars()
+            .all()
+        )
 
         if existing_rows and not replace_rows:
             return PollImportResult(
@@ -1047,8 +1069,7 @@ def main() -> None:
 
     if result.skipped_existing_rows:
         print(
-            f"poll {result.poll_id} already has rows; "
-            "use --replace-rows to overwrite"
+            f"poll {result.poll_id} already has rows; use --replace-rows to overwrite"
         )
     else:
         if result.replaced_rows:

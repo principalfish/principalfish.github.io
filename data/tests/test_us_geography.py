@@ -103,7 +103,12 @@ class TestCanonicalState:
 
     @pytest.mark.parametrize(
         ("code", "expected"),
-        [("TX", "Texas"), ("or", "Oregon"), (" In ", "Indiana"), ("dc", "District of Columbia")],
+        [
+            ("TX", "Texas"),
+            ("or", "Oregon"),
+            (" In ", "Indiana"),
+            ("dc", "District of Columbia"),
+        ],
     )
     def test_postal_codes_resolve_when_allowed(self, code: str, expected: str) -> None:
         assert canonical_state(code, allow_postal=True) == expected
@@ -207,9 +212,7 @@ class TestHouseSeatName:
             ("pennsylvania", 7, "PA-07"),
         ],
     )
-    def test_numbered_districts(
-        self, state: str, district: int, expected: str
-    ) -> None:
+    def test_numbered_districts(self, state: str, district: int, expected: str) -> None:
         assert house_seat_name(state, district) == expected
 
     @pytest.mark.parametrize("state", sorted(AT_LARGE_STATES))

@@ -125,9 +125,7 @@ def test_every_nav_link_resolves_and_renders(seeded_app: Flask) -> None:
     with seeded_app.test_request_context():
         from console.nav import section_items
 
-        urls = [
-            item.url for section in SECTIONS for item in section_items(section)
-        ]
+        urls = [item.url for section in SECTIONS for item in section_items(section)]
 
     assert urls
     for url in urls:
@@ -178,9 +176,7 @@ def test_every_endpoint_belongs_to_an_area_or_is_listed_as_sectionless(
 ) -> None:
     for rule in app.url_map.iter_rules():
         blueprint = rule.endpoint.partition(".")[0]
-        area = current_area(
-            rule.endpoint, {"chamber": "house", "section": "house"}
-        )
+        area = current_area(rule.endpoint, {"chamber": "house", "section": "house"})
         listed = blueprint in {"home", "static"}
         assert (area is None) is listed, rule.endpoint
 

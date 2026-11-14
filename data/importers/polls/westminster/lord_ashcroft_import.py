@@ -246,7 +246,9 @@ def _fetch_bytes(url: str) -> bytes:
     Raises:
         urllib.error.URLError: If the request fails (network error, HTTP error, etc.).
     """
-    request = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
+    request = Request(
+        url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"}
+    )
     with urlopen(request, timeout=60) as response:
         data: bytes = response.read()
         return data
@@ -289,7 +291,9 @@ def _resolve_xls_url(source_url: str) -> str:
             candidates.append(absolute)
 
     if not candidates:
-        raise ValueError(f"No XLS/XLSX link found in Lord Ashcroft HTML page: {source_url}")
+        raise ValueError(
+            f"No XLS/XLSX link found in Lord Ashcroft HTML page: {source_url}"
+        )
 
     return candidates[0]
 
@@ -844,7 +848,9 @@ def parse_poll_from_xls_url(xls_url: str) -> ParsedPoll:
     )
 
 
-def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+def _find_existing_poll(
+    db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll
+) -> Poll | None:
     """Query the database for a poll matching the given pollster, map, and dates.
 
     The lookup is exact on pollster ID, map ID, fieldwork start/end dates, and
@@ -936,12 +942,13 @@ def build_import_plan(
     ]
     if missing_parties:
         raise ValueError(
-            "Missing parties in database (run party importer first): "
-            f"{missing_parties}"
+            f"Missing parties in database (run party importer first): {missing_parties}"
         )
 
     rows: list[PlannedPollRow] = []
-    region_by_name = {region.name: region for region in db.get_regions_for_map(poll_map.id)}
+    region_by_name = {
+        region.name: region for region in db.get_regions_for_map(poll_map.id)
+    }
     for party_name, percentage in parsed.party_percentages.items():
         rows.append(
             PlannedPollRow(
@@ -1057,9 +1064,11 @@ def commit_import_plan(
         created_poll_row = False
 
     with db.session() as session:
-        existing_rows = session.execute(
-            select(PollRow).where(PollRow.poll_id == poll_id)
-        ).scalars().all()
+        existing_rows = (
+            session.execute(select(PollRow).where(PollRow.poll_id == poll_id))
+            .scalars()
+            .all()
+        )
 
         if existing_rows and not replace_rows:
             return PollImportResult(
@@ -1188,8 +1197,7 @@ def main() -> None:
 
     if result.skipped_existing_rows:
         print(
-            f"poll {result.poll_id} already has rows; "
-            "use --replace-rows to overwrite"
+            f"poll {result.poll_id} already has rows; use --replace-rows to overwrite"
         )
     else:
         if result.replaced_rows:

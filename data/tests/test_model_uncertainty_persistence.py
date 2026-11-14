@@ -426,7 +426,9 @@ class TestWithoutPayload:
         kept = save(path, scopes["main"], 1)
         drop_table(path)
 
-        with pytest.raises(UncertaintyStoreError, match="archive/migrate_add_model_uncertainty"):
+        with pytest.raises(
+            UncertaintyStoreError, match="archive/migrate_add_model_uncertainty"
+        ):
             save(path, scopes["main"], 1, payload(1))
 
         with closing(sqlite3.connect(path)) as conn:

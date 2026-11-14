@@ -73,7 +73,9 @@ def build_manifest_party_settings(parties: Sequence[Party]) -> list[dict[str, An
     return entries
 
 
-def build_manifest_regions_by_map_id(regions: Sequence[Region]) -> dict[str, list[dict[str, Any]]]:
+def build_manifest_regions_by_map_id(
+    regions: Sequence[Region],
+) -> dict[str, list[dict[str, Any]]]:
     """Group region records by map ID for ``mapModes[mapId].regions``.
 
     Groups regions by their ``map_id``, sorted within each group by name
@@ -89,7 +91,9 @@ def build_manifest_regions_by_map_id(regions: Sequence[Region]) -> dict[str, lis
     """
     regions_by_map_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
-    for region in sorted(regions, key=lambda row: (row.map_id, row.name.lower(), row.id)):
+    for region in sorted(
+        regions, key=lambda row: (row.map_id, row.name.lower(), row.id)
+    ):
         regions_by_map_id[str(region.map_id)].append(
             {
                 "id": region.id,
@@ -141,14 +145,19 @@ def build_map_modes_with_regions(
     # cycle already held (2026's Class 2, exported late in 2026) must roll on to its following
     # term, not read as "up this year". The floor is the shell's ``nextElectionYear`` (or the
     # export year, if later, so a stale shell still rolls forward).
-    cycle_floor = current_year if special_year is None else max(current_year, special_year)
+    cycle_floor = (
+        current_year if special_year is None else max(current_year, special_year)
+    )
     merged: dict[str, Any] = {}
     for map_id_str, mode in map_modes.items():
         entry = dict(mode)
         overrides: dict[str, str] = entry.pop("regionNameOverride", None) or {}
         if "regions" not in entry:
             entry["regions"] = [
-                {"id": region["id"], "name": overrides.get(region["name"], region["name"])}
+                {
+                    "id": region["id"],
+                    "name": overrides.get(region["name"], region["name"]),
+                }
                 for region in regions_by_map_id.get(map_id_str, [])
             ]
         # Resolve the durable Senate-class cycle ({base year per class, period}) into concrete
@@ -156,7 +165,9 @@ def build_map_modes_with_regions(
         # lookup and the cycle rolls forward on its own without editing the shell.
         cycle = entry.pop("senateClassCycle", None)
         if cycle:
-            entry["senateClassNextElection"] = _senate_class_next_election(cycle, cycle_floor)
+            entry["senateClassNextElection"] = _senate_class_next_election(
+                cycle, cycle_floor
+            )
         # Senate special elections (an off-cycle vacancy contested alongside the regular class,
         # e.g. Ohio and Florida's Class-3 seats in 2026) are filtered here, once, to the ones the
         # next Senate election holds; the front end then uses the list as-is.
@@ -221,7 +232,11 @@ def senate_specials_for_year(entries: object, year: int) -> list[dict[str, Any]]
         if not isinstance(entry, dict):
             continue
         entry_year = entry.get("year")
-        if not _is_int(entry_year) or entry_year != year or not _is_int(entry.get("class")):
+        if (
+            not _is_int(entry_year)
+            or entry_year != year
+            or not _is_int(entry.get("class"))
+        ):
             continue
         if not all(
             isinstance(entry.get(key), str) and entry[key].strip()
@@ -328,7 +343,9 @@ def _live_senate_specials(
     return senate_specials_for_year(entries, next_year)
 
 
-def _senate_class_next_election(cycle: dict[str, Any], current_year: int) -> dict[str, int]:
+def _senate_class_next_election(
+    cycle: dict[str, Any], current_year: int
+) -> dict[str, int]:
     """Resolve each Senate class's next election year from a durable cycle definition.
 
     Args:
@@ -395,7 +412,11 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
             first.  Modified in-place.
     """
     latest_general_id = next(
-        (entry["id"] for entry in manifest_entries if entry.get("type") == ElectionType.uk_general.value),
+        (
+            entry["id"]
+            for entry in manifest_entries
+            if entry.get("type") == ElectionType.uk_general.value
+        ),
         None,
     )
     present_ids = {entry.get("id") for entry in manifest_entries}
@@ -412,7 +433,9 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
             # earlier. Auto-chaining to the previous cycle would compare unrelated seats.
             entry_year = _entry_year(entry)
             if entry_year is not None:
-                earlier_year = entry_year - FIXED_GAP_COMPARISON_YEARS[str(entry.get("type"))]
+                earlier_year = (
+                    entry_year - FIXED_GAP_COMPARISON_YEARS[str(entry.get("type"))]
+                )
                 candidates = [
                     other
                     for other in manifest_entries
@@ -423,7 +446,9 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
                 # Two entries can share a year; the plain "<year>-<type slug>" id wins,
                 # otherwise the first in list order.
                 plain_id = f"{earlier_year}-{str(entry.get('type')).replace('_', '-')}"
-                preferred = [other for other in candidates if other.get("id") == plain_id]
+                preferred = [
+                    other for other in candidates if other.get("id") == plain_id
+                ]
                 if preferred or candidates:
                     comparison_id = (preferred or candidates)[0]["id"]
         elif entry.get("type") == ElectionType.model_uns.value:
@@ -439,7 +464,7 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
             entry_type = entry.get("type")
             any_map = entry_type in CROSS_MAP_COMPARISON_TYPES
             entry_year = _entry_year(entry)
-            for later_entry in manifest_entries[index + 1:]:
+            for later_entry in manifest_entries[index + 1 :]:
                 if (
                     later_entry.get("parliament") == parliament
                     and later_entry.get("type") == entry_type
@@ -470,7 +495,9 @@ def _is_earlier(candidate_year: int | None, year: int | None) -> bool:
     return candidate_year is not None and year is not None and candidate_year < year
 
 
-def remove_comparison_for_supplemental_entries(manifest_entries: list[dict[str, Any]]) -> None:
+def remove_comparison_for_supplemental_entries(
+    manifest_entries: list[dict[str, Any]],
+) -> None:
     """Strip ``comparisonElectionId`` from supplemental entries flagged ``noComparison``.
 
     After ``assign_comparison_elections`` has run, this pass removes the

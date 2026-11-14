@@ -374,7 +374,9 @@ class TestMain:
         _write(inputs / "650map.json", _topology())
         _write(inputs / "650map_new.json", _topology())
         monkeypatch.setattr(
-            importer, "__file__", str(root / "importers/results/westminster/import_topojson.py")
+            importer,
+            "__file__",
+            str(root / "importers/results/westminster/import_topojson.py"),
         )
         # config is already imported; this wins over its initial .env load.
         monkeypatch.setenv("DATABASE_PATH", db.config.database_path)

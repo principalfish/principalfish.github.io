@@ -1347,8 +1347,7 @@ def _contest_page_urls(
     if discovered is not None and discovered.dropped_overflow:
         count = discovered.dropped_overflow
         overflow[f"{contest.slug}: {count} more discovery link(s) dropped"] = (
-            f"past the {_MAX_DROPPED_LINKS}-link cap on one index's rejected "
-            "race links"
+            f"past the {_MAX_DROPPED_LINKS}-link cap on one index's rejected race links"
         )
     wanted = list(dict.fromkeys(urls))
     if not contest.is_per_state:
@@ -1433,9 +1432,7 @@ def fetch_us_poll_index(
     for contest in contests:
         seat_ids = _seat_ids_for_map(db, contest.map_name)
         if seat_ids is None:
-            notes.append(
-                f"{contest.slug}: skipped — no map named {contest.map_name!r}"
-            )
+            notes.append(f"{contest.slug}: skipped — no map named {contest.map_name!r}")
             continue
         scoped.append((contest, seat_ids))
 
@@ -1451,9 +1448,7 @@ def fetch_us_poll_index(
     for contest, _ in scoped:
         index_html = pages.get(contest.index_url) if contest.index_url else None
         if contest.index_url is not None and index_html is None:
-            notes.append(
-                f"{contest.slug}: no race pages — its index could not be read"
-            )
+            notes.append(f"{contest.slug}: no race pages — its index could not be read")
         urls, unplaced = _contest_page_urls(
             contest, index_html=index_html, wanted_states=wanted_states
         )
@@ -1635,9 +1630,7 @@ def build_us_import_plan(db: Database, row: UsPollRow) -> UsImportPlan:
         if party_id is None:
             if reading.party_name not in unknown:
                 unknown.append(reading.party_name)
-                warnings.append(
-                    f"party not in the database: {reading.party_name!r}"
-                )
+                warnings.append(f"party not in the database: {reading.party_name!r}")
             continue
         planned.append(
             PlannedUsPollRow(

@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "election-data"
 version = "0"
 description = "Election data pipeline and console (installed editable only, to put data/ on the import path)"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 
 # Nothing is built or distributed. The editable install exists so that
 # `data/` is on sys.path for every interpreter in the venv, wherever a script is
@@ -15,3 +15,12 @@ requires-python = ">=3.10"
 [tool.setuptools]
 packages = []
 py-modules = []
+
+# Lint and format settings. guesstheyear/ruff.toml extends these.
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+extend-exclude = ["archive", "election_data", ".venv"]
+
+[tool.ruff.lint]
+extend-select = ["N", "PTH", "C4"]

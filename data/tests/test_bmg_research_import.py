@@ -300,9 +300,7 @@ class TestParseFieldwork:
         assert start == date(2026, 1, 3)
         assert end == date(2026, 1, 4)
 
-    @pytest.mark.parametrize(
-        "dash", ["–", "—"], ids=["en_dash", "em_dash"]
-    )
+    @pytest.mark.parametrize("dash", ["–", "—"], ids=["en_dash", "em_dash"])
     def test_dash_variants_normalised(self, dash: str) -> None:
         start, end = bmg._parse_fieldwork(f"31 January {dash} 2 February 2026")
         assert start == date(2026, 1, 31)
@@ -1550,9 +1548,7 @@ class TestResolveSourceUrl:
         with pytest.raises(ValueError, match="Unexpected BMG news listing redirect"):
             bmg.resolve_source_url(_ARTICLE_URL)
 
-    def test_oversize_html_fails_clearly(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_oversize_html_fails_clearly(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _mock_pages(monkeypatch, {_RELEASE_URL: (_RELEASE_URL, "x" * 2_000_001)})
         with pytest.raises(ValueError, match="Source page is too large"):
             bmg.resolve_source_url(_RELEASE_URL)
@@ -1632,8 +1628,7 @@ class TestFinalHeadlineAndSample:
             party: values[bmg.NATIONAL_KEY]
             for party, values in parsed.party_region_percentages.items()
         } == {
-            party: round(value * 100, 2)
-            for party, value in _NATIONAL_FRACTIONS.items()
+            party: round(value * 100, 2) for party, value in _NATIONAL_FRACTIONS.items()
         }
         assert {
             party: {
@@ -1746,9 +1741,7 @@ def _counted_workbook(*tables: list[list[object]]) -> Workbook:
     for number, table in enumerate(tables, 1):
         rows.append(_row({2: f"Table {number}"}))
         rows.extend(table)
-    return build_workbook(
-        {"Methodology": _methodology_sheet(), "Tables": rows}
-    )
+    return build_workbook({"Methodology": _methodology_sheet(), "Tables": rows})
 
 
 _FINAL_UNWEIGHTED = {3: 1306, 36: 166, 37: 57, 43: 114, 44: 71}

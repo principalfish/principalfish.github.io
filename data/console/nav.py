@@ -204,9 +204,7 @@ _MODEL_FORMS: Mapping[str, tuple[str, tuple[str, ...]]] = {
 def section_links(section: Section) -> tuple[NavLink, ...]:
     """A section's navigation links, in display order."""
     links: list[NavLink] = [
-        NavLink(
-            "Polls", "polls.section_poll_list", values=(("section", section.slug),)
-        )
+        NavLink("Polls", "polls.section_poll_list", values=(("section", section.slug),))
     ]
     if section.has(Capability.POLL_IMPORT):
         links.append(

@@ -221,7 +221,9 @@ def parse_fieldwork(value: str) -> tuple[date, date]:
 
     month_start = month_map.get(month_start_name.lower())
     if month_start is None:
-        raise ValueError(f"Unknown month name in fieldwork string: {month_start_name!r}")
+        raise ValueError(
+            f"Unknown month name in fieldwork string: {month_start_name!r}"
+        )
 
     year_start = year_end
     if month_start > month_end:
@@ -281,7 +283,7 @@ _SECOND_QUESTION_PREFIX = "If there were a general election"
 
 def _combined_headline_values(line: str, label: str) -> list[int]:
     """Read complete integer cells without discarding malformed percentages."""
-    cells = line[len(label):].strip()
+    cells = line[len(label) :].strip()
     if _INTEGER_ROW.fullmatch(cells) is None:
         raise ValueError(f"Invalid percentage cells in combined headline row: {label}")
     return [int(cell) for cell in cells.split()]
@@ -486,7 +488,9 @@ def _parse_new_format(
         # specifically" marker, so its lines are the headline rows alone.
         second_question = len(lines)
     if second_question is None:
-        raise ValueError("Could not find the end of the MRP headline rows in new-format PDF")
+        raise ValueError(
+            "Could not find the end of the MRP headline rows in new-format PDF"
+        )
     headline_rows = _parse_split_headline_rows(lines[:second_question])
 
     # Step 2: region table header, and its column count from the "%" row.
@@ -504,14 +508,17 @@ def _parse_new_format(
             f"Regions table has {pct_columns} columns but its header names "
             f"{len(columns)}: {columns}"
         )
-    if not has_country_columns and re.search(r"Wales\s+Scotland", page_one_header) is None:
+    if (
+        not has_country_columns
+        and re.search(r"Wales\s+Scotland", page_one_header) is None
+    ):
         raise ValueError(
             "Wales and Scotland columns found in neither the regions table nor page 1"
         )
 
     # Step 3: one table row per headline row, directly under the "%" row.
     table_rows: list[list[int]] = []
-    for line in section[pct_match.end():].splitlines():
+    for line in section[pct_match.end() :].splitlines():
         if len(table_rows) == len(headline_rows):
             break
         line = line.strip()
@@ -538,7 +545,9 @@ def _parse_new_format(
             wales, scotland = by_column["Wales"], by_column["Scotland"]
         else:
             if len(page_one_values) < 2:
-                raise ValueError("MRP headline row is missing Wales and Scotland values")
+                raise ValueError(
+                    "MRP headline row is missing Wales and Scotland values"
+                )
             wales, scotland = page_one_values[-2:]
         result[party_name] = {
             "Wales": float(wales),
@@ -588,11 +597,11 @@ def _region_table_text(full_text: str, page_one_header: str) -> str | None:
     Returns:
         The text to read the region table from, or None when there is none.
     """
-    tail = full_text[len(page_one_header):]
+    tail = full_text[len(page_one_header) :]
     marker = tail.find("Region in England")
     if marker == -1:
         return None
-    return tail[:marker + len("Region in England")]
+    return tail[: marker + len("Region in England")]
 
 
 LayoutKind = Literal["combined", "in_section", "after_section", "page_one_rows"]
@@ -717,7 +726,7 @@ def _split_table_counts(
     columns = _region_table_columns(header_match)
     rows = [
         [int(v) for v in line.split()]
-        for line in section[header_match.end():pct_match.start()].splitlines()
+        for line in section[header_match.end() : pct_match.start()].splitlines()
         if _INTEGER_ROW.fullmatch(line.strip())
     ]
     if len(rows) != 2 or any(len(row) != len(columns) for row in rows):
@@ -770,7 +779,10 @@ def parse_bases(full_text: str) -> list[ParsedBase]:
             counts = {
                 name: (u, w)
                 for name, u, w in zip(
-                    names, unweighted[-len(names):], weighted[-len(names):], strict=True
+                    names,
+                    unweighted[-len(names) :],
+                    weighted[-len(names) :],
+                    strict=True,
                 )
             }
     elif layout.region_text is not None:
@@ -1012,7 +1024,9 @@ def build_import_plan(
         for region_name in region_names:
             region = regions_by_name.get(normalize_name(region_name))
             if region is None:
-                raise ValueError(f"Region {region_name!r} not found in map {map_name!r}")
+                raise ValueError(
+                    f"Region {region_name!r} not found in map {map_name!r}"
+                )
             ids.append(region.id)
         macro_to_region_ids[macro] = ids
 
@@ -1034,8 +1048,7 @@ def build_import_plan(
     ]
     if missing_parties:
         raise ValueError(
-            "Missing parties in database (run party importer first): "
-            f"{missing_parties}"
+            f"Missing parties in database (run party importer first): {missing_parties}"
         )
 
     rows: list[PlannedPollRow] = []
@@ -1119,7 +1132,10 @@ def commit_import_plan(
             raise ValueError("Pollster lookup failed during commit")
         with db.session() as session:
             db_pollster = session.get(Pollster, pollster.id)
-            if db_pollster is not None and db_pollster.regions_mapping != plan.regions_mapping:
+            if (
+                db_pollster is not None
+                and db_pollster.regions_mapping != plan.regions_mapping
+            ):
                 db_pollster.regions_mapping = plan.regions_mapping
         pollster_id = pollster.id
         created_pollster = False
@@ -1154,9 +1170,11 @@ def commit_import_plan(
         created_poll_row = False
 
     with db.session() as session:
-        existing_rows = session.execute(
-            select(PollRow).where(PollRow.poll_id == poll_id)
-        ).scalars().all()
+        existing_rows = (
+            session.execute(select(PollRow).where(PollRow.poll_id == poll_id))
+            .scalars()
+            .all()
+        )
 
         if existing_rows and not replace_rows:
             return PollImportResult(
@@ -1285,8 +1303,7 @@ def main() -> None:
 
     if result.skipped_existing_rows:
         print(
-            f"poll {result.poll_id} already has rows; "
-            "use --replace-rows to overwrite"
+            f"poll {result.poll_id} already has rows; use --replace-rows to overwrite"
         )
     else:
         if result.replaced_rows:

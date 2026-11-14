@@ -30,13 +30,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
-TIGER_CD120_URL = "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_{fips}_cd120.zip"
+TIGER_CD120_URL = (
+    "https://www2.census.gov/geo/tiger/TIGER2026/CD/tl_2026_{fips}_cd120.zip"
+)
 TIGER_CD120_DISTRICT_FIELD = "CD120FP"
 ALLOWED_HOSTS = frozenset({"www2.census.gov"})
 
 # Census cartographic boundary files (1:500k) for the states that did not move.
-CB_2024_CD119_URL = "https://www2.census.gov/geo/tiger/GENZ2024/shp/cb_2024_us_cd119_500k.zip"
-CB_2018_CD116_URL = "https://www2.census.gov/geo/tiger/GENZ2018/shp/cb_2018_us_cd116_500k.zip"
+CB_2024_CD119_URL = (
+    "https://www2.census.gov/geo/tiger/GENZ2024/shp/cb_2024_us_cd119_500k.zip"
+)
+CB_2018_CD116_URL = (
+    "https://www2.census.gov/geo/tiger/GENZ2018/shp/cb_2018_us_cd116_500k.zip"
+)
 
 
 @dataclass(frozen=True)
@@ -66,7 +72,9 @@ REDRAWN_2026: dict[str, StateSource] = {
         StateSource("CA", "06", "California", "Proposition 50 plan, 52 districts"),
         StateSource("FL", "12", "Florida", "mid-decade plan"),
         StateSource("LA", "22", "Louisiana", "mid-decade plan, six districts"),
-        StateSource("NC", "37", "North Carolina", "NC-01 and NC-03 swapped eastern counties"),
+        StateSource(
+            "NC", "37", "North Carolina", "NC-01 and NC-03 swapped eastern counties"
+        ),
         StateSource("OH", "39", "Ohio", "redistricting commission plan"),
         StateSource("TN", "47", "Tennessee", "mid-decade plan"),
         StateSource("TX", "48", "Texas", "mid-decade plan, 38 districts"),

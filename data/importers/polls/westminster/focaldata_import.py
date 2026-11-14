@@ -183,7 +183,9 @@ def _infer_year(url: str, fallback: int | None = None) -> int:
     raise ValueError("Could not infer year from URL")
 
 
-def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tuple[date, date]:
+def _parse_fieldwork(
+    fieldwork_text: str, default_year: int | None = None
+) -> tuple[date, date]:
     """Parse a human-readable fieldwork date range string into start/end dates.
 
     Handles four common formats (with or without an explicit year):
@@ -210,10 +212,14 @@ def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tu
         ValueError: If the month names cannot be parsed or no pattern matches
             the normalised text.
     """
-    normalized = re.sub(r"\s+", " ", fieldwork_text.strip().replace("–", "-").replace("—", "-"))
+    normalized = re.sub(
+        r"\s+", " ", fieldwork_text.strip().replace("–", "-").replace("—", "-")
+    )
     normalized = re.sub(r"(\d)(st|nd|rd|th)", r"\1", normalized, flags=re.IGNORECASE)
 
-    pattern_same_month = re.compile(r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})")
+    pattern_same_month = re.compile(
+        r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})"
+    )
     match = pattern_same_month.search(normalized)
     if match:
         day_start = int(match.group(1))
@@ -237,7 +243,9 @@ def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tu
         if month_start is None or month_end is None:
             raise ValueError(f"Could not parse months in fieldwork: {fieldwork_text!r}")
         year_start = year_end - 1 if month_start > month_end else year_end
-        return date(year_start, month_start, day_start), date(year_end, month_end, day_end)
+        return date(year_start, month_start, day_start), date(
+            year_end, month_end, day_end
+        )
 
     pattern_no_year = re.compile(r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)")
     match = pattern_no_year.search(normalized)
@@ -249,7 +257,9 @@ def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tu
             raise ValueError(f"Could not parse month in fieldwork: {fieldwork_text!r}")
         return date(default_year, month, day_start), date(default_year, month, day_end)
 
-    pattern_cross_no_year = re.compile(r"(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)")
+    pattern_cross_no_year = re.compile(
+        r"(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)"
+    )
     match = pattern_cross_no_year.search(normalized)
     if match and default_year is not None:
         day_start = int(match.group(1))
@@ -259,7 +269,9 @@ def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tu
         if month_start is None or month_end is None:
             raise ValueError(f"Could not parse months in fieldwork: {fieldwork_text!r}")
         year_start = default_year - 1 if month_start > month_end else default_year
-        return date(year_start, month_start, day_start), date(default_year, month_end, day_end)
+        return date(year_start, month_start, day_start), date(
+            default_year, month_end, day_end
+        )
 
     raise ValueError(f"Could not parse fieldwork string: {fieldwork_text!r}")
 
@@ -288,7 +300,9 @@ def _google_sheet_export_url(url: str) -> str | None:
     spreadsheet_id = match.group(1)
     query = parse_qs(parsed.query)
     gid = query.get("gid", [None])[0]
-    export = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=xlsx"
+    export = (
+        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=xlsx"
+    )
     if gid:
         export += f"&gid={gid}"
     return export
@@ -321,7 +335,10 @@ def extract_workbook(xlsx_url: str) -> Any:
     payload = None
     errors: list[str] = []
     for candidate in dict.fromkeys(candidate_urls):
-        req = Request(candidate, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
+        req = Request(
+            candidate,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"},
+        )
         try:
             with urlopen(req, timeout=50) as response:
                 data = response.read()
@@ -437,7 +454,9 @@ def _canonical_party(label: str) -> str | None:
     return None
 
 
-def _parse_info_sheet(workbook: Any, default_year: int, fieldwork_label: str | None = None) -> tuple[date, date, int]:
+def _parse_info_sheet(
+    workbook: Any, default_year: int, fieldwork_label: str | None = None
+) -> tuple[date, date, int]:
     """Extract fieldwork dates and sample size from the workbook's info sheet.
 
     Looks for a sheet named ``"Info"`` first, falling back to the first sheet.
@@ -462,7 +481,11 @@ def _parse_info_sheet(workbook: Any, default_year: int, fieldwork_label: str | N
         ValueError: If fieldwork dates or sample size cannot be found in the
             workbook.
     """
-    sheet = workbook["Info"] if "Info" in workbook.sheetnames else workbook[workbook.sheetnames[0]]
+    sheet = (
+        workbook["Info"]
+        if "Info" in workbook.sheetnames
+        else workbook[workbook.sheetnames[0]]
+    )
 
     fieldwork_raw = None
     sample_size = None
@@ -527,7 +550,9 @@ def _parse_info_sheet(workbook: Any, default_year: int, fieldwork_label: str | N
     if sample_size is None:
         raise ValueError("Sample size not found in workbook")
 
-    fieldwork_start, fieldwork_end = _parse_fieldwork(fieldwork_raw, default_year=default_year)
+    fieldwork_start, fieldwork_end = _parse_fieldwork(
+        fieldwork_raw, default_year=default_year
+    )
     return fieldwork_start, fieldwork_end, sample_size
 
 
@@ -549,7 +574,12 @@ def _find_tables_sheet(workbook: Any) -> Any:
     """
     for name in workbook.sheetnames:
         lowered = name.lower()
-        if lowered == "tables" or "table" in lowered or "voting intention" in lowered or "respondents" in lowered:
+        if (
+            lowered == "tables"
+            or "table" in lowered
+            or "voting intention" in lowered
+            or "respondents" in lowered
+        ):
             return workbook[name]
     raise ValueError("Could not find tables sheet")
 
@@ -738,7 +768,9 @@ def _parse_party_macro_percentages(workbook: Any) -> dict[str, dict[str, float]]
 
         macro_values = {NATIONAL_KEY: _to_percentage(value)}
         for macro_name, col in macro_columns.items():
-            macro_values[macro_name] = _to_percentage_or_zero(sheet.cell(row, col).value)
+            macro_values[macro_name] = _to_percentage_or_zero(
+                sheet.cell(row, col).value
+            )
         parsed[canonical] = macro_values
 
     for optional_party in ["Scottish National Party", "Plaid Cymru", "Other"]:
@@ -795,7 +827,9 @@ def parse_poll(
             if required data cannot be extracted.
     """
     year = _infer_year(source_url, fallback=year_hint)
-    fieldwork_start, fieldwork_end, sample_size = _parse_info_sheet(workbook, year, fieldwork_label=fieldwork_label)
+    fieldwork_start, fieldwork_end, sample_size = _parse_info_sheet(
+        workbook, year, fieldwork_label=fieldwork_label
+    )
     party_macro_percentages = _parse_party_macro_percentages(workbook)
     return ParsedPoll(
         sample_size=sample_size,
@@ -806,7 +840,9 @@ def parse_poll(
     )
 
 
-def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+def _find_existing_poll(
+    db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll
+) -> Poll | None:
     """Look up a poll in the database matching the given metadata.
 
     Matches on pollster ID, map ID, fieldwork start/end dates, and sample size.
@@ -918,8 +954,7 @@ def build_import_plan(
     ]
     if missing_parties:
         raise ValueError(
-            "Missing parties in database (run party importer first): "
-            f"{missing_parties}"
+            f"Missing parties in database (run party importer first): {missing_parties}"
         )
 
     regions = db.get_regions_for_map(poll_map.id)
@@ -1056,9 +1091,11 @@ def commit_import_plan(
         created_poll_row = False
 
     with db.session() as session:
-        existing_rows = session.execute(
-            select(PollRow).where(PollRow.poll_id == poll_id)
-        ).scalars().all()
+        existing_rows = (
+            session.execute(select(PollRow).where(PollRow.poll_id == poll_id))
+            .scalars()
+            .all()
+        )
 
         if existing_rows and not replace_rows:
             return PollImportResult(
@@ -1190,8 +1227,7 @@ def main() -> None:
 
     if result.skipped_existing_rows:
         print(
-            f"poll {result.poll_id} already has rows; "
-            "use --replace-rows to overwrite"
+            f"poll {result.poll_id} already has rows; use --replace-rows to overwrite"
         )
     else:
         if result.replaced_rows:

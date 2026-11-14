@@ -598,14 +598,12 @@ def test_hub_preview_without_detail_and_with_a_bad_summary(
     assert "No u rows: the run has no stored seat detail." in body
     with closing(sqlite3.connect(db.config.database_path)) as conn:
         conn.execute(
-            "UPDATE model_uncertainty SET national_json = '{}' "
-            "WHERE election_id = ?",
+            "UPDATE model_uncertainty SET national_json = '{}' WHERE election_id = ?",
             (election_id,),
         )
         conn.commit()
     assert (
-        "The export would fail on this run&#39;s stored summary: "
-        "national.simulations"
+        "The export would fail on this run&#39;s stored summary: national.simulations"
     ) in _hub(app)
 
 

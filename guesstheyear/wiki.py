@@ -4,6 +4,7 @@ import sqlite3
 import time
 import re
 
+
 def setup_database():
     """Create the SQLite database and events table if they do not already exist.
 
@@ -15,12 +16,12 @@ def setup_database():
         tuple[sqlite3.Connection, sqlite3.Cursor]: A (conn, cursor) pair ready for
         querying and inserting rows.
     """
-    conn = sqlite3.connect('wikipedia_history.db')
+    conn = sqlite3.connect("wikipedia_history.db")
     cursor = conn.cursor()
-    cursor.execute('PRAGMA journal_mode=WAL;')
-    
+    cursor.execute("PRAGMA journal_mode=WAL;")
+
     # Updated table creation with timeframe_type
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             year INTEGER,
@@ -29,9 +30,10 @@ def setup_database():
             event TEXT,
             source_page TEXT
         )
-    ''')
+    """)
     conn.commit()
     return conn, cursor
+
 
 def get_timeframe_info(year, era):
     """Returns (primary_title, fallback_title, timeframe_type, year_range)"""
@@ -40,25 +42,31 @@ def get_timeframe_info(year, era):
         primary = f"AD_{year}" if year < 1000 else str(year)
         fallback = str(year) if year < 1000 else f"AD_{year}"
         return primary, fallback, "year", [year]
-    
+
     # BC Logic - Returning 4 values to match the AD structure
     if year <= 500:
         title = f"{year}_BC"
         return title, None, "year", [year]
-    
+
     elif year <= 1799:
         decade = (year // 10) * 10
         # Wikipedia quirk for century heads
         title = f"{year}s_BC_(decade)" if year % 100 == 0 else f"{decade}s_BC"
         return title, None, "decade", range(decade, decade + 10)
-    
+
     else:
         # Century calculation (e.g., 1801-1900 is 19th Century)
         century = ((year - 1) // 100) + 1
-        suffixes = {1: 'st', 2: 'nd', 3: 'rd'}
-        suffix = suffixes.get(century % 10 if not 11 <= century <= 13 else None, 'th')
+        suffixes = {1: "st", 2: "nd", 3: "rd"}
+        suffix = suffixes.get(century % 10 if not 11 <= century <= 13 else None, "th")
         title = f"{century}{suffix}_century_BC"
-        return title, None, "century", range((century-1)*100 + 1, (century*100) + 1)
+        return (
+            title,
+            None,
+            "century",
+            range((century - 1) * 100 + 1, (century * 100) + 1),
+        )
+
 
 def get_year_events(page_title):
     """Fetch a Wikipedia page via the API and extract list items from event sections.
@@ -79,54 +87,86 @@ def get_year_events(page_title):
         list if the page does not exist or an error occurs.
     """
     URL = "https://en.wikipedia.org/w/api.php"
-    headers = {'User-Agent': 'HistoryGameParser/1.0 (contact@email.com)'}
-    
-    params = {"action": "parse", "page": page_title, "prop": "sections", "format": "json"}
+    headers = {"User-Agent": "HistoryGameParser/1.0 (contact@email.com)"}
+
+    params = {
+        "action": "parse",
+        "page": page_title,
+        "prop": "sections",
+        "format": "json",
+    }
     try:
         res = requests.get(URL, params=params, headers=headers, timeout=10).json()
-        if 'parse' not in res: return []
-     
+        if "parse" not in res:
+            return []
+
         # EXCLUDE undesirable sections like References, Sources, External Links
-        exclude_keywords = ["references", "sources", "bibliography", "external links", "further reading", "notes"]
-        
+        exclude_keywords = [
+            "references",
+            "sources",
+            "bibliography",
+            "external links",
+            "further reading",
+            "notes",
+        ]
+
         # Get only valid section indices
         valid_sections = [
-            s['index'] for s in res['parse']['sections'] 
-            if any(kw.lower() in s['line'].lower() for kw in ["events", "by place", "content", "Events and trends", "January – March", "April – June", "July – September", "October – December"])
-            and not any(ex in s['line'].lower() for ex in exclude_keywords)
+            s["index"]
+            for s in res["parse"]["sections"]
+            if any(
+                kw.lower() in s["line"].lower()
+                for kw in [
+                    "events",
+                    "by place",
+                    "content",
+                    "Events and trends",
+                    "January – March",
+                    "April – June",
+                    "July – September",
+                    "October – December",
+                ]
+            )
+            and not any(ex in s["line"].lower() for ex in exclude_keywords)
         ]
 
         all_events = []
         for section_index in valid_sections:
-         
-            params = {"action": "parse", "page": page_title, "section": section_index, "prop": "text", "format": "json"}
+            params = {
+                "action": "parse",
+                "page": page_title,
+                "section": section_index,
+                "prop": "text",
+                "format": "json",
+            }
             page_res = requests.get(URL, params=params, headers=headers).json()
-            soup = BeautifulSoup(page_res['parse']['text']['*'], 'html.parser')
-  
-            for li in soup.find_all('li'):
-                if li.parent.name in ['ul', 'ol']:
+            soup = BeautifulSoup(page_res["parse"]["text"]["*"], "html.parser")
+
+            for li in soup.find_all("li"):
+                if li.parent.name in ["ul", "ol"]:
                     # 1. Remove HTML citation sups [1], [2], etc.
-                    for sup in li.find_all('sup'): 
-                        sup.decompose() 
+                    for sup in li.find_all("sup"):
+                        sup.decompose()
 
                     cleaned = li.get_text().strip()
 
                     # 2. Skip if it's a plain-text reference line (starts with ^)
-                    if cleaned.startswith('^'):
+                    if cleaned.startswith("^"):
                         continue
 
-                    # 3. Final cleaning: Remove any remaining bracketed [edit] or [12] 
+                    # 3. Final cleaning: Remove any remaining bracketed [edit] or [12]
                     # that might not have been in <sup> tags
-                    cleaned = re.sub(r'\[\d+\]|\[edit\]', '', cleaned)
-                    
+                    cleaned = re.sub(r"\[\d+\]|\[edit\]", "", cleaned)
+
                     # Filter out short fragments or empty strings
-                    if len(cleaned) > 25 and cleaned not in all_events: 
+                    if len(cleaned) > 25 and cleaned not in all_events:
                         all_events.append(cleaned)
-        
+
         return all_events
     except Exception as e:
         print(f"Error on {page_title}: {e}")
         return []
+
 
 def scrape_range(year_range, era, conn, cursor):
     """Iterate over a range of years, fetch Wikipedia events, and insert rows into the DB.
@@ -150,47 +190,55 @@ def scrape_range(year_range, era, conn, cursor):
     """
     for year in year_range:
         primary_title, fallback_title, t_type, y_range = get_timeframe_info(year, era)
-        
+
         # IMPROVED CHECK: Does this specific year already have data?
-        cursor.execute('SELECT 1 FROM events WHERE year = ? AND era = ? LIMIT 1', (year, era))
-        
+        cursor.execute(
+            "SELECT 1 FROM events WHERE year = ? AND era = ? LIMIT 1", (year, era)
+        )
+
         if cursor.fetchone():
-            # If it's a century or decade, we might want to skip the whole range 
+            # If it's a century or decade, we might want to skip the whole range
             # but for a year-by-year loop, this is the safest way to ensure no duplicates.
             print(f"Skipping {year} {era} (Year already has data)...")
             continue
 
         print(f"Fetching {primary_title} ({t_type})...")
         events = get_year_events(primary_title)
-        
+
         # Fallback logic
         if not events and fallback_title:
-            print(f"  No events in {primary_title}, trying fallback {fallback_title}...")
+            print(
+                f"  No events in {primary_title}, trying fallback {fallback_title}..."
+            )
             events = get_year_events(fallback_title)
             final_title = fallback_title if events else primary_title
         else:
             final_title = primary_title
-    
+
         if events:
-            print (f"  Found {len(events)} events for Year {year} ({t_type})")
+            print(f"  Found {len(events)} events for Year {year} ({t_type})")
             for r_year in y_range:
                 # One last safety check for bulk inserts (decades/centuries)
                 # to prevent a decade insert from overlapping existing years
-                cursor.execute('SELECT 1 FROM events WHERE year = ? AND era = ? LIMIT 1', (r_year, era))
+                cursor.execute(
+                    "SELECT 1 FROM events WHERE year = ? AND era = ? LIMIT 1",
+                    (r_year, era),
+                )
                 if cursor.fetchone():
                     continue
-                
+
                 data = [(r_year, era, t_type, e, final_title) for e in events]
                 cursor.executemany(
-                    'INSERT INTO events (year, era, timeframe_type, event, source_page) VALUES (?, ?, ?, ?, ?)', 
-                    data
+                    "INSERT INTO events (year, era, timeframe_type, event, source_page) VALUES (?, ?, ?, ?, ?)",
+                    data,
                 )
             conn.commit()
         else:
             # We save a dummy entry or log it to prevent re-scraping "empty" years
             print(f"  Warning: No events found for Year {year}")
-            
+
         time.sleep(0.1)
+
 
 def main():
     """Entry point: set up the database and scrape Wikipedia events for AD and BC years.
@@ -202,15 +250,16 @@ def main():
         None
     """
     conn, cursor = setup_database()
-    
+
     print("--- Starting AD Scraping ---")
     scrape_range(range(1, 2027), "AD", conn, cursor)
- 
+
     print("\n--- Starting BC Scraping ---")
     scrape_range(range(1, 4001), "BC", conn, cursor)
 
     conn.close()
     print("\nExtraction Complete!")
+
 
 if __name__ == "__main__":
     main()

@@ -197,7 +197,9 @@ def _infer_year(xlsx_url: str, fallback: int | None = None) -> int:
     raise ValueError("Could not infer year from URL")
 
 
-def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tuple[date, date]:
+def _parse_fieldwork(
+    fieldwork_text: str, default_year: int | None = None
+) -> tuple[date, date]:
     """Parse a human-readable fieldwork date string into a (start, end) date pair.
 
     Handles multiple formats found in BMG Research spreadsheets, including:
@@ -226,10 +228,14 @@ def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tu
         ValueError: If the month name cannot be parsed, or if no pattern
             matches the input string.
     """
-    normalized = re.sub(r"\s+", " ", fieldwork_text.strip().replace("–", "-").replace("—", "-"))
+    normalized = re.sub(
+        r"\s+", " ", fieldwork_text.strip().replace("–", "-").replace("—", "-")
+    )
     normalized = re.sub(r"(\d)(st|nd|rd|th)", r"\1", normalized, flags=re.IGNORECASE)
 
-    pattern_same_month_amp = re.compile(r"(\d{1,2})\s*&\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})")
+    pattern_same_month_amp = re.compile(
+        r"(\d{1,2})\s*&\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})"
+    )
     match = pattern_same_month_amp.search(normalized)
     if match:
         day_start = int(match.group(1))
@@ -240,7 +246,9 @@ def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tu
             raise ValueError(f"Could not parse fieldwork month: {fieldwork_text!r}")
         return date(year, month, day_start), date(year, month, day_end)
 
-    pattern_same_month = re.compile(r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})")
+    pattern_same_month = re.compile(
+        r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})"
+    )
     match = pattern_same_month.search(normalized)
     if match:
         day_start = int(match.group(1))
@@ -264,7 +272,9 @@ def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tu
         if month_start is None or month_end is None:
             raise ValueError(f"Could not parse fieldwork months: {fieldwork_text!r}")
         year_start = year_end - 1 if month_start > month_end else year_end
-        return date(year_start, month_start, day_start), date(year_end, month_end, day_end)
+        return date(year_start, month_start, day_start), date(
+            year_end, month_end, day_end
+        )
 
     pattern_no_year = re.compile(r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)")
     match = pattern_no_year.search(normalized)
@@ -307,9 +317,7 @@ class _LinkParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.links: list[str] = []
 
-    def handle_starttag(
-        self, tag: str, attrs: list[tuple[str, str | None]]
-    ) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag.lower() == "a":
             for name, value in attrs:
                 if name.lower() == "href" and value:
@@ -336,9 +344,7 @@ def _fetch_page_links(url: str, hosts: set[str]) -> tuple[str, list[str]]:
     parser = _LinkParser()
     parser.feed(content.decode("utf-8", errors="replace"))
     links = list(
-        dict.fromkeys(
-            urldefrag(urljoin(final_url, link)).url for link in parser.links
-        )
+        dict.fromkeys(urldefrag(urljoin(final_url, link)).url for link in parser.links)
     )
     return final_url, links
 
@@ -379,8 +385,7 @@ def resolve_source_url(source_url: str) -> str:
             raise ValueError(f"Unexpected BMG release redirect: {final_url}")
         return _published_workbook(links)
     if not (
-        _is_public_url(source_url, _INEWS_HOSTS)
-        and parsed.path.startswith("/news/")
+        _is_public_url(source_url, _INEWS_HOSTS) and parsed.path.startswith("/news/")
     ):
         return source_url
 
@@ -453,7 +458,9 @@ def extract_workbook(xlsx_url: str) -> Any:
     candidate_urls = [xlsx_url]
     if "bmgresearch.co.uk" in xlsx_url:
         candidate_urls.append(xlsx_url.replace("bmgresearch.co.uk", "bmgresearch.com"))
-        candidate_urls.append(xlsx_url.replace("www.bmgresearch.co.uk", "bmgresearch.com"))
+        candidate_urls.append(
+            xlsx_url.replace("www.bmgresearch.co.uk", "bmgresearch.com")
+        )
 
     payload = None
     errors: list[str] = []
@@ -568,7 +575,9 @@ def _find_methodology_sheet(workbook: Any) -> Any:
     return workbook[workbook.sheetnames[0]]
 
 
-def _parse_fieldwork_and_sample(workbook: Any, default_year: int) -> tuple[date, date, int]:
+def _parse_fieldwork_and_sample(
+    workbook: Any, default_year: int
+) -> tuple[date, date, int]:
     """Extract fieldwork dates and sample size from the methodology sheet.
 
     Scans the first 80 rows and 5 columns of the methodology sheet for cells
@@ -603,7 +612,9 @@ def _parse_fieldwork_and_sample(workbook: Any, default_year: int) -> tuple[date,
                 continue
             lowered = text.lower()
             if "fieldwork date" in lowered or "fieldwork dates" in lowered:
-                match = re.search(r"fieldwork dates?\s*:\s*(.+)$", text, flags=re.IGNORECASE)
+                match = re.search(
+                    r"fieldwork dates?\s*:\s*(.+)$", text, flags=re.IGNORECASE
+                )
                 fieldwork_raw = match.group(1).strip() if match else text
             if lowered.startswith("sample:"):
                 sample_raw = text
@@ -611,7 +622,9 @@ def _parse_fieldwork_and_sample(workbook: Any, default_year: int) -> tuple[date,
     if not fieldwork_raw:
         raise ValueError("Fieldwork dates not found in methodology sheet")
 
-    fieldwork_start, fieldwork_end = _parse_fieldwork(fieldwork_raw, default_year=default_year)
+    fieldwork_start, fieldwork_end = _parse_fieldwork(
+        fieldwork_raw, default_year=default_year
+    )
 
     if not sample_raw:
         raise ValueError("Sample line not found in methodology sheet")
@@ -847,7 +860,10 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
 
         if isinstance(next_total, (int, float)) and 0.0 <= float(next_total) <= 1.2:
             percentage = _to_percentage(next_total)
-        elif isinstance(current_total, (int, float)) and 0.0 <= float(current_total) <= 1.2:
+        elif (
+            isinstance(current_total, (int, float))
+            and 0.0 <= float(current_total) <= 1.2
+        ):
             percentage = _to_percentage(current_total)
         else:
             continue
@@ -906,7 +922,9 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
     return parsed
 
 
-def parse_poll(workbook: Any, *, source_url: str, year_hint: int | None = None) -> ParsedPoll:
+def parse_poll(
+    workbook: Any, *, source_url: str, year_hint: int | None = None
+) -> ParsedPoll:
     """Parse all relevant poll data from a BMG Research workbook.
 
     Infers the poll year from ``source_url`` (falling back to ``year_hint``),
@@ -932,7 +950,9 @@ def parse_poll(workbook: Any, *, source_url: str, year_hint: int | None = None) 
             party data cannot be extracted from the workbook.
     """
     inferred_year = _infer_year(source_url, fallback=year_hint)
-    fieldwork_start, fieldwork_end, sample_size = _parse_fieldwork_and_sample(workbook, inferred_year)
+    fieldwork_start, fieldwork_end, sample_size = _parse_fieldwork_and_sample(
+        workbook, inferred_year
+    )
     party_region_percentages = _parse_party_region_percentages(workbook)
     return ParsedPoll(
         sample_size=sample_size,
@@ -943,7 +963,9 @@ def parse_poll(workbook: Any, *, source_url: str, year_hint: int | None = None) 
     )
 
 
-def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+def _find_existing_poll(
+    db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll
+) -> Poll | None:
     """Look up an existing Poll row matching the given pollster, map, and fieldwork metadata.
 
     Matches on ``pollster_id``, ``map_id``, ``fieldwork_start``,
@@ -1045,8 +1067,7 @@ def build_import_plan(
     ]
     if missing_parties:
         raise ValueError(
-            "Missing parties in database (run party importer first): "
-            f"{missing_parties}"
+            f"Missing parties in database (run party importer first): {missing_parties}"
         )
 
     rows: list[PlannedPollRow] = []
@@ -1170,9 +1191,11 @@ def commit_import_plan(
         created_poll_row = False
 
     with db.session() as session:
-        existing_rows = session.execute(
-            select(PollRow).where(PollRow.poll_id == poll_id)
-        ).scalars().all()
+        existing_rows = (
+            session.execute(select(PollRow).where(PollRow.poll_id == poll_id))
+            .scalars()
+            .all()
+        )
 
         if existing_rows and not replace_rows:
             return PollImportResult(
@@ -1305,8 +1328,7 @@ def main() -> None:
 
     if result.skipped_existing_rows:
         print(
-            f"poll {result.poll_id} already has rows; "
-            "use --replace-rows to overwrite"
+            f"poll {result.poll_id} already has rows; use --replace-rows to overwrite"
         )
     else:
         if result.replaced_rows:

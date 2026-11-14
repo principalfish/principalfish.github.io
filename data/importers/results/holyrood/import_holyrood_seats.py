@@ -61,7 +61,9 @@ def ensure_map(db: Database, map_id: int, name: str) -> Map:
     return result
 
 
-def import_map_seats(db: Database, map_id: int, name: str, seats: dict[str, str]) -> int:
+def import_map_seats(
+    db: Database, map_id: int, name: str, seats: dict[str, str]
+) -> int:
     """Create the constituency regions + seats for one Holyrood map.
 
     Args:
@@ -106,7 +108,9 @@ def main() -> None:
 
     for map_id_text, entry in data.items():
         count = import_map_seats(db, int(map_id_text), entry["name"], entry["seats"])
-        print(f"map {map_id_text} ({entry['name']}): {count} constituency seats ensured")
+        print(
+            f"map {map_id_text} ({entry['name']}): {count} constituency seats ensured"
+        )
 
 
 if __name__ == "__main__":

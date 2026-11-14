@@ -35,7 +35,9 @@ BARE_NAMES = [
 
 
 @pytest.mark.parametrize(("module_name", "relative_path"), RUNNERS)
-def test_each_runner_imports_as_a_package_module(module_name: str, relative_path: str) -> None:
+def test_each_runner_imports_as_a_package_module(
+    module_name: str, relative_path: str
+) -> None:
     module = importlib.import_module(module_name)
 
     assert module.__name__ == module_name
@@ -48,7 +50,9 @@ def test_models_is_a_package_and_the_schema_lives_in_core_schema() -> None:
 
     assert Path(str(models.__file__)).resolve() == DATA_DIR / "models" / "__init__.py"
     assert Path(str(schema.__file__)).resolve() == DATA_DIR / "core" / "schema.py"
-    assert not hasattr(models, "Base"), "models/__init__.py must not re-export the schema"
+    assert not hasattr(models, "Base"), (
+        "models/__init__.py must not re-export the schema"
+    )
 
 
 def test_the_us_runners_share_one_common_module() -> None:
@@ -79,7 +83,9 @@ def test_importing_every_runner_in_a_fresh_interpreter_loads_no_bare_module() ->
 
 
 @pytest.mark.parametrize(("module_name", "relative_path"), RUNNERS)
-def test_each_runner_still_runs_by_path(module_name: str, relative_path: str, tmp_path: Path) -> None:
+def test_each_runner_still_runs_by_path(
+    module_name: str, relative_path: str, tmp_path: Path
+) -> None:
     """``python data/models/<engine>/<runner>.py --help`` works from any directory."""
     result = subprocess.run(
         [sys.executable, str(DATA_DIR / "models" / relative_path), "--help"],

@@ -353,7 +353,9 @@ class TestGoogleSheetExportUrl:
         )
 
     def test_non_google_url_returns_none(self) -> None:
-        assert fd._google_sheet_export_url("https://focaldata.example.test/x.xlsx") is None
+        assert (
+            fd._google_sheet_export_url("https://focaldata.example.test/x.xlsx") is None
+        )
 
     def test_google_domain_wrong_path_returns_none(self) -> None:
         url = "https://docs.google.com/document/d/ABC123/edit"
@@ -394,7 +396,9 @@ class TestExtractWorkbook:
         payload = _valid_payload()
         requested: list[str] = []
         original = "https://docs.google.com/spreadsheets/d/ABC123/edit?gid=1"
-        export = "https://docs.google.com/spreadsheets/d/ABC123/export?format=xlsx&gid=1"
+        export = (
+            "https://docs.google.com/spreadsheets/d/ABC123/export?format=xlsx&gid=1"
+        )
 
         def fake_urlopen(req: Request, timeout: float = 50) -> FakeUrlResponse:
             requested.append(req.full_url)
@@ -413,7 +417,9 @@ class TestExtractWorkbook:
         payload = _valid_payload()
         requested: list[str] = []
         original = "https://docs.google.com/spreadsheets/d/ABC123/edit?gid=1"
-        export = "https://docs.google.com/spreadsheets/d/ABC123/export?format=xlsx&gid=1"
+        export = (
+            "https://docs.google.com/spreadsheets/d/ABC123/export?format=xlsx&gid=1"
+        )
 
         def fake_urlopen(req: Request, timeout: float = 50) -> FakeUrlResponse:
             requested.append(req.full_url)
@@ -454,7 +460,9 @@ class TestExtractWorkbook:
             raise ConnectionError("unreachable")
 
         monkeypatch.setattr(fd, "urlopen", fake_urlopen)
-        with pytest.raises(ValueError, match="Could not fetch XLSX payload") as exc_info:
+        with pytest.raises(
+            ValueError, match="Could not fetch XLSX payload"
+        ) as exc_info:
             fd.extract_workbook(original)
         message = str(exc_info.value)
         assert message.count("unreachable") == 2
@@ -956,9 +964,7 @@ class TestFindViSectionStart:
     def test_missing_raises(self) -> None:
         rows = [_row({1: "nothing relevant here"})]
         workbook = build_workbook({"Tables": rows})
-        with pytest.raises(
-            ValueError, match="Could not find voting intention section"
-        ):
+        with pytest.raises(ValueError, match="Could not find voting intention section"):
             fd._find_vi_section_start(workbook["Tables"])
 
 
@@ -1379,7 +1385,9 @@ class TestBuildImportPlan:
         def _row_for(party: str, region: str | None) -> fd.PlannedPollRow:
             if region is None:
                 return next(
-                    r for r in plan.rows if r.party_name == party and r.region_id is None
+                    r
+                    for r in plan.rows
+                    if r.party_name == party and r.region_id is None
                 )
             return next(
                 r
@@ -1451,7 +1459,9 @@ class TestBuildImportPlan:
             pollster_identifier="focaldata",
         )
         ni_rows = [
-            row for row in plan.rows if row.region_id == world.region_ids["Northern Ireland"]
+            row
+            for row in plan.rows
+            if row.region_id == world.region_ids["Northern Ireland"]
         ]
         assert len(ni_rows) == 8
         assert all(row.percentage == 0.0 for row in ni_rows)
@@ -1492,13 +1502,17 @@ class TestBuildImportPlan:
             pollster_identifier="focaldata",
         )
 
-        region_row_ids = {row.region_id for row in plan.rows if row.region_id is not None}
+        region_row_ids = {
+            row.region_id for row in plan.rows if row.region_id is not None
+        }
         assert region_row_ids == {london_id, scotland_id}
         # 8 parties × (1 national + 2 regional) rows.
         assert len(plan.rows) == 8 * 3
 
         labour_london = next(
-            r for r in plan.rows if r.party_name == "Labour" and r.region_id == london_id
+            r
+            for r in plan.rows
+            if r.party_name == "Labour" and r.region_id == london_id
         )
         assert labour_london.percentage == 45.0
 
@@ -1886,8 +1900,6 @@ class TestParseBases:
         assert parsed.bases == []
 
     def test_no_column_n_row_gives_no_bases(self) -> None:
-        parsed = fd.parse_poll(
-            _based_workbook(base_rows=False), source_url=_XLSX_URL
-        )
+        parsed = fd.parse_poll(_based_workbook(base_rows=False), source_url=_XLSX_URL)
 
         assert parsed.bases == []

@@ -148,7 +148,9 @@ def only_the_test_database(db: Database, monkeypatch: pytest.MonkeyPatch) -> Pat
 
     def guarded(database: Any, *args: Any, **kwargs: Any) -> sqlite3.Connection:
         if Path(database).resolve() != allowed:
-            raise AssertionError(f"sqlite3.connect outside the test database: {database}")
+            raise AssertionError(
+                f"sqlite3.connect outside the test database: {database}"
+            )
         connection: sqlite3.Connection = real_connect(database, *args, **kwargs)
         return connection
 

@@ -49,24 +49,27 @@ def test_the_shared_us_pages_build_from_the_chamber(
             ("approve_race", "/approve-race"),
             ("finish", "/finish"),
         ):
-            assert url_for(
-                f"us_poll_import.{endpoint}", chamber="president", token="abc"
-            ) == f"/president/polls/import/abc{suffix}"
+            assert (
+                url_for(f"us_poll_import.{endpoint}", chamber="president", token="abc")
+                == f"/president/polls/import/abc{suffix}"
+            )
         assert url_for("us_results.us_results_form", chamber="senate") == (
             "/senate/results"
         )
         assert url_for("us_results.us_results_preview", chamber="house") == (
             "/house/results/preview"
         )
-        assert url_for(
-            "us_results.us_results_confirm", chamber="house", token="abc"
-        ) == "/house/results/confirm/abc"
+        assert (
+            url_for("us_results.us_results_confirm", chamber="house", token="abc")
+            == "/house/results/confirm/abc"
+        )
         assert url_for("us_results.us_results_current_senate") == (
             "/senate/results/current-senate"
         )
-        assert url_for(
-            "us.set_race_matchup", chamber="house", map_id=3, seat_id=4
-        ) == "/house/matchups/3/4"
+        assert (
+            url_for("us.set_race_matchup", chamber="house", map_id=3, seat_id=4)
+            == "/house/matchups/3/4"
+        )
         with pytest.raises(BuildError):
             url_for("us_poll_import.import_form")
         with pytest.raises(BuildError):

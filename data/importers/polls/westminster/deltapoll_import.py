@@ -29,7 +29,9 @@ from importers.polls.bases import (
 )
 from importers.polls.types import PollImportResult
 
-DEFAULT_SOURCE_URL = "https://deltapoll.co.uk/wp-content/uploads/2026/01/260105_Deltapoll-Mirror-pdf.pdf"
+DEFAULT_SOURCE_URL = (
+    "https://deltapoll.co.uk/wp-content/uploads/2026/01/260105_Deltapoll-Mirror-pdf.pdf"
+)
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
 DEFAULT_POLLSTER_IDENTIFIER = "deltapoll"
 
@@ -162,7 +164,9 @@ def _fetch_bytes(url: str) -> bytes:
     Raises:
         urllib.error.URLError: If the request fails or times out (60 s limit).
     """
-    req = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
+    req = Request(
+        url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"}
+    )
     with urlopen(req, timeout=60) as response:
         data: bytes = response.read()
         return data
@@ -292,14 +296,19 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
         ValueError: If no ``Fieldwork:`` line is found, if month names cannot
             be resolved, or if none of the four patterns match.
     """
-    fieldwork_line = next((line for line in lines if line.lower().startswith("fieldwork:")), None)
+    fieldwork_line = next(
+        (line for line in lines if line.lower().startswith("fieldwork:")), None
+    )
     if fieldwork_line is None:
         raise ValueError("Fieldwork line not found in Deltapoll PDF")
 
     normalized = fieldwork_line.replace("–", "-").replace("—", "-")
     normalized = re.sub(r"(\d)(st|nd|rd|th)", r"\1", normalized, flags=re.IGNORECASE)
 
-    pattern_cross = re.compile(r"Fieldwork:\s*(\d{1,2})\s+([A-Za-z]+)\s+\d{4}\s+to\s+(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2})", re.IGNORECASE)
+    pattern_cross = re.compile(
+        r"Fieldwork:\s*(\d{1,2})\s+([A-Za-z]+)\s+\d{4}\s+to\s+(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2})",
+        re.IGNORECASE,
+    )
     match = pattern_cross.search(normalized)
     if match:
         day_start = int(match.group(1))
@@ -308,11 +317,18 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
         month_end = _month_number(match.group(4))
         year_end = int(match.group(5))
         if month_start is None or month_end is None:
-            raise ValueError(f"Could not parse fieldwork months from: {fieldwork_line!r}")
+            raise ValueError(
+                f"Could not parse fieldwork months from: {fieldwork_line!r}"
+            )
         year_start = year_end - 1 if month_start > month_end else year_end
-        return date(year_start, month_start, day_start), date(year_end, month_end, day_end)
+        return date(year_start, month_start, day_start), date(
+            year_end, month_end, day_end
+        )
 
-    pattern_cross_alt = re.compile(r"Fieldwork:\s*(\d{1,2})\s+([A-Za-z]+)\s+to\s+(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2})", re.IGNORECASE)
+    pattern_cross_alt = re.compile(
+        r"Fieldwork:\s*(\d{1,2})\s+([A-Za-z]+)\s+to\s+(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2})",
+        re.IGNORECASE,
+    )
     match = pattern_cross_alt.search(normalized)
     if match:
         day_start = int(match.group(1))
@@ -321,11 +337,18 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
         month_end = _month_number(match.group(4))
         year_end = int(match.group(5))
         if month_start is None or month_end is None:
-            raise ValueError(f"Could not parse fieldwork months from: {fieldwork_line!r}")
+            raise ValueError(
+                f"Could not parse fieldwork months from: {fieldwork_line!r}"
+            )
         year_start = year_end - 1 if month_start > month_end else year_end
-        return date(year_start, month_start, day_start), date(year_end, month_end, day_end)
+        return date(year_start, month_start, day_start), date(
+            year_end, month_end, day_end
+        )
 
-    pattern_same_hyphen = re.compile(r"Fieldwork:\s*(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2})", re.IGNORECASE)
+    pattern_same_hyphen = re.compile(
+        r"Fieldwork:\s*(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2})",
+        re.IGNORECASE,
+    )
     match = pattern_same_hyphen.search(normalized)
     if match:
         day_start = int(match.group(1))
@@ -333,10 +356,15 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
         month = _month_number(match.group(3))
         year = int(match.group(4))
         if month is None:
-            raise ValueError(f"Could not parse fieldwork month from: {fieldwork_line!r}")
+            raise ValueError(
+                f"Could not parse fieldwork month from: {fieldwork_line!r}"
+            )
         return date(year, month, day_start), date(year, month, day_end)
 
-    pattern_same_to = re.compile(r"Fieldwork:\s*(\d{1,2})\s+to\s*(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2})", re.IGNORECASE)
+    pattern_same_to = re.compile(
+        r"Fieldwork:\s*(\d{1,2})\s+to\s*(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2})",
+        re.IGNORECASE,
+    )
     match = pattern_same_to.search(normalized)
     if match:
         day_start = int(match.group(1))
@@ -344,7 +372,9 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
         month = _month_number(match.group(3))
         year = int(match.group(4))
         if month is None:
-            raise ValueError(f"Could not parse fieldwork month from: {fieldwork_line!r}")
+            raise ValueError(
+                f"Could not parse fieldwork month from: {fieldwork_line!r}"
+            )
         return date(year, month, day_start), date(year, month, day_end)
 
     raise ValueError(f"Could not parse fieldwork line: {fieldwork_line!r}")
@@ -366,7 +396,9 @@ def _parse_sample_size(lines: list[str]) -> int:
         ValueError: If no ``Sample Size:`` line is found or if no digits can
             be extracted from it.
     """
-    sample_line = next((line for line in lines if line.lower().startswith("sample size:")), None)
+    sample_line = next(
+        (line for line in lines if line.lower().startswith("sample size:")), None
+    )
     if sample_line is None:
         raise ValueError("Sample Size line not found in Deltapoll PDF")
     digits = re.sub(r"[^0-9]", "", sample_line)
@@ -395,7 +427,9 @@ def _canonical_party_from_line(line: str) -> str | None:
     return None
 
 
-def _extract_party_order_and_national(lines: list[str]) -> tuple[list[str], dict[str, float]]:
+def _extract_party_order_and_national(
+    lines: list[str],
+) -> tuple[list[str], dict[str, float]]:
     """Extract the national vote-share table from the Q1 voting-intention section.
 
     Scans for the first line containing ``voting intention`` (case-insensitive)
@@ -419,11 +453,7 @@ def _extract_party_order_and_national(lines: list[str]) -> tuple[list[str], dict
             any of the seven required core parties are absent from the table.
     """
     start_idx = next(
-        (
-            i
-            for i, line in enumerate(lines)
-            if "voting intention" in line.lower()
-        ),
+        (i for i, line in enumerate(lines) if "voting intention" in line.lower()),
         None,
     )
     if start_idx is None:
@@ -432,7 +462,7 @@ def _extract_party_order_and_national(lines: list[str]) -> tuple[list[str], dict
     party_order: list[str] = []
     national: dict[str, float] = {}
 
-    for line in lines[start_idx:start_idx + 60]:
+    for line in lines[start_idx : start_idx + 60]:
         party_name = _canonical_party_from_line(line)
         if party_name is None:
             continue
@@ -455,7 +485,9 @@ def _extract_party_order_and_national(lines: list[str]) -> tuple[list[str], dict
     }
     missing = sorted(required_core - set(national.keys()))
     if missing:
-        raise ValueError(f"Missing expected party rows in Deltapoll Q1 table: {missing}")
+        raise ValueError(
+            f"Missing expected party rows in Deltapoll Q1 table: {missing}"
+        )
 
     national.setdefault("Other", 0.0)
     if "Other" not in party_order:
@@ -464,7 +496,9 @@ def _extract_party_order_and_national(lines: list[str]) -> tuple[list[str], dict
     return party_order, national
 
 
-def _parse_regional_from_block(lines: list[str], party_order: list[str]) -> dict[str, dict[str, float]]:
+def _parse_regional_from_block(
+    lines: list[str], party_order: list[str]
+) -> dict[str, dict[str, float]]:
     """Parse the macro-regional vote-share block from the Deltapoll PDF.
 
     Looks for a header line containing the full region sequence
@@ -499,7 +533,7 @@ def _parse_regional_from_block(lines: list[str], party_order: list[str]) -> dict
         raise ValueError("Could not find regional header block in Deltapoll PDF")
 
     rows: list[list[int]] = []
-    for line in lines[header_idx + 1:header_idx + 35]:
+    for line in lines[header_idx + 1 : header_idx + 35]:
         values = [int(v) for v in re.findall(r"-?\d+", line)]
         if len(values) == 8 and all(0 <= value <= 100 for value in values):
             rows.append(values)
@@ -548,11 +582,12 @@ def _parse_bases(lines: list[str], *, with_regions: bool) -> list[ParsedBase]:
         The national base then one per macro region, or an empty list when
         page 1 lacks either row.
     """
+
     def first_count(label: str) -> int | None:
         line = next((line for line in lines if line.startswith(label)), None)
         if line is None:
             return None
-        values = line[len(label):].split()
+        values = line[len(label) :].split()
         return count_value(values[0]) if values else None
 
     unweighted = first_count("Unweighted Sample")
@@ -570,7 +605,7 @@ def _parse_bases(lines: list[str], *, with_regions: bool) -> list[ParsedBase]:
     if header_idx is None:
         return [national]
     count_rows: list[list[int]] = []
-    for line in lines[header_idx + 1:header_idx + 5]:
+    for line in lines[header_idx + 1 : header_idx + 5]:
         if line.startswith("%"):
             break
         if re.fullmatch(r"\d+(?:\s+\d+){7}", line):
@@ -639,7 +674,9 @@ def parse_poll(pdf_text: str) -> ParsedPoll:
     )
 
 
-def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+def _find_existing_poll(
+    db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll
+) -> Poll | None:
     """Look up a poll that matches the parsed metadata exactly.
 
     Matches on pollster, map, fieldwork start/end, and sample size.
@@ -728,11 +765,12 @@ def build_import_plan(
 
     party_by_name = {party.name: party for party in db.get_all_parties()}
     required_parties = sorted(set(PARTY_LABEL_TO_CANONICAL.values()))
-    missing_parties = [party_name for party_name in required_parties if party_name not in party_by_name]
+    missing_parties = [
+        party_name for party_name in required_parties if party_name not in party_by_name
+    ]
     if missing_parties:
         raise ValueError(
-            "Missing parties in database (run party importer first): "
-            f"{missing_parties}"
+            f"Missing parties in database (run party importer first): {missing_parties}"
         )
 
     rows: list[PlannedPollRow] = []
@@ -758,7 +796,9 @@ def build_import_plan(
             for internal_region_name in MACRO_TO_INTERNAL_REGIONS[macro]:
                 region = regions_by_name.get(internal_region_name)
                 if region is None:
-                    raise ValueError(f"Region {internal_region_name!r} not found in map {map_name!r}")
+                    raise ValueError(
+                        f"Region {internal_region_name!r} not found in map {map_name!r}"
+                    )
                 rows.append(
                     PlannedPollRow(
                         party_id=party_id,
@@ -858,9 +898,11 @@ def commit_import_plan(
         created_poll_row = False
 
     with db.session() as session:
-        existing_rows = session.execute(
-            select(PollRow).where(PollRow.poll_id == poll_id)
-        ).scalars().all()
+        existing_rows = (
+            session.execute(select(PollRow).where(PollRow.poll_id == poll_id))
+            .scalars()
+            .all()
+        )
 
         if existing_rows and not replace_rows:
             return PollImportResult(
@@ -989,8 +1031,7 @@ def main() -> None:
 
     if result.skipped_existing_rows:
         print(
-            f"poll {result.poll_id} already has rows; "
-            "use --replace-rows to overwrite"
+            f"poll {result.poll_id} already has rows; use --replace-rows to overwrite"
         )
     else:
         if result.replaced_rows:

@@ -76,9 +76,21 @@ class TestManifestNameForElection:
         [
             ("2024 General Election", ElectionType.uk_general, "2024 Election"),
             ("2019 General Election", ElectionType.uk_general, "2019 Election"),
-            ("2021 Scottish Parliament Election", ElectionType.holyrood_general, "2021 Election"),
-            ("2016 Scottish Parliament Election", ElectionType.holyrood_general, "2016 Election"),
-            ("2026 Scottish Parliament Election", ElectionType.holyrood_general, "2026 Election"),
+            (
+                "2021 Scottish Parliament Election",
+                ElectionType.holyrood_general,
+                "2021 Election",
+            ),
+            (
+                "2016 Scottish Parliament Election",
+                ElectionType.holyrood_general,
+                "2016 Election",
+            ),
+            (
+                "2026 Scottish Parliament Election",
+                ElectionType.holyrood_general,
+                "2026 Election",
+            ),
             (
                 "2021 Scottish Parliament Election (2026 Boundaries)",
                 ElectionType.holyrood_general,
@@ -100,13 +112,17 @@ class TestManifestNameForElection:
     def test_general_pattern_only_applies_to_uk_general(self) -> None:
         """A by-election whose name happens to match the general pattern is left verbatim."""
         assert (
-            manifest_name_for_election(_election("2021 General Election", ElectionType.by_election))
+            manifest_name_for_election(
+                _election("2021 General Election", ElectionType.by_election)
+            )
             == "2021 General Election"
         )
 
     def test_unmatched_name_passes_through_verbatim(self) -> None:
         assert (
-            manifest_name_for_election(_election("Some Odd Election", ElectionType.holyrood_general))
+            manifest_name_for_election(
+                _election("Some Odd Election", ElectionType.holyrood_general)
+            )
             == "Some Odd Election"
         )
 
@@ -131,12 +147,19 @@ class TestReorderManifestEntries:
         # current-holyrood-prediction compares against the new 2026-holyrood, so 2026
         # slots immediately after the prediction (mirrors the real 2026 restoration).
         built = [
-            {"id": "current-holyrood-prediction", "comparisonElectionId": "2026-holyrood"},
+            {
+                "id": "current-holyrood-prediction",
+                "comparisonElectionId": "2026-holyrood",
+            },
             {"id": "2021-holyrood-2026"},
             {"id": "2026-holyrood", "comparisonElectionId": "2021-holyrood"},
             {"id": "2021-holyrood"},
         ]
-        existing = ["current-holyrood-prediction", "2021-holyrood-2026", "2021-holyrood"]
+        existing = [
+            "current-holyrood-prediction",
+            "2021-holyrood-2026",
+            "2021-holyrood",
+        ]
         out = reorder_manifest_entries(built, existing)
         assert self._ids(out) == [
             "current-holyrood-prediction",
@@ -187,9 +210,18 @@ class TestAssignComparisonElections:
     def test_general_does_not_compare_against_same_map_referendum(self) -> None:
         # The oldest general (map 1) must not grab the EU referendum (map 1, other type).
         entries = [
-            self._entry("2015-general", "westminster", 1, ElectionType.uk_general.value),
-            self._entry("2010-general", "westminster", 1, ElectionType.uk_general.value),
-            {"id": "eu-referendum-2016", "type": "eu_referendum", "parliament": "westminster", "mapId": 1},
+            self._entry(
+                "2015-general", "westminster", 1, ElectionType.uk_general.value
+            ),
+            self._entry(
+                "2010-general", "westminster", 1, ElectionType.uk_general.value
+            ),
+            {
+                "id": "eu-referendum-2016",
+                "type": "eu_referendum",
+                "parliament": "westminster",
+                "mapId": 1,
+            },
         ]
         assign_comparison_elections(entries)
         by_id = {e["id"]: e for e in entries}
@@ -199,7 +231,9 @@ class TestAssignComparisonElections:
 
     def test_never_compares_across_parliaments(self) -> None:
         entries = [
-            self._entry("2024-general", "westminster", 2, ElectionType.uk_general.value),
+            self._entry(
+                "2024-general", "westminster", 2, ElectionType.uk_general.value
+            ),
             self._entry("2021-holyrood", "holyrood", 11),
         ]
         assign_comparison_elections(entries)
@@ -209,9 +243,15 @@ class TestAssignComparisonElections:
 
     def test_model_uns_compares_against_latest_general(self) -> None:
         entries = [
-            self._entry("current-prediction", "westminster", 2, ElectionType.model_uns.value),
-            self._entry("2024-general", "westminster", 2, ElectionType.uk_general.value),
-            self._entry("2019-general", "westminster", 1, ElectionType.uk_general.value),
+            self._entry(
+                "current-prediction", "westminster", 2, ElectionType.model_uns.value
+            ),
+            self._entry(
+                "2024-general", "westminster", 2, ElectionType.uk_general.value
+            ),
+            self._entry(
+                "2019-general", "westminster", 1, ElectionType.uk_general.value
+            ),
         ]
         assign_comparison_elections(entries)
         assert entries[0]["comparisonElectionId"] == "2024-general"
@@ -239,9 +279,15 @@ class TestAssignComparisonElections:
         # The Senate's staggered classes contest different states each cycle, so no Senate
         # election chains to the previous one — even though they share parliament/mapId/type.
         entries = [
-            self._entry("2024-us-senate", "us_senate", 23, ElectionType.us_senate.value),
-            self._entry("2022-us-senate", "us_senate", 23, ElectionType.us_senate.value),
-            self._entry("2020-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+            self._entry(
+                "2024-us-senate", "us_senate", 23, ElectionType.us_senate.value
+            ),
+            self._entry(
+                "2022-us-senate", "us_senate", 23, ElectionType.us_senate.value
+            ),
+            self._entry(
+                "2020-us-senate", "us_senate", 23, ElectionType.us_senate.value
+            ),
         ]
         assign_comparison_elections(entries)
         assert all("comparisonElectionId" not in e for e in entries)
@@ -251,7 +297,9 @@ class TestAssignComparisonElections:
         entries = [
             self._entry("2024-us-house", "us_house", 21, ElectionType.us_house.value),
             self._entry("2022-us-house", "us_house", 21, ElectionType.us_house.value),
-            self._entry("2024-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+            self._entry(
+                "2024-us-senate", "us_senate", 23, ElectionType.us_senate.value
+            ),
         ]
         assign_comparison_elections(entries)
         by_id = {e["id"]: e for e in entries}
@@ -263,25 +311,49 @@ class TestAssignComparisonElections:
         # Each forecast reads gains against the baseline its model swings from —
         # the Senate forecast against the 2020 Class-2 result, not 2024.
         entries = [
-            self._entry("current-us-house", "us_house", 21, ElectionType.us_house_model.value),
-            self._entry("current-us-president", "us_presidential", 22, ElectionType.us_presidential_model.value),
-            self._entry("current-us-senate", "us_senate", 23, ElectionType.us_senate_model.value),
+            self._entry(
+                "current-us-house", "us_house", 21, ElectionType.us_house_model.value
+            ),
+            self._entry(
+                "current-us-president",
+                "us_presidential",
+                22,
+                ElectionType.us_presidential_model.value,
+            ),
+            self._entry(
+                "current-us-senate", "us_senate", 23, ElectionType.us_senate_model.value
+            ),
             self._entry("2024-us-house", "us_house", 21, ElectionType.us_house.value),
-            self._entry("2024-us-president", "us_presidential", 22, ElectionType.us_presidential.value),
-            self._entry("2024-us-senate", "us_senate", 23, ElectionType.us_senate.value),
-            self._entry("2020-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+            self._entry(
+                "2024-us-president",
+                "us_presidential",
+                22,
+                ElectionType.us_presidential.value,
+            ),
+            self._entry(
+                "2024-us-senate", "us_senate", 23, ElectionType.us_senate.value
+            ),
+            self._entry(
+                "2020-us-senate", "us_senate", 23, ElectionType.us_senate.value
+            ),
         ]
         assign_comparison_elections(entries)
         by_id = {e["id"]: e for e in entries}
         assert by_id["current-us-house"]["comparisonElectionId"] == "2024-us-house"
-        assert by_id["current-us-president"]["comparisonElectionId"] == "2024-us-president"
+        assert (
+            by_id["current-us-president"]["comparisonElectionId"] == "2024-us-president"
+        )
         assert by_id["current-us-senate"]["comparisonElectionId"] == "2020-us-senate"
 
     def test_us_forecast_comparison_skipped_when_baseline_absent(self) -> None:
         # No dangling comparisonElectionId when the baseline isn't exported.
         entries = [
-            self._entry("current-us-senate", "us_senate", 23, ElectionType.us_senate_model.value),
-            self._entry("2024-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+            self._entry(
+                "current-us-senate", "us_senate", 23, ElectionType.us_senate_model.value
+            ),
+            self._entry(
+                "2024-us-senate", "us_senate", 23, ElectionType.us_senate.value
+            ),
         ]
         assign_comparison_elections(entries)
         assert "comparisonElectionId" not in entries[0]
@@ -356,14 +428,23 @@ class TestRefreshManifestModes:
                     "projection": "albersUsa",
                     "regions": [{"id": 1, "name": "Stale"}],
                     "senateClassNextElection": {"2": 2020},
-                    "senateSpecialElections": [{"seat": "Ohio", "class": 3, "year": 2020}],
+                    "senateSpecialElections": [
+                        {"seat": "Ohio", "class": 3, "year": 2020}
+                    ],
                 },
             },
         }
 
     def test_replaces_regions_and_derived_keys_but_keeps_config(self) -> None:
         manifest = self._manifest()
-        specials = [{"seat": "Ohio", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate"}]
+        specials = [
+            {
+                "seat": "Ohio",
+                "class": 3,
+                "year": 2026,
+                "baselineElectionId": "2022-us-senate",
+            }
+        ]
         rebuilt = {
             "23": {
                 "regions": [{"id": 1, "name": "East North Central"}],
@@ -371,7 +452,9 @@ class TestRefreshManifestModes:
                 "senateSpecialElections": specials,
             },
         }
-        refresh_manifest_modes(manifest, rebuilt, {"23": [{"id": 1, "name": "East North Central"}]})
+        refresh_manifest_modes(
+            manifest, rebuilt, {"23": [{"id": 1, "name": "East North Central"}]}
+        )
         mode = manifest["mapModes"]["23"]
         assert mode["regions"] == [{"id": 1, "name": "East North Central"}]
         assert mode["senateClassNextElection"] == {"2": 2026}
@@ -388,12 +471,24 @@ class TestRefreshManifestModes:
         assert "senateSpecialElections" not in manifest["mapModes"]["23"]
         assert manifest["mapModes"]["23"]["senateClassNextElection"] == {"2": 2026}
 
-    def test_refreshes_specials_through_the_same_live_rule_as_a_full_export(self) -> None:
+    def test_refreshes_specials_through_the_same_live_rule_as_a_full_export(
+        self,
+    ) -> None:
         # The metadata-only path rebuilds its modes from the shell exactly as a full export
         # does, so a later-cycle special and a malformed entry drop out here too.
         valid = [
-            {"seat": "Florida", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate"},
-            {"seat": "Ohio", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate"},
+            {
+                "seat": "Florida",
+                "class": 3,
+                "year": 2026,
+                "baselineElectionId": "2022-us-senate",
+            },
+            {
+                "seat": "Ohio",
+                "class": 3,
+                "year": 2026,
+                "baselineElectionId": "2022-us-senate",
+            },
         ]
         shell: dict[str, Any] = {
             "parliamentFeatures": {"us_senate": {"nextElectionYear": 2026}},
@@ -401,8 +496,18 @@ class TestRefreshManifestModes:
                 "23": {
                     "senateSpecialElections": [
                         valid[0],
-                        {"seat": "Texas", "class": 1, "year": 2028, "baselineElectionId": "x"},
-                        {"seat": "Maine", "class": 2, "year": "2026", "baselineElectionId": "x"},
+                        {
+                            "seat": "Texas",
+                            "class": 1,
+                            "year": 2028,
+                            "baselineElectionId": "x",
+                        },
+                        {
+                            "seat": "Maine",
+                            "class": 2,
+                            "year": "2026",
+                            "baselineElectionId": "x",
+                        },
                         valid[1],
                     ],
                 },
@@ -418,10 +523,16 @@ class TestRefreshManifestModes:
         refresh_manifest_modes(manifest, rebuilt, {"23": []})
         assert manifest["mapModes"]["23"]["senateSpecialElections"] == valid
 
-    def test_refreshes_baseline_overrides_and_drops_them_when_the_shell_does(self) -> None:
-        overrides = [{"seat": "Ohio", "class": 3, "baselineElectionId": "2026-us-senate"}]
+    def test_refreshes_baseline_overrides_and_drops_them_when_the_shell_does(
+        self,
+    ) -> None:
+        overrides = [
+            {"seat": "Ohio", "class": 3, "baselineElectionId": "2026-us-senate"}
+        ]
         manifest = self._manifest()
-        manifest["mapModes"]["23"]["senateBaselineOverrides"] = [{"seat": "Stale", "class": 3, "baselineElectionId": "x"}]
+        manifest["mapModes"]["23"]["senateBaselineOverrides"] = [
+            {"seat": "Stale", "class": 3, "baselineElectionId": "x"}
+        ]
         refresh_manifest_modes(
             manifest, {"23": {"regions": [], "senateBaselineOverrides": overrides}}, {}
         )
@@ -435,7 +546,9 @@ class TestRefreshManifestModes:
         mode = manifest["mapModes"]["23"]
         assert mode["regions"] == [{"id": 9, "name": "Pacific"}]
         # With no shell to rebuild from, the derived keys are left as they are rather than wiped.
-        assert mode["senateSpecialElections"] == [{"seat": "Ohio", "class": 3, "year": 2020}]
+        assert mode["senateSpecialElections"] == [
+            {"seat": "Ohio", "class": 3, "year": 2020}
+        ]
 
 
 class TestMissingPrebuiltMapFails:
@@ -445,18 +558,26 @@ class TestMissingPrebuiltMapFails:
     build step; exporting without it used to emit a manifest pointing at a 404 map.
     """
 
-    def test_export_raises_when_prebuilt_map_missing(self, db: Database, tmp_path: Path) -> None:
+    def test_export_raises_when_prebuilt_map_missing(
+        self, db: Database, tmp_path: Path
+    ) -> None:
         us_map = db.add_map("us-house-districts", parliament="us_house")
         region = db.add_region(us_map.id, "South Atlantic")
         db.add_seat(us_map.id, "GA-01", region_id=region.id)
-        db.add_election(us_map.id, 2024, "2024 US House Election", ElectionType.us_house)
+        db.add_election(
+            us_map.id, 2024, "2024 US House Election", ElectionType.us_house
+        )
 
         output_root = tmp_path / "uselectionmaps" / "data"
-        args = argparse.Namespace(dry_run=False, output_file=None, legacy_files_dir=tmp_path)
+        args = argparse.Namespace(
+            dry_run=False, output_file=None, legacy_files_dir=tmp_path
+        )
         with db.session() as session:
-            election = session.execute(
-                select(Election).options(joinedload(Election.map))
-            ).scalars().one()
+            election = (
+                session.execute(select(Election).options(joinedload(Election.map)))
+                .scalars()
+                .one()
+            )
             with pytest.raises(FileNotFoundError, match=r"map-\d+\.topo\.json"):
                 _export_page(
                     session=session,
@@ -510,28 +631,45 @@ class TestStateTrendsExport:
         # Add 2020 and 2024; the export loads them 2024-first (descending) to prove the sort.
         for year in (2020, 2024):
             election = db.add_election(
-                us_map.id, year, f"{year} US Presidential Election", ElectionType.us_presidential
+                us_map.id,
+                year,
+                f"{year} US Presidential Election",
+                ElectionType.us_presidential,
             )
             for name, (dem, rep) in cls._UNITS.items():
-                db.add_vote(election.id, seat_ids[name], party_id=DEM_PARTY_ID, vote_total=dem)
-                db.add_vote(election.id, seat_ids[name], party_id=REP_PARTY_ID, vote_total=rep)
+                db.add_vote(
+                    election.id, seat_ids[name], party_id=DEM_PARTY_ID, vote_total=dem
+                )
+                db.add_vote(
+                    election.id, seat_ids[name], party_id=REP_PARTY_ID, vote_total=rep
+                )
 
         output_root = tmp_path / "uselectionmaps" / "data"
         (output_root / "maps").mkdir(parents=True)
-        (output_root / "maps" / f"map-{us_map.id}.topo.json").write_text("{}", encoding="utf-8")
+        (output_root / "maps" / f"map-{us_map.id}.topo.json").write_text(
+            "{}", encoding="utf-8"
+        )
         return output_root
 
-    def test_full_export_writes_sorted_trend_artifact(self, db: Database, tmp_path: Path) -> None:
+    def test_full_export_writes_sorted_trend_artifact(
+        self, db: Database, tmp_path: Path
+    ) -> None:
         output_root = self._seed_presidential_page(db, tmp_path)
-        args = argparse.Namespace(dry_run=False, output_file=None, legacy_files_dir=tmp_path)
+        args = argparse.Namespace(
+            dry_run=False, output_file=None, legacy_files_dir=tmp_path
+        )
         with db.session() as session:
             # DESCENDING year order (2024 before 2020) — the artifact must still sort ascending.
-            elections = session.execute(
-                select(Election)
-                .where(Election.type == ElectionType.us_presidential)
-                .options(joinedload(Election.map))
-                .order_by(Election.year.desc())
-            ).scalars().all()
+            elections = (
+                session.execute(
+                    select(Election)
+                    .where(Election.type == ElectionType.us_presidential)
+                    .options(joinedload(Election.map))
+                    .order_by(Election.year.desc())
+                )
+                .scalars()
+                .all()
+            )
             _export_page(
                 session=session,
                 elections=list(elections),
@@ -552,7 +690,10 @@ class TestStateTrendsExport:
         units = data["units"]
         assert set(units.keys()) == set(self._UNITS.keys())
         for series in units.values():
-            assert [entry["year"] for entry in series] == [2020, 2024]  # ascending despite reversed input
+            assert [entry["year"] for entry in series] == [
+                2020,
+                2024,
+            ]  # ascending despite reversed input
             for entry in series:
                 assert isinstance(entry["year"], int)  # JSON 2020, not 2020.0
                 assert entry["dem"] + entry["rep"] == pytest.approx(100.0)
@@ -561,16 +702,24 @@ class TestStateTrendsExport:
         assert california[0]["dem"] == 60.0
         assert california[0]["rep"] == 40.0
 
-    def test_dry_run_writes_no_trend_artifact(self, db: Database, tmp_path: Path) -> None:
+    def test_dry_run_writes_no_trend_artifact(
+        self, db: Database, tmp_path: Path
+    ) -> None:
         output_root = self._seed_presidential_page(db, tmp_path)
-        args = argparse.Namespace(dry_run=True, output_file=None, legacy_files_dir=tmp_path)
+        args = argparse.Namespace(
+            dry_run=True, output_file=None, legacy_files_dir=tmp_path
+        )
         with db.session() as session:
-            elections = session.execute(
-                select(Election)
-                .where(Election.type == ElectionType.us_presidential)
-                .options(joinedload(Election.map))
-                .order_by(Election.year.desc())
-            ).scalars().all()
+            elections = (
+                session.execute(
+                    select(Election)
+                    .where(Election.type == ElectionType.us_presidential)
+                    .options(joinedload(Election.map))
+                    .order_by(Election.year.desc())
+                )
+                .scalars()
+                .all()
+            )
             _export_page(
                 session=session,
                 elections=list(elections),
@@ -583,7 +732,9 @@ class TestStateTrendsExport:
                 single_election_mode=False,
             )
 
-        assert not (output_root / "results" / "us-president-trends-by-state.json").exists()
+        assert not (
+            output_root / "results" / "us-president-trends-by-state.json"
+        ).exists()
 
 
 class TestStateTrendsThirdParty:
@@ -604,31 +755,56 @@ class TestStateTrendsThirdParty:
             s.add(Party(id=REP_PARTY_ID, name="Republican", colour="#E81B23"))
             s.add(Party(id=cls._IND_PARTY_ID, name="Independent", colour="#9B59B6"))
         region = db.add_region(us_map.id, "United States")
-        seats = {name: db.add_seat(us_map.id, name, region_id=region.id, electoral_votes=7).id
-                 for name in ("Mississippi", "Alabama")}
+        seats = {
+            name: db.add_seat(
+                us_map.id, name, region_id=region.id, electoral_votes=7
+            ).id
+            for name in ("Mississippi", "Alabama")
+        }
         election = db.add_election(
-            us_map.id, 1968, "1968 US Presidential Election", ElectionType.us_presidential
+            us_map.id,
+            1968,
+            "1968 US Presidential Election",
+            ElectionType.us_presidential,
         )
         # Mississippi: Wallace wins on votes (45) but Dem 30 / Rep 25 give a real two-party split.
-        db.add_vote(election.id, seats["Mississippi"], party_id=DEM_PARTY_ID, vote_total=30)
-        db.add_vote(election.id, seats["Mississippi"], party_id=REP_PARTY_ID, vote_total=25)
-        db.add_vote(election.id, seats["Mississippi"], party_id=cls._IND_PARTY_ID, vote_total=45)
+        db.add_vote(
+            election.id, seats["Mississippi"], party_id=DEM_PARTY_ID, vote_total=30
+        )
+        db.add_vote(
+            election.id, seats["Mississippi"], party_id=REP_PARTY_ID, vote_total=25
+        )
+        db.add_vote(
+            election.id, seats["Mississippi"], party_id=cls._IND_PARTY_ID, vote_total=45
+        )
         # Alabama: only an Independent vote — no Dem/Rep, so two_party == 0 (synthetic edge).
-        db.add_vote(election.id, seats["Alabama"], party_id=cls._IND_PARTY_ID, vote_total=100)
+        db.add_vote(
+            election.id, seats["Alabama"], party_id=cls._IND_PARTY_ID, vote_total=100
+        )
 
         output_root = tmp_path / "uselectionmaps" / "data"
         (output_root / "maps").mkdir(parents=True)
-        (output_root / "maps" / f"map-{us_map.id}.topo.json").write_text("{}", encoding="utf-8")
+        (output_root / "maps" / f"map-{us_map.id}.topo.json").write_text(
+            "{}", encoding="utf-8"
+        )
         return output_root
 
-    def _run_export(self, db: Database, output_root: Path, tmp_path: Path) -> dict[str, list[dict[str, Any]]]:
-        args = argparse.Namespace(dry_run=False, output_file=None, legacy_files_dir=tmp_path)
+    def _run_export(
+        self, db: Database, output_root: Path, tmp_path: Path
+    ) -> dict[str, list[dict[str, Any]]]:
+        args = argparse.Namespace(
+            dry_run=False, output_file=None, legacy_files_dir=tmp_path
+        )
         with db.session() as session:
-            elections = session.execute(
-                select(Election)
-                .where(Election.type == ElectionType.us_presidential)
-                .options(joinedload(Election.map))
-            ).scalars().all()
+            elections = (
+                session.execute(
+                    select(Election)
+                    .where(Election.type == ElectionType.us_presidential)
+                    .options(joinedload(Election.map))
+                )
+                .scalars()
+                .all()
+            )
             _export_page(
                 session=session,
                 elections=list(elections),
@@ -641,22 +817,31 @@ class TestStateTrendsThirdParty:
                 single_election_mode=False,
             )
         trends_path = output_root / "results" / "us-president-trends-by-state.json"
-        units: dict[str, list[dict[str, Any]]] = json.loads(trends_path.read_text(encoding="utf-8"))["units"]
+        units: dict[str, list[dict[str, Any]]] = json.loads(
+            trends_path.read_text(encoding="utf-8")
+        )["units"]
         return units
 
-    def test_third_party_state_normalises_over_two_party(self, db: Database, tmp_path: Path) -> None:
+    def test_third_party_state_normalises_over_two_party(
+        self, db: Database, tmp_path: Path
+    ) -> None:
         units = self._run_export(db, self._seed(db, tmp_path), tmp_path)
         entry = units["Mississippi"][0]
         # Wallace's 45 is excluded; the point is Dem/Rep share of Dem+Rep only (30+25=55).
-        assert entry == {"year": 1968, "dem": pytest.approx(54.55, abs=0.01),
-                         "rep": pytest.approx(45.45, abs=0.01)}
+        assert entry == {
+            "year": 1968,
+            "dem": pytest.approx(54.55, abs=0.01),
+            "rep": pytest.approx(45.45, abs=0.01),
+        }
         assert entry["dem"] + entry["rep"] == pytest.approx(100.0)
         assert "independent" not in entry
 
     def test_zero_two_party_unit_is_skipped(self, db: Database, tmp_path: Path) -> None:
         units = self._run_export(db, self._seed(db, tmp_path), tmp_path)
         assert "Mississippi" in units  # export ran and produced a series...
-        assert "Alabama" not in units  # ...but the no-Dem/Rep unit is dropped by the guard
+        assert (
+            "Alabama" not in units
+        )  # ...but the no-Dem/Rep unit is dropped by the guard
 
 
 # ── Model-run uncertainty ────────────────────────────────────────────────────
@@ -734,14 +919,17 @@ class TestModelRunUncertaintyExport:
         assert "50 simulations" in document["basis"]
         stored_parties: Any = model_run.national["parties"]
         assert set(document["national"]["parties"]) == set(stored_parties)
-        for text in (files["results/prediction-uncertainty.json"],
-                     files["results/prediction-simulation.json"]):
+        for text in (
+            files["results/prediction-uncertainty.json"],
+            files["results/prediction-simulation.json"],
+        ):
             for private in PRIVATE_KEYS:
                 assert private not in text
         manifest = json.loads(files["map-modes.json"])
-        assert manifest["parliamentFeatures"]["westminster"][
-            "uncertaintyDataPath"
-        ] == "results/flag-under-test.json"
+        assert (
+            manifest["parliamentFeatures"]["westminster"]["uncertaintyDataPath"]
+            == "results/flag-under-test.json"
+        )
         assert result["stdout"].splitlines() == [
             "Wrote uncertainty: <root>/out/results/prediction-uncertainty.json "
             f"({len(document['regions'])} regions)",
@@ -812,9 +1000,7 @@ class TestModelRunUncertaintyExport:
         stale.parent.mkdir(parents=True)
         stale.write_text('{"stale": true}', encoding="utf-8")
 
-        result = run_export(
-            db, tmp_path, ["--dry-run"] if dry_run else [], monkeypatch
-        )
+        result = run_export(db, tmp_path, ["--dry-run"] if dry_run else [], monkeypatch)
         lines = result["stdout"].splitlines()
         if dry_run:
             assert (
@@ -840,12 +1026,15 @@ class TestModelRunUncertaintyExport:
     ) -> None:
         out = tmp_path / "out"
         files = run_export(
-            db, tmp_path, ["--current-simulation", "--output-root", str(out)],
+            db,
+            tmp_path,
+            ["--current-simulation", "--output-root", str(out)],
             monkeypatch,
         )["files"]
-        assert json.loads(files["results/prediction-uncertainty.json"])[
-            "election_name"
-        ] == f"UNS {DAY}"
+        assert (
+            json.loads(files["results/prediction-uncertainty.json"])["election_name"]
+            == f"UNS {DAY}"
+        )
         seats = json.loads(files["results/prediction-simulation.json"])["seats"]
         assert all("u" in seat for seat in seats)
 
@@ -858,7 +1047,9 @@ class TestModelRunUncertaintyExport:
     ) -> None:
         target = tmp_path / "single.json"
         result = run_export(
-            db, tmp_path, ["--current-simulation", "--output-file", str(target)],
+            db,
+            tmp_path,
+            ["--current-simulation", "--output-file", str(target)],
             monkeypatch,
         )
         assert all("u" in seat for seat in json.loads(target.read_text())["seats"])
@@ -893,9 +1084,7 @@ class TestModelRunUncertaintyExport:
         published.parent.mkdir(parents=True)
         published.write_text('{"earlier": true}', encoding="utf-8")
 
-        result = run_export(
-            db, tmp_path, ["--dry-run"] if dry_run else [], monkeypatch
-        )
+        result = run_export(db, tmp_path, ["--dry-run"] if dry_run else [], monkeypatch)
         assert "stale" not in result["stdout"]
         if dry_run:
             assert any(
@@ -919,7 +1108,9 @@ class TestModelRunUncertaintyExport:
         _rerun_older_date(db, westminster_world)
         out = tmp_path / "out"
         result = run_export(
-            db, tmp_path, ["--current-simulation", "--output-root", str(out)],
+            db,
+            tmp_path,
+            ["--current-simulation", "--output-root", str(out)],
             monkeypatch,
         )
         assert f"from election 'UNS {DAY}'" in result["stdout"]
@@ -1075,15 +1266,18 @@ class TestOutputBase:
     ) -> None:
         base = tmp_path / "base"
         result = run_export(
-            golden_world, tmp_path, ["--output-base", str(base), "--dry-run"],
+            golden_world,
+            tmp_path,
+            ["--output-base", str(base), "--dry-run"],
             monkeypatch,
         )
         assert list(result["files"]) == ["map-modes-shell.json"]
         assert read_files(base / "electionmaps" / "data") == {
             "map-modes-shell.json": json.dumps(SHELL)
         }
-        assert "Would write manifest: <root>/base/electionmaps/data/map-modes.json" in (
-            result["stdout"]
+        assert (
+            "Would write manifest: <root>/base/electionmaps/data/map-modes.json"
+            in (result["stdout"])
         )
 
     def test_metadata_only_honours_the_base(
@@ -1092,7 +1286,9 @@ class TestOutputBase:
         base = tmp_path / "base"
         run_export(golden_world, tmp_path, ["--output-base", str(base)], monkeypatch)
         result = run_export(
-            golden_world, tmp_path, ["--output-base", str(base), "--metadata-only"],
+            golden_world,
+            tmp_path,
+            ["--output-base", str(base), "--metadata-only"],
             monkeypatch,
         )
         assert result["stdout"].splitlines() == [
@@ -1114,9 +1310,12 @@ class TestOutputBase:
         written = (
             base / "electionmaps" / "data" / "results" / "prediction-simulation.json"
         )
-        assert written.read_text(encoding="utf-8") == _golden()["current_simulation"][
-            "files"
-        ]["results/prediction-simulation.json"]
+        assert (
+            written.read_text(encoding="utf-8")
+            == _golden()["current_simulation"]["files"][
+                "results/prediction-simulation.json"
+            ]
+        )
 
     @pytest.mark.parametrize(
         ("argv", "message"),
@@ -1162,7 +1361,9 @@ class TestMainLatestUsForecastSelection:
         db.add_election(house_map.id, 2026, "House run 1", ElectionType.us_house_model)
         db.add_election(house_map.id, 2026, "House run 2", ElectionType.us_house_model)
         db.add_election(senate_map.id, 2026, "Senate run", ElectionType.us_senate_model)
-        db.add_election(president_map.id, 2028, "President run", ElectionType.us_presidential_model)
+        db.add_election(
+            president_map.id, 2028, "President run", ElectionType.us_presidential_model
+        )
         db.add_election(house_map.id, 2024, "2024 US House", ElectionType.us_house)
 
         exported: list[str] = []
@@ -1187,5 +1388,8 @@ class TestMainLatestUsForecastSelection:
     ) -> None:
         monkeypatch.setattr(export_elections, "EXPORT_US_CHAMBER_FORECASTS", True)
         assert self._run_main(db, monkeypatch) == [
-            "House run 2", "President run", "Senate run", "2024 US House",
+            "House run 2",
+            "President run",
+            "Senate run",
+            "2024 US House",
         ]

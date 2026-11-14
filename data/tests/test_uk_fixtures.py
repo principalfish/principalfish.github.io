@@ -76,9 +76,7 @@ _NATIONAL_ONLY = frozenset({"techne"})
 class TestSeedWestminsterWorld:
     """The seeded Westminster world satisfies every importer and the UNS model."""
 
-    def test_the_map_is_the_one_every_importer_defaults_to(
-        self, db: Database
-    ) -> None:
+    def test_the_map_is_the_one_every_importer_defaults_to(self, db: Database) -> None:
         """Each registered importer's DEFAULT_MAP_NAME finds the seeded map."""
         world = seed_westminster_world(db)
 
@@ -127,7 +125,7 @@ class TestSeedWestminsterWorld:
         assert seeded == set(world.region_ids)
 
     def test_party_ids_line_up_with_the_model_alias(self, db: Database) -> None:
-        """"Other" → "Others" is exactly the model's PARTY_ID_ALIASES."""
+        """ "Other" → "Others" is exactly the model's PARTY_ID_ALIASES."""
         world = seed_westminster_world(db)
 
         other, others = world.party_ids["Other"], world.party_ids["Others"]
@@ -521,9 +519,7 @@ class TestWorkbookHelpers:
             )
         )
 
-    def test_served_as_a_context_manager(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_served_as_a_context_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Survation reads ``with urlopen(...) as response``; order and cells kept."""
         payload = self._payload()
         monkeypatch.setattr(

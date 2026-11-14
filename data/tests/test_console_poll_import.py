@@ -354,9 +354,7 @@ class TestImportPollPreview:
         assert "<p><strong>Pollster:</strong> Survation (survation)</p>" in lines
         assert f"<p><strong>Source URL:</strong> {_DEFAULT_SOURCE_URL}</p>" in lines
         assert "<p><strong>Map:</strong> UK Constituencies post 2022</p>" in lines
-        assert (
-            "<p><strong>Fieldwork:</strong> 2026-01-03 to 2026-01-05</p>" in lines
-        )
+        assert "<p><strong>Fieldwork:</strong> 2026-01-03 to 2026-01-05</p>" in lines
         assert "<p><strong>Sample size:</strong> 1511</p>" in lines
         assert "<p><strong>Rows to insert:</strong> 104</p>" in lines
         assert _TOKEN_RE.search(body) is not None
@@ -464,13 +462,9 @@ class TestImportPollConfirm:
 
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/westminster/polls/import")
-        assert _flashes(client, response) == [
-            "Preview expired. Please preview again."
-        ]
+        assert _flashes(client, response) == ["Preview expired. Please preview again."]
 
-    def test_wrong_preview_type_flashes_expired(
-        self, app: Flask, db: Database
-    ) -> None:
+    def test_wrong_preview_type_flashes_expired(self, app: Flask, db: Database) -> None:
         # A token minted by a different flow (the Wikipedia queue's own
         # preview type) must not be redeemable here.
         token = store_preview({"type": "wikipedia_queue", "state": object()})
@@ -480,9 +474,7 @@ class TestImportPollConfirm:
 
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/westminster/polls/import")
-        assert _flashes(client, response) == [
-            "Preview expired. Please preview again."
-        ]
+        assert _flashes(client, response) == ["Preview expired. Please preview again."]
 
     def test_commit_error_flashes_message(
         self,
@@ -618,9 +610,7 @@ class TestImportPollConfirm:
 
         assert repeated.status_code == 302
         assert repeated.headers["Location"].endswith("/westminster/polls/import")
-        assert _flashes(client, repeated) == [
-            "Preview expired. Please preview again."
-        ]
+        assert _flashes(client, repeated) == ["Preview expired. Please preview again."]
         assert len(db.get_rows_for_poll(poll_id)) == _SURVATION_PLANNED_ROW_COUNT
 
     def test_run_model_runs_uns_model_and_export(

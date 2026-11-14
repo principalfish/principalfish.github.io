@@ -82,7 +82,9 @@ def test_stored_run_pages_keep_the_full_sub_nav(
     hrefs = dict(_nav_links(body, keep_query=True))
     assert hrefs["Error budget"] == f"{UNCERTAINTY}/budget/{election_id}"
     assert hrefs["Results"] == f"{UNCERTAINTY}/results/{election_id}"
-    assert hrefs["Explore simulations"] == f"{UNCERTAINTY}/sims?election_id={election_id}"
+    assert (
+        hrefs["Explore simulations"] == f"{UNCERTAINTY}/sims?election_id={election_id}"
+    )
 
 
 RUN_RESULT = (

@@ -63,8 +63,7 @@ def select_era(eras: Iterable[ElectoralVoteEra], year: int) -> ElectoralVoteEra:
     """Find the sole supported era for an allocation year."""
     positive_integer(year, context="Allocation year")
     matches = [
-        era for era in eras
-        if era.first_election_year <= year <= era.last_election_year
+        era for era in eras if era.first_election_year <= year <= era.last_election_year
     ]
     if len(matches) != 1:
         raise ElectoralVoteError(
@@ -94,7 +93,8 @@ def allocation_year(
                 "importers/seed/migrate_us_electoral_votes.py with an explicit legacy target.",
             )
         return positive_integer(
-            target_election_year, context="Presidential target year",
+            target_election_year,
+            context="Presidential target year",
         )
     raise ElectoralVoteError(f"Election type {kind!r} has no presidential allocation")
 
@@ -113,7 +113,8 @@ def _weights(
                 f"Invalid tally-unit name in era {era.census_year}",
             )
         available[name] = positive_integer(
-            weight, context=f"EV weight for {name!r} in era {era.census_year}",
+            weight,
+            context=f"EV weight for {name!r} in era {era.census_year}",
         )
     required = set(required_units)
     missing = required - available.keys()
@@ -126,25 +127,34 @@ def _weights(
 
 
 def get_electoral_votes(
-    session: Session, year: int, required_units: Iterable[str],
+    session: Session,
+    year: int,
+    required_units: Iterable[str],
 ) -> dict[str, int]:
     """Read validated weights without seeding, caching or opening a connection."""
     try:
         eras = validate_eras(
             (row[0], row[1], row[2])
-            for row in session.execute(select(
-                USElectoralVoteEra.census_year,
-                USElectoralVoteEra.first_election_year,
-                USElectoralVoteEra.last_election_year,
-            ))
+            for row in session.execute(
+                select(
+                    USElectoralVoteEra.census_year,
+                    USElectoralVoteEra.first_election_year,
+                    USElectoralVoteEra.last_election_year,
+                )
+            )
         )
         era = select_era(eras, year)
-        rows = session.execute(select(
-            USElectoralVoteAllocation.unit_name,
-            USElectoralVoteAllocation.electoral_votes,
-        ).where(USElectoralVoteAllocation.era_year == era.census_year))
+        rows = session.execute(
+            select(
+                USElectoralVoteAllocation.unit_name,
+                USElectoralVoteAllocation.electoral_votes,
+            ).where(USElectoralVoteAllocation.era_year == era.census_year)
+        )
         return _weights(
-            ((row[0], row[1]) for row in rows), required_units, era=era, year=year,
+            ((row[0], row[1]) for row in rows),
+            required_units,
+            era=era,
+            year=year,
         )
     except OperationalError as error:
         if not str(error.orig).startswith(("no such table:", "no such column:")):
@@ -156,7 +166,9 @@ def get_electoral_votes(
 
 
 def get_electoral_votes_sqlite(
-    conn: sqlite3.Connection, year: int, required_units: Iterable[str],
+    conn: sqlite3.Connection,
+    year: int,
+    required_units: Iterable[str],
 ) -> dict[str, int]:
     """SQLite counterpart using the same validation and transaction as the caller."""
     try:
@@ -170,10 +182,14 @@ def get_electoral_votes_sqlite(
         era = select_era(eras, year)
         rows = conn.execute(
             "SELECT unit_name, electoral_votes FROM us_electoral_vote_allocations "
-            "WHERE era_year = ?", (era.census_year,),
+            "WHERE era_year = ?",
+            (era.census_year,),
         )
         return _weights(
-            ((row[0], row[1]) for row in rows), required_units, era=era, year=year,
+            ((row[0], row[1]) for row in rows),
+            required_units,
+            era=era,
+            year=year,
         )
     except sqlite3.OperationalError as error:
         if not str(error).startswith(("no such table:", "no such column:")):

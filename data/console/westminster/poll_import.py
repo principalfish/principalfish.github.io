@@ -137,7 +137,10 @@ def import_poll_form() -> str:
     """GET /westminster/polls/import — Render the poll import form with pollsters."""
     return render_template(
         "import_form.html",
-        pollsters=[{"identifier": key, "name": meta["label"]} for key, meta in IMPORTERS.items()],
+        pollsters=[
+            {"identifier": key, "name": meta["label"]}
+            for key, meta in IMPORTERS.items()
+        ],
     )
 
 

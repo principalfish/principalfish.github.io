@@ -56,7 +56,9 @@ PARTY_KEY_TO_NAME = {
 }
 
 
-def ensure_us_map(db: Database, map_id: int, name: str, parliament: str, replace: bool = False) -> Map:
+def ensure_us_map(
+    db: Database, map_id: int, name: str, parliament: str, replace: bool = False
+) -> Map:
     """Return the US Map with ``map_id``, creating it with the fixed id if absent.
 
     When ``replace`` is True and the map exists, it is deleted first (cascading its
@@ -101,7 +103,9 @@ def seat_entries(data: dict[str, Any]) -> dict[str, Any]:
     return {key: seat for key, seat in data.items() if key != META_KEY}
 
 
-def map_from_meta(data: dict[str, Any], default_id: int, default_name: str) -> tuple[int, str]:
+def map_from_meta(
+    data: dict[str, Any], default_id: int, default_name: str
+) -> tuple[int, str]:
     """Return the ``(map id, map name)`` a file's seats belong to.
 
     Files with a ``meta`` block name their map (each House district set has its own);
@@ -112,7 +116,11 @@ def map_from_meta(data: dict[str, Any], default_id: int, default_name: str) -> t
         return default_id, default_name
     map_id = meta["map_id"]
     map_name = meta.get("map_name", default_name)
-    if not isinstance(map_id, int) or isinstance(map_id, bool) or not isinstance(map_name, str):
+    if (
+        not isinstance(map_id, int)
+        or isinstance(map_id, bool)
+        or not isinstance(map_name, str)
+    ):
         raise SystemExit(f"meta map_id/map_name malformed: {map_id!r}, {map_name!r}")
     return map_id, map_name
 
@@ -143,14 +151,22 @@ def _seat_status(key: str, seat_id: int, seat_info: dict[str, Any]) -> SeatStatu
     same_party = seat_info.get("sameParty", False)
     decisive_round = seat_info.get("round")
     senate_class = seat_info.get("senateClass")
-    if senate_class is not None and (isinstance(senate_class, bool) or senate_class not in (1, 2, 3)):
-        raise SystemExit(f"Seat {key!r}: senateClass must be 1, 2, 3 or null, got {senate_class!r}")
+    if senate_class is not None and (
+        isinstance(senate_class, bool) or senate_class not in (1, 2, 3)
+    ):
+        raise SystemExit(
+            f"Seat {key!r}: senateClass must be 1, 2, 3 or null, got {senate_class!r}"
+        )
     if not isinstance(called, bool) or not isinstance(same_party, bool):
         raise SystemExit(f"Seat {key!r}: called/sameParty must be true or false")
     if pct is not None and (
-        isinstance(pct, bool) or not isinstance(pct, (int, float)) or not 0 <= pct <= 100
+        isinstance(pct, bool)
+        or not isinstance(pct, (int, float))
+        or not 0 <= pct <= 100
     ):
-        raise SystemExit(f"Seat {key!r}: pct must be a number 0-100 or null, got {pct!r}")
+        raise SystemExit(
+            f"Seat {key!r}: pct must be a number 0-100 or null, got {pct!r}"
+        )
     if decisive_round not in _DECISIVE_ROUNDS:
         raise SystemExit(f"Seat {key!r}: unknown round {decisive_round!r}")
     return SeatStatus(
@@ -186,7 +202,9 @@ def resolve_party_ids(db: Database) -> dict[str, int]:
     for key, party_name in PARTY_KEY_TO_NAME.items():
         party = db.get_party_by_name(party_name)
         if party is None:
-            raise SystemExit(f"Party {party_name!r} not found — run import_parties.py first.")
+            raise SystemExit(
+                f"Party {party_name!r} not found — run import_parties.py first."
+            )
         party_id_by_key[key] = party.id
     return party_id_by_key
 
@@ -248,7 +266,9 @@ def import_us_election(
     """
     existing_election = db.get_election_by_name(name)
     if existing_election is not None and not refresh:
-        raise SystemExit(f"Election {name!r} already exists — re-run with --replace to rebuild.")
+        raise SystemExit(
+            f"Election {name!r} already exists — re-run with --replace to rebuild."
+        )
     check_election_map(db, name, us_map.id)
 
     # Validate every seat before writing anything, so a bad file leaves an existing
@@ -261,15 +281,20 @@ def import_us_election(
     # Seats are grouped by Census division (the region filter); a seat's state maps to
     # one of the 9 divisions. Reuse any regions/seats already present so re-imports don't
     # duplicate them.
-    region_id_by_division: dict[str, int] = {r.name: r.id for r in db.get_regions_for_map(us_map.id)}
-    seat_id_by_key: dict[str, int] = {s.seat_name: s.id for s in db.get_seats_for_map(us_map.id)}
+    region_id_by_division: dict[str, int] = {
+        r.name: r.id for r in db.get_regions_for_map(us_map.id)
+    }
+    seat_id_by_key: dict[str, int] = {
+        s.seat_name: s.id for s in db.get_seats_for_map(us_map.id)
+    }
     for seat in planned:
         key, division = seat.key, seat.division
         if division not in region_id_by_division:
             region_id_by_division[division] = db.add_region(us_map.id, division).id
         if key not in seat_id_by_key:
             seat_id_by_key[key] = db.add_seat(
-                us_map.id, key,
+                us_map.id,
+                key,
                 region_id=region_id_by_division[division],
             ).id
 
@@ -279,7 +304,10 @@ def import_us_election(
         election_id = existing_election.id
     else:
         election_id = db.add_election(
-            us_map.id, year, name, election_type,
+            us_map.id,
+            year,
+            name,
+            election_type,
             election_date=election_date or date(year, 11, 5),
             parent_election_id=parent_election_id,
         ).id
@@ -290,7 +318,11 @@ def import_us_election(
         if election is None:
             raise SystemExit(f"Election {name!r} disappeared during the import.")
         if existing_election is not None:
-            session.execute(delete(ElectionSeatStatus).where(ElectionSeatStatus.election_id == election_id))
+            session.execute(
+                delete(ElectionSeatStatus).where(
+                    ElectionSeatStatus.election_id == election_id
+                )
+            )
             session.execute(delete(Vote).where(Vote.election_id == election_id))
             if meta is not None and election_date is not None:
                 election.election_date = election_date
@@ -447,7 +479,9 @@ def _plan_seat(
     if winner_key is not None and (
         not isinstance(winner_key, str) or winner_key not in party_id_by_key
     ):
-        raise SystemExit(f"Seat {key!r}: current {winner_key!r} must be a party key or null")
+        raise SystemExit(
+            f"Seat {key!r}: current {winner_key!r} must be a party key or null"
+        )
     status = _seat_status(key, 0, seat_info) if has_status else None
     if status is not None and not status.called:
         winner_key = None
@@ -465,10 +499,12 @@ def _plan_seat(
             raise SystemExit(f"Seat {key!r}, {party_key}: name must be a string")
         if isinstance(total, bool) or not isinstance(total, (int, float)) or total < 0:
             raise SystemExit(f"Seat {key!r}, {party_key}: total must be a number >= 0")
-        votes.append((
-            party_id,
-            name,
-            float(total),
-            winner_key is not None and party_key == winner_key,
-        ))
+        votes.append(
+            (
+                party_id,
+                name,
+                float(total),
+                winner_key is not None and party_key == winner_key,
+            )
+        )
     return _PlannedSeat(key=key, division=division, votes=tuple(votes), status=status)

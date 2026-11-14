@@ -52,12 +52,12 @@ _TEST_MAP_NAME = "Deltapoll Test Map"
 
 # Every internal region name any macro in MACRO_TO_INTERNAL_REGIONS expands to.
 _ALL_INTERNAL_REGIONS: tuple[str, ...] = tuple(
-    region
-    for regions in MACRO_TO_INTERNAL_REGIONS.values()
-    for region in regions
+    region for regions in MACRO_TO_INTERNAL_REGIONS.values() for region in regions
 )
 
-_REQUIRED_PARTY_NAMES: tuple[str, ...] = tuple(sorted(set(PARTY_LABEL_TO_CANONICAL.values())))
+_REQUIRED_PARTY_NAMES: tuple[str, ...] = tuple(
+    sorted(set(PARTY_LABEL_TO_CANONICAL.values()))
+)
 
 _PARSED_START = date(2026, 3, 1)
 _PARSED_END = date(2026, 3, 3)
@@ -74,11 +74,15 @@ def _seed_map(
 ) -> tuple[int, dict[str, int]]:
     """Seed a map named ``name`` with only ``region_names``, no parties."""
     poll_map = db.add_map(name, parliament="westminster")
-    region_ids = {region: db.add_region(poll_map.id, region).id for region in region_names}
+    region_ids = {
+        region: db.add_region(poll_map.id, region).id for region in region_names
+    }
     return poll_map.id, region_ids
 
 
-def _parsed_poll(party_region_percentages: Mapping[str, Mapping[str, float]]) -> ParsedPoll:
+def _parsed_poll(
+    party_region_percentages: Mapping[str, Mapping[str, float]],
+) -> ParsedPoll:
     """Build a ``ParsedPoll`` with fixed fieldwork/sample-size for plan tests."""
     return ParsedPoll(
         sample_size=_PARSED_SAMPLE,
@@ -144,7 +148,9 @@ class TestFetchBytes:
 
     def test_returns_response_body(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            deltapoll_import, "urlopen", lambda *_a, **_k: FakeUrlResponse(b"payload-bytes")
+            deltapoll_import,
+            "urlopen",
+            lambda *_a, **_k: FakeUrlResponse(b"payload-bytes"),
         )
         assert _fetch_bytes("https://example.test/file.pdf") == b"payload-bytes"
 
@@ -197,12 +203,14 @@ class TestResolvePdfUrl:
 
         assert result == "https://deltapoll.co.uk/wp-content/uploads/report.pdf"
 
-    def test_first_of_several_pdf_links_is_used(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_first_of_several_pdf_links_is_used(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         html = (
-            b'<html><body>'
+            b"<html><body>"
             b'<a href="https://cdn.test/first.pdf">First</a>'
             b'<a href="https://cdn.test/second.pdf">Second</a>'
-            b'</body></html>'
+            b"</body></html>"
         )
         monkeypatch.setattr(deltapoll_import, "_fetch_bytes", lambda _url: html)
 
@@ -225,10 +233,10 @@ class TestResolvePdfUrl:
         anchor doesn't crash the scan or produce a wrong result.
         """
         html = (
-            b'<html><body>'
+            b"<html><body>"
             b'<a href="   ">Blank</a>'
             b'<a href="/report.pdf">Report</a>'
-            b'</body></html>'
+            b"</body></html>"
         )
         monkeypatch.setattr(deltapoll_import, "_fetch_bytes", lambda _url: html)
 
@@ -240,7 +248,9 @@ class TestResolvePdfUrl:
         html = b'<html><body><a href="/about">About</a></body></html>'
         monkeypatch.setattr(deltapoll_import, "_fetch_bytes", lambda _url: html)
 
-        with pytest.raises(ValueError, match="No PDF link found in Deltapoll HTML page"):
+        with pytest.raises(
+            ValueError, match="No PDF link found in Deltapoll HTML page"
+        ):
             _resolve_pdf_url("https://deltapoll.co.uk/reports/")
 
 
@@ -291,10 +301,16 @@ def _fetch_from(responses: Mapping[str, bytes | Exception]) -> Callable[[str], b
 class TestExtractPdfText:
     """Tests for _extract_pdf_text — download, validate and extract PDF text."""
 
-    def test_direct_url_returns_joined_page_text(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(deltapoll_import, "_fetch_bytes", lambda _url: b"%PDF-1.4 bytes")
+    def test_direct_url_returns_joined_page_text(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(
-            deltapoll_import, "PdfReader", _fake_pdf_reader_factory(["Page one", "Page two"])
+            deltapoll_import, "_fetch_bytes", lambda _url: b"%PDF-1.4 bytes"
+        )
+        monkeypatch.setattr(
+            deltapoll_import,
+            "PdfReader",
+            _fake_pdf_reader_factory(["Page one", "Page two"]),
         )
 
         result = _extract_pdf_text("https://deltapoll.co.uk/report.pdf")
@@ -304,7 +320,9 @@ class TestExtractPdfText:
     def test_page_with_no_extracted_text_becomes_empty_string(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(deltapoll_import, "_fetch_bytes", lambda _url: b"%PDF-1.4 bytes")
+        monkeypatch.setattr(
+            deltapoll_import, "_fetch_bytes", lambda _url: b"%PDF-1.4 bytes"
+        )
         monkeypatch.setattr(
             deltapoll_import, "PdfReader", _fake_pdf_reader_factory([None, "Page two"])
         )
@@ -316,7 +334,9 @@ class TestExtractPdfText:
     def test_wayback_url_falls_back_to_if_variant_on_non_pdf_payload(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        original = "https://web.archive.org/web/20260105120000/https://deltapoll.co.uk/r.pdf"
+        original = (
+            "https://web.archive.org/web/20260105120000/https://deltapoll.co.uk/r.pdf"
+        )
         with_if = "https://web.archive.org/web/20260105120000if_/https://deltapoll.co.uk/r.pdf"
         responses: dict[str, bytes | Exception] = {
             original: b"<html>wrapper, not a pdf</html>",
@@ -334,14 +354,18 @@ class TestExtractPdfText:
     def test_wayback_url_falls_back_to_if_variant_on_fetch_error(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        original = "https://web.archive.org/web/20260105120000/https://deltapoll.co.uk/r.pdf"
+        original = (
+            "https://web.archive.org/web/20260105120000/https://deltapoll.co.uk/r.pdf"
+        )
         with_if = "https://web.archive.org/web/20260105120000if_/https://deltapoll.co.uk/r.pdf"
         responses: dict[str, bytes | Exception] = {
             original: RuntimeError("network error"),
             with_if: b"%PDF-1.4 real pdf bytes",
         }
         monkeypatch.setattr(deltapoll_import, "_fetch_bytes", _fetch_from(responses))
-        monkeypatch.setattr(deltapoll_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            deltapoll_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         result = _extract_pdf_text(original)
 
@@ -358,7 +382,9 @@ class TestExtractPdfText:
             return b"%PDF-1.4 bytes"
 
         monkeypatch.setattr(deltapoll_import, "_fetch_bytes", _fetch)
-        monkeypatch.setattr(deltapoll_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            deltapoll_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         _extract_pdf_text(url)
 
@@ -367,7 +393,9 @@ class TestExtractPdfText:
     def test_no_candidate_returns_a_valid_pdf_payload_raises(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(deltapoll_import, "_fetch_bytes", lambda _url: b"not a pdf payload")
+        monkeypatch.setattr(
+            deltapoll_import, "_fetch_bytes", lambda _url: b"not a pdf payload"
+        )
 
         with pytest.raises(ValueError, match="Could not fetch PDF payload from URL"):
             _extract_pdf_text("https://deltapoll.co.uk/report.pdf")
@@ -506,8 +534,12 @@ class TestCanonicalPartyFromLine:
         assert _canonical_party_from_line("Other 2 1") == "Other"
 
     def test_liberal_democrat_variants_map_to_liberal_democrats(self) -> None:
-        assert _canonical_party_from_line("Liberal Democrat 11 13") == "Liberal Democrats"
-        assert _canonical_party_from_line("Liberal Democrats 11 13") == "Liberal Democrats"
+        assert (
+            _canonical_party_from_line("Liberal Democrat 11 13") == "Liberal Democrats"
+        )
+        assert (
+            _canonical_party_from_line("Liberal Democrats 11 13") == "Liberal Democrats"
+        )
 
     def test_snp_variants_map_to_scottish_national_party(self) -> None:
         assert _canonical_party_from_line("SNP 3 3 0") == "Scottish National Party"
@@ -576,7 +608,9 @@ class TestExtractPartyOrderAndNational:
         }
 
     def test_missing_voting_intention_section_raises(self) -> None:
-        with pytest.raises(ValueError, match="Could not find Q1 voting intention section"):
+        with pytest.raises(
+            ValueError, match="Could not find Q1 voting intention section"
+        ):
             _extract_party_order_and_national(["Conservative 20 20"])
 
     def test_missing_required_party_raises(self) -> None:
@@ -678,7 +712,9 @@ class TestParseRegionalFromBlock:
         lines = [_REGIONAL_HEADER, "20 21 15 12 18 22 10 5"]
 
         with pytest.raises(ValueError, match="Could not parse complete regional rows"):
-            _parse_regional_from_block(lines, ["Conservative", "Labour", "Liberal Democrats"])
+            _parse_regional_from_block(
+                lines, ["Conservative", "Labour", "Liberal Democrats"]
+            )
 
     def test_party_without_a_matching_row_defaults_to_zero(self) -> None:
         # len(party_order) - 1 rows is the accepted minimum, so the last party
@@ -867,7 +903,9 @@ class TestParsePoll:
 class TestBuildImportPlan:
     """Tests for build_import_plan's own logic (commit is tested elsewhere)."""
 
-    def test_map_missing_raises(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_map_missing_raises(
+        self, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(deltapoll_import, "_extract_pdf_text", lambda _url: "text")
         monkeypatch.setattr(
             deltapoll_import,
@@ -876,7 +914,9 @@ class TestBuildImportPlan:
         )
 
         with pytest.raises(ValueError, match="Map not found"):
-            build_import_plan(db, map_name="No Such Map", source_url="https://x.test/a.pdf")
+            build_import_plan(
+                db, map_name="No Such Map", source_url="https://x.test/a.pdf"
+            )
 
     def test_missing_parties_raises(
         self, db: Database, monkeypatch: pytest.MonkeyPatch
@@ -892,7 +932,9 @@ class TestBuildImportPlan:
         )
 
         with pytest.raises(ValueError, match="Missing parties in database"):
-            build_import_plan(db, map_name=_TEST_MAP_NAME, source_url="https://x.test/a.pdf")
+            build_import_plan(
+                db, map_name=_TEST_MAP_NAME, source_url="https://x.test/a.pdf"
+            )
 
     def test_missing_internal_region_raises(
         self, db: Database, monkeypatch: pytest.MonkeyPatch
@@ -909,14 +951,21 @@ class TestBuildImportPlan:
         monkeypatch.setattr(
             deltapoll_import,
             "parse_poll",
-            lambda _text: _parsed_poll({"Labour": {NATIONAL_KEY: 30.0, "Midlands": 25.0}}),
+            lambda _text: _parsed_poll(
+                {"Labour": {NATIONAL_KEY: 30.0, "Midlands": 25.0}}
+            ),
         )
 
         with pytest.raises(ValueError, match="Region 'East Midlands' not found in map"):
-            build_import_plan(db, map_name=_TEST_MAP_NAME, source_url="https://x.test/a.pdf")
+            build_import_plan(
+                db, map_name=_TEST_MAP_NAME, source_url="https://x.test/a.pdf"
+            )
 
     def test_macro_expands_to_every_internal_region(
-        self, db: Database, westminster_world: WestminsterWorld, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         world = westminster_world
         monkeypatch.setattr(deltapoll_import, "_extract_pdf_text", lambda _url: "text")
@@ -940,7 +989,10 @@ class TestBuildImportPlan:
         assert all(row.party_name == "Green" for row in plan.rows)
 
     def test_missing_macro_key_is_skipped_and_absent_national_omits_row(
-        self, db: Database, westminster_world: WestminsterWorld, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         world = westminster_world
         monkeypatch.setattr(deltapoll_import, "_extract_pdf_text", lambda _url: "text")
@@ -980,7 +1032,10 @@ class TestBuildImportPlan:
         assert conservative_rows[0].region_id == world.region_ids["Scotland"]
 
     def test_pollster_absent_defaults_name_and_leaves_regions_mapping_empty(
-        self, db: Database, westminster_world: WestminsterWorld, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         world = westminster_world
         monkeypatch.setattr(deltapoll_import, "_extract_pdf_text", lambda _url: "text")
@@ -1002,7 +1057,10 @@ class TestBuildImportPlan:
         assert plan.poll_id is None
 
     def test_existing_pollster_without_a_matching_poll_is_flagged(
-        self, db: Database, westminster_world: WestminsterWorld, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         # Named unlike the "Deltapoll" fallback default, so a mutation that
         # always returns the default name instead of the real pollster's
@@ -1030,12 +1088,19 @@ class TestBuildImportPlan:
         assert plan.poll_id is None
 
     def test_existing_poll_matching_parsed_metadata_is_flagged(
-        self, db: Database, westminster_world: WestminsterWorld, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         world = westminster_world
         pollster = db.add_pollster("Deltapoll Ltd", "deltapoll_test", weight=1.0)
         existing = db.add_poll(
-            pollster.id, world.map_id, _PARSED_START, _PARSED_END, sample_size=_PARSED_SAMPLE
+            pollster.id,
+            world.map_id,
+            _PARSED_START,
+            _PARSED_END,
+            sample_size=_PARSED_SAMPLE,
         )
         monkeypatch.setattr(deltapoll_import, "_extract_pdf_text", lambda _url: "text")
         monkeypatch.setattr(
@@ -1209,7 +1274,9 @@ class TestMain:
             return "text"
 
         monkeypatch.setattr(deltapoll_import, "Database", lambda: db)
-        monkeypatch.setattr(deltapoll_import, "_extract_pdf_text", fake_extract_pdf_text)
+        monkeypatch.setattr(
+            deltapoll_import, "_extract_pdf_text", fake_extract_pdf_text
+        )
         monkeypatch.setattr(
             deltapoll_import,
             "parse_poll",
@@ -1250,7 +1317,11 @@ class TestMain:
         world = westminster_world
         pollster = db.add_pollster("Deltapoll Ltd", "deltapoll_test", weight=1.0)
         poll = db.add_poll(
-            pollster.id, world.map_id, _PARSED_START, _PARSED_END, sample_size=_PARSED_SAMPLE
+            pollster.id,
+            world.map_id,
+            _PARSED_START,
+            _PARSED_END,
+            sample_size=_PARSED_SAMPLE,
         )
         db.add_poll_row(poll.id, world.party_ids["Labour"], 25.0)
         monkeypatch.setattr(deltapoll_import, "Database", lambda: db)
@@ -1278,7 +1349,9 @@ class TestMain:
         out = capsys.readouterr().out
         assert "pollster exists: deltapoll_test" in out
         assert f"poll exists: {poll.id}" in out
-        assert f"poll {poll.id} already has rows; use --replace-rows to overwrite" in out
+        assert (
+            f"poll {poll.id} already has rows; use --replace-rows to overwrite" in out
+        )
         assert len(db.get_rows_for_poll(poll.id)) == 1
 
     def test_replace_rows_deletes_then_inserts(
@@ -1291,7 +1364,11 @@ class TestMain:
         world = westminster_world
         pollster = db.add_pollster("Deltapoll Ltd", "deltapoll_test", weight=1.0)
         poll = db.add_poll(
-            pollster.id, world.map_id, _PARSED_START, _PARSED_END, sample_size=_PARSED_SAMPLE
+            pollster.id,
+            world.map_id,
+            _PARSED_START,
+            _PARSED_END,
+            sample_size=_PARSED_SAMPLE,
         )
         db.add_poll_row(poll.id, world.party_ids["Labour"], 25.0)
         monkeypatch.setattr(deltapoll_import, "Database", lambda: db)

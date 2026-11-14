@@ -172,11 +172,13 @@ def competitive_seats(
         )
     return sorted(
         rows,
-        key=lambda row: row["name"]
-        if sort == "name"
-        else (
-            -row["probability"] if sort == "safe" else row["probability"],
-            row["name"],
+        key=lambda row: (
+            row["name"]
+            if sort == "name"
+            else (
+                -row["probability"] if sort == "safe" else row["probability"],
+                row["name"],
+            )
         ),
     )
 

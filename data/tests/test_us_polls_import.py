@@ -78,21 +78,36 @@ class TestParseDateRange:
         assert parse_date_range("June 3, 2026") == (date(2026, 6, 3), date(2026, 6, 3))
 
     def test_same_month_range(self) -> None:
-        assert parse_date_range("June 1–3, 2026") == (date(2026, 6, 1), date(2026, 6, 3))
+        assert parse_date_range("June 1–3, 2026") == (
+            date(2026, 6, 1),
+            date(2026, 6, 3),
+        )
 
     def test_cross_month_range_with_spaces(self) -> None:
-        assert parse_date_range("May 28 – June 3, 2026") == (date(2026, 5, 28), date(2026, 6, 3))
+        assert parse_date_range("May 28 – June 3, 2026") == (
+            date(2026, 5, 28),
+            date(2026, 6, 3),
+        )
 
     def test_cross_month_range_no_spaces(self) -> None:
-        assert parse_date_range("May 28–June 3, 2026") == (date(2026, 5, 28), date(2026, 6, 3))
+        assert parse_date_range("May 28–June 3, 2026") == (
+            date(2026, 5, 28),
+            date(2026, 6, 3),
+        )
 
     def test_cross_year_range(self) -> None:
         # December → January rolls the start year back one.
-        assert parse_date_range("December 30 – January 2, 2026") == (date(2025, 12, 30), date(2026, 1, 2))
+        assert parse_date_range("December 30 – January 2, 2026") == (
+            date(2025, 12, 30),
+            date(2026, 1, 2),
+        )
 
     def test_fully_explicit_range_with_both_years(self) -> None:
         # The aggregation tables' "Dates administered" format.
-        assert parse_date_range("January 9, 2025 – June 29, 2026") == (date(2025, 1, 9), date(2026, 6, 29))
+        assert parse_date_range("January 9, 2025 – June 29, 2026") == (
+            date(2025, 1, 9),
+            date(2026, 6, 29),
+        )
 
     def test_unparseable_returns_none(self) -> None:
         assert parse_date_range("sometime last week") is None
@@ -109,7 +124,10 @@ class TestParseDateRange:
         assert parse_date_range(raw) is None
 
     def test_same_start_and_end_day_is_kept(self) -> None:
-        assert parse_date_range("June 3–3, 2026") == (date(2026, 6, 3), date(2026, 6, 3))
+        assert parse_date_range("June 3–3, 2026") == (
+            date(2026, 6, 3),
+            date(2026, 6, 3),
+        )
 
 
 class TestPollsterIdentifier:
@@ -117,7 +135,10 @@ class TestPollsterIdentifier:
         assert pollster_identifier("YouGov", "_us_house") == "yougov_us_house"
 
     def test_non_alphanumeric_collapses_to_underscores(self) -> None:
-        assert pollster_identifier("Data for Progress", "_us_senate") == "data_for_progress_us_senate"
+        assert (
+            pollster_identifier("Data for Progress", "_us_senate")
+            == "data_for_progress_us_senate"
+        )
 
 
 # ── Live-markup fixtures ──────────────────────────────────────────────────────
@@ -498,7 +519,14 @@ class TestExpandTableGrid:
         event_row = _texts(grid[3])
         assert event_row[:2] == ["", "August 18, 2026"]
         assert event_row[2:] == ["Primary election held"] * 6
-        assert [cell.is_spanned for cell in grid[3][2:]] == [False, True, True, True, True, True]
+        assert [cell.is_spanned for cell in grid[3][2:]] == [
+            False,
+            True,
+            True,
+            True,
+            True,
+            True,
+        ]
 
     def test_event_row_date_cell_still_parses(self) -> None:
         info = classify_table(_table(SENATE_RACE_PAGE, "el-sayed-rogers"))
@@ -622,7 +650,6 @@ class TestExpandTableGrid:
         assert len(grid) == 2
         assert _texts(grid[1]) == ["Emerson inner rows", "June 3, 2026"]
 
-
     def test_max_cells_abandons_at_the_smaller_bound(self) -> None:
         table = _table(_block_table("t", rows=10, width=5), "t")
         assert expand_table_grid(table, max_cells=49) == []
@@ -632,6 +659,7 @@ class TestExpandTableGrid:
         table = _table(_block_table("t", rows=2, width=2), "t")
         assert expand_table_grid(table, max_cells=0) == []
         assert expand_table_grid(table, max_cells=-5) == []
+
 
 class TestHeadingPath:
     def test_nationwide_president_table(self) -> None:
@@ -792,7 +820,8 @@ class TestDetectColumns:
 
     def test_sample_column_labels(self) -> None:
         header = self._header(
-            "<table id='t'><tr><th>Pollster</th><th>Dates</th><th>N</th></tr></table>", "t"
+            "<table id='t'><tr><th>Pollster</th><th>Dates</th><th>N</th></tr></table>",
+            "t",
         )
         columns = detect_columns(header)
         assert columns is not None
@@ -810,7 +839,8 @@ class TestDetectColumns:
 
     def test_date_column_without_a_pollster_is_rejected(self) -> None:
         header = self._header(
-            "<table id='t'><tr><th>State</th><th>Dates administered</th></tr></table>", "t"
+            "<table id='t'><tr><th>State</th><th>Dates administered</th></tr></table>",
+            "t",
         )
         assert detect_columns(header) is None
 
@@ -1114,10 +1144,12 @@ class TestCandidateColumns:
 
     def test_state_party_suffixes(self) -> None:
         assert [
-            (c.letter, c.party_name) for c in _candidates(MINOR_SUFFIX_PAGE, "minnesota")
+            (c.letter, c.party_name)
+            for c in _candidates(MINOR_SUFFIX_PAGE, "minnesota")
         ] == [("DFL", "Democratic"), ("R", "Republican")]
         assert [
-            (c.letter, c.party_name) for c in _candidates(MINOR_SUFFIX_PAGE, "north-dakota")
+            (c.letter, c.party_name)
+            for c in _candidates(MINOR_SUFFIX_PAGE, "north-dakota")
         ] == [("D-NPL", "Democratic"), ("R", "Republican")]
 
     def test_unknown_suffix_keeps_its_letter_and_has_no_party(self) -> None:
@@ -1130,7 +1162,9 @@ class TestCandidateColumns:
         assert _candidates(HOUSE_INDEX_PAGE, "generic-ballot") == []
 
     def test_party_labels_name_no_candidate(self) -> None:
-        columns = _candidates(HOUSE_INDEX_PAGE, "generic-ballot", allow_party_labels=True)
+        columns = _candidates(
+            HOUSE_INDEX_PAGE, "generic-ballot", allow_party_labels=True
+        )
         assert [(c.index, c.letter, c.party_name) for c in columns] == [
             (3, "R", "Republican"),
             (4, "D", "Democratic"),
@@ -1164,8 +1198,12 @@ class TestMatchupLabel:
 
     def test_democrat_first_gives_the_same_label(self) -> None:
         # Michigan lists the Democrat first; the label must still lead with R.
-        assert _label(SENATE_RACE_PAGE, "el-sayed-rogers") == "Rogers (R) vs El-Sayed (D)"
-        reversed_columns = list(reversed(_candidates(SENATE_RACE_PAGE, "el-sayed-rogers")))
+        assert (
+            _label(SENATE_RACE_PAGE, "el-sayed-rogers") == "Rogers (R) vs El-Sayed (D)"
+        )
+        reversed_columns = list(
+            reversed(_candidates(SENATE_RACE_PAGE, "el-sayed-rogers"))
+        )
         assert matchup_label(reversed_columns) == "Rogers (R) vs El-Sayed (D)"
 
     def test_state_party_label_keeps_its_letter(self) -> None:
@@ -1418,12 +1456,16 @@ class TestParseTableRows:
         assert rows[0].source_url is None
 
     def test_generic_ballot_rows_carry_parties_without_candidates(self) -> None:
-        rows, dropped = _rows(HOUSE_INDEX_PAGE, "generic-ballot", allow_party_labels=True)
+        rows, dropped = _rows(
+            HOUSE_INDEX_PAGE, "generic-ballot", allow_party_labels=True
+        )
         assert dropped == 0
         assert rows[0].pollster_label == "Decision Desk HQ"
         # 'Dates updated' is the snapshot the aggregator row reports.
         assert rows[0].fieldwork_end == date(2026, 6, 29)
-        readings = [(r.party_name, r.candidate_name, r.percentage) for r in rows[0].readings]
+        readings = [
+            (r.party_name, r.candidate_name, r.percentage) for r in rows[0].readings
+        ]
         assert readings == [
             ("Republican", "", 40.1),
             ("Democratic", "", 44.3),
@@ -1578,18 +1620,12 @@ class TestPageGridBudget:
         poll = _table(SENATE_RACE_PAGE, "el-sayed-rogers")
         poll_grid = expand_table_grid(poll)
         poll_cells = len(poll_grid) * len(poll_grid[0])
-        monkeypatch.setattr(
-            us_polls_common, "MAX_PAGE_GRID_CELLS", poll_cells + 1_000
-        )
-        html = (
-            "<h2 id='General_election'>General election</h2>"
-            + self._page(
-                _block_table("a", rows=20, width=20),
-                "<h3 id='Crossing'>Crossing</h3>"
-                + _block_table("b", rows=30, width=30),
-                _block_table("c", rows=1, width=1),
-                _block_table("d", rows=1, width=1),
-            )
+        monkeypatch.setattr(us_polls_common, "MAX_PAGE_GRID_CELLS", poll_cells + 1_000)
+        html = "<h2 id='General_election'>General election</h2>" + self._page(
+            _block_table("a", rows=20, width=20),
+            "<h3 id='Crossing'>Crossing</h3>" + _block_table("b", rows=30, width=30),
+            _block_table("c", rows=1, width=1),
+            _block_table("d", rows=1, width=1),
         )
         page = parse_poll_tables(html)
         # The poll table before the filler is parsed as normal.

@@ -285,9 +285,7 @@ class TestForm:
         assert missing not in senate_page
 
     @pytest.mark.parametrize("path", ["/house", "/senate"])
-    def test_landing_pages_link_to_their_own_tool(
-        self, app: Flask, path: str
-    ) -> None:
+    def test_landing_pages_link_to_their_own_tool(self, app: Flask, path: str) -> None:
         body = app.test_client().get(path).get_data(as_text=True)
 
         assert f'href="{path}/results"' in body
@@ -342,11 +340,13 @@ class TestPreview:
         assert "Not imported" not in body
         # Party mapping.
         assert re.search(
-            r"<td>DEM</td>\s*<td>democrat</td>\s*<td>Democratic</td>", body,
+            r"<td>DEM</td>\s*<td>democrat</td>\s*<td>Democratic</td>",
+            body,
         )
         assert re.search(
             r"<td>OTH</td>\s*<td>others</td>\s*<td>Others</td>\s*"
-            r'<td class="num">1</td>', body,
+            r'<td class="num">1</td>',
+            body,
         )
         # Pipeline counts, source note, no diff yet.
         assert re.search(r"races parsed \(runoffs applied\)</th><td>6</td>", body)
@@ -555,7 +555,8 @@ class TestPreview:
         assert PREVIEW_CACHE == {}
 
     @pytest.mark.parametrize(
-        "error", [KeyError("seatInfo"), TypeError("bad"), ValueError("v")],
+        "error",
+        [KeyError("seatInfo"), TypeError("bad"), ValueError("v")],
     )
     def test_conversion_crash_shows_on_form(
         self,
@@ -656,9 +657,7 @@ class TestPreview:
         assert response.status_code == 200
         assert "Results Preview" in response.get_data(as_text=True)
 
-    def test_the_preview_is_for_the_urls_office(
-        self, app: Flask, nyt: FakeNyt
-    ) -> None:
+    def test_the_preview_is_for_the_urls_office(self, app: Flask, nyt: FakeNyt) -> None:
         token = _token(_preview(app.test_client(), chamber="senate"))
 
         assert PREVIEW_CACHE[token]["chamber"] == "senate"
@@ -786,7 +785,9 @@ class TestConfirm:
         before = _files(out_dir)
         nyt.edit_2026_house(
             lambda data: _state_votes(
-                _race(data, "TX-G-H-28-2026-11-03"), "lopez-b", 110000,
+                _race(data, "TX-G-H-28-2026-11-03"),
+                "lopez-b",
+                110000,
             ),
         )
         token = _token(_preview(client))
@@ -920,7 +921,9 @@ class TestConfirm:
             _import(client)
             nyt.edit_2026_house(
                 lambda data: _state_votes(
-                    _race(data, "TX-G-H-28-2026-11-03"), "lopez-b", 110000,
+                    _race(data, "TX-G-H-28-2026-11-03"),
+                    "lopez-b",
+                    110000,
                 ),
             )
         token = _token(_preview(client))
@@ -1070,10 +1073,17 @@ class TestConfirm:
         assert response.headers["Location"] == "/house/results"
         assert flashes(client, response) == [_EXPIRED]
 
-    @pytest.mark.parametrize(("made", "used"), [("house", "senate"), ("senate", "house")])
+    @pytest.mark.parametrize(
+        ("made", "used"), [("house", "senate"), ("senate", "house")]
+    )
     def test_a_token_made_under_the_other_chamber_is_expired(
-        self, app: Flask, db: Database, nyt: FakeNyt, dirs: tuple[Path, Path],
-        made: str, used: str,
+        self,
+        app: Flask,
+        db: Database,
+        nyt: FakeNyt,
+        dirs: tuple[Path, Path],
+        made: str,
+        used: str,
     ) -> None:
         out_dir, _ = dirs
         client = app.test_client()
@@ -1135,7 +1145,9 @@ class TestConfirm:
 
 class TestCurrentSenate:
     @pytest.fixture()
-    def files(self, app: Flask, dirs: tuple[Path, Path]) -> tuple[Path, Path, dict[str, Any]]:
+    def files(
+        self, app: Flask, dirs: tuple[Path, Path]
+    ) -> tuple[Path, Path, dict[str, Any]]:
         """The configured snapshot (pre-2026) and the imported 2026 Senate file."""
         out_dir, _ = dirs
         snapshot_path = Path(app.config[us_results.SNAPSHOT_CONFIG])
@@ -1144,7 +1156,9 @@ class TestCurrentSenate:
         snapshot_path.write_text(render(snapshot), encoding="utf-8")
         out_dir.mkdir(parents=True, exist_ok=True)
         election_path = out_dir / "senate-2026.json"
-        election_path.write_text(json.dumps(senate_election(snapshot)), encoding="utf-8")
+        election_path.write_text(
+            json.dumps(senate_election(snapshot)), encoding="utf-8"
+        )
         return snapshot_path, election_path, snapshot
 
     def test_rebuilds_the_snapshot_without_touching_the_db_or_export(
@@ -1161,7 +1175,9 @@ class TestCurrentSenate:
 
         assert response.status_code == 200
         body = response.get_data(as_text=True)
-        assert command_line(body) == "cli.py current-senate (rebuild senate-current.json)"
+        assert (
+            command_line(body) == "cli.py current-senate (rebuild senate-current.json)"
+        )
         assert "<strong>Exit code:</strong> 0" in body
         assert "65 holdovers, 35 winners, 0 uncalled (100 members)" in body
         derived = json.loads(snapshot_path.read_text(encoding="utf-8"))
@@ -1174,7 +1190,10 @@ class TestCurrentSenate:
         client = app.test_client()
 
         assert client.post("/senate/results/current-senate").status_code != 404
-        for path in ("/house/results/current-senate", "/president/results/current-senate"):
+        for path in (
+            "/house/results/current-senate",
+            "/president/results/current-senate",
+        ):
             assert client.post(path).status_code == 404
         # A POST-only route: the page that offers it is the Senate results page.
         assert client.get("/senate/results/current-senate").status_code == 405
@@ -1208,7 +1227,11 @@ class TestCurrentSenate:
         snapshot_path, election_path, snapshot = files
         election_path.unlink()
 
-        body = app.test_client().post("/senate/results/current-senate").get_data(as_text=True)
+        body = (
+            app.test_client()
+            .post("/senate/results/current-senate")
+            .get_data(as_text=True)
+        )
 
         assert "<strong>Exit code:</strong> 1" in body
         assert "election file not found" in body
@@ -1222,7 +1245,11 @@ class TestCurrentSenate:
         del election["Georgia"]
         election_path.write_text(json.dumps(election), encoding="utf-8")
 
-        body = app.test_client().post("/senate/results/current-senate").get_data(as_text=True)
+        body = (
+            app.test_client()
+            .post("/senate/results/current-senate")
+            .get_data(as_text=True)
+        )
 
         assert "<strong>Exit code:</strong> 1" in body
         assert "no class 2 race for: Georgia" in body

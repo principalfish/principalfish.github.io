@@ -18,7 +18,9 @@ from sqlalchemy import text
 
 DATA_DIR = Path(__file__).resolve().parents[2]
 REPO_ROOT = DATA_DIR.parent
-TREND_CACHE_META_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
+TREND_CACHE_META_JSON = (
+    REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
+)
 # Default baseline election the projection swings from (override with --baseline-election-name).
 # Bump to the latest general election once it lands. Mirrors Holyrood's BASELINE_ELECTION_NAME.
 BASELINE_ELECTION_NAME = "2024 General Election"
@@ -304,15 +306,19 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--half-life-days", type=float, default=15.0)
     parser.add_argument(
-        "--simulations", type=int, default=None,
+        "--simulations",
+        type=int,
+        default=None,
         help="Monte Carlo elections per date (default: calibrated configuration)",
     )
     parser.add_argument(
-        "--no-uncertainty", action="store_true",
+        "--no-uncertainty",
+        action="store_true",
         help="Run only the deterministic projection, without uncertainty or raw draws",
     )
     parser.add_argument(
-        "--no-raw-sims", action="store_true",
+        "--no-raw-sims",
+        action="store_true",
         help="Store uncertainty summaries without writing the raw simulations file",
     )
     parser.add_argument(
@@ -432,9 +438,7 @@ def reset_existing_model_outputs(
     )
 
     stripped_json_entries = 0
-    publish_trends(
-        sqlite_path, westminster_uns_scope(map_id), trend_cache_json
-    )
+    publish_trends(sqlite_path, westminster_uns_scope(map_id), trend_cache_json)
 
     return deleted_elections, deleted_votes, stripped_json_entries
 
@@ -505,7 +509,8 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
                     output_csv=None,
                     dry_run=args.dry_run,
                     uncertainty=uncertainty,
-                    keep_raw=current == end_date and not getattr(args, "no_raw_sims", False),
+                    keep_raw=current == end_date
+                    and not getattr(args, "no_raw_sims", False),
                 )
                 election_name, projected_votes, _, _, _ = run_simulation(db, cfg)
                 success_count += 1
@@ -571,7 +576,9 @@ def weighted_average(weighted_sum: float, total_weight: float) -> float | None:
     return weighted_sum / total_weight
 
 
-def resolve_simulation_scope(db: Database, cfg: SimulationConfig) -> tuple[Map, Election, date]:
+def resolve_simulation_scope(
+    db: Database, cfg: SimulationConfig
+) -> tuple[Map, Election, date]:
     """Validate config references and resolve the map, baseline election, and since_date.
 
     Looks up the map and baseline election by name. If ``cfg.since_date`` is the
@@ -636,10 +643,17 @@ def fetch_seat_refs(db: Database, map_id: int) -> list[SeatRef]:
             {"map_id": map_id},
         ).fetchall()
 
-    return [SeatRef(id=int(row.id), region_id=row.region_id, seat_name=str(row.seat_name or "")) for row in rows]
+    return [
+        SeatRef(
+            id=int(row.id), region_id=row.region_id, seat_name=str(row.seat_name or "")
+        )
+        for row in rows
+    ]
 
 
-def build_reference_data(db: Database, map_id: int) -> tuple[
+def build_reference_data(
+    db: Database, map_id: int
+) -> tuple[
     list[SeatRef],
     Any,
     dict[int, SeatRef],
@@ -689,8 +703,7 @@ def build_reference_data(db: Database, map_id: int) -> tuple[
         for pollster in db.get_all_pollsters()
     }
     pollster_name_by_id = {
-        pollster.id: pollster.name
-        for pollster in db.get_all_pollsters()
+        pollster.id: pollster.name for pollster in db.get_all_pollsters()
     }
 
     return (
@@ -705,7 +718,9 @@ def build_reference_data(db: Database, map_id: int) -> tuple[
     )
 
 
-def build_baseline_vote_state(db: Database, baseline_election_id: int, region_by_seat_id: dict[int, int | None]) -> tuple[
+def build_baseline_vote_state(
+    db: Database, baseline_election_id: int, region_by_seat_id: dict[int, int | None]
+) -> tuple[
     dict[int, dict[int, float]],
     dict[int, float],
     dict[int, float],
@@ -744,8 +759,12 @@ def build_baseline_vote_state(db: Database, baseline_election_id: int, region_by
     if not baseline_votes:
         raise ValueError("Baseline election has no votes")
 
-    seat_party_vote_totals: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
-    region_party_totals: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+    seat_party_vote_totals: dict[int, dict[int, float]] = defaultdict(
+        lambda: defaultdict(float)
+    )
+    region_party_totals: dict[int, dict[int, float]] = defaultdict(
+        lambda: defaultdict(float)
+    )
     region_totals: dict[int, float] = defaultdict(float)
     national_party_totals: dict[int, float] = defaultdict(float)
     national_total = 0.0
@@ -897,7 +916,11 @@ def collect_poll_shares(
         with db.session() as session:
             n_index = PollNIndex.load(
                 session,
-                (poll.id for poll in polls if since_date <= poll.fieldwork_end <= as_of_date),
+                (
+                    poll.id
+                    for poll in polls
+                    if since_date <= poll.fieldwork_end <= as_of_date
+                ),
             )
 
     validate_half_life(half_life_days)
@@ -912,7 +935,9 @@ def collect_poll_shares(
             continue
 
         decay_weight = math.exp(-math.log(2.0) * float(days_since) / half_life_days)
-        pollster_weight = effective_pollster_weight(pollster_weight_by_id.get(poll.pollster_id))
+        pollster_weight = effective_pollster_weight(
+            pollster_weight_by_id.get(poll.pollster_id)
+        )
         poll_weight = decay_weight * pollster_weight
         if poll_weight <= 0:
             continue
@@ -945,7 +970,8 @@ def collect_poll_shares(
         # including their weights dilutes genuine crossbreaks from other polls.
         # A zero party share within a reported region remains an observation.
         poll_shares = {
-            key: share for key, share in poll_shares.items()
+            key: share
+            for key, share in poll_shares.items()
             if key[0] is None or totals[key[0]] > 0
         }
         if not poll_shares:
@@ -971,14 +997,22 @@ def collect_poll_shares(
             weighted_sums[key] += share * poll_weight
             total_weights[key] += poll_weight
             if uncertainty is not None and n_index is not None:
-                samples[key].append(poll_sample(
-                    poll.id, poll_weight, n_index.resolve(poll.id, key[0]), uncertainty,
-                    ashcroft_party_total=totals[key[0]] if is_ashcroft else None,
-                ))
+                samples[key].append(
+                    poll_sample(
+                        poll.id,
+                        poll_weight,
+                        n_index.resolve(poll.id, key[0]),
+                        uncertainty,
+                        ashcroft_party_total=totals[key[0]] if is_ashcroft else None,
+                    )
+                )
 
     return WestminsterPollAggregation(
-        weighted_sums, total_weights, tuple(contributors),
-        {key: tuple(value) for key, value in samples.items()}, uncertainty,
+        weighted_sums,
+        total_weights,
+        tuple(contributors),
+        {key: tuple(value) for key, value in samples.items()},
+        uncertainty,
         excluded_regions,
     )
 
@@ -1121,7 +1155,9 @@ def compute_region_diffs(
     """
     party_universe: set[int] = set(national_party_totals.keys())
     party_universe.update(party_id for _, party_id in weighted_sums.keys())
-    region_ids = sorted({seat.region_id for seat in seats if seat.region_id is not None})
+    region_ids = sorted(
+        {seat.region_id for seat in seats if seat.region_id is not None}
+    )
     parties_with_baseline = {
         party_id
         for shares in baseline_region_shares.values()
@@ -1138,15 +1174,24 @@ def compute_region_diffs(
             total_weights[(None, party_id)],
         )
         if national_poll is not None:
-            national_swing[party_id] = national_poll - baseline_national_shares.get(party_id, 0.0)
+            national_swing[party_id] = national_poll - baseline_national_shares.get(
+                party_id, 0.0
+            )
 
     region_swings: dict[int, dict[int, float]] = defaultdict(dict)
     region_diff_rows: list[dict[str, Any]] = []
     for region_id in region_ids:
-        region_name = region_by_id[region_id].name if region_id in region_by_id else str(region_id)
-        for party_id in sorted(party_universe, key=lambda party: party_name_by_id.get(party, "")):
+        region_name = (
+            region_by_id[region_id].name
+            if region_id in region_by_id
+            else str(region_id)
+        )
+        for party_id in sorted(
+            party_universe, key=lambda party: party_name_by_id.get(party, "")
+        ):
             baseline_share = baseline_region_shares.get(region_id, {}).get(
-                party_id, 0.0,
+                party_id,
+                0.0,
             )
             applicable = baseline_share > 0 or party_id not in parties_with_baseline
             region_poll = weighted_average(
@@ -1233,7 +1278,9 @@ def project_seat_votes(
         }
 
         region_id = region_by_seat_id.get(seat_id)
-        swing_for_region = region_swings.get(region_id, {}) if region_id is not None else {}
+        swing_for_region = (
+            region_swings.get(region_id, {}) if region_id is not None else {}
+        )
 
         projection_raw: dict[int, float] = {}
         for party_id in party_universe:
@@ -1243,7 +1290,10 @@ def project_seat_votes(
 
         projection_sum = sum(projection_raw.values())
         if projection_sum <= 0:
-            projection_raw = {party_id: base_share_by_party.get(party_id, 0.0) for party_id in party_universe}
+            projection_raw = {
+                party_id: base_share_by_party.get(party_id, 0.0)
+                for party_id in party_universe
+            }
             projection_sum = sum(projection_raw.values())
             if projection_sum <= 0:
                 continue
@@ -1253,7 +1303,9 @@ def project_seat_votes(
             for party_id, value in projection_raw.items()
         }
         winner_party_id = max(normalized, key=lambda k: normalized.get(k, 0.0))
-        winners_by_party[party_name_by_id.get(winner_party_id, str(winner_party_id))] += 1
+        winners_by_party[
+            party_name_by_id.get(winner_party_id, str(winner_party_id))
+        ] += 1
 
         for party_id, pct in normalized.items():
             projected_votes.append(
@@ -1326,18 +1378,31 @@ def write_output_csvs(
     with output_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
             handle,
-            fieldnames=["seat_id", "seat_name", "party_id", "party_name", "predicted_pct", "elected"],
+            fieldnames=[
+                "seat_id",
+                "seat_name",
+                "party_id",
+                "party_name",
+                "predicted_pct",
+                "elected",
+            ],
         )
         writer.writeheader()
         for row in projected_votes:
             seat_id = int(row["seat_id"])
             party_id = int(row["party_id"])
             seat_total = seat_projected_totals.get(seat_id, 0.0)
-            predicted_pct = (float(row["vote_total"]) / seat_total * 100.0) if seat_total > 0 else 0.0
+            predicted_pct = (
+                (float(row["vote_total"]) / seat_total * 100.0)
+                if seat_total > 0
+                else 0.0
+            )
             writer.writerow(
                 {
                     "seat_id": seat_id,
-                    "seat_name": seat_by_id[seat_id].seat_name if seat_id in seat_by_id else "",
+                    "seat_name": seat_by_id[seat_id].seat_name
+                    if seat_id in seat_by_id
+                    else "",
                     "party_id": party_id,
                     "party_name": party_name_by_id.get(party_id, ""),
                     "predicted_pct": f"{predicted_pct:.4f}",
@@ -1369,11 +1434,13 @@ def write_output_csvs(
                     "baseline_share": f"{float(row['baseline_share']):.4f}",
                     "weighted_share": (
                         f"{float(row['weighted_share']):.4f}"
-                        if row.get("applicable", True) else "N/A"
+                        if row.get("applicable", True)
+                        else "N/A"
                     ),
                     "swing": (
                         f"{float(row['swing']):.4f}"
-                        if row.get("applicable", True) else "N/A"
+                        if row.get("applicable", True)
+                        else "N/A"
                     ),
                 }
             )
@@ -1506,9 +1573,13 @@ def run_simulation(
         protected = [TREND_CACHE_JSON, TREND_CACHE_META_JSON]
         if cfg.output_csv:
             csv_path = Path(cfg.output_csv)
-            protected.extend([csv_path, csv_path.with_name(f"{csv_path.stem}_regional_diffs.csv")])
+            protected.extend(
+                [csv_path, csv_path.with_name(f"{csv_path.stem}_regional_diffs.csv")]
+            )
         if any(raw_path.resolve() == path.resolve() for path in protected):
-            raise ValueError("SIMULATIONS_PATH must not overwrite a trend or CSV output")
+            raise ValueError(
+                "SIMULATIONS_PATH must not overwrite a trend or CSV output"
+            )
     poll_map, baseline, since_date = resolve_simulation_scope(db, cfg)
     cfg.since_date = since_date
 
@@ -1580,12 +1651,14 @@ def run_simulation(
         if not isinstance(poll_aggregation, WestminsterPollAggregation) or (
             poll_aggregation.uncertainty_config != cfg.uncertainty
         ):
-            raise UncertaintyError("Uncertainty requires aggregation with matching sampling settings")
+            raise UncertaintyError(
+                "Uncertainty requires aggregation with matching sampling settings"
+            )
         sampling = poll_aggregation.sampling()
         national_average, regional_average = split_averages(poll_aggregation.averages)
-        national_variance, regional_variance = split_averages({
-            key: value.variance for key, value in sampling.items()
-        })
+        national_variance, regional_variance = split_averages(
+            {key: value.variance for key, value in sampling.items()}
+        )
         # A printed zero column is still a regional observation, rather than
         # a missing crossbreak that should acquire national fallback noise.
         for key, average in poll_aggregation.averages.items():
@@ -1610,15 +1683,23 @@ def run_simulation(
         )
         inputs = exclude_polling_regions(inputs, poll_aggregation.excluded_regions)
         simulation = run_simulations(
-            inputs, cfg.uncertainty, cfg.as_of_date.toordinal(),
+            inputs,
+            cfg.uncertainty,
+            cfg.as_of_date.toordinal(),
             keep_raw=raw_path is not None,
         )
         payload = uncertainty_payload(
-            inputs, simulation, cfg.uncertainty, poll_aggregation, sampling,
+            inputs,
+            simulation,
+            cfg.uncertainty,
+            poll_aggregation,
+            sampling,
             baseline_national_shares,
         )
         if cfg.dry_run:
-            print(f"Uncertainty ({simulation.summary.simulations} simulations, if an election were held today):")
+            print(
+                f"Uncertainty ({simulation.summary.simulations} simulations, if an election were held today):"
+            )
             for party, outcome in simulation.summary.national.items():
                 if outcome.seats[2] > 0:
                     lo, median, hi = outcome.seats
@@ -1642,7 +1723,13 @@ def run_simulation(
         )
 
     if cfg.dry_run:
-        return election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
+        return (
+            election_name,
+            projected_votes,
+            region_diff_rows,
+            winners_by_party,
+            latest_poll_usage,
+        )
 
     sqlite_path = database_file(db)
 
@@ -1681,7 +1768,8 @@ def run_simulation(
     if raw_path is not None and simulation is not None and simulation.draws is not None:
         try:
             save_draws(
-                raw_path, simulation.draws,
+                raw_path,
+                simulation.draws,
                 DrawsMeta(persisted_election_id, cfg.as_of_date),
             )
         except OSError as exc:
@@ -1691,7 +1779,13 @@ def run_simulation(
                 "The previous raw file is unchanged. Fix the destination and rerun this date."
             ) from exc
 
-    return persisted_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
+    return (
+        persisted_name,
+        projected_votes,
+        region_diff_rows,
+        winners_by_party,
+        latest_poll_usage,
+    )
 
 
 def main(db_factory: Callable[[], Database] | None = None) -> None:

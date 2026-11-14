@@ -215,7 +215,9 @@ _BALLOT_HEADING: dict[str, str] = {
 }
 
 
-def parse_polls(html: str, ballot: str = BALLOT_CONSTITUENCY) -> list[ParsedScottishPoll]:
+def parse_polls(
+    html: str, ballot: str = BALLOT_CONSTITUENCY
+) -> list[ParsedScottishPoll]:
     """Parse VI polls from the Wikipedia Scottish Parliament polling page.
 
     Finds the wikitable under the "Constituency vote" or "Regional vote" heading
@@ -254,7 +256,10 @@ def parse_polls(html: str, ballot: str = BALLOT_CONSTITUENCY) -> list[ParsedScot
     # The header row that matched tells us column labels.
     # Typical layout: 0=dates, 1=pollster, 2=client (optional), n=sample size
     # We find sample_col by header label, fallback to None.
-    header_cells = [_clean(th.get_text()) for th in all_rows[header_rows_used - 1].find_all(["th", "td"])]
+    header_cells = [
+        _clean(th.get_text())
+        for th in all_rows[header_rows_used - 1].find_all(["th", "td"])
+    ]
     sample_col: int | None = None
     for idx, cell in enumerate(header_cells):
         # "samplesize" with no space: the header is "Sample<br/>size", and
@@ -274,13 +279,19 @@ def parse_polls(html: str, ballot: str = BALLOT_CONSTITUENCY) -> list[ParsedScot
             continue
 
         # Skip rows where the first cell contains a year-only heading or election label
-        date_range = parse_date_range(cells[date_col]) if len(cells) > date_col else None
+        date_range = (
+            parse_date_range(cells[date_col]) if len(cells) > date_col else None
+        )
         if date_range is None:
             continue
 
         fieldwork_start, fieldwork_end = date_range
 
-        pollster_name = _clean(re.sub(r"\[[^\]]+\]", "", cells[pollster_col])) if len(cells) > pollster_col else ""
+        pollster_name = (
+            _clean(re.sub(r"\[[^\]]+\]", "", cells[pollster_col]))
+            if len(cells) > pollster_col
+            else ""
+        )
         if not pollster_name:
             continue
 

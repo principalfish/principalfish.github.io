@@ -122,8 +122,10 @@ class TestAddPoll:
     def test_basic(self, db: Database) -> None:
         pollster, m, _, _ = _make_poll_scaffold(db)
         poll = db.add_poll(
-            pollster.id, m.id,
-            date(2026, 2, 10), date(2026, 2, 12),
+            pollster.id,
+            m.id,
+            date(2026, 2, 10),
+            date(2026, 2, 12),
             sample_size=1500,
         )
         assert poll.id is not None

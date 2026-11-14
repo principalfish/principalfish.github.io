@@ -81,7 +81,9 @@ def _texas_variants(count: int) -> list[str]:
     ]
 
 
-CALIFORNIA_URL = f"{WIKI}/2026_United_States_House_of_Representatives_elections_in_California"
+CALIFORNIA_URL = (
+    f"{WIKI}/2026_United_States_House_of_Representatives_elections_in_California"
+)
 TEXAS_URL = f"{WIKI}/2026_United_States_House_of_Representatives_elections_in_Texas"
 VERMONT_URL = f"{WIKI}/2026_United_States_House_of_Representatives_election_in_Vermont"
 
@@ -485,28 +487,62 @@ def _house_index_page() -> str:
                 territory,
             )
         )
-    links.append(_link(f"{WIKI}/2024_United_States_House_of_Representatives_elections", "2024"))
+    links.append(
+        _link(f"{WIKI}/2024_United_States_House_of_Representatives_elections", "2024")
+    )
     return _HOUSE_INDEX_HEAD + "".join(links) + _INDEX_TAIL
 
 
 _SENATE_CLASS_2_STATES = (
-    "Alabama", "Alaska", "Arkansas", "Colorado", "Delaware", "Georgia", "Idaho",
-    "Illinois", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Massachusetts",
-    "Michigan", "Minnesota", "Mississippi", "Montana", "Nebraska", "New Hampshire",
-    "New Jersey", "New Mexico", "North Carolina", "Oklahoma", "Oregon",
-    "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas",
-    "Virginia", "West Virginia", "Wyoming",
+    "Alabama",
+    "Alaska",
+    "Arkansas",
+    "Colorado",
+    "Delaware",
+    "Georgia",
+    "Idaho",
+    "Illinois",
+    "Iowa",
+    "Kansas",
+    "Kentucky",
+    "Louisiana",
+    "Maine",
+    "Massachusetts",
+    "Michigan",
+    "Minnesota",
+    "Mississippi",
+    "Montana",
+    "Nebraska",
+    "New Hampshire",
+    "New Jersey",
+    "New Mexico",
+    "North Carolina",
+    "Oklahoma",
+    "Oregon",
+    "Rhode Island",
+    "South Carolina",
+    "South Dakota",
+    "Tennessee",
+    "Texas",
+    "Virginia",
+    "West Virginia",
+    "Wyoming",
 )
 
 
 def _senate_index_page() -> str:
     """Build the Senate index: 33 regular races, 2 specials, plus false friends."""
     links = [
-        _link(f"{WIKI}/2026_United_States_Senate_election_in_{state.replace(' ', '_')}", state)
+        _link(
+            f"{WIKI}/2026_United_States_Senate_election_in_{state.replace(' ', '_')}",
+            state,
+        )
         for state in _SENATE_CLASS_2_STATES
     ]
     links += [
-        _link(f"{WIKI}/2026_United_States_Senate_special_election_in_Florida", "Florida"),
+        _link(
+            f"{WIKI}/2026_United_States_Senate_special_election_in_Florida", "Florida"
+        ),
         _link(f"{WIKI}/2026_United_States_Senate_special_election_in_Ohio", "Ohio"),
         # Repeats and off-pattern links the live index also carries.
         _link(f"{WIKI}/2026_United_States_Senate_election_in_Texas", "Texas"),
@@ -795,7 +831,9 @@ class TestFetchPages:
         assert record.exc_info[0] is RuntimeError
 
     def test_http_error_other_than_404_is_a_failure(self) -> None:
-        fetcher = FakeFetcher({}, errors={"b": HTTPError("b", 503, "Busy", Message(), None)})
+        fetcher = FakeFetcher(
+            {}, errors={"b": HTTPError("b", 503, "Busy", Message(), None)}
+        )
         result = fetch_pages(["b"], fetcher=fetcher)
         assert result.failures == {"b": "HTTP 503: Busy"}
         assert result.notes == ()
@@ -987,9 +1025,9 @@ class TestPresidentRows:
             PRESIDENT_PAGE,
             seat_ids=_seat_ids(us_db, PRESIDENT.map_name),
         )
-        assert [(u.seat_name, u.reason, u.dropped_rows) for u in page.unmatched_seats] == [
-            (None, "no heading names a state or district", 1)
-        ]
+        assert [
+            (u.seat_name, u.reason, u.dropped_rows) for u in page.unmatched_seats
+        ] == [(None, "no heading names a state or district", 1)]
         assert not any("Fremont Research" == row.pollster_label for row in page.rows)
 
     def test_row_carries_the_president_pollster_identifier_and_sample(
@@ -1009,7 +1047,9 @@ class TestPresidentRows:
         assert row.fieldwork_end == date(2026, 6, 26)
         assert row.map_name == "US Presidential 2024"
         assert row.contest == "president"
-        assert [(r.party_name, r.candidate_name, r.percentage) for r in row.readings] == [
+        assert [
+            (r.party_name, r.candidate_name, r.percentage) for r in row.readings
+        ] == [
             ("Republican", "JD Vance", 45.0),
             ("Democratic", "Gavin Newsom", 44.0),
         ]
@@ -1043,9 +1083,7 @@ class TestSenateRows:
         assert len(page.rows) == 2
         assert any("repeat row" in note for note in page.rows[0].notes)
 
-    def test_partisan_sponsor_tag_is_split_off_the_label(
-        self, us_db: Database
-    ) -> None:
+    def test_partisan_sponsor_tag_is_split_off_the_label(self, us_db: Database) -> None:
         page = rows_for_page(
             SENATE_RACES,
             MICHIGAN_URL,
@@ -1073,9 +1111,7 @@ class TestSenateRows:
         assert [r.party_name for r in lead.readings] == ["Republican", "Independent"]
         assert page.collapsed_only_races == ()
 
-    def test_alaska_four_way_keeps_both_sullivans_apart(
-        self, us_db: Database
-    ) -> None:
+    def test_alaska_four_way_keeps_both_sullivans_apart(self, us_db: Database) -> None:
         page = rows_for_page(
             SENATE_RACES,
             ALASKA_URL,
@@ -1087,8 +1123,7 @@ class TestSenateRows:
         # Only the shared surname forces full names; Heikes keeps his surname,
         # and the unknown "(WCP)" suffix still sorts last.
         assert row.matchup == (
-            "Dan S. Sullivan (R) vs Dan J. Sullivan (R) vs Peltola (D) "
-            "vs Heikes (WCP)"
+            "Dan S. Sullivan (R) vs Dan J. Sullivan (R) vs Peltola (D) vs Heikes (WCP)"
         )
         assert len(row.readings) == 4
         assert row.seat_name == "Alaska"
@@ -1355,7 +1390,10 @@ class TestHouseDistrictRows:
         self, us_db: Database
     ) -> None:
         page = rows_for_page(
-            HOUSE_DISTRICTS, TEXAS_URL, TEXAS_PAGE, seat_ids=_seat_ids(us_db, HOUSE_DISTRICTS.map_name)
+            HOUSE_DISTRICTS,
+            TEXAS_URL,
+            TEXAS_PAGE,
+            seat_ids=_seat_ids(us_db, HOUSE_DISTRICTS.map_name),
         )
         reasons = [unmatched.reason for unmatched in page.unmatched_seats]
         assert reasons == ["no 'District N' heading above the table (Texas)"]
@@ -1365,7 +1403,10 @@ class TestHouseDistrictRows:
         self, us_db: Database
     ) -> None:
         page = rows_for_page(
-            HOUSE_DISTRICTS, TEXAS_URL, TEXAS_PAGE, seat_ids=_seat_ids(us_db, HOUSE_DISTRICTS.map_name)
+            HOUSE_DISTRICTS,
+            TEXAS_URL,
+            TEXAS_PAGE,
+            seat_ids=_seat_ids(us_db, HOUSE_DISTRICTS.map_name),
         )
         assert len(page.empty_tables) == 1
         empty = page.empty_tables[0]
@@ -1420,9 +1461,7 @@ class TestHouseNationalRows:
         )
         assert all(not row.is_lead for row in page.rows)
 
-    def test_the_redistricting_table_is_not_a_poll_table(
-        self, us_db: Database
-    ) -> None:
+    def test_the_redistricting_table_is_not_a_poll_table(self, us_db: Database) -> None:
         page = rows_for_page(
             HOUSE_NATIONAL,
             HOUSE_INDEX_URL,
@@ -1516,7 +1555,9 @@ class TestFetchUsPollIndex:
     def test_statewide_president_404_is_a_note(self, us_db: Database) -> None:
         index = fetch_us_poll_index(us_db, [PRESIDENT], fetcher=_full_fetcher())
         assert index.page_failures == {}
-        assert index.notes == (f"{PRESIDENT_STATEWIDE_URL}: not present yet (HTTP 404)",)
+        assert index.notes == (
+            f"{PRESIDENT_STATEWIDE_URL}: not present yet (HTTP 404)",
+        )
         assert len(index.rows) == 3
 
     def test_a_broken_page_is_recorded_and_the_rest_still_import(
@@ -1553,9 +1594,7 @@ class TestFetchUsPollIndex:
         assert FLORIDA_SPECIAL_URL in index.page_failures
         assert "already covered by" in index.page_failures[FLORIDA_SPECIAL_URL]
 
-    def test_a_second_page_for_one_seat_is_never_fetched(
-        self, us_db: Database
-    ) -> None:
+    def test_a_second_page_for_one_seat_is_never_fetched(self, us_db: Database) -> None:
         fetcher = _full_fetcher(
             **{
                 SENATE_INDEX_URL: _link(FLORIDA_URL, "Florida")
@@ -1666,9 +1705,7 @@ class TestFetchUsPollIndex:
         }
         assert {row.seat_name for row in index.rows} == {None, "CA-03", "VT-01"}
 
-    def test_diagnostics_are_aggregated_across_contests(
-        self, us_db: Database
-    ) -> None:
+    def test_diagnostics_are_aggregated_across_contests(self, us_db: Database) -> None:
         index = fetch_us_poll_index(
             us_db,
             [SENATE_RACES],
@@ -1695,9 +1732,7 @@ class TestFetchUsPollIndex:
     def test_a_missing_map_skips_the_contest_with_a_note(self, db: Database) -> None:
         index = fetch_us_poll_index(db, [SENATE_RACES], fetcher=_full_fetcher())
         assert index.rows == ()
-        assert index.notes == (
-            "senate_races: skipped — no map named 'US Senate 2024'",
-        )
+        assert index.notes == ("senate_races: skipped — no map named 'US Senate 2024'",)
 
     def test_an_unreadable_index_leaves_the_contest_empty(
         self, us_db: Database
@@ -1705,7 +1740,9 @@ class TestFetchUsPollIndex:
         fetcher = FakeFetcher({})
         index = fetch_us_poll_index(us_db, [SENATE_RACES], fetcher=fetcher)
         assert index.rows == ()
-        assert "senate_races: no race pages — its index could not be read" in index.notes
+        assert (
+            "senate_races: no race pages — its index could not be read" in index.notes
+        )
 
     def test_rows_keep_contest_order(self, us_db: Database) -> None:
         index = fetch_us_poll_index(
@@ -1720,7 +1757,9 @@ class TestFetchUsPollIndex:
     def test_no_test_reaches_the_network(self, us_db: Database) -> None:
         fetcher = _full_fetcher()
         fetch_us_poll_index(us_db, list(US_CONTESTS), fetcher=fetcher)
-        assert all(url.startswith("https://en.wikipedia.org/") for url in fetcher.requested)
+        assert all(
+            url.startswith("https://en.wikipedia.org/") for url in fetcher.requested
+        )
         assert fetcher.requested
 
 
@@ -1765,9 +1804,7 @@ class TestSummaryRows:
         assert page.summary_rows_skipped == 0
 
     def test_the_run_reports_the_skip(self, us_db: Database) -> None:
-        index = fetch_us_poll_index(
-            us_db, [HOUSE_NATIONAL], fetcher=_full_fetcher()
-        )
+        index = fetch_us_poll_index(us_db, [HOUSE_NATIONAL], fetcher=_full_fetcher())
         assert index.summary_rows_skipped == 1
         assert len(index.rows) == 2
 
@@ -1855,9 +1892,7 @@ class TestBuildUsImportPlan:
         row = _page_rows(import_db, SENATE_RACES, ALASKA_URL, ALASKA_PAGE)[0]
         plan = build_us_import_plan(import_db, row)
         assert plan.unknown_parties == ("Gerald Heikes",)
-        assert plan.warnings == (
-            "no party for Gerald Heikes — unrecognised suffix",
-        )
+        assert plan.warnings == ("no party for Gerald Heikes — unrecognised suffix",)
 
     def test_a_national_row_plans_no_seat(self, import_db: Database) -> None:
         row = _page_rows(import_db, PRESIDENT, PRESIDENT_URL, PRESIDENT_PAGE)[0]
@@ -1865,12 +1900,10 @@ class TestBuildUsImportPlan:
         assert plan.seat_id is None
         assert plan.map_id == _map_id(import_db, "US Presidential 2024")
 
-    def test_a_party_column_plans_no_candidate_name(
-        self, import_db: Database
-    ) -> None:
-        row = _page_rows(
-            import_db, HOUSE_NATIONAL, HOUSE_INDEX_URL, HOUSE_INDEX_PAGE
-        )[0]
+    def test_a_party_column_plans_no_candidate_name(self, import_db: Database) -> None:
+        row = _page_rows(import_db, HOUSE_NATIONAL, HOUSE_INDEX_URL, HOUSE_INDEX_PAGE)[
+            0
+        ]
         plan = build_us_import_plan(import_db, row)
         assert [planned.candidate_name for planned in plan.rows] == [None, None]
 
@@ -1907,9 +1940,7 @@ class TestBuildUsImportPlan:
         with pytest.raises(UsImportError, match="no matchup"):
             build_us_import_plan(import_db, row.model_copy(update={"matchup": None}))
 
-    def test_a_row_with_no_resolvable_party_is_rejected(
-        self, db: Database
-    ) -> None:
+    def test_a_row_with_no_resolvable_party_is_rejected(self, db: Database) -> None:
         # The maps and seats exist; the parties do not.
         db.add_map("US Senate 2024")
         senate = db.get_map_by_name("US Senate 2024")
@@ -2007,9 +2038,9 @@ class TestCommitUsImportPlan:
     ) -> None:
         # The generic ballot has neither a matchup nor a seat, so the presence
         # check only matches it if its nulls compare with IS, not with "=".
-        row = _page_rows(
-            import_db, HOUSE_NATIONAL, HOUSE_INDEX_URL, HOUSE_INDEX_PAGE
-        )[0]
+        row = _page_rows(import_db, HOUSE_NATIONAL, HOUSE_INDEX_URL, HOUSE_INDEX_PAGE)[
+            0
+        ]
         first = _commit(import_db, row)
         second = commit_us_import_plan(
             import_db, row, build_us_import_plan(import_db, row)
@@ -2062,9 +2093,7 @@ class TestCommitUsImportPlan:
         )
         assert _commit(import_db, national) != _commit(import_db, nevada)
 
-    def test_a_failed_row_takes_its_poll_back_out(
-        self, import_db: Database
-    ) -> None:
+    def test_a_failed_row_takes_its_poll_back_out(self, import_db: Database) -> None:
         row = _michigan_row(import_db)
         plan = build_us_import_plan(import_db, row)
         broken = plan.rows[0].__class__(
@@ -2191,9 +2220,7 @@ class TestRelabelledPolls:
         import_db.add_party("Independent")
         return import_db
 
-    def test_a_renamed_table_moves_the_stored_poll(
-        self, relabel_db: Database
-    ) -> None:
+    def test_a_renamed_table_moves_the_stored_poll(self, relabel_db: Database) -> None:
         stored = _michigan_row(relabel_db)
         poll_id = _commit(relabel_db, stored)
         renamed = _renamed(stored)
@@ -2478,7 +2505,6 @@ class TestRunImporter:
         out = capsys.readouterr().out
         assert code == 0
         assert (
-            "WARNING Change Research: party not in the database: 'Independent'"
-            in out
+            "WARNING Change Research: party not in the database: 'Independent'" in out
         )
         assert "created=1 skipped=0 failed=0 rows=1" in out

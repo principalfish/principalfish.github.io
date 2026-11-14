@@ -86,9 +86,7 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     ``run_python_script`` fails here instead of spawning a real model run,
     export, or poll import.
     """
-    forbid_call(
-        monkeypatch, "console.holyrood.model.run_command", "recording_runner"
-    )
+    forbid_call(monkeypatch, "console.holyrood.model.run_command", "recording_runner")
     forbid_call(
         monkeypatch,
         "console.holyrood.model.run_python_script",
@@ -310,7 +308,9 @@ class TestHolyroodImportPolls:
         ]
         body = response.get_data(as_text=True)
         assert "<h2>Import Scottish Polls</h2>" in body
-        assert _command_line(body) == "holyrood_wikipedia_import.py (constituency + list)"
+        assert (
+            _command_line(body) == "holyrood_wikipedia_import.py (constituency + list)"
+        )
         assert "<strong>Exit code:</strong> 0</p>" in body
         stdout = _pre_after_heading(body, "h3", "Stdout")
         assert stdout == (
@@ -357,7 +357,10 @@ class TestHolyroodImportPolls:
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         stderr = _pre_after_heading(body, "h3", "Stderr")
-        assert stderr == "=== Import Scottish constituency polls from Wikipedia ===\nwarn A"
+        assert (
+            stderr
+            == "=== Import Scottish constituency polls from Wikipedia ===\nwarn A"
+        )
 
     def test_first_run_failing_skips_the_second(
         self,
@@ -393,7 +396,9 @@ class TestHolyroodImportPolls:
             "constituency failed"
         )
         stderr = _pre_after_heading(body, "h3", "Stderr")
-        assert stderr == "=== Import Scottish constituency polls from Wikipedia ===\nboom"
+        assert (
+            stderr == "=== Import Scottish constituency polls from Wikipedia ===\nboom"
+        )
 
 
 class TestChoicesForHolyroodModelForm:
@@ -437,12 +442,8 @@ class TestChoicesForHolyroodModelForm:
         # other, inserted in reverse-alphabetical order — so this can only pass
         # if both sort keys (year desc, then name asc) are applied, not just one
         # and not insertion order.
-        db.add_election(
-            world.map_id, 2030, "B Election", ElectionType.holyrood_general
-        )
-        db.add_election(
-            world.map_id, 2030, "A Election", ElectionType.holyrood_general
-        )
+        db.add_election(world.map_id, 2030, "B Election", ElectionType.holyrood_general)
+        db.add_election(world.map_id, 2030, "A Election", ElectionType.holyrood_general)
 
         choices = _choices_for_holyrood_model_form(db)
 
@@ -534,12 +535,8 @@ class TestRunHolyroodModelFormRoute:
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         assert '<option value="0" selected>' in _select_block(body, "as_of_days_back")
-        assert '<option value="30" selected>' in _select_block(
-            body, "since_days_back"
-        )
-        assert '<option value="30.0" selected>' in _select_block(
-            body, "half_life_days"
-        )
+        assert '<option value="30" selected>' in _select_block(body, "since_days_back")
+        assert '<option value="30.0" selected>' in _select_block(body, "half_life_days")
         assert '<option value="true" selected>' in _select_block(body, "dry_run")
 
 
@@ -574,12 +571,8 @@ class TestRunHolyroodModelExecute:
         assert f'<option value="{world.constituency_election_name}" selected>' in (
             _select_block(body, "election_name")
         )
-        assert '<option value="30" selected>' in _select_block(
-            body, "as_of_days_back"
-        )
-        assert '<option value="7" selected>' in _select_block(
-            body, "since_days_back"
-        )
+        assert '<option value="30" selected>' in _select_block(body, "as_of_days_back")
+        assert '<option value="7" selected>' in _select_block(body, "since_days_back")
 
     def test_dry_run_produces_one_command_with_no_export(
         self,
@@ -601,7 +594,9 @@ class TestRunHolyroodModelExecute:
         assert "--dry-run" in command
         assert "--no-output" in command
         body = response.get_data(as_text=True)
-        assert _pre_after_heading(body, "h4", "Stdout") == "ran run_holyrood_uns_model.py"
+        assert (
+            _pre_after_heading(body, "h4", "Stdout") == "ran run_holyrood_uns_model.py"
+        )
         assert _pre_after_heading(body, "h4", "Stderr") == "(no stderr)"
         assert "Static Data Export" not in body
 
@@ -854,7 +849,9 @@ class TestRunHolyroodModelExecute:
         assert len(runner.calls) == 1
         body = response.get_data(as_text=True)
         assert "<strong>Exit code:</strong> 3</p>" in body
-        assert _pre_after_heading(body, "h4", "Stdout") == "ran run_holyrood_uns_model.py"
+        assert (
+            _pre_after_heading(body, "h4", "Stdout") == "ran run_holyrood_uns_model.py"
+        )
         assert _pre_after_heading(body, "h4", "Stderr") == "boom"
         assert "Static Data Export" not in body
 
@@ -915,9 +912,10 @@ class TestRunHolyroodModelExecute:
         body = response.get_data(as_text=True)
         assert "<strong>Exit code:</strong> 1</p>" in body
         assert _pre_after_heading(body, "h5", "Stdout") == "(no stdout)"
-        assert _pre_after_heading(
-            body, "h5", "Stderr"
-        ) == f"Export script not found: {missing_script}"
+        assert (
+            _pre_after_heading(body, "h5", "Stderr")
+            == f"Export script not found: {missing_script}"
+        )
         assert "The run finished but the export failed with exit code 1" in body
 
     def test_a_successful_export_keeps_the_export_requested_headline(
@@ -952,9 +950,7 @@ class TestRunHolyroodModelExecute:
 class TestHolyroodOutputsRoute:
     """GET /holyrood/outputs lists holyrood_uns elections, recent or all."""
 
-    def test_default_view_lists_recent_outputs(
-        self, app: Flask, db: Database
-    ) -> None:
+    def test_default_view_lists_recent_outputs(self, app: Flask, db: Database) -> None:
         world = seed_holyrood_world(db)
         output_id = _seed_model_output(db, world, name="Holyrood UNS 2026-06-01")
 
@@ -1047,9 +1043,7 @@ class TestHolyroodOutputDetailRoute:
 
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/holyrood/outputs")
-        assert _flashes(client, response) == [
-            "Holyrood model output #99999 not found."
-        ]
+        assert _flashes(client, response) == ["Holyrood model output #99999 not found."]
 
     def test_pagination_splits_across_pages(self, app: Flask, db: Database) -> None:
         world = seed_holyrood_world(db)
@@ -1065,9 +1059,9 @@ class TestHolyroodOutputDetailRoute:
         # Westminster blueprint's equivalent route.
         assert f'href="/holyrood/outputs/{output_id}?page=2"' in page1
 
-        page2 = client.get(
-            f"/holyrood/outputs/{output_id}?page=2"
-        ).get_data(as_text=True)
+        page2 = client.get(f"/holyrood/outputs/{output_id}?page=2").get_data(
+            as_text=True
+        )
         assert "Page 2 of 2" in page2
         assert "Bulk Seat 059" in page2
         assert "Bulk Seat 000" not in page2
@@ -1077,9 +1071,7 @@ class TestHolyroodOutputDetailRoute:
 class TestDeleteHolyroodOutput:
     """POST /holyrood/outputs/<id>/delete removes one output and its votes."""
 
-    def test_found_deletes_and_flashes_count(
-        self, app: Flask, db: Database
-    ) -> None:
+    def test_found_deletes_and_flashes_count(self, app: Flask, db: Database) -> None:
         world = seed_holyrood_world(db)
         output_id = _seed_model_output(db, world)
         client = app.test_client()
@@ -1099,9 +1091,7 @@ class TestDeleteHolyroodOutput:
         response = client.post("/holyrood/outputs/99999/delete")
 
         assert response.status_code == 302
-        assert _flashes(client, response) == [
-            "Holyrood model output #99999 not found."
-        ]
+        assert _flashes(client, response) == ["Holyrood model output #99999 not found."]
 
 
 class TestDeleteSelectedHolyroodOutputs:

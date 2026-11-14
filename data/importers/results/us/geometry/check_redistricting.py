@@ -69,10 +69,15 @@ def nyt_county_districts(snapshot: Mapping[str, Any]) -> dict[str, set[str]]:
     """
     out: dict[str, set[str]] = defaultdict(set)
     for race in snapshot["races"]:
-        if race.get("office_id") != "H" or "special" in str(race.get("type", "")).lower():
+        if (
+            race.get("office_id") != "H"
+            or "special" in str(race.get("type", "")).lower()
+        ):
             continue  # a special can be held on the old lines on general-election day
         units = race.get("reporting_units") or []
-        state = next((u["state_postal"] for u in units if u.get("level") == "state"), None)
+        state = next(
+            (u["state_postal"] for u in units if u.get("level") == "state"), None
+        )
         if state is None:
             continue
         number = int(race.get("seat_number") or 0) or 1
@@ -89,10 +94,21 @@ def _read_geojson(path: Path, tmp: Path, name: str) -> list[dict[str, Any]]:
     # GeoJSON and TopoJSON carry no CRS; the maps are in lon/lat.
     source_crs = ["-s_srs", "EPSG:4326"] if path.suffix in (".json", ".geojson") else []
     subprocess.run(
-        ["ogr2ogr", "-f", "GeoJSON", *source_crs, "-t_srs", AREA_CRS, str(out), str(path)],
+        [
+            "ogr2ogr",
+            "-f",
+            "GeoJSON",
+            *source_crs,
+            "-t_srs",
+            AREA_CRS,
+            str(out),
+            str(path),
+        ],
         check=True,
     )
-    features: list[dict[str, Any]] = json.loads(out.read_text(encoding="utf-8"))["features"]
+    features: list[dict[str, Any]] = json.loads(out.read_text(encoding="utf-8"))[
+        "features"
+    ]
     return features
 
 
@@ -126,7 +142,9 @@ def geometry_county_districts(
     return out
 
 
-def state_scores(nyt: Mapping[str, set[str]], geometry: Mapping[str, set[str]]) -> StateScores:
+def state_scores(
+    nyt: Mapping[str, set[str]], geometry: Mapping[str, set[str]]
+) -> StateScores:
     """Score each state by the share of its matched counties whose district sets differ.
 
     Returns:
@@ -163,7 +181,11 @@ def redrawn_states(old: StateScores, new: StateScores) -> set[str]:
 
 def state_labels(nyt: Mapping[str, set[str]]) -> dict[str, str]:
     """Map each state FIPS prefix to its postal code, read off NYT's district names."""
-    return {fips[:2]: sorted(districts)[0][:2] for fips, districts in nyt.items() if districts}
+    return {
+        fips[:2]: sorted(districts)[0][:2]
+        for fips, districts in nyt.items()
+        if districts
+    }
 
 
 def check_redistricting(
@@ -203,7 +225,9 @@ def main() -> None:
         if args.old
         else None
     )
-    labels = state_labels(nyt_county_districts(json.loads(args.nyt.read_text(encoding="utf-8"))))
+    labels = state_labels(
+        nyt_county_districts(json.loads(args.nyt.read_text(encoding="utf-8")))
+    )
     redrawn = redrawn_states(old, new) if old is not None else set()
     ranked = new if old is None else old
 
@@ -211,14 +235,20 @@ def main() -> None:
         share = ranked.get(fips, (None, 0))[0]
         return -(share if share is not None else -1.0)
 
-    print("state  counties   old   new" if old is not None else "state  counties  mismatch")
+    print(
+        "state  counties   old   new"
+        if old is not None
+        else "state  counties  mismatch"
+    )
     for fips in sorted(new, key=worst_first):
         share, count = new[fips]
         label = labels.get(fips, fips)
         if old is not None:
             flag = "  <- redrawn" if fips in redrawn else ""
             old_share = old.get(fips, (None, 0))[0]
-            print(f"{label:<6} {count:>8}  {_fmt(old_share):>4}  {_fmt(share):>4}{flag}")
+            print(
+                f"{label:<6} {count:>8}  {_fmt(old_share):>4}  {_fmt(share):>4}{flag}"
+            )
         else:
             print(f"{label:<6} {count:>8}  {_fmt(share):>8}")
     if old is not None:

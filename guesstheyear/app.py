@@ -3,6 +3,7 @@ import sqlite3
 
 app = Flask(__name__)
 
+
 def get_db() -> sqlite3.Connection:
     """Open and return a connection to the Wikipedia history database.
 
@@ -13,9 +14,10 @@ def get_db() -> sqlite3.Connection:
         sqlite3.Connection: An open connection to ``wikipedia_history.db`` with
             ``row_factory`` set to ``sqlite3.Row``.
     """
-    conn = sqlite3.connect('wikipedia_history.db')
+    conn = sqlite3.connect("wikipedia_history.db")
     conn.row_factory = sqlite3.Row
     return conn
+
 
 # HTML Template (Bootstrap for quick styling)
 HTML_TEMPLATE = """
@@ -135,7 +137,8 @@ HTML_TEMPLATE = """
 </html>
 """
 
-@app.route('/')
+
+@app.route("/")
 def index() -> str:
     """Render the Guess The Year game page.
 
@@ -147,7 +150,8 @@ def index() -> str:
     """
     return render_template_string(HTML_TEMPLATE)
 
-@app.route('/api/challenge')
+
+@app.route("/api/challenge")
 def challenge():
     """Return a random challenge for the Guess The Year game.
 
@@ -170,23 +174,28 @@ def challenge():
     """
     conn = get_db()
     # Find a random year that has at least 3 events for a better game
-    row = conn.execute('''
+    row = conn.execute("""
         SELECT year, era, timeframe_type FROM events 
         GROUP BY year, era 
         HAVING COUNT(*) >= 3 
         ORDER BY RANDOM() LIMIT 1
-    ''').fetchone()
-    
-    events = conn.execute('SELECT event FROM events WHERE year = ? AND era = ? ORDER BY RANDOM() LIMIT 5', 
-                         (row['year'], row['era'])).fetchall()
-    conn.close()
-    
-    return jsonify({
-        "year": row['year'],
-        "era": row['era'],
-        "timeframe_type": row['timeframe_type'],
-        "events": [e['event'] for e in events]
-    })
+    """).fetchone()
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    events = conn.execute(
+        "SELECT event FROM events WHERE year = ? AND era = ? ORDER BY RANDOM() LIMIT 5",
+        (row["year"], row["era"]),
+    ).fetchall()
+    conn.close()
+
+    return jsonify(
+        {
+            "year": row["year"],
+            "era": row["era"],
+            "timeframe_type": row["timeframe_type"],
+            "events": [e["event"] for e in events],
+        }
+    )
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

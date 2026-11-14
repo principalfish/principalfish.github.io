@@ -501,9 +501,7 @@ class TestNavigation:
         # when the post is refused.
         pages = [
             client.get("/export").get_data(as_text=True),
-            client.post("/export", data={"sections": ["house"]}).get_data(
-                as_text=True
-            ),
+            client.post("/export", data={"sections": ["house"]}).get_data(as_text=True),
         ]
 
         for body in pages:

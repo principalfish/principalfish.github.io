@@ -44,7 +44,7 @@ def test_read_csv_trims_values_and_skips_empty_regions(tmp_path: Path) -> None:
     path = tmp_path / "population.csv"
     path.write_text(
         'region,population,extra\n Scotland ,"5,430,000",ignore\n'
-        ',123,ignore\n   ,,ignore\nWales,3100000,ignore\n',
+        ",123,ignore\n   ,,ignore\nWales,3100000,ignore\n",
         encoding="utf-8",
     )
     assert populations.read_csv(path) == [
@@ -78,12 +78,14 @@ def test_read_json_preserves_population_types_and_skips_blank_regions(
 ) -> None:
     path = tmp_path / "population.json"
     path.write_text(
-        json.dumps([
-            {"region": " Scotland ", "population": 5430000},
-            {"region": "Wales", "population": "3,100,000", "extra": "ignored"},
-            {"region": " "},
-            {},
-        ]),
+        json.dumps(
+            [
+                {"region": " Scotland ", "population": 5430000},
+                {"region": "Wales", "population": "3,100,000", "extra": "ignored"},
+                {"region": " "},
+                {},
+            ]
+        ),
         encoding="utf-8",
     )
     assert populations.read_json(path) == [
@@ -136,7 +138,11 @@ def _set_cli(
 ) -> None:
     monkeypatch.setenv("DATABASE_PATH", db.config.database_path)
     argv = [
-        "import_region_populations.py", "--map-name", "Target", "--input", str(path)
+        "import_region_populations.py",
+        "--map-name",
+        "Target",
+        "--input",
+        str(path),
     ]
     if dry_run:
         argv.append("--dry-run")
@@ -160,11 +166,13 @@ def test_main_matches_names_and_preserves_other_maps_and_unlisted_regions(
     assert len({changed.id, unchanged.id, unlisted.id, other.id}) == 4
     path = tmp_path / "input.json"
     path.write_text(
-        json.dumps([
-            {"region": " NORTH east ", "population": "1,234"},
-            {"region": "Scotland", "population": 200},
-            {"region": "Missing", "population": 500},
-        ]),
+        json.dumps(
+            [
+                {"region": " NORTH east ", "population": "1,234"},
+                {"region": "Scotland", "population": 200},
+                {"region": "Missing", "population": 500},
+            ]
+        ),
         encoding="utf-8",
     )
     _set_cli(monkeypatch, db, path, dry_run=dry_run)
@@ -181,7 +189,9 @@ def test_main_matches_names_and_preserves_other_maps_and_unlisted_regions(
         unlisted.id: ("Wales", 300),
     }
     other_regions = db.get_regions_for_map(other_map.id)
-    other_rows = [(region.id, region.name, region.population) for region in other_regions]
+    other_rows = [
+        (region.id, region.name, region.population) for region in other_regions
+    ]
     assert other_rows == [(other.id, "North East", 400)]
     output = capsys.readouterr().out
     assert "Updated: 1" in output
@@ -252,10 +262,12 @@ def test_main_invalid_population_rolls_back_prior_updates(
     second = db.add_region(target.id, "Wales", population=200)
     path = tmp_path / "input.json"
     path.write_text(
-        json.dumps([
-            {"region": "Scotland", "population": 300},
-            {"region": "Wales", "population": "invalid"},
-        ]),
+        json.dumps(
+            [
+                {"region": "Scotland", "population": 300},
+                {"region": "Wales", "population": "invalid"},
+            ]
+        ),
         encoding="utf-8",
     )
     _set_cli(monkeypatch, db, path)

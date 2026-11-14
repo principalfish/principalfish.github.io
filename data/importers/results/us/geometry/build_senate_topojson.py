@@ -26,10 +26,56 @@ from pathlib import Path
 
 # 50 states (Senate excludes DC and the territories present in the Census file).
 STATE_ABBREVS = {
-    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN",
-    "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV",
-    "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN",
-    "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+    "AL",
+    "AK",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "FL",
+    "GA",
+    "HI",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY",
 }
 
 
@@ -59,24 +105,47 @@ def enrich(state_geojson: Path, out_path: Path) -> int:
 def main() -> None:
     """CLI entry point: state shapefile -> 50-state simplified TopoJSON."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--state-shp", required=True, type=Path, help="cb_2024_us_state_500k.shp")
+    parser.add_argument(
+        "--state-shp", required=True, type=Path, help="cb_2024_us_state_500k.shp"
+    )
     parser.add_argument("--out", required=True, type=Path, help="Output TopoJSON path")
-    parser.add_argument("--simplify", default="12%", help="mapshaper simplification (default 12%%)")
+    parser.add_argument(
+        "--simplify", default="12%", help="mapshaper simplification (default 12%%)"
+    )
     args = parser.parse_args()
 
     with tempfile.TemporaryDirectory() as tmp:
         state_geojson = Path(tmp) / "state.geojson"
         clean = Path(tmp) / "clean.geojson"
         subprocess.run(
-            ["ogr2ogr", "-f", "GeoJSON", "-t_srs", "EPSG:4326",
-             "-select", "STUSPS,NAME", str(state_geojson), str(args.state_shp)],
+            [
+                "ogr2ogr",
+                "-f",
+                "GeoJSON",
+                "-t_srs",
+                "EPSG:4326",
+                "-select",
+                "STUSPS,NAME",
+                str(state_geojson),
+                str(args.state_shp),
+            ],
             check=True,
         )
         count = enrich(state_geojson, clean)
         args.out.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(
-            ["mapshaper", str(clean), "-rename-layers", "map",
-             "-simplify", args.simplify, "keep-shapes", "-o", "format=topojson", str(args.out)],
+            [
+                "mapshaper",
+                str(clean),
+                "-rename-layers",
+                "map",
+                "-simplify",
+                args.simplify,
+                "keep-shapes",
+                "-o",
+                "format=topojson",
+                str(args.out),
+            ],
             check=True,
         )
         print(f"Wrote {count} polygons to {args.out}")

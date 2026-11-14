@@ -111,8 +111,8 @@ from export.uncertainty import (
 )
 from models.support.persistence import load_uncertainty
 
-DEM_PARTY_ID = 20   # Democratic — see uselectionmaps/data/map-modes.json parties[]
-REP_PARTY_ID = 21   # Republican
+DEM_PARTY_ID = 20  # Democratic — see uselectionmaps/data/map-modes.json parties[]
+REP_PARTY_ID = 21  # Republican
 
 DATA_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = DATA_DIR.parent
@@ -265,10 +265,9 @@ class ExportScope:
     @property
     def is_everything(self) -> bool:
         """Whether this scope is the full export (every section, every content kind)."""
-        return (
-            self.parliaments == frozenset(SECTION_PARLIAMENTS.values())
-            and self.content == frozenset(CONTENT_KINDS)
-        )
+        return self.parliaments == frozenset(
+            SECTION_PARLIAMENTS.values()
+        ) and self.content == frozenset(CONTENT_KINDS)
 
     def covers(self, parliament: str, *, forecast: bool) -> bool:
         """Whether election content of this kind and parliament is in scope."""
@@ -295,8 +294,7 @@ class ExportScope:
     def touches_page(self, page_parliaments: Collection[str]) -> bool:
         """Whether the scope does anything on a page with these parliaments."""
         return any(
-            parliament in page_parliaments
-            for parliament in self.effective_parliaments
+            parliament in page_parliaments for parliament in self.effective_parliaments
         )
 
     def plan_line(self) -> str:
@@ -548,7 +546,9 @@ def resolve_page_roots(
     return roots
 
 
-def partition_elections_by_page(elections: Sequence[Election]) -> dict[str, list[Election]]:
+def partition_elections_by_page(
+    elections: Sequence[Election],
+) -> dict[str, list[Election]]:
     """Group ``elections`` by the front-end page that owns their parliament.
 
     Routing is driven by :data:`PAGE_PARLIAMENTS`: an election lands in the page whose parliament
@@ -567,7 +567,9 @@ def partition_elections_by_page(elections: Sequence[Election]) -> dict[str, list
     return by_page
 
 
-def seat_statuses_for_election(session: Session, election_id: int) -> dict[int, SeatStatus]:
+def seat_statuses_for_election(
+    session: Session, election_id: int
+) -> dict[int, SeatStatus]:
     """Return an election's seat statuses keyed by seat id (seats without a row are absent).
 
     The in-session counterpart of :meth:`core.db.Database.get_seat_statuses`, so the
@@ -602,14 +604,18 @@ def senate_special_entries(
         RuntimeError: If a child special is on a different map from its parent; its
             seat names would not match the parent's states.
     """
-    children = session.execute(
-        select(Election)
-        .where(
-            Election.parent_election_id == election.id,
-            Election.type == ElectionType.us_senate,
+    children = (
+        session.execute(
+            select(Election)
+            .where(
+                Election.parent_election_id == election.id,
+                Election.type == ElectionType.us_senate,
+            )
+            .order_by(Election.id)
         )
-        .order_by(Election.id)
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     entries: list[dict[str, Any]] = []
     for child in children:
         if child.map_id != election.map_id:
@@ -617,17 +623,23 @@ def senate_special_entries(
                 f"Senate special {child.name!r} is on map {child.map_id}, "
                 f"but its parent {election.name!r} is on map {election.map_id}"
             )
-        child_votes = list(session.execute(
-            select(Vote)
-            .where(Vote.election_id == child.id)
-            .options(joinedload(Vote.party))
-        ).scalars().all())
-        entries.extend(build_special_entries(
-            seats,
-            child_votes,
-            seat_statuses_for_election(session, child.id),
-            election_year=child.year,
-        ))
+        child_votes = list(
+            session.execute(
+                select(Vote)
+                .where(Vote.election_id == child.id)
+                .options(joinedload(Vote.party))
+            )
+            .scalars()
+            .all()
+        )
+        entries.extend(
+            build_special_entries(
+                seats,
+                child_votes,
+                seat_statuses_for_election(session, child.id),
+                election_year=child.year,
+            )
+        )
     entries.sort(key=lambda entry: str(entry["n"]))
     return entries
 
@@ -655,7 +667,11 @@ def earlier_senate_results(
     }
 
     def when(row: Election) -> date:
-        parent = all_rows.get(row.parent_election_id) if row.parent_election_id is not None else None
+        parent = (
+            all_rows.get(row.parent_election_id)
+            if row.parent_election_id is not None
+            else None
+        )
         dated = parent if parent is not None else row
         return dated.election_date or date(dated.year, 1, 1)
 
@@ -663,23 +679,42 @@ def earlier_senate_results(
     rows = [
         row
         for row in all_rows.values()
-        if row.id != election.id and row.parent_election_id != election.id and when(row) < cutoff
+        if row.id != election.id
+        and row.parent_election_id != election.id
+        and when(row) < cutoff
     ]
     rows.sort(key=lambda row: (when(row), row.parent_election_id is None, -row.id))
     results: list[SenateResults] = []
     for row in rows:
         if row.id not in cache:
             seats = [
-                SeatRow(seat_id=seat.id, seat_name=seat.seat_name, region_id=seat.region_id,
-                        region_name=None, electorate=None)
-                for seat in session.execute(select(Seat).where(Seat.map_id == row.map_id)).scalars()
+                SeatRow(
+                    seat_id=seat.id,
+                    seat_name=seat.seat_name,
+                    region_id=seat.region_id,
+                    region_name=None,
+                    electorate=None,
+                )
+                for seat in session.execute(
+                    select(Seat).where(Seat.map_id == row.map_id)
+                ).scalars()
             ]
-            votes = list(session.execute(
-                select(Vote).where(Vote.election_id == row.id).options(joinedload(Vote.party))
-            ).scalars().all())
+            votes = list(
+                session.execute(
+                    select(Vote)
+                    .where(Vote.election_id == row.id)
+                    .options(joinedload(Vote.party))
+                )
+                .scalars()
+                .all()
+            )
             statuses = seat_statuses_for_election(session, row.id)
-            payload = build_result_payload(seats, votes, election_year=row.year, statuses=statuses)
-            cache[row.id] = senate_results_by_class(payload["seats"], senate_class_by_name(seats, statuses))
+            payload = build_result_payload(
+                seats, votes, election_year=row.year, statuses=statuses
+            )
+            cache[row.id] = senate_results_by_class(
+                payload["seats"], senate_class_by_name(seats, statuses)
+            )
         results.append(cache[row.id])
     return results
 
@@ -806,7 +841,9 @@ def parse_args() -> argparse.Namespace:
             single-target flag or ``--output-file``, an unknown name or an
             empty selection.
     """
-    parser = argparse.ArgumentParser(description="Export non-simulation elections to electionmaps/data")
+    parser = argparse.ArgumentParser(
+        description="Export non-simulation elections to electionmaps/data"
+    )
     target_group = parser.add_mutually_exclusive_group()
     target_group.add_argument(
         "--election-name",
@@ -867,7 +904,8 @@ def parse_args() -> argparse.Namespace:
         default=None,
         metavar="A,B",
         help=(
-            "Comma-separated sections to export (" + ", ".join(SECTION_PARLIAMENTS)
+            "Comma-separated sections to export ("
+            + ", ".join(SECTION_PARLIAMENTS)
             + "); the others' files and manifest entries are left as they are"
         ),
     )
@@ -876,7 +914,8 @@ def parse_args() -> argparse.Namespace:
         default=None,
         metavar="X,Y",
         help=(
-            "Comma-separated content to export (" + ", ".join(CONTENT_KINDS)
+            "Comma-separated content to export ("
+            + ", ".join(CONTENT_KINDS)
             + "); the other kinds' files and manifest entries are left as they are"
         ),
     )
@@ -902,9 +941,7 @@ def parse_args() -> argparse.Namespace:
             )
         names = [name.strip() for name in raw.split(",") if name.strip()]
         if not names:
-            parser.error(
-                f"{flag} selected nothing (choose from {', '.join(choices)})"
-            )
+            parser.error(f"{flag} selected nothing (choose from {', '.join(choices)})")
         unknown = [name for name in names if name not in choices]
         if unknown:
             parser.error(
@@ -985,9 +1022,13 @@ def main() -> None:
     database_path = Path(db.config.database_path)
     others_party = db.get_party_by_name("Others")
     if others_party is None:
-        raise RuntimeError("'Others' party not found in DB — run import_parties.py first")
+        raise RuntimeError(
+            "'Others' party not found in DB — run import_parties.py first"
+        )
     set_others_party_id(others_party.id)
-    seat_columns = {column["name"] for column in inspect(db.engine).get_columns("seats")}
+    seat_columns = {
+        column["name"] for column in inspect(db.engine).get_columns("seats")
+    }
     has_electorate = "electorate" in seat_columns
 
     with db.session() as session:
@@ -999,24 +1040,32 @@ def main() -> None:
         manifest_regions_by_map_id = build_manifest_regions_by_map_id(regions)
 
         if args.election_name:
-            elections = session.execute(
-                select(Election)
-                .where(Election.name == args.election_name)
-                .options(joinedload(Election.map))
-            ).scalars().all()
+            elections = (
+                session.execute(
+                    select(Election)
+                    .where(Election.name == args.election_name)
+                    .options(joinedload(Election.map))
+                )
+                .scalars()
+                .all()
+            )
             if not elections:
                 raise RuntimeError(f"Election not found: {args.election_name}")
         elif args.current_simulation:
             # Export the latest model_uns election (the current prediction).
             sim_election = latest_model_run(session)
             if sim_election is None:
-                raise RuntimeError("No model_uns elections found for --current-simulation")
+                raise RuntimeError(
+                    "No model_uns elections found for --current-simulation"
+                )
 
             map_id = sim_election.map_id
 
             if has_electorate:
                 seat_rows = session.execute(
-                    select(Seat.id, Seat.seat_name, Region.id, Region.name, Seat.electorate)
+                    select(
+                        Seat.id, Seat.seat_name, Region.id, Region.name, Seat.electorate
+                    )
                     .outerjoin(Region, Region.id == Seat.region_id)
                     .where(Seat.map_id == map_id)
                     .order_by(Seat.seat_name)
@@ -1040,11 +1089,15 @@ def main() -> None:
                 for row in seat_rows
             ]
 
-            votes = list(session.execute(
-                select(Vote)
-                .where(Vote.election_id == sim_election.id)
-                .options(joinedload(Vote.party))
-            ).scalars().all())
+            votes = list(
+                session.execute(
+                    select(Vote)
+                    .where(Vote.election_id == sim_election.id)
+                    .options(joinedload(Vote.party))
+                )
+                .scalars()
+                .all()
+            )
             published = model_run_uncertainty(
                 sim_election,
                 load_uncertainty(database_path, sim_election.id),
@@ -1064,49 +1117,68 @@ def main() -> None:
                 output_file = args.output_file.resolve()
                 seat_count = len(result_payload.get("seats", []))
                 if args.dry_run:
-                    print(f"Would write simulation payload: {output_file} ({seat_count} seats)")
+                    print(
+                        f"Would write simulation payload: {output_file} ({seat_count} seats)"
+                    )
                 else:
                     write_json(output_file, result_payload)
-                    print(f"Wrote simulation payload: {output_file} ({seat_count} seats from election '{sim_election.name}')")
+                    print(
+                        f"Wrote simulation payload: {output_file} ({seat_count} seats from election '{sim_election.name}')"
+                    )
             else:
                 # Write to default results dir
                 # --output-root and --output-base are exclusive; without either this
                 # is the repository's UK page, electionmaps/data.
                 uk_root = args.output_root or page_roots["electionmaps"]
-                result_path = uk_root.resolve() / "results" / "prediction-simulation.json"
+                result_path = (
+                    uk_root.resolve() / "results" / "prediction-simulation.json"
+                )
                 seat_count = len(result_payload.get("seats", []))
                 if args.dry_run:
                     print(f"Would write simulation: {result_path} ({seat_count} seats)")
                 else:
                     write_json(result_path, result_payload)
-                    print(f"Wrote simulation: {result_path} ({seat_count} seats from election '{sim_election.name}')")
+                    print(
+                        f"Wrote simulation: {result_path} ({seat_count} seats from election '{sim_election.name}')"
+                    )
                 sync_uncertainty_file(
                     result_path.parent, uncertainty_document, dry_run=args.dry_run
                 )
             return
         else:
-            elections = session.execute(
-                select(Election)
-                .where(Election.type.in_([
-                    ElectionType.uk_general,
-                    ElectionType.by_election,
-                    ElectionType.holyrood_general,
-                    ElectionType.us_house,
-                    ElectionType.us_presidential,
-                    ElectionType.us_senate,
-                ]))
-                .options(joinedload(Election.map))
-                .order_by(Election.year.desc(), Election.name.asc())
-            ).scalars().all()
+            elections = (
+                session.execute(
+                    select(Election)
+                    .where(
+                        Election.type.in_(
+                            [
+                                ElectionType.uk_general,
+                                ElectionType.by_election,
+                                ElectionType.holyrood_general,
+                                ElectionType.us_house,
+                                ElectionType.us_presidential,
+                                ElectionType.us_senate,
+                            ]
+                        )
+                    )
+                    .options(joinedload(Election.map))
+                    .order_by(Election.year.desc(), Election.name.asc())
+                )
+                .scalars()
+                .all()
+            )
 
             elections = [
                 election
                 for election in elections
-                if str(election.name or "").strip().lower() not in SUPPLEMENTAL_LEGACY_ELECTION_NAMES
+                if str(election.name or "").strip().lower()
+                not in SUPPLEMENTAL_LEGACY_ELECTION_NAMES
             ]
 
             if not elections:
-                raise RuntimeError("No non-simulation elections found (uk_general/by_election/holyrood_general)")
+                raise RuntimeError(
+                    "No non-simulation elections found (uk_general/by_election/holyrood_general)"
+                )
 
             latest_simulation = latest_model_run(session)
             if latest_simulation is not None:
@@ -1130,13 +1202,17 @@ def main() -> None:
                     and not EXPORT_US_CHAMBER_FORECASTS
                 ):
                     continue
-                latest_us_model = session.execute(
-                    select(Election)
-                    .where(Election.type == _us_model_type)
-                    .options(joinedload(Election.map))
-                    .order_by(Election.id.desc())
-                    .limit(1)
-                ).scalars().first()
+                latest_us_model = (
+                    session.execute(
+                        select(Election)
+                        .where(Election.type == _us_model_type)
+                        .options(joinedload(Election.map))
+                        .order_by(Election.id.desc())
+                        .limit(1)
+                    )
+                    .scalars()
+                    .first()
+                )
                 if latest_us_model is not None:
                     latest_us_models.append(latest_us_model)
             if latest_us_models:
@@ -1154,7 +1230,11 @@ def main() -> None:
         # publishes its stored uncertainty alongside its result file. Built once,
         # before any file is written, so a malformed summary writes nothing.
         model_run = next(
-            (election for election in elections if election.type == ElectionType.model_uns),
+            (
+                election
+                for election in elections
+                if election.type == ElectionType.model_uns
+            ),
             None,
         )
         model_uncertainty = (
@@ -1240,7 +1320,10 @@ def missing_export_inputs(
         if single_election_mode:
             continue
         for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS:
-            if supplemental.get("parliament", "westminster") not in PAGE_PARLIAMENTS[page_name]:
+            if (
+                supplemental.get("parliament", "westminster")
+                not in PAGE_PARLIAMENTS[page_name]
+            ):
                 continue
             if scope is not None and not scope.covers(
                 supplemental.get("parliament", "westminster"), forecast=False
@@ -1253,8 +1336,12 @@ def missing_export_inputs(
             else:
                 continue  # A config slip the supplemental pass reports itself.
             if not source_path.exists():
-                supplementals.append(f"supplemental {supplemental['id']!r} file {source_path}")
-    maps = [f"{item} (needed by {', '.join(names)})" for item, names in needed_by.items()]
+                supplementals.append(
+                    f"supplemental {supplemental['id']!r} file {source_path}"
+                )
+    maps = [
+        f"{item} (needed by {', '.join(names)})" for item, names in needed_by.items()
+    ]
     return maps + supplementals
 
 
@@ -1293,7 +1380,11 @@ def export_pages(
     elections = kept
 
     if single_election_mode:
-        folded = [election.name for election in elections if is_folded_senate_special(election)]
+        folded = [
+            election.name
+            for election in elections
+            if is_folded_senate_special(election)
+        ]
         if folded:
             raise RuntimeError(
                 f"{', '.join(repr(name) for name in folded)} is a folded Senate special, "
@@ -1421,34 +1512,48 @@ def _export_page(
                 seat_name=row[1],
                 region_id=row[2],
                 region_name=row[3],
-                electorate=(row[electorate_idx] if electorate_idx is not None else None),
+                electorate=(
+                    row[electorate_idx] if electorate_idx is not None else None
+                ),
             )
             for row in seat_rows
         ]
 
-        votes = list(session.execute(
-            select(Vote)
-            .where(Vote.election_id == election.id)
-            .options(joinedload(Vote.party))
-        ).scalars().all())
+        votes = list(
+            session.execute(
+                select(Vote)
+                .where(Vote.election_id == election.id)
+                .options(joinedload(Vote.party))
+            )
+            .scalars()
+            .all()
+        )
 
         # For Holyrood general elections, also fetch votes from the linked list election
         # so that all 129 seats (73 constituency + 56 list) appear in one results file.
         if election.type == ElectionType.holyrood_general:
-            list_election = session.execute(
-                select(Election)
-                .where(
-                    Election.parent_election_id == election.id,
-                    Election.type == ElectionType.holyrood_list,
+            list_election = (
+                session.execute(
+                    select(Election)
+                    .where(
+                        Election.parent_election_id == election.id,
+                        Election.type == ElectionType.holyrood_list,
+                    )
+                    .options(joinedload(Election.map))
                 )
-                .options(joinedload(Election.map))
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             if list_election is not None:
-                list_votes = session.execute(
-                    select(Vote)
-                    .where(Vote.election_id == list_election.id)
-                    .options(joinedload(Vote.party))
-                ).scalars().all()
+                list_votes = (
+                    session.execute(
+                        select(Vote)
+                        .where(Vote.election_id == list_election.id)
+                        .options(joinedload(Vote.party))
+                    )
+                    .scalars()
+                    .all()
+                )
                 votes = votes + list(list_votes)
 
         stem = file_stem_for_election(election)
@@ -1525,10 +1630,14 @@ def _export_page(
             output_file = args.output_file.resolve()
             seat_count = len(result_payload.get("seats", []))
             if args.dry_run:
-                print(f"Would write single result payload: {output_file} ({seat_count} seats)")
+                print(
+                    f"Would write single result payload: {output_file} ({seat_count} seats)"
+                )
             else:
                 write_json(output_file, result_payload)
-                print(f"Wrote single result payload: {output_file} ({seat_count} seats)")
+                print(
+                    f"Wrote single result payload: {output_file} ({seat_count} seats)"
+                )
             continue
 
         # By-elections: collect seat changes only; they are folded into current-parliament.json
@@ -1541,7 +1650,8 @@ def _export_page(
                     "votes": compact_votes_to_dict(seat_row.get("p", [])),
                 }
                 for seat_row in result_payload.get("seats", [])
-                if seat_row.get("n") and seat_row.get("p")  # only seats with actual votes
+                if seat_row.get("n")
+                and seat_row.get("p")  # only seats with actual votes
             ]
             pending_by_election_rows.append(
                 {
@@ -1549,7 +1659,9 @@ def _export_page(
                     "dbId": election.id,
                     "parentDbId": election.parent_election_id,
                     "name": election.name,
-                    "date": str(election.election_date) if election.election_date else None,
+                    "date": str(election.election_date)
+                    if election.election_date
+                    else None,
                     "changes": changes,
                 }
             )
@@ -1557,7 +1669,9 @@ def _export_page(
 
         # Only Westminster maps are bootstrapped from a legacy template; every other
         # parliament (Holyrood, US) ships a pre-built TopoJSON in maps/ that we verify.
-        uses_prebuilt_map = getattr(map_row, "parliament", "westminster") != "westminster"
+        uses_prebuilt_map = (
+            getattr(map_row, "parliament", "westminster") != "westminster"
+        )
         map_relpath = f"maps/{map_filename}"
         result_path = results_dir / result_filename
         map_path = maps_dir / map_filename
@@ -1567,7 +1681,9 @@ def _export_page(
             # (e.g. build_house_topojson.py) and lives directly in maps/. We only
             # need to verify it exists.
             if args.dry_run:
-                print(f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)")
+                print(
+                    f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)"
+                )
                 # A missing map was already reported by export_pages' preflight.
                 if election.map_id not in written_map_ids and map_path.exists():
                     print(f"Pre-built map already in place: {map_path}")
@@ -1589,23 +1705,31 @@ def _export_page(
                 )
 
             if args.dry_run:
-                print(f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)")
+                print(
+                    f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)"
+                )
                 if election.map_id not in written_map_ids:
                     if map_path.exists():
                         print(f"Map already in place: {map_path}")
                     else:
-                        print(f"Would write map: {map_path} (template {map_template_filename})")
+                        print(
+                            f"Would write map: {map_path} (template {map_template_filename})"
+                        )
             else:
                 write_json(result_path, result_payload)
                 if election.map_id not in written_map_ids and not map_path.exists():
                     # Bootstrap a missing map from its legacy template only.  Never overwrite
                     # an existing map: the committed TopoJSON is hand-curated (e.g. manual
                     # boundary fixes) and is not reflected in the legacy templates.
-                    map_payload = json.loads(map_template_path.read_text(encoding="utf-8"))
+                    map_payload = json.loads(
+                        map_template_path.read_text(encoding="utf-8")
+                    )
                     write_json(map_path, map_payload)
 
         if published is not None:
-            sync_uncertainty_file(results_dir, uncertainty_document, dry_run=args.dry_run)
+            sync_uncertainty_file(
+                results_dir, uncertainty_document, dry_run=args.dry_run
+            )
 
         map_files_by_id[str(election.map_id)] = map_relpath
         written_map_ids.add(election.map_id)
@@ -1704,9 +1828,11 @@ def _export_page(
             if entry_id in held_ids:
                 data_files_by_election_id.setdefault(entry_id, data_file)
 
-    if "us_presidential" in parliaments and (
-        scope is None or scope.covers("us_presidential", forecast=False)
-    ) and not args.dry_run:
+    if (
+        "us_presidential" in parliaments
+        and (scope is None or scope.covers("us_presidential", forecast=False))
+        and not args.dry_run
+    ):
         for series in state_trends.values():
             series.sort(key=lambda entry: entry["year"])
         write_json(
@@ -1737,17 +1863,28 @@ def _export_page(
     remove_comparison_for_supplemental_entries(manifest_entries)
 
     if pending_by_election_rows:
-        by_elections_by_parent_manifest_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        by_elections_by_parent_manifest_id: dict[str, list[dict[str, Any]]] = (
+            defaultdict(list)
+        )
         for by_election in pending_by_election_rows:
             parent_db_id = by_election.get("parentDbId")
-            parent_manifest_id = manifest_id_by_db_id.get(parent_db_id) if parent_db_id is not None else None
+            parent_manifest_id = (
+                manifest_id_by_db_id.get(parent_db_id)
+                if parent_db_id is not None
+                else None
+            )
             if not parent_manifest_id:
                 continue
             by_elections_by_parent_manifest_id[parent_manifest_id].append(by_election)
 
-        for parent_manifest_id, by_rows in sorted(by_elections_by_parent_manifest_id.items()):
+        for parent_manifest_id, by_rows in sorted(
+            by_elections_by_parent_manifest_id.items()
+        ):
             all_changes: list[dict[str, Any]] = []
-            for row in sorted(by_rows, key=lambda row: (row.get("date") or "", str(row.get("name") or ""))):
+            for row in sorted(
+                by_rows,
+                key=lambda row: (row.get("date") or "", str(row.get("name") or "")),
+            ):
                 for change in row.get("changes", []):
                     if change.get("seat"):
                         all_changes.append(change)
@@ -1792,12 +1929,18 @@ def _export_page(
             composite_manifest_id = COMPOSITE_ENTRY_ID
 
             if args.dry_run:
-                print(f"Would write composite: {composite_path} ({len(composite_seats)} seats, {len(all_changes)} overrides)")
+                print(
+                    f"Would write composite: {composite_path} ({len(composite_seats)} seats, {len(all_changes)} overrides)"
+                )
             else:
                 write_json(composite_path, composite_payload)
-                print(f"Wrote composite: {composite_path} ({len(composite_seats)} seats, {len(all_changes)} overrides)")
+                print(
+                    f"Wrote composite: {composite_path} ({len(composite_seats)} seats, {len(all_changes)} overrides)"
+                )
 
-            data_files_by_election_id[composite_manifest_id] = f"results/{composite_filename}"
+            data_files_by_election_id[composite_manifest_id] = (
+                f"results/{composite_filename}"
+            )
 
             parent_entry = next(
                 (e for e in manifest_entries if e.get("id") == parent_manifest_id),
@@ -1852,7 +1995,11 @@ def _export_page(
     # When absent we fall back to the previously-written map-modes.json so older
     # checkouts and tests without a shell keep working unchanged.
     shell_path = output_root / "map-modes-shell.json"
-    shell = json.loads(shell_path.read_text(encoding="utf-8")) if shell_path.exists() else {}
+    shell = (
+        json.loads(shell_path.read_text(encoding="utf-8"))
+        if shell_path.exists()
+        else {}
+    )
     config = shell if shell else existing
 
     # model/poll-tracker meta files are keyed by parliament; keep only those belonging to
@@ -1886,7 +2033,9 @@ def _export_page(
     # elections like 2021-holyrood-2026) are also preserved here — they are exported to
     # disk by the main loop but excluded from manifest_entries by the standard-name filter.
     existing_by_id = {e.get("id"): e for e in existing.get("elections", [])}
-    existing_data_files = existing.get("files", {}).get("elections", {}).get("electionsById", {})
+    existing_data_files = (
+        existing.get("files", {}).get("elections", {}).get("electionsById", {})
+    )
     for entry_id, entry in existing_by_id.items():
         entry_type = entry.get("type")
         if entry_type not in PRESERVE_ENTRY_TYPES:
@@ -1987,7 +2136,9 @@ def _export_page(
     if unmoded_map_ids:
         # The front end needs a mapMode (projection, regions) to draw a map; add it to
         # the page's map-modes-shell.json.
-        print(f"Warning: no mapModes entry for map id(s) {unmoded_map_ids} in {shell_path}")
+        print(
+            f"Warning: no mapModes entry for map id(s) {unmoded_map_ids} in {shell_path}"
+        )
 
     manifest_payload = {
         "defaultElection": default_election_id,
@@ -2003,12 +2154,12 @@ def _export_page(
     }
 
     if args.dry_run:
-        print(f"Would write manifest: {manifest_path} ({len(manifest_entries)} elections)")
+        print(
+            f"Would write manifest: {manifest_path} ({len(manifest_entries)} elections)"
+        )
     else:
         write_manifest(manifest_path, manifest_payload)
         print(f"Wrote manifest: {manifest_path} ({len(manifest_entries)} elections)")
-
-
 
 
 if __name__ == "__main__":

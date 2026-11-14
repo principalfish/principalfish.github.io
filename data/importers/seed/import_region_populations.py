@@ -257,8 +257,7 @@ def main() -> None:
             if db_region is not None:
                 db_region.population = population
                 print(
-                    f"- updated: {db_region.name} "
-                    f"({region.population} -> {population})"
+                    f"- updated: {db_region.name} ({region.population} -> {population})"
                 )
                 updated += 1
 

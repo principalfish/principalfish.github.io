@@ -15,7 +15,11 @@ from sqlalchemy.orm import joinedload
 
 from core.db import Database, SeatStatus
 from core.schema import Election, ElectionType, Party, Seat, Vote
-from export.export_elections import earlier_senate_results, seat_statuses_for_election, senate_special_entries
+from export.export_elections import (
+    earlier_senate_results,
+    seat_statuses_for_election,
+    senate_special_entries,
+)
 from export.payload import (
     SeatRow,
     add_previous_senate_results,
@@ -70,7 +74,13 @@ def _vote(*args: Any, **kwargs: Any) -> Vote:
 
 
 def _seat(seat_id: int, name: str, region_id: int | None = None) -> SeatRow:
-    return SeatRow(seat_id=seat_id, seat_name=name, region_id=region_id, region_name=None, electorate=None)
+    return SeatRow(
+        seat_id=seat_id,
+        seat_name=name,
+        region_id=region_id,
+        region_name=None,
+        electorate=None,
+    )
 
 
 class TestChooseWinner:
@@ -169,7 +179,13 @@ class TestBuildResultPayload:
         set_others_party_id(0)
         seats = [_seat(1, "Alpha")]
         votes = [
-            _vote(1, 100.0, party=_party(1, "Labour"), elected=True, candidate_name="Alice"),
+            _vote(
+                1,
+                100.0,
+                party=_party(1, "Labour"),
+                elected=True,
+                candidate_name="Alice",
+            ),
             _vote(1, 60.0, party=_party(2, "Conservative"), candidate_name="Bob"),
             _vote(1, 10.0, party=_party(3, "Green")),  # no name -> stays 2-element
         ]
@@ -179,21 +195,31 @@ class TestBuildResultPayload:
     def test_electoral_votes_emitted_only_when_set(self) -> None:
         set_others_party_id(0)
         pres_seat = SeatRow(
-            seat_id=1, seat_name="California", region_id=1, region_name="California",
-            electorate=None, electoral_votes=54,
+            seat_id=1,
+            seat_name="California",
+            region_id=1,
+            region_name="California",
+            electorate=None,
+            electoral_votes=54,
         )
         votes = [_vote(1, 100.0, party=_party(1, "Democratic"), elected=True)]
         payload = build_result_payload([pres_seat], votes)
         assert payload["seats"][0]["ev"] == 54
         # A seat with no electoral_votes (the default) omits the key entirely.
-        uk = build_result_payload([_seat(2, "Alpha")], [_vote(2, 10.0, party=_party(1, "Labour"))])
+        uk = build_result_payload(
+            [_seat(2, "Alpha")], [_vote(2, 10.0, party=_party(1, "Labour"))]
+        )
         assert "ev" not in uk["seats"][0]
 
     def test_ev_by_unit_overrides_seat_electoral_votes(self) -> None:
         set_others_party_id(0)
         seat = SeatRow(
-            seat_id=1, seat_name="California", region_id=1, region_name="Pacific",
-            electorate=None, electoral_votes=54,
+            seat_id=1,
+            seat_name="California",
+            region_id=1,
+            region_name="Pacific",
+            electorate=None,
+            electoral_votes=54,
         )
         votes = [_vote(1, 100.0, party=_party(1, "Democratic"), elected=True)]
         payload = build_result_payload([seat], votes, ev_by_unit={"California": 55})
@@ -202,8 +228,12 @@ class TestBuildResultPayload:
     def test_ev_by_unit_none_falls_back_to_seat(self) -> None:
         set_others_party_id(0)
         seat = SeatRow(
-            seat_id=1, seat_name="California", region_id=1, region_name="Pacific",
-            electorate=None, electoral_votes=54,
+            seat_id=1,
+            seat_name="California",
+            region_id=1,
+            region_name="Pacific",
+            electorate=None,
+            electoral_votes=54,
         )
         votes = [_vote(1, 100.0, party=_party(1, "Democratic"), elected=True)]
         payload = build_result_payload([seat], votes, ev_by_unit=None)
@@ -212,8 +242,12 @@ class TestBuildResultPayload:
     def test_ev_by_unit_missing_key_omits_ev(self) -> None:
         set_others_party_id(0)
         seat = SeatRow(
-            seat_id=1, seat_name="California", region_id=1, region_name="Pacific",
-            electorate=None, electoral_votes=54,
+            seat_id=1,
+            seat_name="California",
+            region_id=1,
+            region_name="Pacific",
+            electorate=None,
+            electoral_votes=54,
         )
         votes = [_vote(1, 100.0, party=_party(1, "Democratic"), elected=True)]
         payload = build_result_payload([seat], votes, ev_by_unit={"OtherState": 10})
@@ -353,7 +387,9 @@ class TestSeatStatusFields:
         set_others_party_id(0)
         statuses = {1: SeatStatus(seat_id=1, called=True, pct_counted=72.0)}
         seat = build_result_payload(
-            [_seat(1, "AZ-06")], [_vote(1, 5.0, party=self._DEM, elected=True)], statuses=statuses
+            [_seat(1, "AZ-06")],
+            [_vote(1, 5.0, party=self._DEM, elected=True)],
+            statuses=statuses,
         )["seats"][0]
         assert "c" not in seat
         assert "pc" not in seat
@@ -386,7 +422,11 @@ class TestSeatStatusFields:
     def test_uncalled_seat_with_a_tied_lead_has_no_winner(self) -> None:
         set_others_party_id(0)
         seats = [_seat(1, "AK-01")]
-        votes = [_vote(1, 500.0, party=self._REP), _vote(1, 500.0, party=self._DEM), _vote(1, 20.0, party=None)]
+        votes = [
+            _vote(1, 500.0, party=self._REP),
+            _vote(1, 500.0, party=self._DEM),
+            _vote(1, 20.0, party=None),
+        ]
         statuses = {1: SeatStatus(seat_id=1, called=False)}
         seat = build_result_payload(seats, votes, statuses=statuses)["seats"][0]
         assert "w" not in seat
@@ -398,15 +438,22 @@ class TestSeatStatusFields:
     def test_uncalled_status_overrides_a_stray_elected_flag(self) -> None:
         set_others_party_id(0)
         seats = [_seat(1, "CA-13")]
-        votes = [_vote(1, 400.0, party=self._DEM, elected=True), _vote(1, 500.0, party=self._REP)]
+        votes = [
+            _vote(1, 400.0, party=self._DEM, elected=True),
+            _vote(1, 500.0, party=self._REP),
+        ]
         statuses = {1: SeatStatus(seat_id=1, called=False)}
-        assert build_result_payload(seats, votes, statuses=statuses)["seats"][0]["w"] == 21
+        assert (
+            build_result_payload(seats, votes, statuses=statuses)["seats"][0]["w"] == 21
+        )
 
     def test_same_party_seat_has_sp(self) -> None:
         set_others_party_id(0)
         statuses = {1: SeatStatus(seat_id=1, same_party=True)}
         seat = build_result_payload(
-            [_seat(1, "CA-34")], [_vote(1, 5.0, party=self._DEM, elected=True)], statuses=statuses
+            [_seat(1, "CA-34")],
+            [_vote(1, 5.0, party=self._DEM, elected=True)],
+            statuses=statuses,
         )["seats"][0]
         assert seat["sp"] is True
         assert "c" not in seat
@@ -416,14 +463,22 @@ class TestSeatStatusFields:
         for label in ("rcv-final", "runoff"):
             statuses = {1: SeatStatus(seat_id=1, decisive_round=label)}
             seat = build_result_payload(
-                [_seat(1, "ME-02")], [_vote(1, 5.0, party=self._DEM, elected=True)], statuses=statuses
+                [_seat(1, "ME-02")],
+                [_vote(1, 5.0, party=self._DEM, elected=True)],
+                statuses=statuses,
             )["seats"][0]
             assert seat["rd"] == label
 
     def test_fields_follow_the_existing_keys(self) -> None:
         set_others_party_id(0)
         statuses = {
-            1: SeatStatus(seat_id=1, called=False, pct_counted=50.0, same_party=True, decisive_round="runoff")
+            1: SeatStatus(
+                seat_id=1,
+                called=False,
+                pct_counted=50.0,
+                same_party=True,
+                decisive_round="runoff",
+            )
         }
         seat = build_result_payload(
             [_seat(1, "LA-05")], [_vote(1, 5.0, party=self._REP)], statuses=statuses
@@ -435,7 +490,12 @@ class TestSeatStatusFields:
         seats, votes = self._two_seat_election()
         statuses = {1: SeatStatus(seat_id=1, called=False, pct_counted=40.0)}
         payload = build_result_payload(seats, votes, statuses=statuses)
-        assert payload["seats"][1] == {"n": "GA-02", "r": 3, "w": 20, "p": [[20, 550, "Bishop"], [21, 450]]}
+        assert payload["seats"][1] == {
+            "n": "GA-02",
+            "r": 3,
+            "w": 20,
+            "p": [[20, 550, "Bishop"], [21, 450]],
+        }
 
 
 class TestBuildSpecialEntries:
@@ -444,7 +504,11 @@ class TestBuildSpecialEntries:
     def test_entries_carry_class_and_status_but_no_region(self) -> None:
         set_others_party_id(0)
         dem, rep = _party(20, "Democratic"), _party(21, "Republican")
-        seats = [_seat(1, "Minnesota", region_id=4), _seat(2, "Georgia", region_id=5), _seat(3, "Ohio", region_id=6)]
+        seats = [
+            _seat(1, "Minnesota", region_id=4),
+            _seat(2, "Georgia", region_id=5),
+            _seat(3, "Ohio", region_id=6),
+        ]
         votes = [
             _vote(2, 1000.0, party=dem, candidate_name="Warnock"),
             _vote(2, 900.0, party=rep, candidate_name="Loeffler"),
@@ -453,7 +517,13 @@ class TestBuildSpecialEntries:
         ]
         statuses = {
             1: SeatStatus(seat_id=1, senate_class=2),
-            2: SeatStatus(seat_id=2, called=False, pct_counted=95.0, senate_class=3, decisive_round="runoff"),
+            2: SeatStatus(
+                seat_id=2,
+                called=False,
+                pct_counted=95.0,
+                senate_class=3,
+                decisive_round="runoff",
+            ),
         }
         entries = build_special_entries(seats, votes, statuses, election_year=2020)
         # Seats with no special votes (Ohio) are left out; the rest sort by name.
@@ -467,13 +537,20 @@ class TestBuildSpecialEntries:
                 "pc": 95,
                 "rd": "runoff",
             },
-            {"n": "Minnesota", "cl": 2, "w": 20, "p": [[20, 600, "Smith"], [21, 500, "Housley"]]},
+            {
+                "n": "Minnesota",
+                "cl": 2,
+                "w": 20,
+                "p": [[20, 600, "Smith"], [21, 500, "Housley"]],
+            },
         ]
 
     def test_class_is_omitted_when_unknown(self) -> None:
         set_others_party_id(0)
         entries = build_special_entries(
-            [_seat(1, "Georgia")], [_vote(1, 5.0, party=_party(20, "Democratic"), elected=True)], {}
+            [_seat(1, "Georgia")],
+            [_vote(1, 5.0, party=_party(20, "Democratic"), elected=True)],
+            {},
         )
         assert entries == [{"n": "Georgia", "w": 20, "p": [[20, 5]]}]
 
@@ -493,26 +570,38 @@ class TestPreviousSenateResults:
 
     def test_results_by_class_drops_names_and_skips_unknown_class(self) -> None:
         entries = [
-            {"n": "Florida", "r": 1, "w": 21, "p": [[21, 500, "Rubio"], [20, 400, "Demings"]]},
+            {
+                "n": "Florida",
+                "r": 1,
+                "w": 21,
+                "p": [[21, 500, "Rubio"], [20, 400, "Demings"]],
+            },
             {"n": "Texas", "r": 2, "p": [[21, 5]]},
             {"n": "Iowa", "r": 3, "w": 21, "p": [[21, 3]]},
         ]
         results = senate_results_by_class(entries, {"Florida": 3, "Texas": 1})
-        assert results == {("Florida", 3): self._FL_2022, ("Texas", 1): {"p": [[21, 5]]}}
+        assert results == {
+            ("Florida", 3): self._FL_2022,
+            ("Texas", 1): {"p": [[21, 5]]},
+        }
 
     def test_standalone_special_gets_the_previous_same_class_result(self) -> None:
         seats = [
             {"n": "Alaska", "r": 1, "w": 21, "p": [[21, 5]]},
             {"n": "Florida", "r": 2, "w": 21, "p": [[21, 6]]},
         ]
-        add_previous_senate_results(seats, [], {"Alaska": 2, "Florida": 3, "Iowa": 2}, self._earlier())
+        add_previous_senate_results(
+            seats, [], {"Alaska": 2, "Florida": 3, "Iowa": 2}, self._earlier()
+        )
         assert "pv" not in seats[0]
         assert seats[1]["pv"] == self._FL_2022
         assert list(seats[1]) == ["n", "r", "w", "p", "pv"]
 
     def test_folded_special_gets_the_previous_same_class_result(self) -> None:
         specials = [{"n": "Oklahoma", "cl": 2, "w": 21, "p": [[21, 1]]}]
-        add_previous_senate_results([], specials, {"Texas": 3, "Ohio": 3, "Oklahoma": 3}, self._earlier())
+        add_previous_senate_results(
+            [], specials, {"Texas": 3, "Ohio": 3, "Oklahoma": 3}, self._earlier()
+        )
         assert specials[0]["pv"] == self._OK_2020
 
     def test_most_recent_earlier_election_wins(self) -> None:
@@ -521,30 +610,41 @@ class TestPreviousSenateResults:
             {("Florida", 3): self._FL_2022},
         ]
         seats = [{"n": "Florida", "r": 1, "w": 21, "p": [[21, 6]]}]
-        add_previous_senate_results(seats, [], {"Florida": 3, "Alaska": 2, "Iowa": 2}, earlier)
+        add_previous_senate_results(
+            seats, [], {"Florida": 3, "Alaska": 2, "Iowa": 2}, earlier
+        )
         assert seats[0]["pv"] == self._FL_2022
 
     def test_absent_without_an_earlier_same_class_election(self) -> None:
         specials = [{"n": "Arizona", "cl": 3, "w": 20, "p": [[20, 1]]}]
         seats = [{"n": "Arizona", "r": 1, "w": 20, "p": [[20, 2]]}]
-        add_previous_senate_results(seats, specials, {"Arizona": 2, "Iowa": 2}, self._earlier())
+        add_previous_senate_results(
+            seats, specials, {"Arizona": 2, "Iowa": 2}, self._earlier()
+        )
         assert "pv" not in specials[0]
         assert "pv" not in seats[0]
 
-    def test_regular_seats_never_get_pv_even_with_an_earlier_same_class_result(self) -> None:
+    def test_regular_seats_never_get_pv_even_with_an_earlier_same_class_result(
+        self,
+    ) -> None:
         seats = [{"n": "Oklahoma", "r": 1, "w": 21, "p": [[21, 6]]}]
-        add_previous_senate_results(seats, [], {"Oklahoma": 2, "Alaska": 2, "Iowa": 2}, self._earlier())
+        add_previous_senate_results(
+            seats, [], {"Oklahoma": 2, "Alaska": 2, "Iowa": 2}, self._earlier()
+        )
         assert seats == [{"n": "Oklahoma", "r": 1, "w": 21, "p": [[21, 6]]}]
 
     def test_no_clear_regular_class_adds_nothing(self) -> None:
         seats = [{"n": "Florida", "r": 1, "w": 21, "p": [[21, 6]]}]
-        add_previous_senate_results(seats, [], {"Florida": 3, "Alaska": 2}, self._earlier())
+        add_previous_senate_results(
+            seats, [], {"Florida": 3, "Alaska": 2}, self._earlier()
+        )
         assert "pv" not in seats[0]
 
     def test_non_senate_payload_is_unchanged(self) -> None:
         set_others_party_id(0)
         payload = build_result_payload(
-            [_seat(1, "Seat A", region_id=1)], [_vote(1, 5.0, party=_party(20, "Democratic"), elected=True)]
+            [_seat(1, "Seat A", region_id=1)],
+            [_vote(1, 5.0, party=_party(20, "Democratic"), elected=True)],
         )
         assert payload["seats"] == [{"n": "Seat A", "r": 1, "w": 20, "p": [[20, 5]]}]
 
@@ -556,16 +656,38 @@ class TestEarlierSenateResultsFromDb:
     def world(self, db: Database) -> dict[str, int]:
         us_map = db.add_map("US Senate", parliament="us_senate")
         dem, rep = db.add_party("Democratic"), db.add_party("Republican")
-        seat = {n: db.add_seat(us_map.id, n).id for n in ("Alaska", "Arizona", "Florida", "Georgia", "Oklahoma")}
+        seat = {
+            n: db.add_seat(us_map.id, n).id
+            for n in ("Alaska", "Arizona", "Florida", "Georgia", "Oklahoma")
+        }
 
         def senate(name: str, year: int, day: date, parent: int | None = None) -> int:
             return db.add_election(
-                us_map.id, year, name, ElectionType.us_senate, parent_election_id=parent, election_date=day
+                us_map.id,
+                year,
+                name,
+                ElectionType.us_senate,
+                parent_election_id=parent,
+                election_date=day,
             ).id
 
-        def race(election_id: int, state: str, cls: int, dem_votes: float, rep_votes: float) -> None:
-            db.add_vote(election_id, seat[state], party_id=dem.id, vote_total=dem_votes, elected=dem_votes > rep_votes)
-            db.add_vote(election_id, seat[state], party_id=rep.id, vote_total=rep_votes, elected=rep_votes > dem_votes)
+        def race(
+            election_id: int, state: str, cls: int, dem_votes: float, rep_votes: float
+        ) -> None:
+            db.add_vote(
+                election_id,
+                seat[state],
+                party_id=dem.id,
+                vote_total=dem_votes,
+                elected=dem_votes > rep_votes,
+            )
+            db.add_vote(
+                election_id,
+                seat[state],
+                party_id=rep.id,
+                vote_total=rep_votes,
+                elected=rep_votes > dem_votes,
+            )
             statuses = db.get_seat_statuses(election_id)
             statuses[seat[state]] = SeatStatus(seat_id=seat[state], senate_class=cls)
             db.set_seat_statuses(election_id, statuses.values())
@@ -586,31 +708,58 @@ class TestEarlierSenateResultsFromDb:
         race(e2026, "Alaska", 2, 45, 55)
         race(e2026, "Georgia", 2, 52, 48)
         race(e2026, "Florida", 3, 47, 53)
-        return {"map": us_map.id, "dem": dem.id, "rep": rep.id, "e2020": e2020, "sp2020": sp2020,
-                "e2022": e2022, "e2026": e2026}
+        return {
+            "map": us_map.id,
+            "dem": dem.id,
+            "rep": rep.id,
+            "e2020": e2020,
+            "sp2020": sp2020,
+            "e2022": e2022,
+            "e2026": e2026,
+        }
 
-    def _pv(self, db: Database, world: dict[str, int], key: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    def _pv(
+        self, db: Database, world: dict[str, int], key: str
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         set_others_party_id(0)
         with db.session() as session:
             election = session.get(Election, world[key])
             assert election is not None
             seats = [
-                SeatRow(seat_id=row.id, seat_name=row.seat_name, region_id=None, region_name=None, electorate=None)
-                for row in session.execute(select(Seat).where(Seat.map_id == world["map"])).scalars()
+                SeatRow(
+                    seat_id=row.id,
+                    seat_name=row.seat_name,
+                    region_id=None,
+                    region_name=None,
+                    electorate=None,
+                )
+                for row in session.execute(
+                    select(Seat).where(Seat.map_id == world["map"])
+                ).scalars()
             ]
-            votes = list(session.execute(
-                select(Vote).where(Vote.election_id == election.id).options(joinedload(Vote.party))
-            ).scalars())
+            votes = list(
+                session.execute(
+                    select(Vote)
+                    .where(Vote.election_id == election.id)
+                    .options(joinedload(Vote.party))
+                ).scalars()
+            )
             statuses = seat_statuses_for_election(session, election.id)
-            payload = build_result_payload(seats, votes, election_year=election.year, statuses=statuses)
+            payload = build_result_payload(
+                seats, votes, election_year=election.year, statuses=statuses
+            )
             specials = senate_special_entries(session, election, seats)
             add_previous_senate_results(
-                payload["seats"], specials, senate_class_by_name(seats, statuses),
+                payload["seats"],
+                specials,
+                senate_class_by_name(seats, statuses),
                 earlier_senate_results(session, election, {}),
             )
             return payload["seats"], specials
 
-    def test_standalone_special_compares_with_the_2022_class_3_result(self, db: Database, world: dict[str, int]) -> None:
+    def test_standalone_special_compares_with_the_2022_class_3_result(
+        self, db: Database, world: dict[str, int]
+    ) -> None:
         seats, specials = self._pv(db, world, "e2026")
         by_name = {seat["n"]: seat for seat in seats}
         dem, rep = world["dem"], world["rep"]
@@ -619,14 +768,18 @@ class TestEarlierSenateResultsFromDb:
         assert "pv" not in by_name["Georgia"]
         assert specials == []
 
-    def test_folded_special_compares_with_the_previous_same_class_result(self, db: Database, world: dict[str, int]) -> None:
+    def test_folded_special_compares_with_the_previous_same_class_result(
+        self, db: Database, world: dict[str, int]
+    ) -> None:
         seats, specials = self._pv(db, world, "e2022")
         rep, dem = world["rep"], world["dem"]
         assert [(s["n"], s["cl"]) for s in specials] == [("Oklahoma", 2)]
         assert specials[0]["pv"] == {"w": rep, "p": [[rep, 70], [dem, 20]]}
         assert all("pv" not in seat for seat in seats)
 
-    def test_special_with_no_earlier_same_class_election_has_no_pv(self, db: Database, world: dict[str, int]) -> None:
+    def test_special_with_no_earlier_same_class_election_has_no_pv(
+        self, db: Database, world: dict[str, int]
+    ) -> None:
         seats, specials = self._pv(db, world, "e2020")
         assert [(s["n"], s["cl"]) for s in specials] == [("Arizona", 3), ("Georgia", 3)]
         assert all("pv" not in entry for entry in specials + seats)
@@ -636,42 +789,81 @@ class TestEarlierSenateResultsOrdering:
     """``earlier_senate_results``: own children excluded, same-date ties deterministic."""
 
     @staticmethod
-    def _held(db: Database, name: str, year: int, day: date | None, parent: int | None, map_id: int,
-              seat_id: int, rep_votes: float, cls: int) -> int:
+    def _held(
+        db: Database,
+        name: str,
+        year: int,
+        day: date | None,
+        parent: int | None,
+        map_id: int,
+        seat_id: int,
+        rep_votes: float,
+        cls: int,
+    ) -> int:
         election = db.add_election(
-            map_id, year, name, ElectionType.us_senate, parent_election_id=parent, election_date=day
+            map_id,
+            year,
+            name,
+            ElectionType.us_senate,
+            parent_election_id=parent,
+            election_date=day,
         )
         rep = db.add_party("Republican " + name)
-        db.add_vote(election.id, seat_id, party_id=rep.id, vote_total=rep_votes, elected=True)
-        db.set_seat_statuses(election.id, [SeatStatus(seat_id=seat_id, senate_class=cls)])
+        db.add_vote(
+            election.id, seat_id, party_id=rep.id, vote_total=rep_votes, elected=True
+        )
+        db.set_seat_statuses(
+            election.id, [SeatStatus(seat_id=seat_id, senate_class=cls)]
+        )
         return election.id
 
-    def test_own_special_is_not_earlier_than_its_parent_despite_an_earlier_date(self, db: Database) -> None:
+    def test_own_special_is_not_earlier_than_its_parent_despite_an_earlier_date(
+        self, db: Database
+    ) -> None:
         set_others_party_id(0)
         us_map = db.add_map("US Senate", parliament="us_senate")
         seat = db.add_seat(us_map.id, "Georgia").id
-        old = self._held(db, "old", 2014, date(2014, 11, 4), None, us_map.id, seat, 7, 3)
-        parent = self._held(db, "parent", 2020, date(2020, 11, 5), None, us_map.id, seat, 1, 2)
-        child = self._held(db, "child", 2020, date(2020, 11, 3), parent, us_map.id, seat, 2, 3)
+        old = self._held(
+            db, "old", 2014, date(2014, 11, 4), None, us_map.id, seat, 7, 3
+        )
+        parent = self._held(
+            db, "parent", 2020, date(2020, 11, 5), None, us_map.id, seat, 1, 2
+        )
+        child = self._held(
+            db, "child", 2020, date(2020, 11, 3), parent, us_map.id, seat, 2, 3
+        )
         with db.session() as session:
-            elections = {key: session.get(Election, value) for key, value in
-                         {"old": old, "parent": parent, "child": child}.items()}
+            elections = {
+                key: session.get(Election, value)
+                for key, value in {"old": old, "parent": parent, "child": child}.items()
+            }
             parent_election = elections["parent"]
             assert parent_election is not None
             cache: dict[int, Any] = {}
             earlier_of_parent = earlier_senate_results(session, parent_election, cache)
-            assert [r[("Georgia", 3)]["p"][0][1] if ("Georgia", 3) in r else None for r in earlier_of_parent] == [7]
+            assert [
+                r[("Georgia", 3)]["p"][0][1] if ("Georgia", 3) in r else None
+                for r in earlier_of_parent
+            ] == [7]
             assert set(cache) == {old}
 
-    def test_same_date_regular_is_preferred_over_a_special_then_lower_id(self, db: Database) -> None:
+    def test_same_date_regular_is_preferred_over_a_special_then_lower_id(
+        self, db: Database
+    ) -> None:
         set_others_party_id(0)
         us_map = db.add_map("US Senate", parliament="us_senate")
         seat = db.add_seat(us_map.id, "Georgia").id
         day = date(2020, 11, 3)
         parent = self._held(db, "parent", 2020, day, None, us_map.id, seat, 1, 3)
-        special_low = self._held(db, "special low", 2020, day, parent, us_map.id, seat, 2, 3)
-        special_high = self._held(db, "special high", 2020, day, parent, us_map.id, seat, 3, 3)
-        later = self._held(db, "later", 2022, date(2022, 11, 8), None, us_map.id, seat, 4, 2)
+        special_low = self._held(
+            db, "special low", 2020, day, parent, us_map.id, seat, 2, 3
+        )
+        special_high = self._held(
+            db, "special high", 2020, day, parent, us_map.id, seat, 3, 3
+        )
+        later = self._held(
+            db, "later", 2022, date(2022, 11, 8), None, us_map.id, seat, 4, 2
+        )
         with db.session() as session:
             election = session.get(Election, later)
             assert election is not None

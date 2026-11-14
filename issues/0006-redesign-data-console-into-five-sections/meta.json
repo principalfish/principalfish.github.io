@@ -9,14 +9,15 @@
   "gh_issue": 83,
   "build_model": null,
   "created": "2026-11-08 15:51",
-  "updated": "2026-11-13 09:23",
+  "updated": "2026-11-14 06:53",
   "done": "2026-11-13 09:23",
   "local": [
     {
       "kind": "session",
       "name": "local_25f43011-ef61-46dc-9023-7e1b5918b096",
       "added": "2026-11-09 14:56",
-      "note": "builder: redesign-data-console-into-five-sections"
+      "note": "builder: redesign-data-console-into-five-sections",
+      "removed": "2026-11-14 06:53"
     },
     {
       "kind": "worktree",

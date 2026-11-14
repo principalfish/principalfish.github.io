@@ -11,3 +11,10 @@ Cost: 6 subagents (3 checks, verifier, 1 re-check, re-check verifier) · ~298k t
 | round | other | low | docs | noticed | fixed | `README.md:8`, `data/README.md:31` | Both say "Python 3.10+", already stale (predates the piece) |
 | re-check | correctness | low | docs | verified | fixed | `README.md:8`, `data/README.md:31` | "Python 3.10+" now contradicts `requires-python = ">=3.12"`, so following the README on 3.10/3.11 fails the editable install; change both to "Python 3.12+" |
 | manual | user | low | docs | - | fixed | `README.md:8`, `data/README.md:31` | User chose "Fix in piece 1": both now say "Python 3.12+" (round of correctness, security, coverage: clean) |
+
+## piece 2 · 2026-11-14 · Reformat the Python once
+
+Cost: 4 check subagents (security; correctness twice, the first stopped by a session restart before it reported; coverage) · tokens partly unknown (security ~48k, correctness rerun ~67k) · ~3 min · no verifier (every check clean)
+
+| Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
+|-|-|-|-|-|-|-|-|

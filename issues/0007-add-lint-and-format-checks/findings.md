@@ -18,3 +18,10 @@ Cost: 4 check subagents (security; correctness twice, the first stopped by a ses
 
 | Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
 |-|-|-|-|-|-|-|-|
+
+## piece 3 · 2026-11-14 · Reformat the JavaScript once
+
+Cost: 3 check subagents (correctness, security, coverage) · ~199k tokens · ~5 min · no verifier (every check clean)
+
+| Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
+|-|-|-|-|-|-|-|-|

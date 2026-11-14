@@ -10,11 +10,11 @@ Rules that no linter can check, such as how booleans are named, guard clauses or
 
 ## Plan
 
-_2026-11-14 · 1 of 7 pieces done · now: piece 2 not started_
+_2026-11-14 · 2 of 7 pieces done · now: piece 3 not started_
 
 - [x] **1/7 Pin the tools and add their settings** · `68720459`
   Pin ruff, shellcheck and Biome and add their settings.
-- [ ] **2/7 Reformat the Python once** · not started
+- [x] **2/7 Reformat the Python once** · `5fb62b38`
   One formatting-only commit with ruff format.
 - [ ] **3/7 Reformat the JavaScript once** · not started
   One formatting-only commit with Biome, bundles rebuilt.

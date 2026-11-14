@@ -3,15 +3,16 @@
 ## Settled
 - Goal: formatting, naming and idioms are enforced by linters run as project checks, not by review (the review's style check became docs-only on 2026-11-14). (2026-11-14)
 - strict mypy keeps gating `data/run_tests.sh`. (2026-11-14)
+- Python: ruff defaults + `N`, `PTH`, `C4`, all findings fixed in this issue. The F811 fixture pattern is fixed by registering `tests/console_fixtures.py` through `pytest_plugins` in `conftest.py` and dropping the imports, not by ignoring F811. (2026-11-14)
+- `guesstheyear/*.py` is linted and formatted too, using `data/pyproject.toml`'s settings through a small extending config. (2026-11-14)
+- JavaScript: Biome, line width 100, 2-space indent, double quotes (electionmapslogic switches from single), semicolons, trailing commas; recommended rules, findings fixed here. (2026-11-14)
+- Shell: shellcheck only; no shfmt, no optional shellcheck checks. (2026-11-14)
+- A root `./lint.sh` runs ruff check, ruff format --check, biome ci and shellcheck (`--fix` applies fixes); it becomes the first item on `project.md`'s Checks line, the other items stay; `ci.yml` gets a lint job. (2026-11-14)
 
 ## Open
-- Python rule set: ruff defaults (ruff 0.17's default is ~400 rules) plus which extras; how to handle the 283 F811 fixture-import findings.
-- Python scope: `data/` only, or `guesstheyear/*.py` too; `target-version`.
-- JavaScript: Biome or ESLint; line width and quote style; which folders.
-- Shell: shellcheck, shfmt, optional shellcheck checks; how the tools are installed.
 - Formatting commits and `.git-blame-ignore-revs`.
-- How the checks join `project.md`'s Checks line and CI.
-- Tool pinning.
+- Tool pinning and how shellcheck is installed.
+- JS scope: every tracked source file, including routeweather, referdle-solver, guesstheyear, data/console/static.
 
 ## Assumed
 

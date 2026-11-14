@@ -86,13 +86,21 @@ def legacy_party_key_for_vote(vote: Vote, election_year: int | None = None) -> s
     if short_name:
         normalized_short = normalize_token(short_name)
         if normalized_short == "reformuk":
-            return "reform" if (election_year is not None and election_year >= 2024) else "ukip"
+            return (
+                "reform"
+                if (election_year is not None and election_year >= 2024)
+                else "ukip"
+            )
         if normalized_short in PARTY_NAME_TO_KEY:
             return PARTY_NAME_TO_KEY[normalized_short]
 
     normalized_name = normalize_token(vote.party.name)
     if normalized_name == "reformuk":
-        return "reform" if (election_year is not None and election_year >= 2024) else "ukip"
+        return (
+            "reform"
+            if (election_year is not None and election_year >= 2024)
+            else "ukip"
+        )
     return PARTY_NAME_TO_KEY.get(normalized_name, normalized_name)
 
 
@@ -173,7 +181,10 @@ def is_folded_senate_special(election: Election) -> bool:
     payload as ``specials`` and gives it no result file or manifest entry of its own.
     A standalone special is an ordinary seat of the regular election, not a child.
     """
-    return election.type == ElectionType.us_senate and election.parent_election_id is not None
+    return (
+        election.type == ElectionType.us_senate
+        and election.parent_election_id is not None
+    )
 
 
 def file_stem_for_election(election: Election) -> str:
@@ -227,13 +238,19 @@ def file_stem_for_election(election: Election) -> str:
         year = general_match.group(1)
         return f"uk-general-{year}"
 
-    holyrood_match = re.fullmatch(r"(\d{4})\s+Scottish Parliament Election", election.name)
+    holyrood_match = re.fullmatch(
+        r"(\d{4})\s+Scottish Parliament Election", election.name
+    )
     if election.type == ElectionType.holyrood_general and holyrood_match:
         return f"holyrood-general-{holyrood_match.group(1)}"
 
-    holyrood_boundaries_match = re.fullmatch(r"(\d{4})\s+Scottish Parliament Election \(\d{4} Boundaries\)", election.name)
+    holyrood_boundaries_match = re.fullmatch(
+        r"(\d{4})\s+Scottish Parliament Election \(\d{4} Boundaries\)", election.name
+    )
     if election.type == ElectionType.holyrood_general and holyrood_boundaries_match:
-        return f"holyrood-general-{holyrood_boundaries_match.group(1)}-changed-boundaries"
+        return (
+            f"holyrood-general-{holyrood_boundaries_match.group(1)}-changed-boundaries"
+        )
 
     return slugify(f"{election.type.value}-{election.year}-{election.name}")
 
@@ -288,7 +305,9 @@ def manifest_id_for_election(election: Election) -> str:
     if election.type == ElectionType.uk_general and general_match:
         return f"{general_match.group(1)}-general"
 
-    holyrood_match = re.fullmatch(r"(\d{4})\s+Scottish Parliament Election", election.name)
+    holyrood_match = re.fullmatch(
+        r"(\d{4})\s+Scottish Parliament Election", election.name
+    )
     if election.type == ElectionType.holyrood_general and holyrood_match:
         return f"{holyrood_match.group(1)}-holyrood"
 
@@ -330,7 +349,11 @@ def manifest_name_for_election(election: Election) -> str:
     if election.type == ElectionType.us_senate_model:
         return "2026 Prediction"
 
-    if election.type in (ElectionType.us_house, ElectionType.us_presidential, ElectionType.us_senate):
+    if election.type in (
+        ElectionType.us_house,
+        ElectionType.us_presidential,
+        ElectionType.us_senate,
+    ):
         return f"{election.year} Election"
 
     general_match = re.fullmatch(r"(\d{4})\s+General\s+Election", election.name)
@@ -339,12 +362,15 @@ def manifest_name_for_election(election: Election) -> str:
 
     if election.type == ElectionType.holyrood_general:
         boundaries_match = re.fullmatch(
-            r"(\d{4})\s+Scottish Parliament Election \((\d{4}) Boundaries\)", election.name
+            r"(\d{4})\s+Scottish Parliament Election \((\d{4}) Boundaries\)",
+            election.name,
         )
         if boundaries_match:
             return f"{boundaries_match.group(1)} Election ({boundaries_match.group(2)} boundaries)"
 
-        holyrood_match = re.fullmatch(r"(\d{4})\s+Scottish Parliament Election", election.name)
+        holyrood_match = re.fullmatch(
+            r"(\d{4})\s+Scottish Parliament Election", election.name
+        )
         if holyrood_match:
             return f"{holyrood_match.group(1)} Election"
 

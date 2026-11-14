@@ -114,9 +114,7 @@ def test_archive_unzips_to_a_working_database(
     assert rows(gunzip(made, tmp_path / "restored.db")) == ["a"]
 
 
-def test_unchanged_database_adds_nothing(
-    source_db: Path, archive: Path
-) -> None:
+def test_unchanged_database_adds_nothing(source_db: Path, archive: Path) -> None:
     run(source_db, archive)
 
     assert run(source_db, archive) is None
@@ -224,9 +222,7 @@ def test_restore_uses_newest_local_archive_and_keeps_prerestore(
     assert not source_db.with_name("elections.db.partial").exists()
 
 
-def test_restore_with_no_local_archive_raises(
-    source_db: Path, archive: Path
-) -> None:
+def test_restore_with_no_local_archive_raises(source_db: Path, archive: Path) -> None:
     with pytest.raises(FileNotFoundError, match="no archive to restore from"):
         backup.restore_latest(db_path=source_db, archive_dir=archive)
     assert rows(source_db) == ["a"]
@@ -299,9 +295,7 @@ def test_prerestore_of_an_unreadable_database_is_a_plain_copy(
     assert kept.read_bytes() == b"garbage, not a database"
 
 
-def test_prerestore_replaces_an_older_one(
-    source_db: Path, archive: Path
-) -> None:
+def test_prerestore_replaces_an_older_one(source_db: Path, archive: Path) -> None:
     run(source_db, archive)
     kept = source_db.with_name("elections.db.prerestore")
     kept.write_bytes(b"an older undo copy")

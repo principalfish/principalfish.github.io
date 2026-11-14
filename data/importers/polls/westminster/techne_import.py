@@ -24,7 +24,9 @@ from importers.polls.bases import (
 )
 from importers.polls.types import PollImportResult
 
-DEFAULT_PDF_URL = "https://www.techneuk.com/wp-content/uploads/2026/02/R162-UK-2026-2-13-DATA.pdf"
+DEFAULT_PDF_URL = (
+    "https://www.techneuk.com/wp-content/uploads/2026/02/R162-UK-2026-2-13-DATA.pdf"
+)
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
 DEFAULT_POLLSTER_IDENTIFIER = "techne"
 
@@ -210,11 +212,16 @@ def extract_pdf_text(pdf_url: str) -> str:
     """
     candidate_urls = [pdf_url]
     if "web.archive.org/web/" in pdf_url and "if_/" not in pdf_url:
-        candidate_urls.append(pdf_url.replace("/web/", "/web/").replace("/https://", "if_/https://", 1))
+        candidate_urls.append(
+            pdf_url.replace("/web/", "/web/").replace("/https://", "if_/https://", 1)
+        )
 
     payload = None
     for candidate in candidate_urls:
-        req = Request(candidate, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
+        req = Request(
+            candidate,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"},
+        )
         try:
             with urlopen(req, timeout=60) as response:
                 data = response.read()
@@ -406,6 +413,7 @@ def _parse_party_percentages(pdf_text: str) -> dict[str, float]:
             Democrats, Reform UK, Green, Scottish National Party, Plaid Cymru,
             Other) is missing after parsing.
     """
+
     def _extract(text: str) -> dict[str, float]:
         """Extract canonical party percentages from a block of text.
 
@@ -496,7 +504,9 @@ def parse_poll(pdf_text: str, *, inferred_year: int) -> ParsedPoll:
     )
 
 
-def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+def _find_existing_poll(
+    db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll
+) -> Poll | None:
     """Look up an existing poll that matches the given key fields.
 
     Matches on pollster, map, fieldwork start/end dates, and sample size.
@@ -593,8 +603,7 @@ def build_import_plan(
     ]
     if missing_parties:
         raise ValueError(
-            "Missing parties in database (run party importer first): "
-            f"{missing_parties}"
+            f"Missing parties in database (run party importer first): {missing_parties}"
         )
 
     rows: list[PlannedPollRow] = []
@@ -704,9 +713,11 @@ def commit_import_plan(
         created_poll_row = False
 
     with db.session() as session:
-        existing_rows = session.execute(
-            select(PollRow).where(PollRow.poll_id == poll_id)
-        ).scalars().all()
+        existing_rows = (
+            session.execute(select(PollRow).where(PollRow.poll_id == poll_id))
+            .scalars()
+            .all()
+        )
 
         if existing_rows and not replace_rows:
             return PollImportResult(
@@ -840,8 +851,7 @@ def main() -> None:
 
     if result.skipped_existing_rows:
         print(
-            f"poll {result.poll_id} already has rows; "
-            "use --replace-rows to overwrite"
+            f"poll {result.poll_id} already has rows; use --replace-rows to overwrite"
         )
     else:
         if result.replaced_rows:

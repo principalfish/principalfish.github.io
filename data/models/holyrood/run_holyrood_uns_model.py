@@ -225,6 +225,7 @@ def _election_name(as_of_date: date) -> str:
     """Return the canonical persisted election name for a Holyrood UNS run."""
     return f"Holyrood UNS {as_of_date.isoformat()}"
 
+
 # Parties not standing in the 2026 election.
 # Their swing is zeroed out in both the constituency and list passes.
 EXCLUDED_PARTIES: set[str] = {"Alba Party"}
@@ -270,7 +271,9 @@ class HolyroodSimulationConfig:
 
     constituency_election_name: str = BASELINE_ELECTION_NAME
     swing_by_region_party: dict[int, dict[int, float]] = field(default_factory=dict)
-    list_swing_by_region_party: dict[int, dict[int, float]] = field(default_factory=dict)
+    list_swing_by_region_party: dict[int, dict[int, float]] = field(
+        default_factory=dict
+    )
     dry_run: bool = True
     as_of_date: date = field(default_factory=date.today)
     since_date: date | None = None
@@ -342,7 +345,9 @@ def resolve_poll_shares(
         canonical = _PARTY_NAME_ALIASES.get(raw_name.strip().lower(), raw_name.strip())
         party = db.get_party_by_name(canonical)
         if party is None:
-            print(f"WARNING: party not found in DB: {raw_name!r} (resolved to {canonical!r}) — skipped")
+            print(
+                f"WARNING: party not found in DB: {raw_name!r} (resolved to {canonical!r}) — skipped"
+            )
             continue
         result[party.id] = share
     return result
@@ -372,7 +377,9 @@ def compute_baseline_national_shares(
         grand_total += v
     if grand_total == 0:
         return {}
-    return {party_id: (v / grand_total) * 100.0 for party_id, v in national_totals.items()}
+    return {
+        party_id: (v / grand_total) * 100.0 for party_id, v in national_totals.items()
+    }
 
 
 def compute_holyrood_swings(
@@ -468,12 +475,9 @@ def collect_holyrood_poll_shares(
     else:
         pollster_rows = source.pollsters
     pollster_suffix_by_id: dict[int, bool] = {
-        p.id: p.identifier.endswith(ballot_suffix)
-        for p in pollster_rows
+        p.id: p.identifier.endswith(ballot_suffix) for p in pollster_rows
     }
-    pollster_name_by_id: dict[int, str] = {
-        p.id: p.name for p in pollster_rows
-    }
+    pollster_name_by_id: dict[int, str] = {p.id: p.name for p in pollster_rows}
     pollster_weight_by_id: dict[int, float] = {
         p.id: effective_pollster_weight(p.weight) for p in pollster_rows
     }
@@ -604,7 +608,9 @@ def project_constituency_seats(
             continue
 
         region_id = region_by_seat_id.get(seat_id)
-        region_swings = swing_by_region_party.get(region_id, {}) if region_id is not None else {}
+        region_swings = (
+            swing_by_region_party.get(region_id, {}) if region_id is not None else {}
+        )
 
         # Baseline shares (0–100) + swing → adjusted shares
         adjusted: dict[int, float] = {}
@@ -627,12 +633,14 @@ def project_constituency_seats(
         winner_id = max(adjusted, key=lambda p: adjusted[p])
 
         for party_id, adj_pct in adjusted.items():
-            projected.append({
-                "seat_id": seat_id,
-                "party_id": party_id,
-                "vote_total": (adj_pct / adj_total) * total,
-                "elected": party_id == winner_id,
-            })
+            projected.append(
+                {
+                    "seat_id": seat_id,
+                    "party_id": party_id,
+                    "vote_total": (adj_pct / adj_total) * total,
+                    "elected": party_id == winner_id,
+                }
+            )
 
     return projected
 
@@ -723,12 +731,14 @@ def project_list_seats(
 
         for seat_ref, winning_party_id in zip(list_seats, winners):
             for party_id, votes in normalized_votes.items():
-                projected.append({
-                    "seat_id": seat_ref.id,
-                    "party_id": party_id,
-                    "vote_total": votes,
-                    "elected": party_id == winning_party_id,
-                })
+                projected.append(
+                    {
+                        "seat_id": seat_ref.id,
+                        "party_id": party_id,
+                        "vote_total": votes,
+                        "elected": party_id == winning_party_id,
+                    }
+                )
 
     return projected
 
@@ -753,10 +763,17 @@ def _list_seat_number(seat_name: str) -> int:
 def load_seat_refs(db: Database, map_id: int) -> list[SeatRef]:
     """Return all seats for ``map_id`` as lightweight :class:`SeatRef` objects."""
     with db.session() as s:
-        rows = s.execute(
-            sa_select(Seat).where(Seat.map_id == map_id).order_by(Seat.seat_name)
-        ).scalars().all()
-        return [SeatRef(id=row.id, region_id=row.region_id, seat_name=row.seat_name) for row in rows]
+        rows = (
+            s.execute(
+                sa_select(Seat).where(Seat.map_id == map_id).order_by(Seat.seat_name)
+            )
+            .scalars()
+            .all()
+        )
+        return [
+            SeatRef(id=row.id, region_id=row.region_id, seat_name=row.seat_name)
+            for row in rows
+        ]
 
 
 def load_constituency_vote_state(
@@ -882,7 +899,9 @@ def run_holyrood_projection(
     """
     const_election = db.get_election_by_name(cfg.constituency_election_name)
     if const_election is None:
-        raise ValueError(f"Constituency election not found: {cfg.constituency_election_name!r}")
+        raise ValueError(
+            f"Constituency election not found: {cfg.constituency_election_name!r}"
+        )
 
     list_election = find_list_election(db, const_election.id)
     map_id = const_election.map_id
@@ -896,7 +915,9 @@ def run_holyrood_projection(
 
     const_seat_votes = load_constituency_vote_state(db, const_election.id)
     if not const_seat_votes:
-        raise ValueError(f"No constituency votes found for election id={const_election.id}")
+        raise ValueError(
+            f"No constituency votes found for election id={const_election.id}"
+        )
 
     regional_votes = load_list_regional_votes(db, list_election.id, list_seats)
     if not regional_votes:
@@ -990,7 +1011,9 @@ def run_holyrood_simulation(
             validate_manual_share(share)
     const_election = db.get_election_by_name(cfg.constituency_election_name)
     if const_election is None:
-        raise ValueError(f"Baseline election not found: {cfg.constituency_election_name!r}")
+        raise ValueError(
+            f"Baseline election not found: {cfg.constituency_election_name!r}"
+        )
 
     all_seats = load_seat_refs(db, const_election.map_id)
     region_ids = {s.region_id for s in all_seats if s.region_id is not None}
@@ -1079,7 +1102,9 @@ def run_holyrood_simulation(
     cfg.swing_by_region_party = swing_by_region_party
     cfg.list_swing_by_region_party = list_swing_by_region_party
 
-    print(f"Running Holyrood UNS projection — baseline: {cfg.constituency_election_name!r} ({mode})")
+    print(
+        f"Running Holyrood UNS projection — baseline: {cfg.constituency_election_name!r} ({mode})"
+    )
     const_proj, list_proj, seat_summary = run_holyrood_projection(db, cfg)
     const_proj = recorded_vote_rows(const_proj)
     list_proj = recorded_vote_rows(list_proj)
@@ -1433,7 +1458,9 @@ def constituency_national_vote_shares(
         grand_total += v
     if grand_total <= 0:
         return {}
-    return {party_id: (v / grand_total) * 100.0 for party_id, v in totals_by_party.items()}
+    return {
+        party_id: (v / grand_total) * 100.0 for party_id, v in totals_by_party.items()
+    }
 
 
 def existing_trend_dates(
@@ -1688,12 +1715,18 @@ def _print_seat_table(seat_summary: dict[str, dict[str, int]]) -> None:
     print(f"\n{'Party':<30} {'Const':>6} {'List':>6} {'Total':>6}")
     print("-" * 52)
     total_const = total_list = 0
-    for party_name, counts in sorted(seat_summary.items(), key=lambda kv: -kv[1]["total"]):
-        print(f"{party_name:<30} {counts['constituency']:>6} {counts['list']:>6} {counts['total']:>6}")
+    for party_name, counts in sorted(
+        seat_summary.items(), key=lambda kv: -kv[1]["total"]
+    ):
+        print(
+            f"{party_name:<30} {counts['constituency']:>6} {counts['list']:>6} {counts['total']:>6}"
+        )
         total_const += counts["constituency"]
         total_list += counts["list"]
     print("-" * 52)
-    print(f"{'TOTAL':<30} {total_const:>6} {total_list:>6} {total_const + total_list:>6}")
+    print(
+        f"{'TOTAL':<30} {total_const:>6} {total_list:>6} {total_const + total_list:>6}"
+    )
 
 
 def main(db_factory: Callable[[], Database] | None = None) -> None:
@@ -1726,9 +1759,13 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
     # --poll-shares is a single-snapshot override and cannot be combined with the
     # retrospective date range (which fetches DB poll averages per date).
     if args.poll_shares and (args.start_date or args.end_date):
-        raise ValueError("--poll-shares cannot be combined with --start-date/--end-date")
+        raise ValueError(
+            "--poll-shares cannot be combined with --start-date/--end-date"
+        )
     validate_run_arguments(args, date.today())
-    raw_manual_shares = parse_manual_shares(args.poll_shares) if args.poll_shares else None
+    raw_manual_shares = (
+        parse_manual_shares(args.poll_shares) if args.poll_shares else None
+    )
     db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
 
     # Retrospective backfill mode.

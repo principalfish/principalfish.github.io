@@ -155,18 +155,24 @@ class TestProjectConstituencySeats:
             102: {1: 10000, 2: 25000, 3: 8000},  # party 2 wins
         }
         projected = project_constituency_seats(seat_votes, {}, {101: 10, 102: 20})
-        elected = {row["seat_id"]: row["party_id"] for row in projected if row["elected"]}
+        elected = {
+            row["seat_id"]: row["party_id"] for row in projected if row["elected"]
+        }
         assert elected[101] == 1
         assert elected[102] == 2
 
     def test_swing_can_change_winner(self) -> None:
         """Applying sufficient swing flips the result."""
-        seat_votes: dict[int, dict[int, float]] = {101: {1: 100, 2: 90}}  # party 1 leads by 10 votes (5 pp)
+        seat_votes: dict[int, dict[int, float]] = {
+            101: {1: 100, 2: 90}
+        }  # party 1 leads by 10 votes (5 pp)
         # Give party 2 a +10 pp swing — should flip to party 2
         swing = {999: {2: 10.0}}  # region 999
         region_by_seat_id: dict[int, int | None] = {101: 999}
         projected = project_constituency_seats(seat_votes, swing, region_by_seat_id)
-        elected = {row["seat_id"]: row["party_id"] for row in projected if row["elected"]}
+        elected = {
+            row["seat_id"]: row["party_id"] for row in projected if row["elected"]
+        }
         assert elected[101] == 2
 
     def test_negative_swing_clamped_at_zero(self) -> None:
@@ -174,7 +180,11 @@ class TestProjectConstituencySeats:
         seat_votes: dict[int, dict[int, float]] = {101: {1: 100, 2: 50}}
         swing = {10: {1: -200.0}}  # far below zero
         projected = project_constituency_seats(seat_votes, swing, {101: 10})
-        votes_for_1 = next(r["vote_total"] for r in projected if r["seat_id"] == 101 and r["party_id"] == 1)
+        votes_for_1 = next(
+            r["vote_total"]
+            for r in projected
+            if r["seat_id"] == 101 and r["party_id"] == 1
+        )
         assert votes_for_1 == pytest.approx(0.0)
 
     def test_empty_seat_votes_produces_no_output(self) -> None:
@@ -777,9 +787,7 @@ class TestFetchHolyroodPollAverages:
         ["a_holyrood_list", "yougov"],
         ids=["other-ballot-only", "westminster-only"],
     )
-    def test_no_usable_polls_returns_empty(
-        self, db: Database, identifier: str
-    ) -> None:
+    def test_no_usable_polls_returns_empty(self, db: Database, identifier: str) -> None:
         world = seed_holyrood_world(db)
         _add_holyrood_poll(
             db, world, identifier, _POLL_AS_OF, {"Scottish National Party": 40.0}
@@ -914,7 +922,9 @@ class TestRunHolyroodProjection:
         ls_b1 = db.add_seat(m.id, "B List 1", region_id=reg_b.id)
 
         # Constituency election
-        const_e = db.add_election(m.id, 2021, "2021 Test Holyrood Election", ElectionType.holyrood_general)
+        const_e = db.add_election(
+            m.id, 2021, "2021 Test Holyrood Election", ElectionType.holyrood_general
+        )
 
         # Constituency votes: p1 wins A1 and B1; p2 wins A2 and B2
         for seat, winner, other in [
@@ -923,12 +933,18 @@ class TestRunHolyroodProjection:
             (cs_b1, p1.id, p2.id),
             (cs_b2, p2.id, p1.id),
         ]:
-            db.add_vote(const_e.id, seat.id, party_id=winner, vote_total=20000, elected=True)
-            db.add_vote(const_e.id, seat.id, party_id=other, vote_total=10000, elected=False)
+            db.add_vote(
+                const_e.id, seat.id, party_id=winner, vote_total=20000, elected=True
+            )
+            db.add_vote(
+                const_e.id, seat.id, party_id=other, vote_total=10000, elected=False
+            )
 
         # List election (linked to constituency election)
         list_e = db.add_election(
-            m.id, 2021, "2021 Test Holyrood List Election",
+            m.id,
+            2021,
+            "2021 Test Holyrood List Election",
             ElectionType.holyrood_list,
             parent_election_id=const_e.id,
         )
@@ -936,9 +952,15 @@ class TestRunHolyroodProjection:
         # List votes: same regional totals for each list seat in a region
         # p1: 1200, p2: 700, p3: 500
         for list_seat in [ls_a1, ls_a2, ls_a3, ls_b1, ls_b2, ls_b3]:
-            db.add_vote(list_e.id, list_seat.id, party_id=p1.id, vote_total=1200, elected=False)
-            db.add_vote(list_e.id, list_seat.id, party_id=p2.id, vote_total=700, elected=False)
-            db.add_vote(list_e.id, list_seat.id, party_id=p3.id, vote_total=500, elected=False)
+            db.add_vote(
+                list_e.id, list_seat.id, party_id=p1.id, vote_total=1200, elected=False
+            )
+            db.add_vote(
+                list_e.id, list_seat.id, party_id=p2.id, vote_total=700, elected=False
+            )
+            db.add_vote(
+                list_e.id, list_seat.id, party_id=p3.id, vote_total=500, elected=False
+            )
 
         return m.id, const_e, p1, p2, p3, reg_a, reg_b
 
@@ -953,7 +975,9 @@ class TestRunHolyroodProjection:
         )
         const_proj, list_proj, summary = run_holyrood_projection(db, cfg)
 
-        elected_const = {row["seat_id"]: row["party_id"] for row in const_proj if row["elected"]}
+        elected_const = {
+            row["seat_id"]: row["party_id"] for row in const_proj if row["elected"]
+        }
         # 4 constituency seats → 4 winners (2 per party)
         party1_wins = sum(1 for pid in elected_const.values() if pid == p1.id)
         party2_wins = sum(1 for pid in elected_const.values() if pid == p2.id)
@@ -1069,9 +1093,12 @@ class TestConstituencyNationalVoteShares:
 
     def test_empty_or_zero_total_returns_empty(self) -> None:
         assert constituency_national_vote_shares([]) == {}
-        assert constituency_national_vote_shares(
-            [{"seat_id": 1, "party_id": 1, "vote_total": 0.0, "elected": False}]
-        ) == {}
+        assert (
+            constituency_national_vote_shares(
+                [{"seat_id": 1, "party_id": 1, "vote_total": 0.0, "elected": False}]
+            )
+            == {}
+        )
 
 
 # ── SQLite persistence ────────────────────────────────────────────────────────
@@ -1083,9 +1110,13 @@ class TestPersistProjection:
     def _project(
         self, db: Database
     ) -> tuple[int, list[dict[str, object]], list[dict[str, object]], dict[int, str]]:
-        map_id, const_e, p1, p2, p3, _, _ = TestRunHolyroodProjection()._build_scenario(db)
+        map_id, const_e, p1, p2, p3, _, _ = TestRunHolyroodProjection()._build_scenario(
+            db
+        )
         cfg = HolyroodSimulationConfig(
-            constituency_election_name=const_e.name, swing_by_region_party={}, dry_run=True
+            constituency_election_name=const_e.name,
+            swing_by_region_party={},
+            dry_run=True,
         )
         const_proj, list_proj, _ = run_holyrood_projection(db, cfg)
         party_names = {p1.id: "SNP", p2.id: "Labour", p3.id: "Conservative"}
@@ -1104,13 +1135,16 @@ class TestPersistProjection:
 
         conn = sqlite3.connect(out_db)
         try:
-            elections = conn.execute("SELECT name, type, year FROM elections").fetchall()
+            elections = conn.execute(
+                "SELECT name, type, year FROM elections"
+            ).fetchall()
             assert elections == [(name, "holyrood_uns", 2026)]
             total = conn.execute(
                 "SELECT COUNT(*) FROM votes WHERE election_id = ?", (election_id,)
             ).fetchone()[0]
             elected = conn.execute(
-                "SELECT COUNT(*) FROM votes WHERE election_id = ? AND elected = 1", (election_id,)
+                "SELECT COUNT(*) FROM votes WHERE election_id = ? AND elected = 1",
+                (election_id,),
             ).fetchone()[0]
         finally:
             conn.close()
@@ -1119,13 +1153,17 @@ class TestPersistProjection:
         # 4 constituency + 6 list winners in the synthetic scenario.
         assert elected == 10
 
-    def test_delete_then_repersist_is_idempotent(self, db: Database, tmp_path: Path) -> None:
+    def test_delete_then_repersist_is_idempotent(
+        self, db: Database, tmp_path: Path
+    ) -> None:
         map_id, const_proj, list_proj, party_names = self._project(db)
         out_db = tmp_path / "elections.db"
         name = _election_name(date(2026, 7, 5))
         rows = const_proj + list_proj
 
-        persist_projection(map_id, date(2026, 7, 5), name, rows, party_names, sqlite_path=out_db)
+        persist_projection(
+            map_id, date(2026, 7, 5), name, rows, party_names, sqlite_path=out_db
+        )
         deleted_elections, deleted_votes = delete_holyrood_uns_for_as_of_date(
             date(2026, 7, 5), sqlite_path=out_db, map_id=map_id
         )
@@ -1134,7 +1172,9 @@ class TestPersistProjection:
 
         # Re-persisting the same date must succeed (no UNIQUE(name) collision) and
         # leave exactly one election.
-        persist_projection(map_id, date(2026, 7, 5), name, rows, party_names, sqlite_path=out_db)
+        persist_projection(
+            map_id, date(2026, 7, 5), name, rows, party_names, sqlite_path=out_db
+        )
         conn = sqlite3.connect(out_db)
         try:
             count = conn.execute(
@@ -1155,7 +1195,14 @@ class TestExistingTrendDates:
         trend = tmp_path / "trends.json"
         trend.write_text(
             json.dumps(
-                [{"election_id": 1, "election_name": "Holyrood UNS 2026-07-01", "as_of_date": "2026-07-01", "parties": {}}]
+                [
+                    {
+                        "election_id": 1,
+                        "election_name": "Holyrood UNS 2026-07-01",
+                        "as_of_date": "2026-07-01",
+                        "parties": {},
+                    }
+                ]
             )
         )
         out_db = tmp_path / "elections.db"
@@ -1208,7 +1255,9 @@ class TestDatesToRunForCfg:
         cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 4), dry_run=False)
         assert dates_to_run_for_cfg(cfg, map_id=1) == [date(2026, 7, 4)]
 
-    def test_no_prior_dates_returns_as_of(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_no_prior_dates_returns_as_of(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(hmod, "existing_trend_dates", lambda *_a, **_k: set())
         cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 4), dry_run=False)
         assert dates_to_run_for_cfg(cfg, map_id=1) == [date(2026, 7, 4)]
@@ -1217,9 +1266,7 @@ class TestDatesToRunForCfg:
 # ── reset_existing_model_outputs / delete_holyrood_uns_for_as_of_date ─────────
 
 
-def _seed_holyrood_run(
-    db: Database, world: HolyroodWorld, as_of_date: date
-) -> None:
+def _seed_holyrood_run(db: Database, world: HolyroodWorld, as_of_date: date) -> None:
     """A two-vote ``holyrood_uns`` run for ``as_of_date``, saved into ``db``."""
     seat_id = world.constituency_seat_ids["Glasgow Southside"]
     rows = [
@@ -1451,7 +1498,9 @@ class TestRunRetrospectiveValidation:
 
     def test_end_before_start_raises(self, db: Database) -> None:
         with pytest.raises(ValueError, match="end-date must be on or after"):
-            run_retrospective(db, _retro_args(start_date="2026-07-05", end_date="2026-07-01"))
+            run_retrospective(
+                db, _retro_args(start_date="2026-07-05", end_date="2026-07-01")
+            )
 
     def test_negative_lookback_raises(self, db: Database) -> None:
         with pytest.raises(ValueError, match="lookback-days"):
@@ -1672,9 +1721,7 @@ class TestBuildConfigFromArgs:
     """_build_config_from_args: single-date CLI flags to a simulation config."""
 
     @staticmethod
-    def _build(
-        monkeypatch: pytest.MonkeyPatch, *argv: str
-    ) -> HolyroodSimulationConfig:
+    def _build(monkeypatch: pytest.MonkeyPatch, *argv: str) -> HolyroodSimulationConfig:
         """Build the config for ``argv`` with today pinned to 2026-06-15."""
         monkeypatch.setattr(hmod, "date", _FixedDate)
         args = _parse_args(monkeypatch, "--election-name", "Test Baseline", *argv)
@@ -2568,9 +2615,7 @@ class TestRunHolyroodSimulation:
             {"Scottish National Party": 0.0, "Labour": 100.0},
         )
 
-        output = run_holyrood_simulation(
-            db, _simulation_config(world, since_date=None)
-        )
+        output = run_holyrood_simulation(db, _simulation_config(world, since_date=None))
 
         assert output.seat_summary == _CONSTITUENCY_ONLY_SEATS
         assert output.latest_poll_date == _SIM_AS_OF - timedelta(days=365)
@@ -2661,9 +2706,10 @@ class TestRunHolyroodSimulation:
         output = run_holyrood_simulation(db, _simulation_config(world, dry_run=False))
 
         # 4 constituency seats × 2 parties + 6 list seats × 3 parties.
-        assert _election_names_and_votes(only_the_test_database)[
-            "Holyrood UNS 2026-06-01"
-        ] == 26
+        assert (
+            _election_names_and_votes(only_the_test_database)["Holyrood UNS 2026-06-01"]
+            == 26
+        )
         assert _holyrood_uns_elections(only_the_test_database) == [
             ("Holyrood UNS 2026-06-01", 10)
         ]
@@ -3348,9 +3394,7 @@ class TestContributingEndpointCaps:
             cfg: HolyroodSimulationConfig,
             manual_poll_shares: dict[int, float] | None = None,
             *,
-            poll_aggregations: tuple[
-                PollAggregation[int], PollAggregation[int]
-            ]
+            poll_aggregations: tuple[PollAggregation[int], PollAggregation[int]]
             | None = None,
         ) -> hmod.HolyroodRunOutput:
             captured.append((cfg.since_date, cfg.as_of_date))
@@ -3427,9 +3471,7 @@ class TestContributingEndpointCaps:
             cfg: HolyroodSimulationConfig,
             manual_poll_shares: dict[int, float] | None = None,
             *,
-            poll_aggregations: tuple[
-                PollAggregation[int], PollAggregation[int]
-            ]
+            poll_aggregations: tuple[PollAggregation[int], PollAggregation[int]]
             | None = None,
         ) -> hmod.HolyroodRunOutput:
             captured.append((cfg.since_date, cfg.as_of_date))

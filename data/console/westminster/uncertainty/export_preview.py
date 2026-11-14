@@ -105,7 +105,7 @@ def _withheld(stored: StoredUncertainty) -> tuple[str, ...]:
                 region_parties |= _keys(region.get("parties"))
         lines += [
             f"regions: {private(_keys(stored.regions), PUBLIC_REGION_FIELDS)}",
-            "region parties: " f"{private(region_parties, PUBLIC_REGION_PARTY_FIELDS)}",
+            f"region parties: {private(region_parties, PUBLIC_REGION_PARTY_FIELDS)}",
         ]
     if stored.seats is not None:
         seat_parties: set[str] = set()

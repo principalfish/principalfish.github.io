@@ -600,10 +600,14 @@ def report_conversion(
         snapshot = None
         if db is not None:
             snapshot = snapshot_election(
-                db, election_name(year, chamber, special=special),
+                db,
+                election_name(year, chamber, special=special),
             )
         report = diff_against_existing(
-            data, old_file, snapshot, file_label=f"committed {name}",
+            data,
+            old_file,
+            snapshot,
+            file_label=f"committed {name}",
         )
         lines.extend(f"  {line}" for line in report.summary().splitlines())
     stale_special = out_dir / output_name(year, chamber, special=True)
@@ -732,7 +736,11 @@ def import_files(
         (main_path, main_data, election_name(year, chamber), False),
     ]
     special_path = _special_to_import(
-        db, main_data, out_dir, year=year, chamber=chamber,
+        db,
+        main_data,
+        out_dir,
+        year=year,
+        chamber=chamber,
     )
     if special_path is not None:
         special_data = read_election_file(special_path, chamber)
@@ -776,7 +784,12 @@ def import_files(
             else:
                 parent = election_name(year, chamber) if special else None
                 inserted = import_senate(
-                    db, path, year, name, refresh=refresh, parent_name=parent,
+                    db,
+                    path,
+                    year,
+                    name,
+                    refresh=refresh,
+                    parent_name=parent,
                 )
         except (KeyError, TypeError, ValueError) as err:
             raise CliError(f"{path.name} is malformed: {err!r}") from err
@@ -1084,7 +1097,11 @@ def _run(
             raise CliError(f"could not convert {year} {chamber}: {err!r}") from err
     print(
         report_conversion(
-            result, year=year, chamber=chamber, out_dir=args.out_dir, db=database,
+            result,
+            year=year,
+            chamber=chamber,
+            out_dir=args.out_dir,
+            db=database,
         ),
     )
     if args.dry_run:
@@ -1092,7 +1109,11 @@ def _run(
         return 0
     # Refuse rather than leave a specials file the new main file does not name.
     refuse_stale_special(
-        result, year=year, chamber=chamber, out_dir=args.out_dir, db=database,
+        result,
+        year=year,
+        chamber=chamber,
+        out_dir=args.out_dir,
+        db=database,
     )
     written = write_conversion(result, year=year, chamber=chamber, out_dir=args.out_dir)
     for path in written:

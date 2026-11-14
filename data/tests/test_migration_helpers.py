@@ -52,7 +52,9 @@ class TestSchemaObjectExists:
         assert schema_object_exists(conn, "table", "polls")
         assert schema_object_exists(conn, "index", "ix_polls_pollster")
 
-    def test_a_name_of_the_other_kind_is_not_found(self, conn: sqlite3.Connection) -> None:
+    def test_a_name_of_the_other_kind_is_not_found(
+        self, conn: sqlite3.Connection
+    ) -> None:
         assert not schema_object_exists(conn, "index", "polls")
         assert not schema_object_exists(conn, "table", "ix_polls_pollster")
 

@@ -56,9 +56,13 @@ class FakeRunner:
     def __call__(
         self, target: object, *args: str, cwd: Path | None = None, timeout: int
     ) -> subprocess.CompletedProcess[str]:
-        name = Path(str(target)).name if isinstance(target, Path) else Path(
-            str(target[1])  # type: ignore[index]
-        ).name
+        name = (
+            Path(str(target)).name
+            if isinstance(target, Path)
+            else Path(
+                str(target[1])  # type: ignore[index]
+            ).name
+        )
         self.calls.append(name)
         self.started.set()
         if self.gate:
@@ -100,9 +104,9 @@ def _stub_script(tmp_path: Path, name: str) -> Path:
     return script
 
 
-def _model_check(summary: str, heading: str, scripts: tuple[str, str]) -> Callable[
-    [str], None
-]:
+def _model_check(
+    summary: str, heading: str, scripts: tuple[str, str]
+) -> Callable[[str], None]:
     model_script, export_script = scripts
 
     def check(body: str) -> None:
@@ -475,7 +479,9 @@ def test_a_refused_rebuild_goes_back_to_the_admin_page(flow: Flow) -> None:
 
 
 def test_the_rebuild_with_a_missing_script_still_redirects_home(
-    app: Flask, monkeypatch: pytest.MonkeyPatch, tmp_path: Path  # noqa: F811
+    app: Flask,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     runner = FakeRunner()
     monkeypatch.setattr("console.admin.site.run_python_script", runner)

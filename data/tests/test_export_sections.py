@@ -465,9 +465,7 @@ class TestOneSectionLeavesTheRestAlone:
         assert changed == {"uselectionmaps/data/map-modes.json"}
 
     @staticmethod
-    def _export_pages(
-        world: World, page_roots: dict[str, Path], scope: Any
-    ) -> None:
+    def _export_pages(world: World, page_roots: dict[str, Path], scope: Any) -> None:
         """Call ``export_pages`` directly, as ``main`` does, for ``scope``."""
         others = world.db.get_party_by_name("Others")
         assert others is not None

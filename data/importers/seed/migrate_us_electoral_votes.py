@@ -26,7 +26,11 @@ from core.migration_helpers import (
     open_database as open_database,
     schema_object_exists,
 )
-from importers.seed.us_electoral_votes import ELECTION_YEAR_INTERVALS, EV_BY_ERA, ev_map_for_year
+from importers.seed.us_electoral_votes import (
+    ELECTION_YEAR_INTERVALS,
+    EV_BY_ERA,
+    ev_map_for_year,
+)
 
 ERAS_DDL = """
 CREATE TABLE IF NOT EXISTS us_electoral_vote_eras (
@@ -108,7 +112,9 @@ def _existing_allocations(conn: sqlite3.Connection) -> set[tuple[int, str]]:
 
 
 def _legacy_groups(
-    conn: sqlite3.Connection, *, has_target: bool,
+    conn: sqlite3.Connection,
+    *,
+    has_target: bool,
 ) -> list[tuple[int, int, str | None, str | None]]:
     condition = " AND target_election_year IS NULL" if has_target else ""
     return [
@@ -160,9 +166,11 @@ def _migrate(
     legacy_count = sum(count for _, count, _, _ in groups)
     has_maps = schema_object_exists(conn, "table", "maps")
     legacy_map_count = (
-        int(conn.execute(
-            "SELECT COUNT(*) FROM maps WHERE parliament = 'us_president'"
-        ).fetchone()[0])
+        int(
+            conn.execute(
+                "SELECT COUNT(*) FROM maps WHERE parliament = 'us_president'"
+            ).fetchone()[0]
+        )
         if has_maps
         else 0
     )
@@ -234,7 +242,9 @@ def migrate(
     """Report or apply bootstrap and backfill; applying owns one transaction."""
     if dry_run:
         return _migrate(
-            conn, dry_run=True, legacy_forecast_target_year=legacy_forecast_target_year,
+            conn,
+            dry_run=True,
+            legacy_forecast_target_year=legacy_forecast_target_year,
         )
     if conn.in_transaction:
         raise ElectoralVoteError(
@@ -255,9 +265,12 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--legacy-forecast-target-year", type=int)
     args = parser.parse_args()
-    with closing(open_database(
-        DatabaseConfig.from_env().database_path, read_only=args.dry_run,
-    )) as conn:
+    with closing(
+        open_database(
+            DatabaseConfig.from_env().database_path,
+            read_only=args.dry_run,
+        )
+    ) as conn:
         conn.execute("PRAGMA foreign_keys = ON")
         for line in migrate(
             conn,

@@ -96,7 +96,14 @@ _SAMPLE_TEXT = "2,015"
 # their own URLs, not this one.
 _SOURCE_URL = "https://example.test/2026/tables.xlsx"
 
-_MACRO_HEADERS: tuple[str, ...] = ("North", "Mids", "London", "South", "Wales", "Scotland")
+_MACRO_HEADERS: tuple[str, ...] = (
+    "North",
+    "Mids",
+    "London",
+    "South",
+    "Wales",
+    "Scotland",
+)
 
 # Raw workbook party label -> (Total, North, Mids, London, South, Wales,
 # Scotland, Northern Ireland). Every value is unique across the whole grid
@@ -443,7 +450,10 @@ class TestInferYearFromUrl:
         assert op._infer_year_from_url(url) == 2020
 
     def test_no_year_with_fallback_returns_fallback(self) -> None:
-        assert op._infer_year_from_url("https://example.test/tables.xlsx", fallback=2025) == 2025
+        assert (
+            op._infer_year_from_url("https://example.test/tables.xlsx", fallback=2025)
+            == 2025
+        )
 
     def test_no_year_without_fallback_raises(self) -> None:
         with pytest.raises(ValueError, match="Could not infer year from URL"):
@@ -549,7 +559,9 @@ class TestFindFieldworkAndSample:
                 "FRONT PAGE": _front_page_rows(),
             }
         )
-        start, _end, _sample = op._find_fieldwork_and_sample(workbook, default_year=2026)
+        start, _end, _sample = op._find_fieldwork_and_sample(
+            workbook, default_year=2026
+        )
         assert start == date(2026, 2, 3)
 
     def test_uses_first_sheet_when_front_page_is_absent(self) -> None:
@@ -568,7 +580,9 @@ class TestFindFieldworkAndSample:
                 ]
             }
         )
-        start, _end, _sample = op._find_fieldwork_and_sample(workbook, default_year=2026)
+        start, _end, _sample = op._find_fieldwork_and_sample(
+            workbook, default_year=2026
+        )
         assert start == date(2026, 2, 3)
 
     def test_field_date_singular_without_trailing_s_also_matches(self) -> None:
@@ -581,7 +595,9 @@ class TestFindFieldworkAndSample:
         workbook = build_workbook(
             {"FRONT PAGE": [[None, None, "Field Date", None, None, _FIELDWORK_TEXT]]}
         )
-        start, _end, _sample = op._find_fieldwork_and_sample(workbook, default_year=2026)
+        start, _end, _sample = op._find_fieldwork_and_sample(
+            workbook, default_year=2026
+        )
         assert start == date(2026, 2, 3)
 
     def test_sample_label_matches_via_substring(self) -> None:
@@ -593,7 +609,9 @@ class TestFindFieldworkAndSample:
                 ]
             }
         )
-        _start, _end, sample = op._find_fieldwork_and_sample(workbook, default_year=2026)
+        _start, _end, sample = op._find_fieldwork_and_sample(
+            workbook, default_year=2026
+        )
         assert sample == 1234
 
     def test_last_matching_field_date_row_wins(self) -> None:
@@ -621,7 +639,9 @@ class TestFindFieldworkAndSample:
                 ]
             }
         )
-        _start, _end, sample = op._find_fieldwork_and_sample(workbook, default_year=2026)
+        _start, _end, sample = op._find_fieldwork_and_sample(
+            workbook, default_year=2026
+        )
         assert sample == 2015
 
     def test_fieldwork_not_found_raises(self) -> None:
@@ -632,24 +652,28 @@ class TestFindFieldworkAndSample:
             op._find_fieldwork_and_sample(workbook, default_year=2026)
 
     def test_sample_label_not_found_returns_none(self) -> None:
-        workbook = build_workbook(
-            {"FRONT PAGE": _front_page_rows(sample_text=None)}
+        workbook = build_workbook({"FRONT PAGE": _front_page_rows(sample_text=None)})
+        _start, _end, sample = op._find_fieldwork_and_sample(
+            workbook, default_year=2026
         )
-        _start, _end, sample = op._find_fieldwork_and_sample(workbook, default_year=2026)
         assert sample is None
 
     def test_sample_value_with_no_digits_returns_none(self) -> None:
         workbook = build_workbook(
             {"FRONT PAGE": _front_page_rows(sample_text="undisclosed")}
         )
-        _start, _end, sample = op._find_fieldwork_and_sample(workbook, default_year=2026)
+        _start, _end, sample = op._find_fieldwork_and_sample(
+            workbook, default_year=2026
+        )
         assert sample is None
 
     def test_label_at_row_49_is_found(self) -> None:
         blank_rows: list[list[object]] = [[] for _ in range(48)]
         target: list[object] = [None, None, "Field dates", None, None, _FIELDWORK_TEXT]
         workbook = build_workbook({"FRONT PAGE": [*blank_rows, target]})
-        start, _end, _sample = op._find_fieldwork_and_sample(workbook, default_year=2026)
+        start, _end, _sample = op._find_fieldwork_and_sample(
+            workbook, default_year=2026
+        )
         assert start == date(2026, 2, 3)
 
     def test_label_at_row_50_is_never_scanned_pins_current_behaviour(self) -> None:
@@ -696,7 +720,9 @@ class TestFindFieldworkAndSampleDigitConcatenation:
                 ]
             }
         )
-        _start, _end, sample = op._find_fieldwork_and_sample(workbook, default_year=2026)
+        _start, _end, sample = op._find_fieldwork_and_sample(
+            workbook, default_year=2026
+        )
         assert sample == 205418
 
 
@@ -715,9 +741,7 @@ class TestFindHeadlineSheet:
         assert op._find_headline_sheet(workbook).title == "VI Headline Table"
 
     def test_first_match_in_sheet_order_wins(self) -> None:
-        workbook = build_workbook(
-            {"Headline A": [["a"]], "Headline B": [["b"]]}
-        )
+        workbook = build_workbook({"Headline A": [["a"]], "Headline B": [["b"]]})
         assert op._find_headline_sheet(workbook).title == "Headline A"
 
     def test_no_match_raises(self) -> None:
@@ -739,7 +763,16 @@ class TestParsePollHeaderRow:
 
     def test_header_row_found_at_row_19_boundary(self) -> None:
         blank_rows: list[list[object]] = [[] for _ in range(18)]
-        header: list[object] = [None, "Total", "North", "Mids", "London", "South", "Wales", "Scotland"]
+        header: list[object] = [
+            None,
+            "Total",
+            "North",
+            "Mids",
+            "London",
+            "South",
+            "Wales",
+            "Scotland",
+        ]
         workbook = _full_workbook(headline_rows=[*blank_rows, header])
         # No base row anywhere: a *different*, later failure proves the
         # header row itself was found.
@@ -750,13 +783,30 @@ class TestParsePollHeaderRow:
 
     def test_header_row_at_row_20_is_never_scanned_pins_current_behaviour(self) -> None:
         blank_rows: list[list[object]] = [[] for _ in range(19)]
-        header: list[object] = [None, "Total", "North", "Mids", "London", "South", "Wales", "Scotland"]
+        header: list[object] = [
+            None,
+            "Total",
+            "North",
+            "Mids",
+            "London",
+            "South",
+            "Wales",
+            "Scotland",
+        ]
         workbook = _full_workbook(headline_rows=[*blank_rows, header])
         with pytest.raises(ValueError, match="Could not locate headline header row"):
             op.parse_poll(workbook, source_url=_SOURCE_URL)
 
     def test_missing_regional_header_raises(self) -> None:
-        header: list[object] = [None, "Total", "North", "London", "South", "Wales", "Scotland"]
+        header: list[object] = [
+            None,
+            "Total",
+            "North",
+            "London",
+            "South",
+            "Wales",
+            "Scotland",
+        ]
         rows = [header, ["Base: All Respondents (Weighted)", 2015]]
         workbook = _full_workbook(headline_rows=rows)
         expected = "Missing expected regional header 'Mids' in HeadlineVI sheet"
@@ -771,7 +821,16 @@ class TestParsePollHeaderRow:
         exactly (confirmed across four real downloaded workbooks), so this
         is a documented inconsistency, not an observed production issue.
         """
-        header: list[object] = [None, "TOTAL", "North", "Mids", "London", "South", "Wales", "Scotland"]
+        header: list[object] = [
+            None,
+            "TOTAL",
+            "North",
+            "Mids",
+            "London",
+            "South",
+            "Wales",
+            "Scotland",
+        ]
         rows = [header, ["Base: All Respondents (Weighted)", 2015]]
         workbook = _full_workbook(headline_rows=rows)
         expected = "Missing expected 'Total' header in HeadlineVI sheet"
@@ -786,7 +845,16 @@ class TestParsePollBaseRowAndSample:
     """parse_poll's weighted-base-row search and sample-size resolution."""
 
     def test_base_row_not_found_raises(self) -> None:
-        header: list[object] = [None, "Total", "North", "Mids", "London", "South", "Wales", "Scotland"]
+        header: list[object] = [
+            None,
+            "Total",
+            "North",
+            "Mids",
+            "London",
+            "South",
+            "Wales",
+            "Scotland",
+        ]
         workbook = _full_workbook(headline_rows=[header, ["Not a base row", 2015]])
         with pytest.raises(
             ValueError, match="Could not locate weighted base row in HeadlineVI sheet"
@@ -835,7 +903,16 @@ class TestParsePollBaseRowAndSample:
         assert parsed.sample_size == 2015
 
     def test_base_row_found_at_header_plus_7_boundary(self) -> None:
-        header: list[object] = [None, "Total", "North", "Mids", "London", "South", "Wales", "Scotland"]
+        header: list[object] = [
+            None,
+            "Total",
+            "North",
+            "Mids",
+            "London",
+            "South",
+            "Wales",
+            "Scotland",
+        ]
         blank_rows: list[list[object]] = [[] for _ in range(6)]
         base: list[object] = ["Base: All Respondents (Weighted)", 2015]
         workbook = _full_workbook(headline_rows=[header, *blank_rows, base])
@@ -849,7 +926,16 @@ class TestParsePollBaseRowAndSample:
     def test_base_row_one_past_the_boundary_is_never_scanned_pins_current_behaviour(
         self,
     ) -> None:
-        header: list[object] = [None, "Total", "North", "Mids", "London", "South", "Wales", "Scotland"]
+        header: list[object] = [
+            None,
+            "Total",
+            "North",
+            "Mids",
+            "London",
+            "South",
+            "Wales",
+            "Scotland",
+        ]
         blank_rows: list[list[object]] = [[] for _ in range(7)]
         base: list[object] = ["Base: All Respondents (Weighted)", 2015]
         workbook = _full_workbook(headline_rows=[header, *blank_rows, base])
@@ -900,7 +986,10 @@ class TestParsePollBaseRowAndSample:
         happens to differ.
         """
         header: list[object] = [
-            None, "Total", *_MACRO_HEADERS, "Northern Ireland",
+            None,
+            "Total",
+            *_MACRO_HEADERS,
+            "Northern Ireland",
         ]
         rows: list[list[object]] = [
             header,
@@ -936,7 +1025,9 @@ class TestParsePollPartyRows:
             "Scotland": 8.0,
             "Northern Ireland": 9.0,
         }
-        assert parsed.party_macro_percentages["Liberal Democrats"][op.NATIONAL_KEY] == 18.0
+        assert (
+            parsed.party_macro_percentages["Liberal Democrats"][op.NATIONAL_KEY] == 18.0
+        )
         assert parsed.party_macro_percentages["Reform UK"]["South"] == 30.0
         assert parsed.party_macro_percentages["Other"]["Scotland"] == 48.0
         assert parsed.sample_size == 2015
@@ -957,7 +1048,9 @@ class TestParsePollPartyRows:
         parsed = op.parse_poll(workbook, source_url=_SOURCE_URL)
         assert parsed.party_macro_percentages["Conservative"][op.NATIONAL_KEY] == 2.0
         assert parsed.party_macro_percentages["Labour"][op.NATIONAL_KEY] == 10.0
-        assert parsed.party_macro_percentages["Liberal Democrats"][op.NATIONAL_KEY] == 18.0
+        assert (
+            parsed.party_macro_percentages["Liberal Democrats"][op.NATIONAL_KEY] == 18.0
+        )
         assert parsed.party_macro_percentages["Reform UK"][op.NATIONAL_KEY] == 26.0
 
     def test_blank_row_is_harmless(self) -> None:
@@ -1073,7 +1166,8 @@ class TestParsePollOptionalPartyRecognition:
         parsed = op.parse_poll(workbook, source_url=_SOURCE_URL)
 
         assert all(
-            v == 0.0 for v in parsed.party_macro_percentages["Scottish National Party"].values()
+            v == 0.0
+            for v in parsed.party_macro_percentages["Scottish National Party"].values()
         )
         assert all(
             v == 0.0 for v in parsed.party_macro_percentages["Plaid Cymru"].values()
@@ -1818,7 +1912,14 @@ class TestMain:
 # ── Column bases ────────────────────────────────────────────────────────
 
 _BASE_HEADER: tuple[object, ...] = (
-    None, "Total", "North", "Mids", "London", "South", "Wales", "Scotland",
+    None,
+    "Total",
+    "North",
+    "Mids",
+    "London",
+    "South",
+    "Wales",
+    "Scotland",
     "Northern Ireland",
 )
 # Total, North, Mids, London, South, Wales, Scotland, Northern Ireland.
@@ -1826,8 +1927,14 @@ _UNWEIGHTED = (1547, 394, 271, 157, 513, 67, 145, 0)
 _WEIGHTED = (1508, 371, 248, 212, 496, 61, 120, 0)
 # Party share rows, each followed by its weighted count row (Total column
 # only matters to the decided-base check); the counts sum to 1508.
-_PARTY_COUNTS = (("Lab", 0.267, 402), ("Reform", 0.247, 373), ("Con", 0.188, 284),
-                 ("Green", 0.116, 175), ("Lib Dem", 0.097, 147), ("Other", 0.085, 127))
+_PARTY_COUNTS = (
+    ("Lab", 0.267, 402),
+    ("Reform", 0.247, 373),
+    ("Con", 0.188, 284),
+    ("Green", 0.116, 175),
+    ("Lib Dem", 0.097, 147),
+    ("Other", 0.085, 127),
+)
 
 
 def _based_headline_rows(

@@ -180,9 +180,7 @@ class Database:
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.close()
 
-        self._session_factory = sessionmaker(
-            bind=self.engine, expire_on_commit=False
-        )
+        self._session_factory = sessionmaker(bind=self.engine, expire_on_commit=False)
 
     # ── lifecycle ─────────────────────────────────────────────────────────
 
@@ -261,7 +259,9 @@ class Database:
             Matching Party instance, or None.
         """
         with self.session() as s:
-            return s.execute(select(Party).where(Party.name == name)).scalar_one_or_none()
+            return s.execute(
+                select(Party).where(Party.name == name)
+            ).scalar_one_or_none()
 
     def get_all_parties(self) -> Sequence[Party]:
         """Return all Party rows ordered by name.
@@ -413,14 +413,16 @@ class Database:
             The existing or newly created Region instance.
         """
         with self.session() as s:
-            region = s.execute(
-                select(Region).where(Region.map_id == map_id, Region.name == name)
-            ).scalars().first()
+            region = (
+                s.execute(
+                    select(Region).where(Region.map_id == map_id, Region.name == name)
+                )
+                .scalars()
+                .first()
+            )
             if region is not None:
                 return region
-        return self.add_region(
-            map_id, name, parent_id=parent_id, population=population
-        )
+        return self.add_region(map_id, name, parent_id=parent_id, population=population)
 
     # ── seats ─────────────────────────────────────────────────────────────
 
@@ -514,11 +516,15 @@ class Database:
             The existing or newly created Seat instance.
         """
         with self.session() as s:
-            seat = s.execute(
-                select(Seat).where(
-                    Seat.map_id == map_id, Seat.seat_name == seat_name
+            seat = (
+                s.execute(
+                    select(Seat).where(
+                        Seat.map_id == map_id, Seat.seat_name == seat_name
+                    )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             if seat is not None:
                 return seat
         return self.add_seat(
@@ -737,7 +743,9 @@ class Database:
                 .all()
             )
 
-    def get_turnout_for_seat_election(self, election_id: int, seat_id: int) -> float | None:
+    def get_turnout_for_seat_election(
+        self, election_id: int, seat_id: int
+    ) -> float | None:
         """Return the total votes cast in a seat for a given election.
 
         Sums all Vote.vote_total values for the seat/election combination.
@@ -760,9 +768,7 @@ class Database:
                 return None
             return float(turnout)
 
-    def get_winner_for_seat(
-        self, election_id: int, seat_id: int
-    ) -> Vote | None:
+    def get_winner_for_seat(self, election_id: int, seat_id: int) -> Vote | None:
         """Return the elected candidate for a seat, if any."""
         with self.session() as s:
             return s.execute(
@@ -814,9 +820,7 @@ class Database:
                     ElectionSeatStatus.election_id == election_id
                 )
             )
-            result = s.execute(
-                delete(Vote).where(Vote.election_id == election_id)
-            )
+            result = s.execute(delete(Vote).where(Vote.election_id == election_id))
             return cast("CursorResult[Any]", result).rowcount
 
     # ── seat statuses ─────────────────────────────────────────────────────

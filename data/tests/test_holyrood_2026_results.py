@@ -263,7 +263,9 @@ class TestPartyRatioStdevs:
     def test_uniform_projection_has_zero_stdev_everywhere(self) -> None:
         multipliers = {SNP: 0.679, LABOUR: 0.754, CONSERVATIVE: 0.459}
         projected = {
-            name: {pid: round(total * multipliers[pid]) for pid, total in totals.items()}
+            name: {
+                pid: round(total * multipliers[pid]) for pid, total in totals.items()
+            }
             for name, totals in self.BASELINE_SEATS.items()
         }
         stdevs = party_ratio_stdevs(

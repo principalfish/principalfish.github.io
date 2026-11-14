@@ -164,6 +164,7 @@ class TestComputeRegionDiffs:
         baseline_regional: dict[int, dict[int, float]],
     ) -> tuple[set[int], dict[int, dict[int, float]], list[dict[str, Any]]]:
         from collections import defaultdict
+
         ws = defaultdict(float, weighted_sums)
         tw = defaultdict(float, total_weights)
         return compute_region_diffs(
@@ -264,7 +265,9 @@ class TestComputeRegionDiffs:
         # Delta semantics: swing = national_poll(35) - national_baseline(30) = +5.
         assert region_swings[10][1] == pytest.approx(5.0)
         # weighted_share = regional_baseline(50) + delta(5) = 55, not the level (35).
-        row = next(r for r in region_diff_rows if r["region_id"] == 10 and r["party_id"] == 1)
+        row = next(
+            r for r in region_diff_rows if r["region_id"] == 10 and r["party_id"] == 1
+        )
         assert row["weighted_share"] == pytest.approx(55.0)
         assert row["baseline_share"] == pytest.approx(50.0)
 
@@ -276,7 +279,12 @@ class TestComputeRegionDiffs:
             ({1: 45.0, 2: 35.0}, {2: 20.0}, 5.0),
             ({1: 45.0, 2: 35.0}, {1: 0.0, 2: 20.0}, -60.0),
         ],
-        ids=["national-omission", "national-zero", "regional-omission", "regional-zero"],
+        ids=[
+            "national-omission",
+            "national-zero",
+            "regional-omission",
+            "regional-zero",
+        ],
     )
     def test_omission_and_explicit_zero_have_distinct_meanings(
         self,
@@ -319,7 +327,9 @@ class TestComputeRegionDiffs:
     @pytest.mark.parametrize("regional_poll", [None, 0.146, 10.0])
     @pytest.mark.parametrize("explicit_zero", [False, True])
     def test_party_absent_from_region_gets_no_swing(
-        self, regional_poll: float | None, explicit_zero: bool,
+        self,
+        regional_poll: float | None,
+        explicit_zero: bool,
     ) -> None:
         sums: dict[tuple[int | None, int], float] = {(None, 8): 10.0}
         if regional_poll is not None:
@@ -972,9 +982,7 @@ class TestBuildBaselineVoteState:
         r = world.region_ids
 
         seat_totals, national_totals, national_shares, region_shares = (
-            build_baseline_vote_state(
-                db, world.baseline_election_id, region_by_seat_id
-            )
+            build_baseline_vote_state(db, world.baseline_election_id, region_by_seat_id)
         )
 
         assert seat_totals[orphan_id] == {p["Labour"]: 40000.0}
@@ -1079,7 +1087,8 @@ class TestAggregatePollShares:
             _AS_OF - timedelta(days=1),
             {} if regional else {party: 0.0},
             regional={region: {party: 0.0, world.party_ids["Conservative"]: 20.0}}
-            if region is not None else None,
+            if region is not None
+            else None,
         )
         map_id = (
             db.add_map("Unrelated map").id if excluded == "wrong-map" else world.map_id
@@ -2024,9 +2033,7 @@ class TestDeleteModelUnsForAsOfDate:
         assert delete_model_uns_for_as_of_date(
             date(2026, 6, 1), only_the_test_database, map_id=world.map_id
         ) == (0, 0)
-        assert _model_uns_elections(only_the_test_database) == [
-            ("UNS 2026-06-02", 2)
-        ]
+        assert _model_uns_elections(only_the_test_database) == [("UNS 2026-06-02", 2)]
 
     def test_deletes_every_run_for_the_date_and_its_votes(
         self,
@@ -2053,8 +2060,7 @@ class TestDeleteModelUnsForAsOfDate:
             ("UNS 2026-06-10", 3),
         ]
         assert (
-            len(db.get_votes_for_election(world.baseline_election_id))
-            == baseline_votes
+            len(db.get_votes_for_election(world.baseline_election_id)) == baseline_votes
         )
 
     def test_preserves_same_named_other_type(
@@ -2183,9 +2189,7 @@ class TestResetExistingModelOutputs:
         )
 
         assert result == (0, 0, 0)
-        assert _model_uns_elections(only_the_test_database) == [
-            ("UNS 2026-05-31", 1)
-        ]
+        assert _model_uns_elections(only_the_test_database) == [("UNS 2026-05-31", 1)]
         assert _read_json(trend_json)[0]["as_of_date"] == "2026-05-31"
         assert _read_json(trend_json)[0]["parties"]
 
@@ -2700,7 +2704,9 @@ class TestRunRetrospective:
         run_uns_model.run_retrospective(db, args)
 
         lines = capsys.readouterr().out.splitlines()
-        assert lines[0] == ("RESET recomputing dates; previous results retained until replacement succeeds")
+        assert lines[0] == (
+            "RESET recomputing dates; previous results retained until replacement succeeds"
+        )
         progress = [line for line in lines if line.startswith("PROGRESS")]
         assert progress == [
             "PROGRESS success=1 failed=0 as_of=2026-06-09 "
@@ -2762,9 +2768,7 @@ class TestRunRetrospective:
         ]
         assert "DRY_RUN=True" in lines
         assert "SUCCESS=3 FAILED=0" in lines
-        assert _model_uns_elections(only_the_test_database) == [
-            ("UNS 2026-06-09", 2)
-        ]
+        assert _model_uns_elections(only_the_test_database) == [("UNS 2026-06-09", 2)]
         assert not trend_json.exists()
 
     @pytest.mark.parametrize("extra", [[], ["--dry-run"]])
@@ -2828,7 +2832,9 @@ class TestRunRetrospective:
             "--dry-run",
         )
 
-        with pytest.raises(ValueError, match="Baseline election not found: Missing Election"):
+        with pytest.raises(
+            ValueError, match="Baseline election not found: Missing Election"
+        ):
             run_uns_model.run_retrospective(db, args)
         assert capsys.readouterr().out == ""
 
@@ -3033,7 +3039,10 @@ class TestMain:
         )
 
         out = capsys.readouterr().out
-        assert "RESET recomputing dates; previous results retained until replacement succeeds" in out
+        assert (
+            "RESET recomputing dates; previous results retained until replacement succeeds"
+            in out
+        )
         assert "SUCCESS=2 FAILED=0" in out
         # The single-date path (its summary and the meta file) never runs.
         assert "UNS simulation complete" not in out
@@ -3088,9 +3097,7 @@ class TestMain:
         assert lines[12] == "- Labour: 4"
         assert not any(line.startswith("AUTO-BACKFILL") for line in lines)
         assert not any(line.startswith("Backfill progress") for line in lines)
-        assert _model_uns_elections(only_the_test_database) == [
-            ("UNS 2026-06-08", 32)
-        ]
+        assert _model_uns_elections(only_the_test_database) == [("UNS 2026-06-08", 32)]
         assert _read_json(meta_json) == {
             "as_of_date": "2026-06-08",
             "since_date": "2026-05-09",
@@ -3292,9 +3299,7 @@ class TestMain:
         assert "Election name: UNS 2026-06-09" in lines
         assert not meta_json.exists()
         assert not trend_json.exists()
-        assert _model_uns_elections(only_the_test_database) == [
-            ("UNS 2026-06-06", 1)
-        ]
+        assert _model_uns_elections(only_the_test_database) == [("UNS 2026-06-06", 1)]
 
     def test_prints_the_regional_swing_summary(
         self,
@@ -3323,9 +3328,7 @@ class TestMain:
 
         lines = capsys.readouterr().out.splitlines()
         summary = lines[lines.index("Weighted regional diffs (swing) snapshot:") + 1 :]
-        unswung = (
-            "Green: +0.00, Labour: +5.00, Liberal Democrats: +0.00"
-        )
+        unswung = "Green: +0.00, Labour: +5.00, Liberal Democrats: +0.00"
         # Parties absent from a region's baseline are marked inapplicable;
         # Scotland's SNP swing still comes from its regional crossbreak.
         assert summary == [
@@ -3411,9 +3414,7 @@ class TestMain:
 
         run_uns_model.main()
 
-        assert _model_uns_elections(only_the_test_database) == [
-            ("UNS 2026-06-09", 32)
-        ]
+        assert _model_uns_elections(only_the_test_database) == [("UNS 2026-06-09", 32)]
 
 
 class TestContributingEndpointCaps:

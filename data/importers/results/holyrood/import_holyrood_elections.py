@@ -62,9 +62,7 @@ from core.schema import Election, ElectionType, Map, Party, Seat
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-MAP_NAME_CANDIDATES = (
-    "Scottish Parliament Constituencies 2021",
-)
+MAP_NAME_CANDIDATES = ("Scottish Parliament Constituencies 2021",)
 
 FILES_DIR = Path(__file__).resolve().parents[3] / "inputs" / "holyrood"
 
@@ -88,6 +86,7 @@ PARTY_KEY_TO_NAME: dict[str, str] = {
 
 
 # ── Dataclasses ───────────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class ElectionSpec:
@@ -188,6 +187,7 @@ class ImportStats:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def normalize_name(value: str) -> str:
     """Lowercase and strip non-alphanumeric characters for fuzzy matching."""
     value = value.lower().replace("&", "and").replace("'", "")
@@ -268,6 +268,7 @@ def dhondt_allocate(
 
 # ── Import functions ──────────────────────────────────────────────────────────
 
+
 def import_constituency_results(
     db: Database,
     spec: ElectionSpec,
@@ -307,7 +308,9 @@ def import_constituency_results(
             if spec.year == 2026
             else "This file is committed to the repository — check it out."
         )
-        raise FileNotFoundError(f"Constituency data file not found: {data_file}\n{hint}")
+        raise FileNotFoundError(
+            f"Constituency data file not found: {data_file}\n{hint}"
+        )
 
     with open(data_file, encoding="utf-8") as f:
         election_data: dict[str, Any] = json.load(f)
@@ -327,7 +330,9 @@ def import_constituency_results(
                 cleared = db.clear_votes_for_election(existing_election.id)
                 print(f"  Refreshing '{spec.name}': cleared {cleared} existing votes.")
             elif skip_existing:
-                print(f"  Skipping '{spec.name}' — already has {len(existing_votes)} votes.")
+                print(
+                    f"  Skipping '{spec.name}' — already has {len(existing_votes)} votes."
+                )
                 return stats
             else:
                 raise RuntimeError(
@@ -356,7 +361,9 @@ def import_constituency_results(
     for seat_name, seat_payload in election_data.items():
         stats.seats_seen += 1
         canonical_name = SEAT_NAME_ALIASES.get(seat_name, seat_name)
-        seat = seats_by_name.get(canonical_name) or seats_by_norm.get(normalize_name(canonical_name))
+        seat = seats_by_name.get(canonical_name) or seats_by_norm.get(
+            normalize_name(canonical_name)
+        )
 
         if seat is None:
             stats.seats_unmatched += 1
@@ -468,7 +475,9 @@ def import_list_results(
                 cleared = db.clear_votes_for_election(existing_election.id)
                 print(f"  Refreshing '{list_name}': cleared {cleared} existing votes.")
             elif skip_existing:
-                print(f"  Skipping '{list_name}' — already has {len(existing_votes)} votes.")
+                print(
+                    f"  Skipping '{list_name}' — already has {len(existing_votes)} votes."
+                )
                 return stats
             else:
                 raise RuntimeError(
@@ -500,14 +509,18 @@ def import_list_results(
         norm_region = normalize_name(region_name)
         region = regions_by_norm.get(norm_region)
         if region is None:
-            print(f"  WARNING: Region '{region_name}' not found in DB — skipping list seats.")
+            print(
+                f"  WARNING: Region '{region_name}' not found in DB — skipping list seats."
+            )
             continue
 
         region_votes: dict[str, int] = region_data.get("regionVotes", {})
         # Use provided seat allocation if present; otherwise compute via d'Hondt
         seat_allocation: dict[str, int] = region_data.get("seats", {})
         if not seat_allocation and region_votes:
-            constituency_seats_won: dict[str, int] = region_data.get("constituencySeatsWon", {})
+            constituency_seats_won: dict[str, int] = region_data.get(
+                "constituencySeatsWon", {}
+            )
             seat_allocation = dhondt_allocate(
                 {normalize_party_key(p): v for p, v in region_votes.items()},
                 {normalize_party_key(p): v for p, v in constituency_seats_won.items()},
@@ -557,6 +570,7 @@ def import_list_results(
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
     """Entry point for the Holyrood election import script."""
     parser = argparse.ArgumentParser()
@@ -564,7 +578,12 @@ def main() -> None:
         "--only-year",
         type=int,
         action="append",
-        choices=[2011, 2016, 2021, 2026],  # applies to base specs; remapped specs also filtered by year
+        choices=[
+            2011,
+            2016,
+            2021,
+            2026,
+        ],  # applies to base specs; remapped specs also filtered by year
         help="Restrict import to one or more years (can be provided multiple times)",
     )
     parser.add_argument(
@@ -592,9 +611,15 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    specs = [s for s in ELECTION_SPECS if args.only_year is None or s.year in args.only_year]
+    specs = [
+        s for s in ELECTION_SPECS if args.only_year is None or s.year in args.only_year
+    ]
     if args.include_remapped:
-        remapped = [s for s in REMAPPED_ELECTION_SPECS if args.only_year is None or s.year in args.only_year]
+        remapped = [
+            s
+            for s in REMAPPED_ELECTION_SPECS
+            if args.only_year is None or s.year in args.only_year
+        ]
         specs = specs + list(remapped)
     if not specs:
         raise ValueError("No elections selected to import")
@@ -631,12 +656,19 @@ def main() -> None:
 
         # Constituency seats
         stats = import_constituency_results(
-            db, spec, holyrood_map, party_cache, args.dry_run, args.skip_existing,
+            db,
+            spec,
+            holyrood_map,
+            party_cache,
+            args.dry_run,
+            args.skip_existing,
             args.refresh,
         )
 
-        print(f"  Constituency seats: {stats.seats_matched}/{stats.seats_seen} matched, "
-              f"{stats.votes_inserted} votes inserted")
+        print(
+            f"  Constituency seats: {stats.seats_matched}/{stats.seats_seen} matched, "
+            f"{stats.votes_inserted} votes inserted"
+        )
 
         # Get the constituency election id for linking list election
         constituency_election_id: int | None = None
@@ -646,11 +678,19 @@ def main() -> None:
 
         # List seats
         list_stats = import_list_results(
-            db, spec, holyrood_map, constituency_election_id,
-            party_cache, args.dry_run, args.skip_existing, args.refresh,
+            db,
+            spec,
+            holyrood_map,
+            constituency_election_id,
+            party_cache,
+            args.dry_run,
+            args.skip_existing,
+            args.refresh,
         )
-        print(f"  List seats: {list_stats.list_regions_seen} regions, "
-              f"{list_stats.list_seats_inserted} list seats inserted")
+        print(
+            f"  List seats: {list_stats.list_regions_seen} regions, "
+            f"{list_stats.list_seats_inserted} list seats inserted"
+        )
 
         overall.seats_seen += stats.seats_seen
         overall.seats_matched += stats.seats_matched

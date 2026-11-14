@@ -161,8 +161,7 @@ def _build_arg_parser(default_contests: Sequence[UsContest]) -> argparse.Argumen
         choices=slugs,
         metavar="SLUG",
         help=(
-            "Limit the run to one contest, repeatable "
-            f"(default: {', '.join(slugs)})"
+            f"Limit the run to one contest, repeatable (default: {', '.join(slugs)})"
         ),
     )
     parser.add_argument(

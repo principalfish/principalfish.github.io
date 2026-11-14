@@ -32,7 +32,9 @@ class SeatOverridesError(ValueError):
     """The seat override file is malformed."""
 
 
-def load_seat_overrides(path: Path = OVERRIDES_PATH) -> dict[str, dict[str, dict[str, Any]]]:
+def load_seat_overrides(
+    path: Path = OVERRIDES_PATH,
+) -> dict[str, dict[str, dict[str, Any]]]:
     """Load and validate the override file.
 
     Args:
@@ -50,10 +52,14 @@ def load_seat_overrides(path: Path = OVERRIDES_PATH) -> dict[str, dict[str, dict
     except (OSError, json.JSONDecodeError) as exc:
         raise SeatOverridesError(f"{path}: cannot read seat overrides: {exc}") from exc
     if not isinstance(raw, dict):
-        raise SeatOverridesError(f"{path}: top level must be an object keyed by election name")
+        raise SeatOverridesError(
+            f"{path}: top level must be an object keyed by election name"
+        )
     for election_name, seats in raw.items():
         if not isinstance(seats, dict):
-            raise SeatOverridesError(f"{path}: {election_name!r} must be an object keyed by seat name")
+            raise SeatOverridesError(
+                f"{path}: {election_name!r} must be an object keyed by seat name"
+            )
         for seat_name, entry in seats.items():
             _validate_entry(f"{path}: {election_name!r} / {seat_name!r}", entry)
     return raw
@@ -61,29 +67,43 @@ def load_seat_overrides(path: Path = OVERRIDES_PATH) -> dict[str, dict[str, dict
 
 def _validate_entry(where: str, entry: Any) -> None:
     if not isinstance(entry, dict) or set(entry) != {"w", "p"}:
-        raise SeatOverridesError(f'{where}: must be an object with exactly the keys "w" and "p"')
+        raise SeatOverridesError(
+            f'{where}: must be an object with exactly the keys "w" and "p"'
+        )
     rows = entry["p"]
     if not isinstance(rows, list) or len(rows) < 2:
         raise SeatOverridesError(f'{where}: "p" must list at least two candidate rows')
     keys: list[str] = []
     for row in rows:
         if not isinstance(row, list) or len(row) != 3:
-            raise SeatOverridesError(f"{where}: each row must be [partyKey, votes, name], got {row!r}")
+            raise SeatOverridesError(
+                f"{where}: each row must be [partyKey, votes, name], got {row!r}"
+            )
         key, votes, name = row
         if not isinstance(key, str) or not key.strip():
-            raise SeatOverridesError(f"{where}: party key must be non-empty text, got {key!r}")
+            raise SeatOverridesError(
+                f"{where}: party key must be non-empty text, got {key!r}"
+            )
         if isinstance(votes, bool) or not isinstance(votes, (int, float)) or votes <= 0:
-            raise SeatOverridesError(f"{where}: votes must be a positive number, got {votes!r}")
+            raise SeatOverridesError(
+                f"{where}: votes must be a positive number, got {votes!r}"
+            )
         if not isinstance(name, str) or not name.strip():
-            raise SeatOverridesError(f"{where}: candidate name must be non-empty text, got {name!r}")
+            raise SeatOverridesError(
+                f"{where}: candidate name must be non-empty text, got {name!r}"
+            )
         keys.append(key)
     votes_only = [float(row[1]) for row in rows]
     if votes_only != sorted(votes_only, reverse=True):
         raise SeatOverridesError(f"{where}: rows must be in descending vote order")
     if len(votes_only) > 1 and votes_only[0] == votes_only[1]:
-        raise SeatOverridesError(f"{where}: the top two rows tie on votes, so there is no individual leader")
+        raise SeatOverridesError(
+            f"{where}: the top two rows tie on votes, so there is no individual leader"
+        )
     if entry["w"] != keys[0]:
-        raise SeatOverridesError(f'{where}: "w" must be the party key of the top (first) row, {keys[0]!r}')
+        raise SeatOverridesError(
+            f'{where}: "w" must be the party key of the top (first) row, {keys[0]!r}'
+        )
 
 
 def apply_seat_overrides(
@@ -113,23 +133,39 @@ def apply_seat_overrides(
         return applied
     seats = payload["seats"]
     for seat_name, entry in wanted.items():
-        index = next((i for i, seat in enumerate(seats) if seat["n"] == seat_name), None)
-        problem = _skip_reason(None if index is None else seats[index], entry, party_id_by_key)
+        index = next(
+            (i for i, seat in enumerate(seats) if seat["n"] == seat_name), None
+        )
+        problem = _skip_reason(
+            None if index is None else seats[index], entry, party_id_by_key
+        )
         if problem is not None:
-            print(f"WARNING: seat override for {election_name!r} / {seat_name!r} not applied: {problem}. "
-                  f"Update or delete the entry in {OVERRIDES_PATH.name}.")
+            print(
+                f"WARNING: seat override for {election_name!r} / {seat_name!r} not applied: {problem}. "
+                f"Update or delete the entry in {OVERRIDES_PATH.name}."
+            )
             continue
         assert index is not None
         seat = seats[index]
-        new_seat: dict[str, Any] = {"n": seat["n"], "r": seat["r"], "w": party_id_by_key[entry["w"]]}
-        new_seat["p"] = [[party_id_by_key[key], votes, name] for key, votes, name in entry["p"]]
+        new_seat: dict[str, Any] = {
+            "n": seat["n"],
+            "r": seat["r"],
+            "w": party_id_by_key[entry["w"]],
+        }
+        new_seat["p"] = [
+            [party_id_by_key[key], votes, name] for key, votes, name in entry["p"]
+        ]
         new_seat.update({k: v for k, v in seat.items() if k not in new_seat})
         seats[index] = new_seat
         applied.append(seat_name)
     return applied
 
 
-def _skip_reason(seat: Mapping[str, Any] | None, entry: Mapping[str, Any], party_id_by_key: Mapping[str, int]) -> str | None:
+def _skip_reason(
+    seat: Mapping[str, Any] | None,
+    entry: Mapping[str, Any],
+    party_id_by_key: Mapping[str, int],
+) -> str | None:
     """Return why the override cannot apply to ``seat``, or ``None`` when it can."""
     if seat is None:
         return "the seat is not in the payload"
@@ -146,8 +182,10 @@ def _skip_reason(seat: Mapping[str, Any] | None, entry: Mapping[str, Any], party
     for row in seat["p"]:
         current_totals[row[0]] = current_totals.get(row[0], 0.0) + float(row[1])
     if override_totals != current_totals:
-        return (f"the override is stale: its party totals {_by_id(override_totals)} differ from "
-                f"the current {_by_id(current_totals)}")
+        return (
+            f"the override is stale: its party totals {_by_id(override_totals)} differ from "
+            f"the current {_by_id(current_totals)}"
+        )
     return None
 
 

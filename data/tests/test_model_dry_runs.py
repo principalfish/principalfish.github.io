@@ -387,7 +387,8 @@ def test_us_default_dry_run_preserves_all_outputs(
     if model == "president":
         seed_allocations(db, {"One": 3})
     election_map, seats = us._seat_map_with_baseline(
-        db, f"test {model}",
+        db,
+        f"test {model}",
         "us_presidential" if model == "president" else f"us_{model}",
         {"One": {dem.id: 60, rep.id: 40}},
     )

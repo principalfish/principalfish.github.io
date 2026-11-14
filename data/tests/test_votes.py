@@ -10,6 +10,7 @@ from core.schema import Election, ElectionType, Map, Seat
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+
 def _make_election(db: Database) -> tuple[Map, Seat, Election]:
     """Create a map + election + seat scaffold used by most tests here."""
     m = db.add_map("UK")
@@ -95,7 +96,9 @@ class TestAddVote:
     def test_model_run_no_candidate(self, db: Database) -> None:
         m = db.add_map("UK")
         seat = db.add_seat(m.id, "Bristol West")
-        election = db.add_election(m.id, 2026, "model_run_2026-02-12", ElectionType.model_run)
+        election = db.add_election(
+            m.id, 2026, "model_run_2026-02-12", ElectionType.model_run
+        )
         party = db.add_party("Labour")
         v = db.add_vote(election.id, seat.id, party_id=party.id, vote_total=0.42)
         assert v.candidate_name is None
@@ -183,8 +186,19 @@ class TestBulkAddVotes:
         _, seat, election = _make_election(db)
         p = db.add_party("Labour")
         votes: list[dict[str, Any]] = [
-            {"election_id": election.id, "seat_id": seat.id, "party_id": p.id, "vote_total": 100, "elected": True},
-            {"election_id": election.id, "seat_id": seat.id, "vote_total": 50, "elected": False},
+            {
+                "election_id": election.id,
+                "seat_id": seat.id,
+                "party_id": p.id,
+                "vote_total": 100,
+                "elected": True,
+            },
+            {
+                "election_id": election.id,
+                "seat_id": seat.id,
+                "vote_total": 50,
+                "elected": False,
+            },
         ]
         count = db.bulk_add_votes(votes)
         assert count == 2

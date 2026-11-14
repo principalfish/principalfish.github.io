@@ -570,9 +570,7 @@ def _tables_rows(
     include_region_header: bool = True,
     omit_region_from_header: Sequence[str] = (),
     omit_party: str | None = None,
-    figures: Sequence[
-        tuple[str, float, Mapping[str, object]]
-    ] = _DEFAULT_PARTY_FIGURES,
+    figures: Sequence[tuple[str, float, Mapping[str, object]]] = _DEFAULT_PARTY_FIGURES,
 ) -> list[Sequence[object]]:
     """Build a full Survation-style voting-intention table's rows."""
     rows: list[Sequence[object]] = [_TITLE_ROW, _PREFERRED_BASE_ROW]
@@ -689,17 +687,13 @@ class TestTablesSheet:
     def test_exact_match_wins_over_startswith_candidate(self) -> None:
         # Both sheets would match on their own tier; the exact "Tables" name
         # must win over "TablesAppendix" (a startswith-only candidate).
-        workbook = build_workbook(
-            {"TablesAppendix": [["x"]], "Tables": [["y"]]}
-        )
+        workbook = build_workbook({"TablesAppendix": [["x"]], "Tables": [["y"]]})
         assert _tables_sheet(workbook).title == "Tables"
 
     def test_startswith_wins_over_contains_candidate(self) -> None:
         # Neither sheet matches exactly; "Tables Extra" (starts with
         # "tables") must win over "Full Table Data" (contains-only).
-        workbook = build_workbook(
-            {"Full Table Data": [["x"]], "Tables Extra": [["y"]]}
-        )
+        workbook = build_workbook({"Full Table Data": [["x"]], "Tables Extra": [["y"]]})
         assert _tables_sheet(workbook).title == "Tables Extra"
 
     def test_table_of_contents_sheet_excluded_raises(self) -> None:
@@ -749,10 +743,7 @@ class TestFindViTableStart:
                 "Tables": [
                     ["Table_1. General Election for which party would you vote?"],
                     ["Base: all respondents"],
-                    [
-                        "Table_2. Westminster Election for which party would "
-                        "you vote?"
-                    ],
+                    ["Table_2. Westminster Election for which party would you vote?"],
                     ["Base: all likely voters"],
                 ]
             }
@@ -761,9 +752,7 @@ class TestFindViTableStart:
 
     def test_no_match_raises(self) -> None:
         workbook = build_workbook({"Tables": [["Nothing relevant here"]]})
-        with pytest.raises(
-            ValueError, match="Could not locate voting intention table"
-        ):
+        with pytest.raises(ValueError, match="Could not locate voting intention table"):
             _find_vi_table_start(workbook["Tables"])
 
     def test_partial_header_matches_are_skipped(self) -> None:
@@ -818,9 +807,7 @@ class TestParseCoverMetadata:
         assert sample_size == 1511
 
     def test_sample_size_as_text_extracts_digits(self) -> None:
-        workbook = build_workbook(
-            {"Cover": _cover_rows(sample_cell="1,511 GB adults")}
-        )
+        workbook = build_workbook({"Cover": _cover_rows(sample_cell="1,511 GB adults")})
         _, _, sample_size = _parse_cover_metadata(workbook, 2026)
         assert sample_size == 1511
 
@@ -940,9 +927,7 @@ class TestParsePartyRegionPercentages:
         assert parsed["Other"][NATIONAL_KEY] == 2.0
 
     def test_no_region_header_leaves_only_national(self) -> None:
-        workbook = build_workbook(
-            {"Tables": _tables_rows(include_region_header=False)}
-        )
+        workbook = build_workbook({"Tables": _tables_rows(include_region_header=False)})
         parsed = _parse_party_region_percentages(workbook)
         assert parsed["Conservative"] == {NATIONAL_KEY: 32.0}
         assert parsed["Labour"] == {NATIONAL_KEY: 40.0}
@@ -992,12 +977,12 @@ class TestParsePoll:
         assert parsed.party_region_percentages["Labour"][NATIONAL_KEY] == 40.0
         assert parsed.party_region_percentages["Conservative"][NATIONAL_KEY] == 32.0
         assert parsed.party_region_percentages["Labour"]["London"] == 45.0
-        assert parsed.party_region_percentages["Reform UK"]["North East England"] == 18.0
+        assert (
+            parsed.party_region_percentages["Reform UK"]["North East England"] == 18.0
+        )
 
     def test_yearless_single_day_uses_url_year(self) -> None:
-        workbook = _full_workbook(
-            cover_rows=_cover_rows(fieldwork_text="29 September")
-        )
+        workbook = _full_workbook(cover_rows=_cover_rows(fieldwork_text="29 September"))
         parsed = parse_poll(workbook, source_url=_XLSX_URL)
         assert parsed.fieldwork_start == parsed.fieldwork_end == date(2026, 9, 29)
         assert parsed.sample_size == 1511
@@ -1022,9 +1007,7 @@ class TestParsePoll:
         assert parsed.party_region_percentages["Labour"][NATIONAL_KEY] == 40.0
 
     def test_year_hint_used_when_url_has_no_year(self) -> None:
-        workbook = _full_workbook(
-            cover_rows=_cover_rows(fieldwork_text="3-5 January")
-        )
+        workbook = _full_workbook(cover_rows=_cover_rows(fieldwork_text="3-5 January"))
         parsed = parse_poll(
             workbook,
             source_url="https://cdn.example.test/survation.xlsx",
@@ -1445,9 +1428,9 @@ class TestParseBases:
 
     def test_likely_voter_base_line_is_labelled_as_such(self) -> None:
         workbook = _grouped_source_workbook()
-        workbook["Tables"].cell(2, 1).value = (
-            "Base: Respondents likely to vote, factored by likelihood to vote"
-        )
+        workbook["Tables"].cell(
+            2, 1
+        ).value = "Base: Respondents likely to vote, factored by likelihood to vote"
 
         parsed = parse_poll(workbook, source_url=_GROUPED_SOURCE_URL)
 

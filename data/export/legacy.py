@@ -47,8 +47,7 @@ SUPPLEMENTAL_LEGACY_ELECTIONS: list[dict[str, Any]] = [
 
 
 SUPPLEMENTAL_LEGACY_ELECTION_NAMES = {
-    str(entry["name"]).strip().lower()
-    for entry in SUPPLEMENTAL_LEGACY_ELECTIONS
+    str(entry["name"]).strip().lower() for entry in SUPPLEMENTAL_LEGACY_ELECTIONS
 }
 
 
@@ -91,14 +90,19 @@ def apply_supplemental_legacy_elections(
             file does not exist under ``results_dir``.
     """
     for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS:
-        if parliaments is not None and supplemental.get("parliament", "westminster") not in parliaments:
+        if (
+            parliaments is not None
+            and supplemental.get("parliament", "westminster") not in parliaments
+        ):
             continue
         election_id = supplemental["id"]
         map_id = int(supplemental["mapId"])
         result_filename = supplemental["resultFile"]
         result_path = results_dir / result_filename
 
-        map_relpath = map_files_by_id.get(str(map_id), f"maps/{map_filename_for_map_id(map_id)}")
+        map_relpath = map_files_by_id.get(
+            str(map_id), f"maps/{map_filename_for_map_id(map_id)}"
+        )
         map_files_by_id[str(map_id)] = map_relpath
         data_files_by_election_id[election_id] = f"results/{result_filename}"
 
@@ -125,20 +129,29 @@ def apply_supplemental_legacy_elections(
                 )
             source_path = legacy_files_dir / source_name
             if not source_path.exists():
-                raise FileNotFoundError(f"Supplemental legacy results file not found: {source_path}")
+                raise FileNotFoundError(
+                    f"Supplemental legacy results file not found: {source_path}"
+                )
             if dry_run:
-                print(f"Would write supplemental results: {result_path} (from {source_path.name})")
+                print(
+                    f"Would write supplemental results: {result_path} (from {source_path.name})"
+                )
             else:
                 raw_payload = json.loads(source_path.read_text(encoding="utf-8"))
                 # Convert legacy seatInfo/partyInfo format to pf-results-v4 if needed
-                if manifest_parties and manifest_regions_by_map_id and raw_payload.get("schema") is None:
+                if (
+                    manifest_parties
+                    and manifest_regions_by_map_id
+                    and raw_payload.get("schema") is None
+                ):
                     party_key_to_id = {p["key"]: p["id"] for p in manifest_parties}
                     region_rows = manifest_regions_by_map_id.get(str(map_id)) or []
                     region_key_to_id = {
-                        normalize_region_name(r["name"]): r["id"]
-                        for r in region_rows
+                        normalize_region_name(r["name"]): r["id"] for r in region_rows
                     }
-                    payload = convert_legacy_seatinfo_to_v4(raw_payload, party_key_to_id, region_key_to_id)
+                    payload = convert_legacy_seatinfo_to_v4(
+                        raw_payload, party_key_to_id, region_key_to_id
+                    )
                 else:
                     payload = raw_payload
                 write_json(result_path, payload)

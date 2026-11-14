@@ -190,7 +190,14 @@ class TestChoicesForModelForm:
         assert choices["as_of_days_back"] == day_options
         assert choices["since_days_back"] == day_options
         assert choices["half_life_days"] == [
-            7.0, 14.0, 15.0, 21.0, 30.0, 45.0, 60.0, 90.0
+            7.0,
+            14.0,
+            15.0,
+            21.0,
+            30.0,
+            45.0,
+            60.0,
+            90.0,
         ]
         assert choices["dry_run_options"] == [
             {"value": "true", "label": "Yes (preview only)"},
@@ -302,9 +309,7 @@ class TestModelRunExecute:
         # since_days_back (7) < as_of_days_back (30) trips the custom
         # model_validator, not a type-coercion failure, so this also proves
         # that validator is wired up.
-        form = _valid_form(
-            westminster_world, as_of_days_back="30", since_days_back="7"
-        )
+        form = _valid_form(westminster_world, as_of_days_back="30", since_days_back="7")
 
         response = app.test_client().post(
             "/westminster/model", data=form, follow_redirects=True

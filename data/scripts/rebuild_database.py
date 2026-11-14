@@ -107,7 +107,9 @@ def parse_by_elections_file(path: Path) -> list[ByElectionEntry]:
             continue
         parent = fields[1] if len(fields) > 1 and fields[1] else None
         map_name = fields[2] if len(fields) > 2 and fields[2] else None
-        entries.append(ByElectionEntry(url=url, parent_election=parent, map_name=map_name))
+        entries.append(
+            ByElectionEntry(url=url, parent_election=parent, map_name=map_name)
+        )
     return entries
 
 
@@ -160,9 +162,12 @@ def us_election_steps(usa_files_dir: Path) -> list[Step]:
                 label=f"Import {name}",
                 script=IMPORTERS_DIR / "results" / "us" / script_name,
                 args=(
-                    "--file", str(json_file),
-                    "--year", str(year),
-                    "--name", name,
+                    "--file",
+                    str(json_file),
+                    "--year",
+                    str(year),
+                    "--name",
+                    name,
                     *args,
                     "--refresh",
                 ),
@@ -255,7 +260,12 @@ def build_steps() -> list[Step]:
         Step(
             "Import region populations",
             IMPORTERS_DIR / "seed" / "import_region_populations.py",
-            ("--map-name", REGION_POPULATIONS_MAP, "--input", str(REGION_POPULATIONS_CSV)),
+            (
+                "--map-name",
+                REGION_POPULATIONS_MAP,
+                "--input",
+                str(REGION_POPULATIONS_CSV),
+            ),
         ),
         Step(
             "Import Westminster general elections",

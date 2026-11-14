@@ -308,7 +308,9 @@ def _to_percentage(value: object) -> float:
     return float(int(round(pct)))
 
 
-def _find_fieldwork_and_sample(workbook: Any, default_year: int) -> tuple[date, date, int | None]:
+def _find_fieldwork_and_sample(
+    workbook: Any, default_year: int
+) -> tuple[date, date, int | None]:
     """Scan the FRONT PAGE sheet for fieldwork dates and sample size.
 
     Reads up to the first 50 rows of column C (label) and column F (value),
@@ -329,7 +331,11 @@ def _find_fieldwork_and_sample(workbook: Any, default_year: int) -> tuple[date, 
         ValueError: If the fieldwork date row is not found, or if the date
             string cannot be parsed.
     """
-    front = workbook["FRONT PAGE"] if "FRONT PAGE" in workbook.sheetnames else workbook[workbook.sheetnames[0]]
+    front = (
+        workbook["FRONT PAGE"]
+        if "FRONT PAGE" in workbook.sheetnames
+        else workbook[workbook.sheetnames[0]]
+    )
 
     fieldwork_raw = None
     sample_raw = None
@@ -346,7 +352,9 @@ def _find_fieldwork_and_sample(workbook: Any, default_year: int) -> tuple[date, 
     if not fieldwork_raw:
         raise ValueError("Fieldwork date not found in workbook")
 
-    fieldwork_start, fieldwork_end = _parse_fieldwork(fieldwork_raw, default_year=default_year)
+    fieldwork_start, fieldwork_end = _parse_fieldwork(
+        fieldwork_raw, default_year=default_year
+    )
 
     sample_size = None
     if sample_raw:
@@ -443,7 +451,9 @@ def _parse_bases(
     return [candidate for candidate in candidates if candidate is not None]
 
 
-def parse_poll(workbook: Any, *, source_url: str, fieldwork_year_hint: int | None = None) -> ParsedPoll:
+def parse_poll(
+    workbook: Any, *, source_url: str, fieldwork_year_hint: int | None = None
+) -> ParsedPoll:
     """Extract poll metadata and regional vote-share data from a loaded workbook.
 
     Reads fieldwork dates and sample size from the FRONT PAGE sheet, then
@@ -469,7 +479,9 @@ def parse_poll(workbook: Any, *, source_url: str, fieldwork_year_hint: int | Non
             rows are missing, or if any date/number cannot be parsed.
     """
     year = _infer_year_from_url(source_url, fallback=fieldwork_year_hint)
-    fieldwork_start, fieldwork_end, sample_from_front = _find_fieldwork_and_sample(workbook, year)
+    fieldwork_start, fieldwork_end, sample_from_front = _find_fieldwork_and_sample(
+        workbook, year
+    )
 
     sheet = _find_headline_sheet(workbook)
 
@@ -507,7 +519,9 @@ def parse_poll(workbook: Any, *, source_url: str, fieldwork_year_hint: int | Non
     required_macro_headers = ["North", "Mids", "London", "South", "Wales", "Scotland"]
     for macro in required_macro_headers:
         if macro not in header_labels:
-            raise ValueError(f"Missing expected regional header {macro!r} in HeadlineVI sheet")
+            raise ValueError(
+                f"Missing expected regional header {macro!r} in HeadlineVI sheet"
+            )
 
     optional_macro_headers = ["Northern Ireland"]
 
@@ -524,12 +538,18 @@ def parse_poll(workbook: Any, *, source_url: str, fieldwork_year_hint: int | Non
         canonical = PARTY_NAME_MAP.get(party_label)
         if canonical is None:
             continue
-        macro_values = {NATIONAL_KEY: _to_percentage(sheet.cell(row, header_labels["Total"]).value)}
+        macro_values = {
+            NATIONAL_KEY: _to_percentage(sheet.cell(row, header_labels["Total"]).value)
+        }
         for macro in required_macro_headers:
-            macro_values[macro] = _to_percentage(sheet.cell(row, header_labels[macro]).value)
+            macro_values[macro] = _to_percentage(
+                sheet.cell(row, header_labels[macro]).value
+            )
         for macro in optional_macro_headers:
             if macro in header_labels:
-                macro_values[macro] = _to_percentage(sheet.cell(row, header_labels[macro]).value)
+                macro_values[macro] = _to_percentage(
+                    sheet.cell(row, header_labels[macro]).value
+                )
             else:
                 macro_values[macro] = 0.0
         party_macro_percentages[canonical] = macro_values
@@ -563,7 +583,9 @@ def parse_poll(workbook: Any, *, source_url: str, fieldwork_year_hint: int | Non
     )
 
 
-def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+def _find_existing_poll(
+    db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll
+) -> Poll | None:
     """Query the database for a poll matching the given pollster, map, and fieldwork details.
 
     Matches on pollster ID, map ID, fieldwork start/end dates, and sample size.
@@ -658,7 +680,9 @@ def build_import_plan(
         for internal_name in internal_names:
             region = regions_by_name.get(internal_name)
             if region is None:
-                raise ValueError(f"Region {internal_name!r} not found in map {map_name!r}")
+                raise ValueError(
+                    f"Region {internal_name!r} not found in map {map_name!r}"
+                )
             ids.append(region.id)
         macro_to_region_ids[macro_name] = ids
 
@@ -680,8 +704,7 @@ def build_import_plan(
     ]
     if missing_parties:
         raise ValueError(
-            "Missing parties in database (run party importer first): "
-            f"{missing_parties}"
+            f"Missing parties in database (run party importer first): {missing_parties}"
         )
 
     rows: list[PlannedPollRow] = []
@@ -700,7 +723,9 @@ def build_import_plan(
         for macro_name, region_ids in macro_to_region_ids.items():
             percentage = macro_values.get(macro_name, 0.0)
             for region_id in region_ids:
-                region_name = next(region.name for region in regions if region.id == region_id)
+                region_name = next(
+                    region.name for region in regions if region.id == region_id
+                )
                 rows.append(
                     PlannedPollRow(
                         party_id=party_by_name[party_name].id,
@@ -768,7 +793,10 @@ def commit_import_plan(
             raise ValueError("Pollster lookup failed during commit")
         with db.session() as session:
             db_pollster = session.get(Pollster, pollster.id)
-            if db_pollster is not None and db_pollster.regions_mapping != plan.regions_mapping:
+            if (
+                db_pollster is not None
+                and db_pollster.regions_mapping != plan.regions_mapping
+            ):
                 db_pollster.regions_mapping = plan.regions_mapping
         pollster_id = pollster.id
         created_pollster = False
@@ -803,9 +831,11 @@ def commit_import_plan(
         created_poll_row = False
 
     with db.session() as session:
-        existing_rows = session.execute(
-            select(PollRow).where(PollRow.poll_id == poll_id)
-        ).scalars().all()
+        existing_rows = (
+            session.execute(select(PollRow).where(PollRow.poll_id == poll_id))
+            .scalars()
+            .all()
+        )
 
         if existing_rows and not replace_rows:
             return PollImportResult(
@@ -938,8 +968,7 @@ def main() -> None:
 
     if result.skipped_existing_rows:
         print(
-            f"poll {result.poll_id} already has rows; "
-            "use --replace-rows to overwrite"
+            f"poll {result.poll_id} already has rows; use --replace-rows to overwrite"
         )
     else:
         if result.replaced_rows:

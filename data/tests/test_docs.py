@@ -29,7 +29,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = Path(__file__).resolve().parents[1] / "console" / "static"
 
 
-
 def docs_files(root: Path) -> list[Path]:
     """The markdown docs under ``root``, failing loudly if there are none.
 

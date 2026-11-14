@@ -88,9 +88,12 @@ def import_house(
         db, map_id, map_name, "us_house", replace=replace and not refresh
     )
     return import_us_election(
-        db, data, house_map,
+        db,
+        data,
+        house_map,
         election_type=ElectionType.us_house,
-        year=year, name=name,
+        year=year,
+        name=name,
         state_for_key=district_state,
         refresh=refresh,
         plan=plan,
@@ -100,10 +103,18 @@ def import_house(
 def main() -> None:
     """CLI entry point: load a US House election JSON file into the database."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--file", required=True, type=Path, help="Path to the house-YYYY.json file")
-    parser.add_argument("--year", type=int, required=True, help="Election year (e.g. 2024)")
-    parser.add_argument("--name", required=True, help="Election name (e.g. '2024 US House Election')")
-    parser.add_argument("--replace", action="store_true", help="Rebuild the US House map first")
+    parser.add_argument(
+        "--file", required=True, type=Path, help="Path to the house-YYYY.json file"
+    )
+    parser.add_argument(
+        "--year", type=int, required=True, help="Election year (e.g. 2024)"
+    )
+    parser.add_argument(
+        "--name", required=True, help="Election name (e.g. '2024 US House Election')"
+    )
+    parser.add_argument(
+        "--replace", action="store_true", help="Rebuild the US House map first"
+    )
     parser.add_argument(
         "--refresh",
         action="store_true",

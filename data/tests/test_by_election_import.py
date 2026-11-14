@@ -85,7 +85,9 @@ def _swatch_row(
 # uk_fixtures, so the by-election flips it.
 _HEXHAM_TABLE = _swatch_row(
     "/wiki/Labour_Party", "Labour", "Jane Doe", "20,000", "50.0", bold=True
-) + _swatch_row("/wiki/Conservative_Party", "Conservative", "John Smith", "15,000", "37.5")
+) + _swatch_row(
+    "/wiki/Conservative_Party", "Conservative", "John Smith", "15,000", "37.5"
+)
 
 
 def _by_election_page(
@@ -293,7 +295,9 @@ class TestParseElectionDate:
         )
         assert parse_election_date(soup) == date(2025, 5, 1)
 
-    def test_labelled_date_row_without_a_td_falls_through_to_a_later_date_row(self) -> None:
+    def test_labelled_date_row_without_a_td_falls_through_to_a_later_date_row(
+        self,
+    ) -> None:
         # The first "Date" th has no sibling td at all, and the SECOND row is
         # also a genuine labelled "Date" row with a real value — so a `break`
         # (or an early return) after the first row would also yield None here,
@@ -322,7 +326,9 @@ class TestParseElectionDate:
         assert parse_election_date(_soup("<p>No infobox here.</p>")) is None
 
     def test_infobox_with_no_date_anywhere_returns_none(self) -> None:
-        soup = _soup('<table class="infobox"><tr><th>Country</th><td>UK</td></tr></table>')
+        soup = _soup(
+            '<table class="infobox"><tr><th>Country</th><td>UK</td></tr></table>'
+        )
         assert parse_election_date(soup) is None
 
 
@@ -362,7 +368,8 @@ class TestParseElectionNameFromTitle:
     def test_strips_wikipedia_suffix(self) -> None:
         soup = _soup("<title>2025 Runcorn and Helsby by-election - Wikipedia</title>")
         assert (
-            parse_election_name_from_title(soup) == "2025 Runcorn and Helsby by-election"
+            parse_election_name_from_title(soup)
+            == "2025 Runcorn and Helsby by-election"
         )
 
     def test_no_title_tag_returns_unknown_by_election(self) -> None:
@@ -376,7 +383,9 @@ class TestParseElectionNameFromTitle:
 class TestFindColumn:
     """Tests for _find_column — first matching HEADER wins, not first keyword."""
 
-    def test_finds_first_matching_header_by_header_order_not_keyword_order(self) -> None:
+    def test_finds_first_matching_header_by_header_order_not_keyword_order(
+        self,
+    ) -> None:
         # "votes" is the 2nd keyword, but it matches the header at index 1; a
         # keyword-first mutant (try "candidate" everywhere, then "votes") would
         # instead return 2, where "candidate" matches. Index 1 proves the loop
@@ -398,7 +407,9 @@ class TestExtractPartyFromRow:
     """Tests for _extract_party_from_row — swatch fallback, link priority, n/a."""
 
     def test_party_col_none_returns_none(self) -> None:
-        assert _extract_party_from_row(_cells("<td>Labour</td>"), None, ["party"]) is None
+        assert (
+            _extract_party_from_row(_cells("<td>Labour</td>"), None, ["party"]) is None
+        )
 
     def test_party_col_out_of_range_returns_none(self) -> None:
         cells = _cells("<td>Labour</td>")
@@ -468,7 +479,9 @@ class TestParseResultsTable:
     """Tests for parse_results_table — column detection, party source, row skips."""
 
     def test_swatch_column_offset_and_bold_marks_elected(self) -> None:
-        soup = _soup(f'<table class="wikitable">{_RESULTS_HEADER}{_HEXHAM_TABLE}</table>')
+        soup = _soup(
+            f'<table class="wikitable">{_RESULTS_HEADER}{_HEXHAM_TABLE}</table>'
+        )
         candidates = parse_results_table(soup)
         assert [c.party_name for c in candidates] == ["Labour", "Conservative"]
         assert candidates[0].candidate_name == "Jane Doe"
@@ -504,7 +517,9 @@ class TestParseResultsTable:
         elected = [c for c in candidates if c.elected]
         assert [c.candidate_name for c in elected] == ["John Smith"]
 
-    @pytest.mark.parametrize("marker", ["✓", "✔", "Yes"], ids=["tick", "heavy_tick", "yes"])
+    @pytest.mark.parametrize(
+        "marker", ["✓", "✔", "Yes"], ids=["tick", "heavy_tick", "yes"]
+    )
     def test_marker_in_row_text_marks_elected_even_on_the_lower_vote_row(
         self, marker: str
     ) -> None:
@@ -570,7 +585,9 @@ class TestParseResultsTable:
         candidates = parse_results_table(soup)
         assert [c.candidate_name for c in candidates] == ["John Smith"]
 
-    def test_first_table_with_neither_candidate_nor_votes_header_is_skipped(self) -> None:
+    def test_first_table_with_neither_candidate_nor_votes_header_is_skipped(
+        self,
+    ) -> None:
         first_table = (
             '<table class="wikitable"><tr><th>Year</th><th>Turnout</th></tr>'
             "<tr><td>2024</td><td>60%</td></tr></table>"
@@ -673,7 +690,10 @@ class TestBuildImportPlan:
     """Tests for build_import_plan — fetch/parse orchestration and DB resolution."""
 
     def test_full_plan_against_the_seeded_westminster_world(
-        self, db: Database, westminster_world: WestminsterWorld, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         world = westminster_world
         _serve(monkeypatch, _by_election_page())
@@ -695,7 +715,10 @@ class TestBuildImportPlan:
         }
 
     def test_seat_matched_by_normalised_name_despite_punctuation(
-        self, db: Database, westminster_world: WestminsterWorld, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         world = westminster_world
         page = _by_election_page(
@@ -716,10 +739,15 @@ class TestBuildImportPlan:
         assert plan.seat_name_matched == "Holborn and St Pancras"
 
     def test_constituency_not_matching_any_seat_leaves_seat_id_none(
-        self, db: Database, westminster_world: WestminsterWorld, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         world = westminster_world
-        page = _by_election_page(title="2025 Nonexistent Constituency by-election - Wikipedia")
+        page = _by_election_page(
+            title="2025 Nonexistent Constituency by-election - Wikipedia"
+        )
         _serve(monkeypatch, page)
 
         plan = build_import_plan(db, url="https://en.wikipedia.org/wiki/x")
@@ -731,7 +759,10 @@ class TestBuildImportPlan:
         assert plan.map_id == world.map_id
 
     def test_map_missing_leaves_map_id_zero_and_no_seat_matched(
-        self, db: Database, westminster_world: WestminsterWorld, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A missing map does not raise here: map_id degrades to 0 and the
         seat-matching loop is skipped entirely (it only runs when the map row
@@ -752,7 +783,10 @@ class TestBuildImportPlan:
         assert plan.seat_name_matched is None
 
     def test_parent_election_missing_leaves_parent_election_id_none(
-        self, db: Database, westminster_world: WestminsterWorld, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A missing parent election does not raise either: parent_election_id
         simply stays None, the same "degrade rather than raise" shape as the
@@ -787,7 +821,10 @@ class TestBuildImportPlan:
         assert "Conservative" not in plan.party_id_by_name
 
     def test_url_is_recorded_on_the_plan_and_reaches_the_fetch(
-        self, db: Database, westminster_world: WestminsterWorld, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         target_url = "https://en.wikipedia.org/wiki/2025_Hexham_by-election_custom"
         requested = _serve_recording(monkeypatch, _by_election_page())
@@ -811,11 +848,17 @@ class TestCommitImportPlan:
         ):
             commit_import_plan(db, plan)
 
-    def test_no_candidates_raises(self, db: Database, westminster_world: WestminsterWorld) -> None:
+    def test_no_candidates_raises(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
         world = westminster_world
-        plan = _plan(seat_id=world.seat_ids["Hexham"], map_id=world.map_id, candidates=[])
+        plan = _plan(
+            seat_id=world.seat_ids["Hexham"], map_id=world.map_id, candidates=[]
+        )
 
-        with pytest.raises(ValueError, match="No candidates parsed from Wikipedia page"):
+        with pytest.raises(
+            ValueError, match="No candidates parsed from Wikipedia page"
+        ):
             commit_import_plan(db, plan)
 
     def test_existing_election_without_refresh_raises(
@@ -824,7 +867,10 @@ class TestCommitImportPlan:
         world = westminster_world
         candidates = [
             ParsedCandidate(
-                party_name="Labour", candidate_name="Jane Doe", votes=20000, elected=True
+                party_name="Labour",
+                candidate_name="Jane Doe",
+                votes=20000,
+                elected=True,
             ),
         ]
         plan = _plan(
@@ -852,10 +898,16 @@ class TestCommitImportPlan:
         world = westminster_world
         first_candidates = [
             ParsedCandidate(
-                party_name="Labour", candidate_name="Jane Doe", votes=20000, elected=True
+                party_name="Labour",
+                candidate_name="Jane Doe",
+                votes=20000,
+                elected=True,
             ),
             ParsedCandidate(
-                party_name="Conservative", candidate_name="John Smith", votes=15000, elected=False
+                party_name="Conservative",
+                candidate_name="John Smith",
+                votes=15000,
+                elected=False,
             ),
         ]
         party_ids = {
@@ -872,10 +924,16 @@ class TestCommitImportPlan:
 
         refreshed_candidates = [
             ParsedCandidate(
-                party_name="Labour", candidate_name="Jane Doe", votes=21000, elected=True
+                party_name="Labour",
+                candidate_name="Jane Doe",
+                votes=21000,
+                elected=True,
             ),
             ParsedCandidate(
-                party_name="Reform UK", candidate_name="Alex Jones", votes=1000, elected=False
+                party_name="Reform UK",
+                candidate_name="Alex Jones",
+                votes=1000,
+                elected=False,
             ),
         ]
         refresh_plan = _plan(
@@ -893,16 +951,21 @@ class TestCommitImportPlan:
         assert second.election_id == first.election_id
         assert second.votes_inserted == 2
         out = capsys.readouterr().out.splitlines()
-        assert (
-            "Refreshing '2025 Hexham by-election': cleared 2 existing votes." in out
-        )
+        assert "Refreshing '2025 Hexham by-election': cleared 2 existing votes." in out
         votes = db.get_votes_for_election(second.election_id)
         # Full payload, not just candidate names: proves seat_id, party_id and
         # vote_total on the refreshed rows, and their order (descending by
         # vote_total within the one seat, per get_votes_for_election).
-        assert [(v.seat_id, v.party_id, v.vote_total, v.candidate_name) for v in votes] == [
+        assert [
+            (v.seat_id, v.party_id, v.vote_total, v.candidate_name) for v in votes
+        ] == [
             (world.seat_ids["Hexham"], world.party_ids["Labour"], 21000.0, "Jane Doe"),
-            (world.seat_ids["Hexham"], world.party_ids["Reform UK"], 1000.0, "Alex Jones"),
+            (
+                world.seat_ids["Hexham"],
+                world.party_ids["Reform UK"],
+                1000.0,
+                "Alex Jones",
+            ),
         ]
 
     def test_new_election_has_the_by_election_type_and_the_winner_is_elected(
@@ -917,7 +980,10 @@ class TestCommitImportPlan:
                 party_name="Labour", candidate_name="Jane Doe", votes=9000, elected=True
             ),
             ParsedCandidate(
-                party_name="Conservative", candidate_name="John Smith", votes=15000, elected=False
+                party_name="Conservative",
+                candidate_name="John Smith",
+                votes=15000,
+                elected=False,
             ),
         ]
         # A non-2025 date: _plan's own default (and the fallback-year test
@@ -953,8 +1019,15 @@ class TestCommitImportPlan:
         # with the right seat/party/total, not e.g. a null party_id or a
         # zeroed vote_total. Order is descending by vote_total within the one
         # seat, per get_votes_for_election's own ordering.
-        assert [(v.seat_id, v.party_id, v.vote_total, v.candidate_name) for v in votes] == [
-            (world.seat_ids["Hexham"], world.party_ids["Conservative"], 15000.0, "John Smith"),
+        assert [
+            (v.seat_id, v.party_id, v.vote_total, v.candidate_name) for v in votes
+        ] == [
+            (
+                world.seat_ids["Hexham"],
+                world.party_ids["Conservative"],
+                15000.0,
+                "John Smith",
+            ),
             (world.seat_ids["Hexham"], world.party_ids["Labour"], 9000.0, "Jane Doe"),
         ]
         elected_votes = [v for v in votes if v.elected]
@@ -976,7 +1049,10 @@ class TestCommitImportPlan:
             map_id=world.map_id,
             candidates=[
                 ParsedCandidate(
-                    party_name="Labour", candidate_name="Jane Doe", votes=100, elected=True
+                    party_name="Labour",
+                    candidate_name="Jane Doe",
+                    votes=100,
+                    elected=True,
                 )
             ],
             election_name="No Date By-election",
@@ -1000,7 +1076,10 @@ class TestCommitImportPlan:
             map_id=world.map_id,
             candidates=[
                 ParsedCandidate(
-                    party_name="Workers Party", candidate_name="X", votes=100, elected=False
+                    party_name="Workers Party",
+                    candidate_name="X",
+                    votes=100,
+                    elected=False,
                 )
             ],
             election_name="Unmapped Party By-election",
@@ -1052,9 +1131,7 @@ class TestMain:
         assert "Seat match: Hexham" in out
         assert f"Parent election ID: {world.baseline_election_id}" in out
         assert "Candidates: 2" in out
-        assert (
-            f"  Labour (id={world.party_ids['Labour']}): Jane Doe - 20,000 *" in out
-        )
+        assert f"  Labour (id={world.party_ids['Labour']}): Jane Doe - 20,000 *" in out
         assert (
             f"  Conservative (id={world.party_ids['Conservative']}): John Smith - 15,000"
             in out
@@ -1118,9 +1195,7 @@ class TestMain:
         assert second is not None
         assert second.id == first.id
         out = capsys.readouterr().out.splitlines()
-        assert (
-            "Refreshing '2025 Hexham by-election': cleared 2 existing votes." in out
-        )
+        assert "Refreshing '2025 Hexham by-election': cleared 2 existing votes." in out
 
     def test_rerun_without_refresh_still_raises(
         self,
@@ -1155,7 +1230,9 @@ class TestMain:
         only_the_test_database: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        page = _by_election_page(title="2025 Nonexistent Constituency by-election - Wikipedia")
+        page = _by_election_page(
+            title="2025 Nonexistent Constituency by-election - Wikipedia"
+        )
         _serve(monkeypatch, page)
         monkeypatch.setenv("DATABASE_PATH", str(only_the_test_database))
         monkeypatch.setattr(
@@ -1166,10 +1243,14 @@ class TestMain:
 
         with pytest.raises(
             ValueError,
-            match=re.escape("No seat matched for constituency 'Nonexistent Constituency'"),
+            match=re.escape(
+                "No seat matched for constituency 'Nonexistent Constituency'"
+            ),
         ):
             main()
-        assert db.get_election_by_name("2025 Nonexistent Constituency by-election") is None
+        assert (
+            db.get_election_by_name("2025 Nonexistent Constituency by-election") is None
+        )
 
     def test_parent_election_flag_is_forwarded_not_the_default(
         self,
@@ -1221,7 +1302,9 @@ class TestMain:
         # proves the flag reached build_import_plan.
         alt_map = db.add_map("Alt Map", parliament="westminster")
         db.add_seat(alt_map.id, "Nonexistent Constituency")
-        page = _by_election_page(title="2025 Nonexistent Constituency by-election - Wikipedia")
+        page = _by_election_page(
+            title="2025 Nonexistent Constituency by-election - Wikipedia"
+        )
         _serve(monkeypatch, page)
         monkeypatch.setenv("DATABASE_PATH", str(only_the_test_database))
         monkeypatch.setattr(

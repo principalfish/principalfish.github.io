@@ -94,9 +94,7 @@ def export_runner(monkeypatch: pytest.MonkeyPatch) -> RecordingRunner:
         cwd: Path | None = None,
         timeout: int,
     ) -> subprocess.CompletedProcess[str]:
-        return runner(
-            [sys.executable, str(script), *args], cwd=cwd, timeout=timeout
-        )
+        return runner([sys.executable, str(script), *args], cwd=cwd, timeout=timeout)
 
     monkeypatch.setattr(by_elections, "run_python_script", run_script)
     return runner
@@ -258,14 +256,10 @@ class TestByElectionConfirm:
 
         assert response.status_code == 302
         assert response.headers["Location"] == "/westminster/by-elections"
-        assert flashes(client, response) == [
-            "Preview expired. Please preview again."
-        ]
+        assert flashes(client, response) == ["Preview expired. Please preview again."]
 
     @pytest.mark.parametrize("preview_type", ["poll_preview", "wikipedia_queue"])
-    def test_other_flow_token_is_rejected(
-        self, app: Flask, preview_type: str
-    ) -> None:
+    def test_other_flow_token_is_rejected(self, app: Flask, preview_type: str) -> None:
         token = store_preview({"type": preview_type})
         client = app.test_client()
 
@@ -273,9 +267,7 @@ class TestByElectionConfirm:
 
         assert response.status_code == 302
         assert response.headers["Location"] == "/westminster/by-elections"
-        assert flashes(client, response) == [
-            "Preview expired. Please preview again."
-        ]
+        assert flashes(client, response) == ["Preview expired. Please preview again."]
         assert token in PREVIEW_CACHE
 
     def test_commit_failure_preserves_preview_for_retry(
@@ -357,9 +349,7 @@ class TestByElectionConfirm:
         repeated = client.post(f"/westminster/by-elections/confirm/{token}")
 
         assert repeated.status_code == 302
-        assert flashes(client, repeated) == [
-            "Preview expired. Please preview again."
-        ]
+        assert flashes(client, repeated) == ["Preview expired. Please preview again."]
         assert len(result_runner.calls) == 1
         assert fake_page == [_SOURCE_URL]
         _assert_imported(db, world)

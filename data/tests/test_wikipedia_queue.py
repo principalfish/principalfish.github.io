@@ -360,10 +360,8 @@ class TestCitationResolution:
             "?next=a.yougov.net/documents/older.pdf",
             "https://a.yougov.net/documents/tables.pdf"
             "#a.yougov.net/documents/older.pdf",
-            "https://example.test/documents/tables.pdf"
-            "a.yougov.net/documents/older.pdf",
-            "https://a.yougov.net/documents/tables.pdf"
-            "example.test/documents/older.pdf",
+            "https://example.test/documents/tables.pdfa.yougov.net/documents/older.pdf",
+            "https://a.yougov.net/documents/tables.pdfexample.test/documents/older.pdf",
             "https://yougov.net.example.test/documents/tables.pdf"
             "a.yougov.net/documents/older.pdf",
             "https://notyougov.net/documents/tables.pdf"
@@ -692,9 +690,7 @@ class TestBuildQueueWindow:
         assert state.cutoff == NO_CUTOFF
         assert len(state.items) == 1
 
-    def test_scrape_drop_counts_are_carried_onto_the_state(
-        self, db: Database
-    ) -> None:
+    def test_scrape_drop_counts_are_carried_onto_the_state(self, db: Database) -> None:
         _seed_westminster(db)
         parsed = _index_of(
             [_row("yougov", date(2026, 8, 1), date(2026, 8, 3))],
@@ -709,9 +705,7 @@ class TestBuildQueueWindow:
 class TestBuildQueueOrderingAndMarking:
     """Oldest first, with unimportable rows pre-marked and stepped over."""
 
-    def test_sorted_ascending_by_end_then_start_then_label(
-        self, db: Database
-    ) -> None:
+    def test_sorted_ascending_by_end_then_start_then_label(self, db: Database) -> None:
         _seed_westminster(db)
         rows = [
             _row("opinium", date(2026, 8, 5), date(2026, 8, 7), label="Opinium"),
@@ -737,9 +731,7 @@ class TestBuildQueueOrderingAndMarking:
     ) -> None:
         _seed_westminster(db)
         unknown = _row("jl_partners", date(2026, 8, 1), date(2026, 8, 3))
-        no_document = _row(
-            "yougov", date(2026, 8, 4), date(2026, 8, 6), source_url=""
-        )
+        no_document = _row("yougov", date(2026, 8, 4), date(2026, 8, 6), source_url="")
         state = build_queue(
             db,
             _index_of([unknown, no_document]),
@@ -774,9 +766,7 @@ class TestBuildQueueOrderingAndMarking:
         assert item.status == "pending"
         assert item.row.pollster_identifier == "yougov"
 
-    def test_an_all_unimportable_queue_finishes_immediately(
-        self, db: Database
-    ) -> None:
+    def test_an_all_unimportable_queue_finishes_immediately(self, db: Database) -> None:
         _seed_westminster(db)
         rows = [_row("jl_partners", date(2026, 8, 1), date(2026, 8, 2))]
         state = build_queue(
@@ -1108,9 +1098,7 @@ class TestQueueStep:
         assert "Labour" in body
         assert state.items[0].plan is not None
 
-    def test_the_skip_and_abandon_forms_post_to_their_routes(
-        self, app: Flask
-    ) -> None:
+    def test_the_skip_and_abandon_forms_post_to_their_routes(self, app: Flask) -> None:
         state = _queue_state()
         _mark(state.items[0], "failed", detail="404 Not Found")
         token = _store(state)
@@ -1229,9 +1217,7 @@ class TestQueueStep:
         monkeypatch.setattr("console.westminster.poll_import.get_db", lambda: db)
         _install_stub_importer(
             monkeypatch,
-            _StubImporter(
-                _stub_plan(seeded["map_id"], poll_exists=True, poll_id=77)
-            ),
+            _StubImporter(_stub_plan(seeded["map_id"], poll_exists=True, poll_id=77)),
         )
         token = _store(_queue_state())
 
@@ -1908,9 +1894,7 @@ class TestFinish:
         assert "Poll #4242, 104 rows inserted" in body
         assert "404 Not Found" in body
         assert "Techne (techne)" in body
-        assert (
-            "The queue was abandoned before these polls were reached." in body
-        )
+        assert "The queue was abandoned before these polls were reached." in body
         assert (
             '<a href="https://example.test/doc.xlsx" target="_blank"'
             ' rel="noopener">Source</a>'
@@ -2065,11 +2049,15 @@ class TestStart:
         monkeypatch.setattr(
             "console.westminster.poll_import.fetch_poll_index", _never_called
         )
-        body = app.test_client().post(
-            "/westminster/polls/import/wikipedia/start",
-            data={"cutoff_date": "31/08/2026"},
-            follow_redirects=True,
-        ).get_data(as_text=True)
+        body = (
+            app.test_client()
+            .post(
+                "/westminster/polls/import/wikipedia/start",
+                data={"cutoff_date": "31/08/2026"},
+                follow_redirects=True,
+            )
+            .get_data(as_text=True)
+        )
 
         assert "is not a valid date" in body
 
@@ -2080,9 +2068,15 @@ class TestStart:
             raise WikipediaIndexError("layout changed")
 
         monkeypatch.setattr("console.westminster.poll_import.fetch_poll_index", _raise)
-        body = app.test_client().post(
-            "/westminster/polls/import/wikipedia/start", data={}, follow_redirects=True
-        ).get_data(as_text=True)
+        body = (
+            app.test_client()
+            .post(
+                "/westminster/polls/import/wikipedia/start",
+                data={},
+                follow_redirects=True,
+            )
+            .get_data(as_text=True)
+        )
 
         assert "Wikipedia page could not be read: layout changed" in body
 
@@ -2154,9 +2148,7 @@ def _scope_present(
     return db.get_poll_keys_for_map(map_id, identifiers)
 
 
-def _scope_cutoffs(
-    db: Database, map_id: int | None
-) -> Callable[[_ScopedRow], date]:
+def _scope_cutoffs(db: Database, map_id: int | None) -> Callable[[_ScopedRow], date]:
     """One cutoff per (seat, matchup): a scope with no stored polls has none."""
     latest = {} if map_id is None else db.get_latest_poll_end_by_scope(map_id)
 
@@ -2281,13 +2273,9 @@ class TestInjectedIdentity:
         state = _build_scoped_queue(db, rows, cutoff=date(2026, 1, 1))
 
         assert state.skipped_present == 1
-        assert [_scoped(item).seat_id for item in state.items] == [
-            seeded["texas_id"]
-        ]
+        assert [_scoped(item).seat_id for item in state.items] == [seeded["texas_id"]]
 
-    def test_the_row_subclass_survives_the_base_typed_field(
-        self, db: Database
-    ) -> None:
+    def test_the_row_subclass_survives_the_base_typed_field(self, db: Database) -> None:
         # QueueItem.row is declared as ScrapedPollRow; the templates and the
         # per-contest hooks still read the scraper's own columns off it.
         _seed_scoped_map(db)
@@ -2381,9 +2369,7 @@ class TestInjectedCutoff:
         assert state.cutoff == date(2026, 6, 1)
         assert len(state.items) == 2
 
-    def test_a_scope_with_no_polls_leaves_the_run_uncapped(
-        self, db: Database
-    ) -> None:
+    def test_a_scope_with_no_polls_leaves_the_run_uncapped(self, db: Database) -> None:
         seeded = _seed_scoped_map(db)
         db.add_poll(
             seeded["pollster_id"],
@@ -2414,9 +2400,7 @@ class TestInjectedCutoff:
 
         assert state.cutoff == NO_CUTOFF
 
-    def test_an_explicit_cutoff_overrides_the_per_scope_one(
-        self, db: Database
-    ) -> None:
+    def test_an_explicit_cutoff_overrides_the_per_scope_one(self, db: Database) -> None:
         seeded = _seed_scoped_map(db)
         db.add_poll(
             seeded["pollster_id"],
@@ -2509,9 +2493,7 @@ class TestPendingInGroup:
             _scoped_row("c", date(2026, 8, 5), date(2026, 8, 6), seat_id=2),
             _scoped_row("d", date(2026, 8, 7), date(2026, 8, 8), seat_id=1),
         ]
-        return QueueState(
-            items=[QueueItem(row=row) for row in rows], cutoff=NO_CUTOFF
-        )
+        return QueueState(items=[QueueItem(row=row) for row in rows], cutoff=NO_CUTOFF)
 
     def test_only_pending_items_of_that_group_are_returned(self) -> None:
         state = self._grouped_state()
@@ -2554,9 +2536,7 @@ class TestApplySkipOrRetry:
             _scoped_row("a", date(2026, 8, 1), date(2026, 8, 2)),
             _scoped_row("b", date(2026, 8, 3), date(2026, 8, 4)),
         ]
-        return QueueState(
-            items=[QueueItem(row=row) for row in rows], cutoff=NO_CUTOFF
-        )
+        return QueueState(items=[QueueItem(row=row) for row in rows], cutoff=NO_CUTOFF)
 
     def test_retry_clears_the_failure_and_holds_the_cursor(self) -> None:
         state = self._state()
@@ -2692,16 +2672,25 @@ _MRP_RELEASES = (
 class TestUnsupportedMrpReleases:
     @pytest.mark.parametrize(("identifier", "label", "source_url"), _MRP_RELEASES)
     def test_release_is_visible_in_skips_and_does_not_interrupt_queue(
-        self, db: Database, identifier: str, label: str, source_url: str,
+        self,
+        db: Database,
+        identifier: str,
+        label: str,
+        source_url: str,
     ) -> None:
         _seed_westminster(db)
         release = _row(
-            identifier, date(2026, 8, 21), date(2026, 9, 21),
-            label=label, source_url=source_url,
+            identifier,
+            date(2026, 8, 21),
+            date(2026, 9, 21),
+            label=label,
+            source_url=source_url,
         )
         regular = _row("yougov", date(2026, 9, 27), date(2026, 9, 28))
         state = build_queue(
-            db, _index_of([release, regular]), map_name=WESTMINSTER_MAP_NAME,
+            db,
+            _index_of([release, regular]),
+            map_name=WESTMINSTER_MAP_NAME,
             cutoff=date(2026, 1, 1),
         )
         assert state.items[0].status == "skipped"
@@ -2715,13 +2704,18 @@ class TestUnsupportedMrpReleases:
         _seed_westminster(db)
         rows = [
             _row(
-                identifier, date(2026, 8, 21), date(2026, 9, 21),
-                label=label, source_url=url,
+                identifier,
+                date(2026, 8, 21),
+                date(2026, 9, 21),
+                label=label,
+                source_url=url,
             )
             for identifier, label, url in _MRP_RELEASES
         ]
         state = build_queue(
-            db, _index_of(rows), map_name=WESTMINSTER_MAP_NAME,
+            db,
+            _index_of(rows),
+            map_name=WESTMINSTER_MAP_NAME,
             cutoff=date(2026, 1, 1),
         )
         assert current_item(state) is None
@@ -2732,13 +2726,18 @@ class TestUnsupportedMrpReleases:
         [
             ("yougov", "YouGov (MRP)", "https://yougov.com/documents/MRP.pdf?x=1"),
             (
-                "more_in_common", "More in Common (MRP)",
+                "more_in_common",
+                "More in Common (MRP)",
                 "https://www.moreincommon.org.uk/uploads/MRP.xlsx",
             ),
             ("yougov", "YouGov", _MRP_RELEASES[1][2]),
             ("more_in_common", "More in Common", _MRP_RELEASES[0][2]),
             ("yougov", "YouGov (MRP)", "https://lookalike.test/en-gb/articles/mrp"),
-            ("yougov", "YouGov (MRP)", "https://yougov.com.evil.test/en-gb/articles/mrp"),
+            (
+                "yougov",
+                "YouGov (MRP)",
+                "https://yougov.com.evil.test/en-gb/articles/mrp",
+            ),
             ("yougov", "YouGov (MRP)", "https://user@yougov.com/en-gb/articles/mrp"),
             ("yougov", "YouGov (MRP)", "https://yougov.com/en-gb/articles/notmrp"),
             ("yougov", "YouGov (MRP)", "https://yougov.com/other/mrp"),
@@ -2746,15 +2745,24 @@ class TestUnsupportedMrpReleases:
         ],
     )
     def test_other_sources_remain_eligible(
-        self, db: Database, identifier: str, label: str, source_url: str,
+        self,
+        db: Database,
+        identifier: str,
+        label: str,
+        source_url: str,
     ) -> None:
         _seed_westminster(db)
         row = _row(
-            identifier, date(2026, 8, 21), date(2026, 9, 21),
-            label=label, source_url=source_url,
+            identifier,
+            date(2026, 8, 21),
+            date(2026, 9, 21),
+            label=label,
+            source_url=source_url,
         )
         state = build_queue(
-            db, _index_of([row]), map_name=WESTMINSTER_MAP_NAME,
+            db,
+            _index_of([row]),
+            map_name=WESTMINSTER_MAP_NAME,
             cutoff=date(2026, 1, 1),
         )
         assert state.items[0].status == "pending"

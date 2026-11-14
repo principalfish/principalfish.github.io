@@ -70,9 +70,7 @@ def presidential_world(db: Database, tmp_path: Path) -> PresidentialWorld:
     )
 
 
-def export_payload(
-    db: Database, tmp_path: Path, election_id: int
-) -> dict[str, Any]:
+def export_payload(db: Database, tmp_path: Path, election_id: int) -> dict[str, Any]:
     destination = tmp_path / "output.json"
     with db.session() as session:
         election = session.scalars(
@@ -102,20 +100,29 @@ def test_import_order_refresh_and_replace_do_not_own_weights(
 ) -> None:
     seed_canonical_allocations(db)
     for name in (
-        "Democratic", "Republican", "Libertarian", "US Green", "Independent", "Others"
+        "Democratic",
+        "Republican",
+        "Libertarian",
+        "US Green",
+        "Independent",
+        "Others",
     ):
         db.add_party(name)
     source = tmp_path / "source.json"
-    source.write_text(json.dumps({
-        "California": {
-            "seatInfo": {"current": "democrat", "electoral_votes": -999},
-            "partyInfo": {"democrat": {"name": "D", "total": 60}},
-        },
-        "Maine CD-1": {
-            "seatInfo": {"current": "republican"},
-            "partyInfo": {"republican": {"name": "R", "total": 40}},
-        },
-    }))
+    source.write_text(
+        json.dumps(
+            {
+                "California": {
+                    "seatInfo": {"current": "democrat", "electoral_votes": -999},
+                    "partyInfo": {"democrat": {"name": "D", "total": 60}},
+                },
+                "Maine CD-1": {
+                    "seatInfo": {"current": "republican"},
+                    "partyInfo": {"republican": {"name": "R", "total": 40}},
+                },
+            }
+        )
+    )
     for year in years:
         import_presidential(db, source, year, f"Actual {year}")
     for year in years:
@@ -160,7 +167,9 @@ def test_actual_and_model_exports_follow_their_own_allocation(
 ) -> None:
     world = presidential_world(db, tmp_path)
     model = db.add_election(
-        world.map_id, 2026, "US President UNS 2026-06-01",
+        world.map_id,
+        2026,
+        "US President UNS 2026-06-01",
         ElectionType.us_presidential_model,
     )
     set_model_target(db, model.id, 2020)
@@ -180,10 +189,12 @@ def test_actual_and_model_exports_follow_their_own_allocation(
     assert export_payload(db, tmp_path, world.baseline_id)["seats"][0]["ev"] == 54
     previous = (tmp_path / "output.json").read_bytes()
     with db.session() as session:
-        session.execute(delete(USElectoralVoteAllocation).where(
-            USElectoralVoteAllocation.era_year == 2010,
-            USElectoralVoteAllocation.unit_name == "California",
-        ))
+        session.execute(
+            delete(USElectoralVoteAllocation).where(
+                USElectoralVoteAllocation.era_year == 2010,
+                USElectoralVoteAllocation.unit_name == "California",
+            )
+        )
     with pytest.raises(ElectoralVoteError, match="California"):
         export_payload(db, tmp_path, model.id)
     assert (tmp_path / "output.json").read_bytes() == previous
@@ -220,9 +231,16 @@ def test_forecast_dry_run_persistence_and_retargeting_agree(
     election = db.get_election_by_name(retargeted[0])
     assert election is not None and election.target_election_year == 2028
     with db.session() as session:
-        assert len(session.scalars(select(Election).where(
-            Election.type == ElectionType.us_presidential_model
-        )).all()) == 1
+        assert (
+            len(
+                session.scalars(
+                    select(Election).where(
+                        Election.type == ElectionType.us_presidential_model
+                    )
+                ).all()
+            )
+            == 1
+        )
     before = db.get_votes_for_election(election.id)
     with pytest.raises(ElectoralVoteError, match="2032"):
         us.run_simulation(
@@ -264,7 +282,9 @@ def test_replacement_failure_preserves_old_votes_and_target(
 
 
 def test_trends_and_console_resolve_each_election_year(
-    db: Database, only_the_test_database: Path, tmp_path: Path,
+    db: Database,
+    only_the_test_database: Path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     world = presidential_world(db, tmp_path)
@@ -275,7 +295,10 @@ def test_trends_and_console_resolve_each_election_year(
     for day, target in [(1, 2020), (2, 2028), (3, 2020)]:
         as_of = date(2026, 6, day)
         _, eid = replace_output(
-            only_the_test_database, scope, as_of, f"{scope.name_prefix} {as_of}",
+            only_the_test_database,
+            scope,
+            as_of,
+            f"{scope.name_prefix} {as_of}",
             [OutputVote(world.seat_id, world.party_id, "D", 60, True)],
             target_election_year=target,
         )
@@ -295,11 +318,16 @@ def test_trends_and_console_resolve_each_election_year(
     assert sorted(year for _, year in requested) == [2020, 2028]
     assert len({connection_id for connection_id, _ in requested}) == 1
     assert [entry["parties"][str(world.party_id)]["e"] for entry in entries] == [
-        55, 54, 55
+        55,
+        54,
+        55,
     ]
     context = build_output_detail_context(
-        db, election_id=ids[0], election_type=ElectionType.us_presidential_model,
-        baseline_types=[ElectionType.us_presidential], page=1,
+        db,
+        election_id=ids[0],
+        election_type=ElectionType.us_presidential_model,
+        baseline_types=[ElectionType.us_presidential],
+        page=1,
     )
     assert context is not None
     party = next(
@@ -313,7 +341,9 @@ def test_trends_and_console_resolve_each_election_year(
         allocation.electoral_votes = 60
     entries = reconstruct_trends(only_the_test_database, scope)
     assert [entry["parties"][str(world.party_id)]["e"] for entry in entries] == [
-        60, 54, 60
+        60,
+        54,
+        60,
     ]
 
 
@@ -385,6 +415,7 @@ def test_cli_target_survives_every_config_path(
                 [OutputVote(world.seat_id, world.party_id, "D", 60, True)],
                 target_election_year=2020 if mode == "metadata" and day == 3 else 2028,
             )
+
     class FixedDate(date):
         @classmethod
         def today(cls) -> FixedDate:
@@ -413,11 +444,13 @@ def test_cli_target_survives_every_config_path(
     assert runs and all(cfg.target_election_year == 2020 for cfg in runs)
     if mode == "metadata":
         assert [(cfg.as_of_date.day, cfg.dry_run) for cfg in runs] == [
-            (2, False), (3, True)
+            (2, False),
+            (3, True),
         ]
     if mode == "retarget_gap":
         assert [(cfg.as_of_date.day, cfg.dry_run) for cfg in runs] == [
-            (2, False), (3, False)
+            (2, False),
+            (3, False),
         ]
     if mode not in {"retrospective", "metadata"}:
         assert max(cfg.as_of_date for cfg in runs) == date(2026, 6, 3)
@@ -425,9 +458,9 @@ def test_cli_target_survives_every_config_path(
         metadata = json.loads(spec.trend_cache_meta_json.read_text())
         assert metadata["target_election_year"] == 2020
     with db.session() as session:
-        models = session.scalars(select(Election).where(
-            Election.type == ElectionType.us_presidential_model
-        )).all()
+        models = session.scalars(
+            select(Election).where(Election.type == ElectionType.us_presidential_model)
+        ).all()
         changed = {cfg.as_of_date for cfg in runs if not cfg.dry_run}
         assert all(
             election.target_election_year == 2020
@@ -436,13 +469,15 @@ def test_cli_target_survives_every_config_path(
         )
         if mode in {"metadata", "retarget_gap", "automatic"}:
             historical = next(
-                election for election in models
+                election
+                for election in models
                 if election.election_date == date(2026, 6, 1)
             )
             assert historical.target_election_year == 2028
         if mode == "retarget_gap":
             current = next(
-                election for election in models
+                election
+                for election in models
                 if election.election_date == date(2026, 6, 3)
             )
             assert current.target_election_year == 2020
@@ -488,10 +523,13 @@ def test_invalid_cli_target_is_rejected_before_database_access(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, raw_target: str
 ) -> None:
     spec = us.UsModelSpec(
-        map_name="Unused", baseline_election_name="Unused",
-        election_type="us_presidential_model", election_name_prefix="US President UNS",
+        map_name="Unused",
+        baseline_election_name="Unused",
+        election_type="us_presidential_model",
+        election_name_prefix="US President UNS",
         trend_cache_json=tmp_path / "trends.json",
-        trend_cache_meta_json=tmp_path / "meta.json", target_election_year=2028,
+        trend_cache_meta_json=tmp_path / "meta.json",
+        target_election_year=2028,
     )
 
     def no_database() -> Database:
@@ -505,10 +543,13 @@ def test_invalid_cli_target_is_rejected_before_database_access(
 
 def test_cli_target_is_presidential_only_and_defaults_to_2028(tmp_path: Path) -> None:
     spec = us.UsModelSpec(
-        map_name="Unused", baseline_election_name="Unused",
-        election_type="us_presidential_model", election_name_prefix="US President UNS",
+        map_name="Unused",
+        baseline_election_name="Unused",
+        election_type="us_presidential_model",
+        election_name_prefix="US President UNS",
         trend_cache_json=tmp_path / "trends.json",
-        trend_cache_meta_json=tmp_path / "meta.json", target_election_year=2028,
+        trend_cache_meta_json=tmp_path / "meta.json",
+        target_election_year=2028,
     )
     parser = us.build_arg_parser(spec)
     assert parser.parse_args([]).target_election_year == 2028

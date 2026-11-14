@@ -193,9 +193,7 @@ def latest_scoped_run(
     return latest_run(scoped_elections(conn, scope))
 
 
-def latest_saved_run(
-    sqlite_path: Path, scope: OutputScope
-) -> tuple[int, date] | None:
+def latest_saved_run(sqlite_path: Path, scope: OutputScope) -> tuple[int, date] | None:
     """Open ``sqlite_path`` and return the scope's latest dated run, or None.
 
     None also when the file does not exist (it is never created).

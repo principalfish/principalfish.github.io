@@ -359,8 +359,7 @@ class TestPollDetail:
         body = response.get_data(as_text=True)
         assert f"Poll #{poll.id}" in body
         assert (
-            f"<strong>Pollster:</strong> {pollster_name} (matrix_pollster)</p>"
-            in body
+            f"<strong>Pollster:</strong> {pollster_name} (matrix_pollster)</p>" in body
         )
         # "National" sorts alphabetically between London and North East
         # England, not first or last, so this also proves the headers are
@@ -1008,23 +1007,39 @@ class TestPollListN:
         world = westminster_world
         labour = world.party_ids["Labour"]
         based = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="more_in_common",
-            fieldwork_end=date(2026, 9, 21), national={labour: 26.0}, sample_size=2113,
+            db,
+            map_id=world.map_id,
+            pollster_identifier="more_in_common",
+            fieldwork_end=date(2026, 9, 21),
+            national={labour: 26.0},
+            sample_size=2113,
         )
         plain = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="find_out_now",
-            fieldwork_end=date(2026, 9, 20), national={labour: 27.0}, sample_size=2607,
+            db,
+            map_id=world.map_id,
+            pollster_identifier="find_out_now",
+            fieldwork_end=date(2026, 9, 20),
+            national={labour: 27.0},
+            sample_size=2607,
         )
         unsized = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="techne",
-            fieldwork_end=date(2026, 9, 19), national={labour: 25.0}, sample_size=None,
+            db,
+            map_id=world.map_id,
+            pollster_identifier="techne",
+            fieldwork_end=date(2026, 9, 19),
+            national={labour: 25.0},
+            sample_size=None,
         )
         _add_base(db, based.id, 1491, weighted_n=1402)
         # A regional base must not stand in for the national n.
         _add_base(db, plain.id, 239, region_id=world.region_ids["London"])
         weighted_only = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="find_out_now",
-            fieldwork_end=date(2026, 9, 30), national={labour: 27.0}, sample_size=2607,
+            db,
+            map_id=world.map_id,
+            pollster_identifier="find_out_now",
+            fieldwork_end=date(2026, 9, 30),
+            national={labour: 27.0},
+            sample_size=2607,
         )
         _add_base(db, weighted_only.id, None, weighted_n=1452)
 
@@ -1181,8 +1196,11 @@ class TestPollDetailN:
             for name in ("London", "Wales", "Scotland", "Northern Ireland")
         )
         poll = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="yougov",
-            fieldwork_end=date(2026, 9, 28), national={labour: 23.0},
+            db,
+            map_id=world.map_id,
+            pollster_identifier="yougov",
+            fieldwork_end=date(2026, 9, 28),
+            national={labour: 23.0},
             regional={
                 london: {labour: 32.0},
                 scotland: {labour: 17.0},
@@ -1205,7 +1223,12 @@ class TestPollDetailN:
         body = app.test_client().get(f"/polls/{poll.id}").get_data(as_text=True)
 
         assert _table_headers(body) == [
-            "Party", "London", "National", "Northern Ireland", "Scotland", "Wales",
+            "Party",
+            "London",
+            "National",
+            "Northern Ireland",
+            "Scotland",
+            "Wales",
         ]
         # Wales: 2286 x 3.1m / (9.1m + 5.5m + 3.1m) = 400.4; Northern Ireland
         # has only a zero placeholder row, so it is neither estimated nor in
@@ -1213,7 +1236,10 @@ class TestPollDetailN:
         assert _tfoot_rows(body) == {
             "n": ["241", "2286", "-", "187", "400"],
             "n source": [
-                "base:all_adults", "base:all_adults", "-", "base:all_adults (split)",
+                "base:all_adults",
+                "base:all_adults",
+                "-",
+                "base:all_adults (split)",
                 "estimate:all_adults",
             ],
             "Weighted n": ["280", "2286", "-", "-", "-"],
@@ -1234,14 +1260,20 @@ class TestPollCoverage:
         labour = world.party_ids["Labour"]
         london, wales = world.region_ids["London"], world.region_ids["Wales"]
         based = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="yougov",
+            db,
+            map_id=world.map_id,
+            pollster_identifier="yougov",
             pollster_name="YouGov",
-            fieldwork_end=date(2026, 9, 28), national={labour: 23.0},
+            fieldwork_end=date(2026, 9, 28),
+            national={labour: 23.0},
             regional={london: {labour: 32.0}, wales: {labour: 18.0}},
         )
         add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="yougov",
-            fieldwork_end=date(2026, 10, 5), national={labour: 22.0},
+            db,
+            map_id=world.map_id,
+            pollster_identifier="yougov",
+            fieldwork_end=date(2026, 10, 5),
+            national={labour: 22.0},
             regional={london: {labour: 31.0}, wales: {labour: 19.0}},
         )
         _add_base(db, based.id, 2310)
@@ -1252,8 +1284,13 @@ class TestPollCoverage:
         )
 
         assert _table_headers(body) == [
-            "Pollster", "Polls", "With national base", "National %", "Crossbreaks",
-            "With base", "Crossbreak %",
+            "Pollster",
+            "Polls",
+            "With national base",
+            "National %",
+            "Crossbreaks",
+            "With base",
+            "Crossbreak %",
         ]
         cells = [[html.unescape(c).strip() for c in row] for row in _table_rows(body)]
         assert cells == [["YouGov (yougov)", "2", "1", "50%", "4", "1", "25%"]]
@@ -1275,12 +1312,18 @@ class TestDeletePollWithBases:
         world = westminster_world
         labour = world.party_ids["Labour"]
         doomed = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="yougov",
-            fieldwork_end=date(2026, 9, 28), national={labour: 23.0},
+            db,
+            map_id=world.map_id,
+            pollster_identifier="yougov",
+            fieldwork_end=date(2026, 9, 28),
+            national={labour: 23.0},
         )
         kept = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier="yougov",
-            fieldwork_end=date(2026, 10, 5), national={labour: 22.0},
+            db,
+            map_id=world.map_id,
+            pollster_identifier="yougov",
+            fieldwork_end=date(2026, 10, 5),
+            national={labour: 22.0},
         )
         _add_base(db, doomed.id, 2310)
         _add_base(db, kept.id, 2312)

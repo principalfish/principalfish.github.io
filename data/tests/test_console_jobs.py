@@ -1174,8 +1174,16 @@ def test_the_status_route_is_get_only(
 
 @pytest.mark.parametrize(
     "query",
-    ["stdout=-1", "stdout=abc", "stderr=1.5", "stdout=", "step=-1", "step=x",
-     "stdout=" + "9" * 5000, "stdout=%EF%BC%91"],
+    [
+        "stdout=-1",
+        "stdout=abc",
+        "stderr=1.5",
+        "stdout=",
+        "step=-1",
+        "step=x",
+        "stdout=" + "9" * 5000,
+        "stdout=%EF%BC%91",
+    ],
 )
 def test_bad_offsets_are_a_400(
     folder: Path, client: FlaskClient[Response], query: str
@@ -1302,8 +1310,11 @@ def test_a_finished_command_job_shows_the_command_result_block(
 def test_a_command_job_without_a_back_page_links_home(
     client: FlaskClient[Response],
 ) -> None:
-    job = _start(lambda: JobOutcome(_command_payload(
-        subprocess.CompletedProcess([], 0, "o", "e")), ok=True))
+    job = _start(
+        lambda: JobOutcome(
+            _command_payload(subprocess.CompletedProcess([], 0, "o", "e")), ok=True
+        )
+    )
 
     body = client.get(f"/runs/{job.id}").get_data(as_text=True)
 
@@ -1399,7 +1410,7 @@ def test_a_running_job_page_shows_the_step_and_the_live_blocks(
         go.write_text("")
     _finished(job)
 
-    assert '<span>running</span>' in body
+    assert "<span>running</span>" in body
     assert "<strong>Step 1:</strong> Westminster model" in body
     assert f'data-status-url="/runs/{job.id}/status"' in body
     assert 'data-step="0"' in body
@@ -1477,4 +1488,4 @@ def test_a_running_record_shows_as_running_in_the_list_and_detail(
     assert "<td>running</td>" in listing
     assert "<strong>Finished:</strong> not yet" in detail
     assert "still in progress" in detail
-    assert '<span>running</span>' in detail
+    assert "<span>running</span>" in detail

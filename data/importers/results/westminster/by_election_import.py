@@ -58,9 +58,18 @@ PARTY_NAME_MAP: dict[str, str] = {
 }
 
 MONTH_MAP = {
-    "january": 1, "february": 2, "march": 3, "april": 4,
-    "may": 5, "june": 6, "july": 7, "august": 8,
-    "september": 9, "october": 10, "november": 11, "december": 12,
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
 }
 
 
@@ -318,11 +327,21 @@ def parse_results_table(soup: BeautifulSoup) -> list[ParsedCandidate]:
             if not party_text:
                 continue
 
-            eff_candidate_col = (candidate_col + row_offset) if candidate_col is not None else None
+            eff_candidate_col = (
+                (candidate_col + row_offset) if candidate_col is not None else None
+            )
             eff_votes_col = (votes_col + row_offset) if votes_col is not None else None
 
-            candidate_text = cells[eff_candidate_col].get_text(strip=True) if eff_candidate_col is not None and eff_candidate_col < len(cells) else ""
-            votes_text = cells[eff_votes_col].get_text(strip=True) if eff_votes_col is not None and eff_votes_col < len(cells) else "0"
+            candidate_text = (
+                cells[eff_candidate_col].get_text(strip=True)
+                if eff_candidate_col is not None and eff_candidate_col < len(cells)
+                else ""
+            )
+            votes_text = (
+                cells[eff_votes_col].get_text(strip=True)
+                if eff_votes_col is not None and eff_votes_col < len(cells)
+                else "0"
+            )
 
             # Clean votes text (remove commas, footnote refs)
             votes_clean = re.sub(r"[^\d]", "", votes_text)
@@ -330,7 +349,11 @@ def parse_results_table(soup: BeautifulSoup) -> list[ParsedCandidate]:
                 continue
 
             # Check if this candidate won (bold text or checkmark)
-            elected = bool(row.find("b") and eff_candidate_col is not None and cells[eff_candidate_col].find("b"))
+            elected = bool(
+                row.find("b")
+                and eff_candidate_col is not None
+                and cells[eff_candidate_col].find("b")
+            )
             # Also check for ✓ or tick mark
             row_text = row.get_text()
             if "✓" in row_text or "✔" in row_text or "Yes" in row_text:
@@ -338,12 +361,14 @@ def parse_results_table(soup: BeautifulSoup) -> list[ParsedCandidate]:
 
             mapped_party = _map_party_name(party_text)
 
-            candidates.append(ParsedCandidate(
-                party_name=mapped_party,
-                candidate_name=candidate_text,
-                votes=int(votes_clean),
-                elected=elected,
-            ))
+            candidates.append(
+                ParsedCandidate(
+                    party_name=mapped_party,
+                    candidate_name=candidate_text,
+                    votes=int(votes_clean),
+                    elected=elected,
+                )
+            )
 
         if candidates:
             break
@@ -373,7 +398,9 @@ def _find_column(headers: list[str], keywords: list[str]) -> int | None:
     return None
 
 
-def _extract_party_from_row(cells: list[Any], party_col: int | None, headers: list[str]) -> str | None:
+def _extract_party_from_row(
+    cells: list[Any], party_col: int | None, headers: list[str]
+) -> str | None:
     """Extract party name from a results table row.
 
     Wikipedia results tables often have a narrow colour cell before the party
@@ -505,7 +532,9 @@ def build_import_plan(
     party_id_by_name: dict[str, int] = {}
     for candidate in candidates:
         if candidate.party_name in party_name_to_id:
-            party_id_by_name[candidate.party_name] = party_name_to_id[candidate.party_name]
+            party_id_by_name[candidate.party_name] = party_name_to_id[
+                candidate.party_name
+            ]
 
     return ByElectionImportPlan(
         url=url,
@@ -565,9 +594,7 @@ def commit_import_plan(
                 f"Election '{plan.election_name}' already exists (id={existing.id})"
             )
         cleared = db.clear_votes_for_election(existing.id)
-        print(
-            f"Refreshing '{plan.election_name}': cleared {cleared} existing votes."
-        )
+        print(f"Refreshing '{plan.election_name}': cleared {cleared} existing votes.")
         election = existing
     else:
         election = db.add_election(
@@ -626,7 +653,9 @@ def main() -> None:
         help="Name of the parent general election",
     )
     parser.add_argument("--map-name", default=DEFAULT_MAP_NAME, help="Map name")
-    parser.add_argument("--dry-run", action="store_true", help="Parse only, don't write to DB")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Parse only, don't write to DB"
+    )
     parser.add_argument(
         "--refresh",
         action="store_true",
@@ -656,7 +685,9 @@ def main() -> None:
     for c in plan.candidates:
         marker = " *" if c.elected else ""
         party_id = plan.party_id_by_name.get(c.party_name, "?")
-        print(f"  {c.party_name} (id={party_id}): {c.candidate_name} - {c.votes:,}{marker}")
+        print(
+            f"  {c.party_name} (id={party_id}): {c.candidate_name} - {c.votes:,}{marker}"
+        )
 
     if args.dry_run:
         print("\nDry run — no database writes.")

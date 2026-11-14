@@ -690,16 +690,25 @@ def _planned_bases(world: WestminsterWorld) -> list[PlannedPollBase]:
     """A national, a direct regional and a population-split regional base."""
     return [
         PlannedPollBase(
-            region_id=None, region_name="National", unweighted_n=1210,
-            weighted_n=1188, kind="decided",
+            region_id=None,
+            region_name="National",
+            unweighted_n=1210,
+            weighted_n=1188,
+            kind="decided",
         ),
         PlannedPollBase(
-            region_id=world.region_ids["London"], region_name="London",
-            unweighted_n=151, weighted_n=163, kind="likely_voters",
+            region_id=world.region_ids["London"],
+            region_name="London",
+            unweighted_n=151,
+            weighted_n=163,
+            kind="likely_voters",
         ),
         PlannedPollBase(
-            region_id=world.region_ids["Scotland"], region_name="Scotland",
-            unweighted_n=97, kind="all_adults", split_from_macro=True,
+            region_id=world.region_ids["Scotland"],
+            region_name="Scotland",
+            unweighted_n=97,
+            kind="all_adults",
+            split_from_macro=True,
         ),
     ]
 
@@ -717,9 +726,11 @@ def _expected_bases(world: WestminsterWorld) -> list[_StoredBase]:
 def _stored_bases(db: Database, poll_id: int) -> list[_StoredBase]:
     """Return a poll's bases sorted national first, then by region id."""
     with db.session() as session:
-        rows = session.execute(
-            select(PollBase).where(PollBase.poll_id == poll_id)
-        ).scalars().all()
+        rows = (
+            session.execute(select(PollBase).where(PollBase.poll_id == poll_id))
+            .scalars()
+            .all()
+        )
         stored = [
             (b.region_id, b.unweighted_n, b.weighted_n, b.kind, b.split_from_macro)
             for b in rows
@@ -785,8 +796,11 @@ class TestCommitBases:
         seeded_poll = _seed_poll(db, world)
         _add_base(db, seeded_poll.id, 999, world.region_ids["Wales"])
         plan = _plan(
-            importer, world, pollster_exists=True,
-            pollster_id=seeded_pollster.id, poll_id=seeded_poll.id,
+            importer,
+            world,
+            pollster_exists=True,
+            pollster_id=seeded_pollster.id,
+            poll_id=seeded_poll.id,
         ).model_copy(update={"bases": _planned_bases(world)})
 
         result = _commit(importer, db, plan)
@@ -809,8 +823,11 @@ class TestCommitBases:
         _add_base(db, seeded_poll.id, 999)
         _add_base(db, sibling.id, 888)
         plan = _plan(
-            importer, world, pollster_exists=True,
-            pollster_id=seeded_pollster.id, poll_id=seeded_poll.id,
+            importer,
+            world,
+            pollster_exists=True,
+            pollster_id=seeded_pollster.id,
+            poll_id=seeded_poll.id,
         ).model_copy(update={"bases": _planned_bases(world)})
 
         result = _commit(importer, db, plan, replace_rows=True)
@@ -828,8 +845,11 @@ class TestCommitBases:
         seeded_poll = _seed_poll(db, world, national={world.party_ids["Labour"]: 40.0})
         _add_base(db, seeded_poll.id, 999)
         plan = _plan(
-            importer, world, pollster_exists=True,
-            pollster_id=seeded_pollster.id, poll_id=seeded_poll.id,
+            importer,
+            world,
+            pollster_exists=True,
+            pollster_id=seeded_pollster.id,
+            poll_id=seeded_poll.id,
         ).model_copy(update={"bases": _planned_bases(world)})
 
         result = _commit(importer, db, plan)

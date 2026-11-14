@@ -116,34 +116,55 @@ def uk_page(db: Database, tmp_path: Path) -> tuple[Path, list[int]]:
     seat = db.add_seat(westminster.id, "Test constituency")
     party = db.add_party("Labour", colour="#ff0000")
     general = db.add_election(
-        westminster.id, 2024, "2024 General Election", ElectionType.uk_general,
+        westminster.id,
+        2024,
+        "2024 General Election",
+        ElectionType.uk_general,
     )
     by_election = db.add_election(
-        westminster.id, 2025, "Test by-election", ElectionType.by_election,
+        westminster.id,
+        2025,
+        "Test by-election",
+        ElectionType.by_election,
         parent_election_id=general.id,
     )
     db.add_vote(general.id, seat.id, party_id=party.id, vote_total=100)
     db.add_vote(by_election.id, seat.id, party_id=party.id, vote_total=120)
     prediction = db.add_election(
-        westminster.id, 2029, "UK forecast", ElectionType.model_uns,
+        westminster.id,
+        2029,
+        "UK forecast",
+        ElectionType.model_uns,
     )
     latest_holyrood = db.add_election(
-        holyrood.id, 2026, "2026 Scottish Parliament Election",
+        holyrood.id,
+        2026,
+        "2026 Scottish Parliament Election",
         ElectionType.holyrood_general,
     )
     prior_holyrood = db.add_election(
-        old_holyrood.id, 2021, "2021 Scottish Parliament Election",
+        old_holyrood.id,
+        2021,
+        "2021 Scottish Parliament Election",
         ElectionType.holyrood_general,
     )
     remapped_holyrood = db.add_election(
-        holyrood.id, 2021, "2021 Scottish Parliament Election (2026 Boundaries)",
+        holyrood.id,
+        2021,
+        "2021 Scottish Parliament Election (2026 Boundaries)",
         ElectionType.holyrood_general,
     )
     prior_general = db.add_election(
-        old_westminster.id, 2019, "2019 General Election", ElectionType.uk_general,
+        old_westminster.id,
+        2019,
+        "2019 General Election",
+        ElectionType.uk_general,
     )
     oldest_general = db.add_election(
-        old_westminster.id, 2017, "2017 General Election", ElectionType.uk_general,
+        old_westminster.id,
+        2017,
+        "2017 General Election",
+        ElectionType.uk_general,
     )
     output_root = _prepare_page(
         tmp_path,
@@ -181,37 +202,58 @@ def test_uk_curated_order_restoration_and_comparison_phases(
         {"id": "2026-holyrood"},
         {"id": "current-prediction"},
         {
-            "id": "2021-holyrood-2026", "type": "holyrood_general",
-            "parliament": "holyrood", "mapId": 4,
+            "id": "2021-holyrood-2026",
+            "type": "holyrood_general",
+            "parliament": "holyrood",
+            "mapId": 4,
         },
         {
-            "id": "current-holyrood-prediction", "type": "holyrood_uns",
-            "parliament": "holyrood", "mapId": 4, "model": True,
+            "id": "current-holyrood-prediction",
+            "type": "holyrood_uns",
+            "parliament": "holyrood",
+            "mapId": 4,
+            "model": True,
             "comparisonElectionId": "2026-holyrood",
         },
         {
-            "id": "missing-prediction", "type": "holyrood_uns",
-            "parliament": "holyrood", "mapId": 4, "model": True,
+            "id": "missing-prediction",
+            "type": "holyrood_uns",
+            "parliament": "holyrood",
+            "mapId": 4,
+            "model": True,
         },
         {"id": "removed-election", "type": "uk_general"},
     ]
-    _write_json(output_root / "map-modes.json", {
-        "elections": prior_entries,
-        "files": {"elections": {"electionsById": {
-            "2021-holyrood-2026": baseline_file,
-            "current-holyrood-prediction": prediction_file,
-            "missing-prediction": "results/does-not-exist.json",
-        }}},
-    })
+    _write_json(
+        output_root / "map-modes.json",
+        {
+            "elections": prior_entries,
+            "files": {
+                "elections": {
+                    "electionsById": {
+                        "2021-holyrood-2026": baseline_file,
+                        "current-holyrood-prediction": prediction_file,
+                        "missing-prediction": "results/does-not-exist.json",
+                    }
+                }
+            },
+        },
+    )
     shell: dict[str, Any] = {"misc": {"orderingFixture": True}}
     if configured_default is not None:
         shell["defaultElection"] = configured_default
     _write_json(output_root / "map-modes-shell.json", shell)
 
     expected_ids = [
-        "current-prediction", "2019-general", "2017-general",
-        "current-holyrood-prediction", "2021-holyrood", "current-parliament",
-        "2024-general", "2019-general-changed-boundaries", "2026-holyrood",
+        "current-prediction",
+        "2019-general",
+        "2017-general",
+        "current-holyrood-prediction",
+        "2021-holyrood",
+        "current-parliament",
+        "2024-general",
+        "2019-general-changed-boundaries",
+        "2026-holyrood",
         "2021-holyrood-2026",
     ]
     expected_comparisons = {
@@ -227,7 +269,8 @@ def test_uk_curated_order_restoration_and_comparison_phases(
         "2021-holyrood-2026": None,
     }
     expected_default = (
-        "2019-general" if configured_default == "2019-general"
+        "2019-general"
+        if configured_default == "2019-general"
         else "current-holyrood-prediction"
     )
     # Repeat with the generated manifest as input; these representative inputs
@@ -235,14 +278,18 @@ def test_uk_curated_order_restoration_and_comparison_phases(
     for _ in range(2):
         _export(db, tmp_path, output_root, election_ids, {"westminster", "holyrood"})
         manifest = _assert_manifest(
-            output_root, expected_ids, expected_comparisons, expected_default,
+            output_root,
+            expected_ids,
+            expected_comparisons,
+            expected_default,
         )
         refs = manifest["files"]["elections"]["electionsById"]
         assert refs["2021-holyrood-2026"] == baseline_file
         assert refs["current-holyrood-prediction"] == prediction_file
         assert (output_root / baseline_file).is_file()
         current = next(
-            entry for entry in manifest["elections"]
+            entry
+            for entry in manifest["elections"]
             if entry["id"] == "current-parliament"
         )
         assert current["byElectionSeats"] == ["Test constituency"]
@@ -261,13 +308,20 @@ def test_new_uk_manifest_current_parliament_placement_and_default(
     if not with_prediction:
         election_ids = election_ids[1:]
     if configured_default is not None:
-        _write_json(output_root / "map-modes-shell.json", {
-            "defaultElection": configured_default,
-        })
+        _write_json(
+            output_root / "map-modes-shell.json",
+            {
+                "defaultElection": configured_default,
+            },
+        )
     _export(db, tmp_path, output_root, election_ids, {"westminster", "holyrood"})
     expected_ids = (["current-prediction"] if with_prediction else []) + [
-        "current-parliament", "2026-holyrood", "2024-general",
-        "2019-general-changed-boundaries", "2021-holyrood", "2019-general",
+        "current-parliament",
+        "2026-holyrood",
+        "2024-general",
+        "2019-general-changed-boundaries",
+        "2021-holyrood",
+        "2019-general",
         "2017-general",
     ]
     expected_comparisons = {
@@ -282,7 +336,10 @@ def test_new_uk_manifest_current_parliament_placement_and_default(
     if with_prediction:
         expected_comparisons["current-prediction"] = "2024-general"
     _assert_manifest(
-        output_root, expected_ids, expected_comparisons, "current-parliament",
+        output_root,
+        expected_ids,
+        expected_comparisons,
+        "current-parliament",
     )
 
 
@@ -291,11 +348,13 @@ def us_page(db: Database, tmp_path: Path) -> tuple[Path, list[int]]:
     seed_canonical_allocations(db)
     # Match the shipped map IDs, including the supplemental Senate descriptor.
     with db.session() as session:
-        session.add_all([
-            Map(id=21, name="US House", parliament="us_house"),
-            Map(id=22, name="US President", parliament="us_presidential"),
-            Map(id=23, name="US Senate", parliament="us_senate"),
-        ])
+        session.add_all(
+            [
+                Map(id=21, name="US House", parliament="us_house"),
+                Map(id=22, name="US President", parliament="us_presidential"),
+                Map(id=23, name="US Senate", parliament="us_senate"),
+            ]
+        )
     specs = [
         (21, 2026, "House forecast", ElectionType.us_house_model),
         (23, 2026, "Senate forecast", ElectionType.us_senate_model),
@@ -312,9 +371,13 @@ def us_page(db: Database, tmp_path: Path) -> tuple[Path, list[int]]:
     ]
     set_model_target(db, election_ids[2])
     output_root = _prepare_page(tmp_path, [21, 22, 23])
-    _write_json(output_root / "results" / "senate-current.json", {
-        "schema": "pf-results-v4", "seats": [],
-    })
+    _write_json(
+        output_root / "results" / "senate-current.json",
+        {
+            "schema": "pf-results-v4",
+            "seats": [],
+        },
+    )
     return output_root, election_ids
 
 
@@ -332,29 +395,50 @@ def test_us_combined_order_supplemental_forecasts_and_default(
     # them are newest first, with Current Senate directly after the newest Senate result.
     monkeypatch.setattr(export_elections, "EXPORT_US_CHAMBER_FORECASTS", True)
     output_root, election_ids = us_page
-    prior: dict[str, Any] = {"elections": [
-        {"id": election_id} for election_id in [
-            "2024-us-president", "2024-us-house", "2022-us-house",
-            "2020-us-senate", "2024-us-senate", "current-senate",
-            "current-us-house", "current-us-senate", "current-us-president",
-            "removed-election",
+    prior: dict[str, Any] = {
+        "elections": [
+            {"id": election_id}
+            for election_id in [
+                "2024-us-president",
+                "2024-us-house",
+                "2022-us-house",
+                "2020-us-senate",
+                "2024-us-senate",
+                "current-senate",
+                "current-us-house",
+                "current-us-senate",
+                "current-us-president",
+                "removed-election",
+            ]
         ]
-    ]}
+    }
     if not remembered_order:
         prior["elections"] = []
     if configured_default is not None:
         prior["defaultElection"] = configured_default
     _write_json(output_root / "map-modes.json", prior)
     expected_ids = [
-        "current-us-president", "2024-us-president", "current-us-house",
-        "2024-us-house", "2022-us-house", "current-us-senate", "2024-us-senate",
-        "current-senate", "2020-us-senate",
+        "current-us-president",
+        "2024-us-president",
+        "current-us-house",
+        "2024-us-house",
+        "2022-us-house",
+        "current-us-senate",
+        "2024-us-senate",
+        "current-senate",
+        "2020-us-senate",
     ]
     if not remembered_order:
         expected_ids = [
-            "current-us-house", "current-us-senate", "current-us-president",
-            "2024-us-house", "2024-us-president", "2024-us-senate",
-            "2022-us-house", "current-senate", "2020-us-senate",
+            "current-us-house",
+            "current-us-senate",
+            "current-us-president",
+            "2024-us-house",
+            "2024-us-president",
+            "2024-us-senate",
+            "2022-us-house",
+            "current-senate",
+            "2020-us-senate",
         ]
     expected_comparisons = {
         "current-us-president": "2024-us-president",
@@ -368,16 +452,23 @@ def test_us_combined_order_supplemental_forecasts_and_default(
         "2024-us-senate": None,
     }
     expected_default = (
-        "current-senate" if configured_default == "current-senate"
+        "current-senate"
+        if configured_default == "current-senate"
         else "current-us-house"
     )
     for _ in range(2):
         _export(
-            db, tmp_path, output_root, election_ids,
+            db,
+            tmp_path,
+            output_root,
+            election_ids,
             {"us_house", "us_presidential", "us_senate"},
         )
         manifest = _assert_manifest(
-            output_root, expected_ids, expected_comparisons, expected_default,
+            output_root,
+            expected_ids,
+            expected_comparisons,
+            expected_default,
         )
         assert manifest["files"]["elections"]["electionsById"]["current-senate"] == (
             "results/senate-current.json"
@@ -399,11 +490,16 @@ def test_partial_export_bypasses_manifest_ordering_and_supplementals(
     # return before supplemental registration or manifest assembly.
     (tmp_path / "2019election_new.json").unlink()
     result_path = (
-        tmp_path / "single-result.json" if mode == "output-file"
+        tmp_path / "single-result.json"
+        if mode == "output-file"
         else output_root / "results" / "uk-general-2024.json"
     )
     _export(
-        db, tmp_path, output_root, [election_ids[3]], {"westminster"},
+        db,
+        tmp_path,
+        output_root,
+        [election_ids[3]],
+        {"westminster"},
         single_election_mode=mode == "single-election",
         output_file=result_path if mode == "output-file" else None,
     )
@@ -423,21 +519,29 @@ def test_full_dry_run_preserves_output_files(
     _write_json(output_root / "map-modes.json", {"elections": []})
     before = {
         path.relative_to(output_root): path.read_bytes()
-        for path in output_root.rglob("*") if path.is_file()
+        for path in output_root.rglob("*")
+        if path.is_file()
     }
     _export(
-        db, tmp_path, output_root, election_ids, {"westminster", "holyrood"},
+        db,
+        tmp_path,
+        output_root,
+        election_ids,
+        {"westminster", "holyrood"},
         dry_run=True,
     )
     after = {
         path.relative_to(output_root): path.read_bytes()
-        for path in output_root.rglob("*") if path.is_file()
+        for path in output_root.rglob("*")
+        if path.is_file()
     }
     assert after == before
 
 
 def test_metadata_only_preserves_election_order_comparisons_and_default(
-    db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     roots = {name: tmp_path / name / "data" for name in ("uk", "us")}
     prior = {
@@ -452,10 +556,17 @@ def test_metadata_only_preserves_election_order_comparisons_and_default(
         _write_json(root / "map-modes.json", prior)
     monkeypatch.setattr(export_elections, "Database", lambda: db)
     monkeypatch.setattr(export_elections, "PAGE_OUTPUT_ROOTS", roots)
-    monkeypatch.setattr(export_elections, "parse_args", lambda: argparse.Namespace(
-        election_name=None, current_simulation=False, metadata_only=True, dry_run=False,
-        output_base=None,
-    ))
+    monkeypatch.setattr(
+        export_elections,
+        "parse_args",
+        lambda: argparse.Namespace(
+            election_name=None,
+            current_simulation=False,
+            metadata_only=True,
+            dry_run=False,
+            output_base=None,
+        ),
+    )
     export_elections.main()
     for root in roots.values():
         manifest = json.loads((root / "map-modes.json").read_text(encoding="utf-8"))
@@ -475,11 +586,18 @@ def test_reorder_anchor_precedence_first_comparer_and_stable_ties() -> None:
         {"id": "unanchored-b"},
     ]
     reordered = reorder_manifest_entries(
-        entries, ["later-comparer", "removed", "old", "first-comparer"],
+        entries,
+        ["later-comparer", "removed", "old", "first-comparer"],
     )
     assert [entry["id"] for entry in reordered] == [
-        "later-comparer", "new-before-a", "new-before-b", "old",
-        "first-comparer", "new-baseline", "unanchored-a", "unanchored-b",
+        "later-comparer",
+        "new-before-a",
+        "new-before-b",
+        "old",
+        "first-comparer",
+        "new-baseline",
+        "unanchored-a",
+        "unanchored-b",
     ]
     assert {id(entry) for entry in reordered} == {id(entry) for entry in entries}
 
@@ -516,8 +634,14 @@ def test_multiple_forecasts_keep_relative_order_with_interleaved_parliaments() -
     original_objects = {id(entry) for entry in entries}
     float_model_entries_first(entries)
     assert [entry["id"] for entry in entries] == [
-        "house-model-a", "house-model-b", "house-old", "senate-model",
-        "senate-old", "president-old", "house-older", "senate-older",
+        "house-model-a",
+        "house-model-b",
+        "house-old",
+        "senate-model",
+        "senate-old",
+        "president-old",
+        "house-older",
+        "senate-older",
     ]
     assert {id(entry) for entry in entries} == original_objects
 
@@ -534,12 +658,16 @@ def test_supplemental_missing_anchor_appends_without_regrouping() -> None:
         parliaments={"us_senate"},
     )
     assert [entry["id"] for entry in entries] == [
-        "2024-us-house", "2020-us-senate", "snapshot",
+        "2024-us-house",
+        "2020-us-senate",
+        "snapshot",
     ]
 
 
 def test_pinned_current_senate_has_no_anchor_so_only_the_sort_places_it() -> None:
-    descriptor = next(s for s in SUPPLEMENTAL_LEGACY_ELECTIONS if s["id"] == "current-senate")
+    descriptor = next(
+        s for s in SUPPLEMENTAL_LEGACY_ELECTIONS if s["id"] == "current-senate"
+    )
     assert "insertBeforeId" not in descriptor and "insertAfterId" not in descriptor
     entries = [
         {"id": "current-senate", "parliament": "us_senate"},
@@ -572,10 +700,14 @@ def test_finalize_uses_supplied_descriptors_without_mutating_input_list() -> Non
     )
 
     assert [entry["id"] for entry in ordered] == [
-        "custom-snapshot", "senate-anchor", "other-snapshot",
+        "custom-snapshot",
+        "senate-anchor",
+        "other-snapshot",
     ]
     assert [entry["id"] for entry in entries] == [
-        "other-snapshot", "custom-snapshot", "senate-anchor",
+        "other-snapshot",
+        "custom-snapshot",
+        "senate-anchor",
     ]
     assert ordered is not entries
     assert ordered[0] is entries[1]
@@ -602,7 +734,9 @@ def test_supplemental_before_anchor_precedence_in_both_stages(
     }
     entry = {"id": "snapshot"}
     initial: list[dict[str, Any]] = [
-        {"id": ""}, {"id": "after"}, {"id": "before"},
+        {"id": ""},
+        {"id": "after"},
+        {"id": "before"},
     ]
     final = [entry, *initial]
 
@@ -694,10 +828,20 @@ def test_sort_us_chamber_entries_newest_first_with_current_senate_second() -> No
     ]
     sort_us_chamber_entries(entries)
     assert _us_lists(entries) == {
-        "us_house": ["2026-us-house", "2024-us-house", "2022-us-house", "2020-us-house", "2018-us-house"],
+        "us_house": [
+            "2026-us-house",
+            "2024-us-house",
+            "2022-us-house",
+            "2020-us-house",
+            "2018-us-house",
+        ],
         "us_senate": [
-            "2026-us-senate", "current-senate", "2024-us-senate",
-            "2022-us-senate", "2020-us-senate", "2018-us-senate",
+            "2026-us-senate",
+            "current-senate",
+            "2024-us-senate",
+            "2022-us-senate",
+            "2020-us-senate",
+            "2018-us-senate",
         ],
     }
 
@@ -711,15 +855,29 @@ def test_sort_us_chamber_entries_places_a_new_year_in_its_slot() -> None:
             _entry("2018-us-senate", "us_senate"),
         ]
 
-    older = [*senate(), _entry("2016-us-senate", "us_senate")]  # imported last, belongs at the end
+    older = [
+        *senate(),
+        _entry("2016-us-senate", "us_senate"),
+    ]  # imported last, belongs at the end
     sort_us_chamber_entries(older)
     assert [e["id"] for e in older] == [
-        "2026-us-senate", "current-senate", "2024-us-senate", "2018-us-senate", "2016-us-senate",
+        "2026-us-senate",
+        "current-senate",
+        "2024-us-senate",
+        "2018-us-senate",
+        "2016-us-senate",
     ]
-    newer = [*senate(), _entry("2028-us-senate", "us_senate")]  # a future result tops the list
+    newer = [
+        *senate(),
+        _entry("2028-us-senate", "us_senate"),
+    ]  # a future result tops the list
     sort_us_chamber_entries(newer)
     assert [e["id"] for e in newer] == [
-        "2028-us-senate", "current-senate", "2026-us-senate", "2024-us-senate", "2018-us-senate",
+        "2028-us-senate",
+        "current-senate",
+        "2026-us-senate",
+        "2024-us-senate",
+        "2018-us-senate",
     ]
     between = [*senate(), _entry("2020-us-senate", "us_senate")]
     sort_us_chamber_entries(between)
@@ -739,12 +897,12 @@ def test_sort_us_chamber_entries_leaves_forecasts_president_and_uk_alone() -> No
     ]
     sort_us_chamber_entries(entries)
     assert [e["id"] for e in entries] == [
-        "current-us-senate",    # forecast keeps its slot
-        "2024-us-senate",       # results refill their own slots
-        "2024-us-president",    # President order is curated, untouched
+        "current-us-senate",  # forecast keeps its slot
+        "2024-us-senate",  # results refill their own slots
+        "2024-us-president",  # President order is curated, untouched
         "2020-us-president",
         "2020-us-senate",
-        "2019-general",         # UK order untouched, even if not newest first
+        "2019-general",  # UK order untouched, even if not newest first
         "2024-general",
         "current-us-president",
     ]
@@ -770,7 +928,10 @@ def test_finalize_sorts_us_chambers_whatever_the_remembered_order() -> None:
         _entry("current-senate", "us_senate"),
     ]
     supplemental = SUPPLEMENTAL_LEGACY_ELECTIONS
-    for remembered in ([], ["2018-us-house", "2024-us-senate", "2024-us-house", "2026-us-house"]):
+    for remembered in (
+        [],
+        ["2018-us-house", "2024-us-senate", "2024-us-house", "2026-us-house"],
+    ):
         result = finalize_manifest_order(entries, remembered, supplemental)
         assert _us_lists(result) == {
             "us_house": ["2026-us-house", "2024-us-house", "2018-us-house"],
@@ -778,7 +939,9 @@ def test_finalize_sorts_us_chambers_whatever_the_remembered_order() -> None:
         }
 
 
-def test_finalize_is_idempotent_on_a_mixed_list_with_president_between_chambers() -> None:
+def test_finalize_is_idempotent_on_a_mixed_list_with_president_between_chambers() -> (
+    None
+):
     def mixed() -> list[dict[str, Any]]:
         ids = [
             ("current-us-president", "us_presidential", True),
@@ -813,8 +976,11 @@ def test_finalize_is_idempotent_on_a_mixed_list_with_president_between_chambers(
         first = again
     lists = _us_lists(first)
     assert lists["us_senate"] == [
-        "2026-us-senate", "current-senate", "2024-us-senate",
-        "2022-us-senate", "2016-us-senate",
+        "2026-us-senate",
+        "current-senate",
+        "2024-us-senate",
+        "2022-us-senate",
+        "2016-us-senate",
     ]
     assert lists["us_house"] == ["2026-us-house", "2024-us-house", "2022-us-house"]
 
@@ -833,17 +999,29 @@ def test_us_chamber_forecast_flag_off_drops_house_and_senate_forecasts(
     }
     for relpath in old_files.values():
         _write_json(output_root / relpath, {})
-    _write_json(output_root / "map-modes.json", {
-        "elections": [{"id": eid, "type": "us_house_model", "model": True} for eid in old_files],
-        "files": {"elections": {"electionsById": old_files}},
-    })
+    _write_json(
+        output_root / "map-modes.json",
+        {
+            "elections": [
+                {"id": eid, "type": "us_house_model", "model": True}
+                for eid in old_files
+            ],
+            "files": {"elections": {"electionsById": old_files}},
+        },
+    )
 
     def run() -> dict[str, Any]:
-        args = argparse.Namespace(dry_run=False, output_file=None, legacy_files_dir=tmp_path)
+        args = argparse.Namespace(
+            dry_run=False, output_file=None, legacy_files_dir=tmp_path
+        )
         with db.session() as session:
-            elections = list(session.scalars(
-                select(Election).options(joinedload(Election.map)).order_by(Election.id),
-            ))
+            elections = list(
+                session.scalars(
+                    select(Election)
+                    .options(joinedload(Election.map))
+                    .order_by(Election.id),
+                )
+            )
             export_elections.export_pages(
                 session=session,
                 elections=elections,
@@ -854,7 +1032,9 @@ def test_us_chamber_forecast_flag_off_drops_house_and_senate_forecasts(
                 has_electorate=True,
                 single_election_mode=False,
             )
-        manifest: dict[str, Any] = json.loads((output_root / "map-modes.json").read_text(encoding="utf-8"))
+        manifest: dict[str, Any] = json.loads(
+            (output_root / "map-modes.json").read_text(encoding="utf-8")
+        )
         return manifest
 
     # Default OFF.
@@ -878,9 +1058,17 @@ def test_us_chamber_forecast_flag_off_drops_house_and_senate_forecasts(
     manifest = run()
     ids = [entry["id"] for entry in manifest["elections"]]
     assert {"current-us-house", "current-us-senate", "current-us-president"} <= set(ids)
-    assert manifest["files"]["elections"]["electionsById"]["current-us-house"] == "results/us-house-forecast.json"
+    assert (
+        manifest["files"]["elections"]["electionsById"]["current-us-house"]
+        == "results/us-house-forecast.json"
+    )
     assert (output_root / "results" / "us-house-forecast.json").is_file()
     assert (output_root / "results" / "us-senate-forecast.json").is_file()
     lists = _us_lists(manifest["elections"])
     assert lists["us_house"] == ["current-us-house", "2024-us-house", "2022-us-house"]
-    assert lists["us_senate"] == ["current-us-senate", "2024-us-senate", "current-senate", "2020-us-senate"]
+    assert lists["us_senate"] == [
+        "current-us-senate",
+        "2024-us-senate",
+        "current-senate",
+        "2020-us-senate",
+    ]

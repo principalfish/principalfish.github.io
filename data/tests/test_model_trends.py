@@ -69,7 +69,9 @@ def store(
             OutputVote(seat, parties[i], "", votes, i == winner)
             for i, votes in enumerate((share, 100 - share))
         ],
-        target_election_year=2028 if scope.election_type == "us_presidential_model" else None,
+        target_election_year=2028
+        if scope.election_type == "us_presidential_model"
+        else None,
     )
 
 
@@ -386,7 +388,8 @@ def test_identical_serialized_metrics_and_zero_totals(
     entries = reconstruct_trends(only_the_test_database, scope)
     # Identical runs collapse; Westminster also keeps its latest one.
     assert [entry["as_of_date"] for entry in entries] == [
-        "2026-06-01", *(["2026-06-03"] if model == "westminster" else []),
+        "2026-06-01",
+        *(["2026-06-03"] if model == "westminster" else []),
     ]
     assert entries[0]["parties"][str(parties[1])]["v"] == 0.0
     assert ("e" in entries[0]["parties"][str(parties[0])]) == (model == "us-president")
@@ -499,7 +502,12 @@ def test_summary_adds_rounded_bands_nonzero_odds_and_hung(
 ) -> None:
     scope, seats, parties = setup_scope(db, "westminster")
     store_with_summary(
-        only_the_test_database, scope, 1, seats[0], parties, 60,
+        only_the_test_database,
+        scope,
+        1,
+        seats[0],
+        parties,
+        60,
         national_block(parties),
     )
     (entry,) = reconstruct_trends(only_the_test_database, scope)
@@ -507,12 +515,25 @@ def test_summary_adds_rounded_bands_nonzero_odds_and_hung(
         # 55.86 -> 55.9 and 44.14 -> 44.1: rounded to 1 dp, not truncated. The
         # mean seats sm come from the histogram (5,000 runs on 0, 5,000 on 1).
         str(parties[0]): {
-            "s": 1, "v": 60.0, "vl": 55.9, "vh": 64.0, "sl": 0, "sh": 1, "sm": 0.5,
-            "pm": 0.731, "pl": 0.999,
+            "s": 1,
+            "v": 60.0,
+            "vl": 55.9,
+            "vh": 64.0,
+            "sl": 0,
+            "sh": 1,
+            "sm": 0.5,
+            "pm": 0.731,
+            "pl": 0.999,
         },
         # A zero probability is left out; 0.001 is kept.
         str(parties[1]): {
-            "s": 0, "v": 40.0, "vl": 36.0, "vh": 44.1, "sl": 0, "sh": 1, "sm": 0.5,
+            "s": 0,
+            "v": 40.0,
+            "vl": 36.0,
+            "vh": 44.1,
+            "sl": 0,
+            "sh": 1,
+            "sm": 0.5,
             "pl": 0.001,
         },
     }
@@ -528,7 +549,12 @@ def test_runs_without_a_summary_are_unchanged(
     scope, seats, parties = setup_scope(db, "westminster")
     store_with_summary(only_the_test_database, scope, 1, seats[0], parties, 60, None)
     store_with_summary(
-        only_the_test_database, scope, 2, seats[0], parties, 70,
+        only_the_test_database,
+        scope,
+        2,
+        seats[0],
+        parties,
+        70,
         national_block(parties),
     )
     first, second = reconstruct_trends(only_the_test_database, scope)
@@ -550,15 +576,30 @@ def test_equal_projection_collapses_whatever_its_odds(
     """The seed changes daily, so equal projections differ only by noise."""
     scope, seats, parties = setup_scope(db, "westminster")
     store_with_summary(
-        only_the_test_database, scope, 1, seats[0], parties, 60,
+        only_the_test_database,
+        scope,
+        1,
+        seats[0],
+        parties,
+        60,
         national_block(parties, hung=0.25),
     )
     store_with_summary(
-        only_the_test_database, scope, 2, seats[0], parties, 60,
+        only_the_test_database,
+        scope,
+        2,
+        seats[0],
+        parties,
+        60,
         national_block(parties, hung=0.30),
     )
     store_with_summary(
-        only_the_test_database, scope, 3, seats[0], parties, 65,
+        only_the_test_database,
+        scope,
+        3,
+        seats[0],
+        parties,
+        65,
         national_block(parties, hung=0.35),
     )
     entries = reconstruct_trends(only_the_test_database, scope)
@@ -579,12 +620,19 @@ def test_latest_run_is_kept_with_its_mean_even_when_its_centrals_repeat(
         for party in stored.values():
             party["hist"]["counts"] = counts
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, 60, block,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            60,
+            block,
         )
     entries = reconstruct_trends(only_the_test_database, scope)
     # Day 2 still collapses onto day 1; day 3, the latest, is kept.
     assert [(e["as_of_date"], e["hung"]) for e in entries] == [
-        ("2026-06-01", 0.26), ("2026-06-03", 0.28),
+        ("2026-06-01", 0.26),
+        ("2026-06-03", 0.28),
     ]
     assert entries[-1]["parties"][str(parties[0])]["sm"] == 0.8
     assert entries[-1]["parties"][str(parties[0])]["s"] == 1
@@ -601,7 +649,13 @@ def test_latest_polled_run_is_kept_when_an_unpolled_run_follows(
             for party in stored.values():
                 party["hist"]["counts"] = [2000, 8000]
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, share, block,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            share,
+            block,
         )
     entries = reconstruct_trends(only_the_test_database, scope)
     # The unpolled day 3 is left out, so day 2 is the latest keepable run.
@@ -615,16 +669,31 @@ def test_first_summary_is_kept_after_an_equal_run_without_one(
     scope, seats, parties = setup_scope(db, "westminster")
     store_with_summary(only_the_test_database, scope, 1, seats[0], parties, 60, None)
     store_with_summary(
-        only_the_test_database, scope, 2, seats[0], parties, 60,
+        only_the_test_database,
+        scope,
+        2,
+        seats[0],
+        parties,
+        60,
         national_block(parties),
     )
     store_with_summary(
-        only_the_test_database, scope, 3, seats[0], parties, 60,
+        only_the_test_database,
+        scope,
+        3,
+        seats[0],
+        parties,
+        60,
         national_block(parties, hung=0.5),
     )
     # A changed latest run, so the equal one before it still collapses.
     store_with_summary(
-        only_the_test_database, scope, 4, seats[0], parties, 65,
+        only_the_test_database,
+        scope,
+        4,
+        seats[0],
+        parties,
+        65,
         national_block(parties, hung=0.6),
     )
     entries = reconstruct_trends(only_the_test_database, scope)
@@ -640,13 +709,23 @@ def test_equal_runs_preserve_summary_gaps(
 ) -> None:
     scope, seats, parties = setup_scope(db, "westminster")
     store_with_summary(
-        only_the_test_database, scope, 1, seats[0], parties, 60,
+        only_the_test_database,
+        scope,
+        1,
+        seats[0],
+        parties,
+        60,
         national_block(parties),
     )
     store_with_summary(only_the_test_database, scope, 2, seats[0], parties, 60, None)
     # A later equal run must restart the bands after the explicit gap.
     store_with_summary(
-        only_the_test_database, scope, 3, seats[0], parties, 60,
+        only_the_test_database,
+        scope,
+        3,
+        seats[0],
+        parties,
+        60,
         national_block(parties, hung=0.5),
     )
     store_with_summary(only_the_test_database, scope, 4, seats[0], parties, 65, None)
@@ -661,7 +740,9 @@ def test_equal_runs_preserve_summary_gaps(
 
 @pytest.mark.parametrize("field", ["config_hash", "kernel_version"])
 def test_equal_central_runs_preserve_each_identity_boundary(
-    db: Database, only_the_test_database: Path, field: str,
+    db: Database,
+    only_the_test_database: Path,
+    field: str,
 ) -> None:
     scope, seats, parties = setup_scope(db, "westminster")
     for day in range(1, 5):
@@ -669,11 +750,19 @@ def test_equal_central_runs_preserve_each_identity_boundary(
         if day in (2, 3):
             block[field] = "changed-identity"
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, 60, block,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            60,
+            block,
         )
     entries = reconstruct_trends(only_the_test_database, scope)
     assert [e["as_of_date"] for e in entries] == [
-        "2026-06-01", "2026-06-02", "2026-06-04",
+        "2026-06-01",
+        "2026-06-02",
+        "2026-06-04",
     ]
     assert entries[0]["segment_id"] == entries[2]["segment_id"]
     assert entries[0]["segment_id"] != entries[1]["segment_id"]
@@ -683,7 +772,10 @@ def test_equal_central_runs_preserve_each_identity_boundary(
 @pytest.mark.parametrize("field", ["config_hash", "kernel_version"])
 @pytest.mark.parametrize("value", [None, "", " ", 1])
 def test_unknown_identity_runs_are_one_continuous_segment(
-    db: Database, only_the_test_database: Path, field: str, value: object,
+    db: Database,
+    only_the_test_database: Path,
+    field: str,
+    value: object,
 ) -> None:
     """Legacy summaries without an identity continue each other, so equal ones collapse."""
     scope, seats, parties = setup_scope(db, "westminster")
@@ -694,7 +786,13 @@ def test_unknown_identity_runs_are_one_continuous_segment(
         else:
             block[field] = value
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, share, block,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            share,
+            block,
         )
     entries = reconstruct_trends(only_the_test_database, scope)
     assert [e["as_of_date"] for e in entries] == ["2026-06-01", "2026-06-04"]
@@ -735,14 +833,24 @@ def test_mixed_known_and_unknown_identities_keep_each_known_change(
     scope, seats, parties = setup_scope(db, "westminster")
     for day, identity in enumerate(identities, start=1):
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, 60,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            60,
             _identity_block(parties, identity),
         )
     # A changed latest run (always kept), so the runs above collapse as they
     # would mid-history.
     last = len(identities) + 1
     store_with_summary(
-        only_the_test_database, scope, last, seats[0], parties, 65,
+        only_the_test_database,
+        scope,
+        last,
+        seats[0],
+        parties,
+        65,
         _identity_block(parties, identities[-1]),
     )
     entries = reconstruct_trends(only_the_test_database, scope)
@@ -758,12 +866,19 @@ def test_known_change_after_a_kept_unknown_run_is_still_a_boundary(
     scope, seats, parties = setup_scope(db, "westminster")
     for day, share, identity in ((1, 60, "a"), (2, 65, None), (3, 65, "b")):
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, share,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            share,
             _identity_block(parties, identity),
         )
     entries = reconstruct_trends(only_the_test_database, scope)
     assert [e["as_of_date"] for e in entries] == [
-        "2026-06-01", "2026-06-02", "2026-06-03",
+        "2026-06-01",
+        "2026-06-02",
+        "2026-06-03",
     ]
     assert entries[1]["segment_id"] is None
 
@@ -832,7 +947,13 @@ def test_kept_runs_carry_every_tracker_break(
         else:
             block = _identity_block(parties, None if kind == "unknown" else kind)
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, 60, block,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            60,
+            block,
         )
         as_of_date = f"2026-06-0{day}"
         if kind == "unpolled":
@@ -843,9 +964,7 @@ def test_kept_runs_carry_every_tracker_break(
         segment = None if block is None or kind == "unknown" else kind
         stored.append((as_of_date, block is not None, segment))
     entries = reconstruct_trends(only_the_test_database, scope)
-    exported = [
-        (e["as_of_date"], "hung" in e, e.get("segment_id")) for e in entries
-    ]
+    exported = [(e["as_of_date"], "hung" in e, e.get("segment_id")) for e in entries]
     # Exported ids are hashes; map them back to the stored kind for the comparison.
     by_date = {as_of_date: segment for as_of_date, _, segment in stored}
     kept = [
@@ -862,12 +981,19 @@ def test_summary_appearing_or_disappearing_is_a_boundary(
     scope, seats, parties = setup_scope(db, "westminster")
     for day, has_summary in ((1, False), (2, True), (3, True), (4, False)):
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, 60,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            60,
             _identity_block(parties, identity) if has_summary else None,
         )
     entries = reconstruct_trends(only_the_test_database, scope)
     assert [(e["as_of_date"], "hung" in e) for e in entries] == [
-        ("2026-06-01", False), ("2026-06-02", True), ("2026-06-04", False),
+        ("2026-06-01", False),
+        ("2026-06-02", True),
+        ("2026-06-04", False),
     ]
 
 
@@ -890,7 +1016,12 @@ def test_westminster_runs_order_compress_and_share_one_segment(
     # Stored out of date order; days 2 and 4 repeat their predecessor's projection.
     for day, share in [(4, 65), (1, 60), (5, 60), (2, 60), (3, 65)]:
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, share,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            share,
             national_block(parties, hung=round(0.1 * day, 1)),
         )
     entries = reconstruct_trends(only_the_test_database, scope)
@@ -909,7 +1040,9 @@ def polled_block(parties: list[int], counts: tuple[int, ...]) -> dict[str, objec
     """A national block whose Westminster budget records these poll counts."""
     block = national_block(parties)
     block["budget"] = {
-        "parties": {str(party): {"poll_count": count} for party, count in zip(parties, counts)}
+        "parties": {
+            str(party): {"poll_count": count} for party, count in zip(parties, counts)
+        }
     }
     return block
 
@@ -921,7 +1054,12 @@ def test_run_with_no_polls_is_left_out(
     scope, seats, parties = setup_scope(db, "westminster")
     for day, share, counts in ((1, 60, (2, 2)), (2, 75, (0, 0)), (3, 65, (1, 1))):
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, share,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            share,
             polled_block(parties, counts),
         )
     entries = reconstruct_trends(only_the_test_database, scope)
@@ -935,7 +1073,12 @@ def test_leading_unpolled_runs_are_kept_central_only_and_collapse(
     scope, seats, parties = setup_scope(db, "westminster")
     for day, share, counts in ((1, 75, (0, 0)), (2, 75, (0, 0)), (3, 60, (2, 2))):
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, share,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            share,
             polled_block(parties, counts),
         )
     first, polled = reconstruct_trends(only_the_test_database, scope)
@@ -961,7 +1104,12 @@ def test_leading_unpolled_runs_with_different_centrals_are_each_kept(
     scope, seats, parties = setup_scope(db, "westminster")
     for day, share, counts in ((1, 75, (0, 0)), (2, 70, (0, 0)), (3, 60, (2, 2))):
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, share,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            share,
             polled_block(parties, counts),
         )
     entries = reconstruct_trends(only_the_test_database, scope)
@@ -986,7 +1134,12 @@ def test_history_of_only_unpolled_runs_is_central_only(
     scope, seats, parties = setup_scope(db, "westminster")
     for day in (1, 2, 3):
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, 75,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            75,
             polled_block(parties, (0, 0)),
         )
     # Equal runs collapse to the first, and the latest is kept.
@@ -1008,13 +1161,20 @@ def test_first_polled_run_keeps_its_uncertainty_after_equal_unpolled_runs(
     scope, seats, parties = setup_scope(db, "westminster")
     for day, counts in ((1, (0, 0)), (2, (0, 0)), (3, (1, 1)), (4, (1, 1))):
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, 60,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            60,
             polled_block(parties, counts),
         )
     entries = reconstruct_trends(only_the_test_database, scope)
     # Day 2 collapses onto day 1; day 4, equal to day 3, is the latest run.
     assert [(e["as_of_date"], "hung" in e) for e in entries] == [
-        ("2026-06-01", False), ("2026-06-03", True), ("2026-06-04", True),
+        ("2026-06-01", False),
+        ("2026-06-03", True),
+        ("2026-06-04", True),
     ]
     assert "segment_id" not in entries[0]
     assert entries[1]["segment_id"] == DEFAULT_SEGMENT_ID
@@ -1025,15 +1185,25 @@ def test_unpolled_run_after_the_first_polled_one_is_still_left_out(
 ) -> None:
     scope, seats, parties = setup_scope(db, "westminster")
     for day, share, counts in (
-        (1, 75, (0, 0)), (2, 60, (2, 2)), (3, 75, (0, 0)), (4, 65, (1, 1)),
+        (1, 75, (0, 0)),
+        (2, 60, (2, 2)),
+        (3, 75, (0, 0)),
+        (4, 65, (1, 1)),
     ):
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, share,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            share,
             polled_block(parties, counts),
         )
     entries = reconstruct_trends(only_the_test_database, scope)
     assert [(e["as_of_date"], "hung" in e) for e in entries] == [
-        ("2026-06-01", False), ("2026-06-02", True), ("2026-06-04", True),
+        ("2026-06-01", False),
+        ("2026-06-02", True),
+        ("2026-06-04", True),
     ]
 
 
@@ -1042,10 +1212,18 @@ def test_run_after_a_skipped_one_still_collapses_onto_the_last_entry(
 ) -> None:
     scope, seats, parties = setup_scope(db, "westminster")
     for day, share, counts in (
-        (1, 60, (2, 2)), (2, 75, (0, 0)), (3, 60, (1, 1)), (4, 65, (1, 1)),
+        (1, 60, (2, 2)),
+        (2, 75, (0, 0)),
+        (3, 60, (1, 1)),
+        (4, 65, (1, 1)),
     ):
         store_with_summary(
-            only_the_test_database, scope, day, seats[0], parties, share,
+            only_the_test_database,
+            scope,
+            day,
+            seats[0],
+            parties,
+            share,
             polled_block(parties, counts),
         )
     entries = reconstruct_trends(only_the_test_database, scope)
@@ -1057,7 +1235,12 @@ def test_run_with_any_polled_party_is_kept(
 ) -> None:
     scope, seats, parties = setup_scope(db, "westminster")
     store_with_summary(
-        only_the_test_database, scope, 1, seats[0], parties, 60,
+        only_the_test_database,
+        scope,
+        1,
+        seats[0],
+        parties,
+        60,
         polled_block(parties, (1, 0)),
     )
     (entry,) = reconstruct_trends(only_the_test_database, scope)
@@ -1071,7 +1254,12 @@ def test_parties_missing_from_either_side(
     stray = db.add_party("C").id
     # The block lists only the first trend party, plus one with no votes.
     store_with_summary(
-        only_the_test_database, scope, 1, seats[0], parties, 60,
+        only_the_test_database,
+        scope,
+        1,
+        seats[0],
+        parties,
+        60,
         national_block([parties[0], stray]),
     )
     (entry,) = reconstruct_trends(only_the_test_database, scope)
@@ -1105,10 +1293,21 @@ def test_malformed_summary_fails_reconstruction(
         reconstruct_trends(only_the_test_database, scope)
     # The CLI reports it as a failure rather than publishing a partial file.
     output = tmp_path / "cache.json"
-    assert main([
-        "--model", "westminster", "--map-id", str(scope.map_id),
-        "--database", str(only_the_test_database), "--output", str(output),
-    ]) == 1
+    assert (
+        main(
+            [
+                "--model",
+                "westminster",
+                "--map-id",
+                str(scope.map_id),
+                "--database",
+                str(only_the_test_database),
+                "--output",
+                str(output),
+            ]
+        )
+        == 1
+    )
     assert not output.exists()
 
 
@@ -1117,7 +1316,12 @@ def test_unreadable_stored_format_fails_reconstruction(
 ) -> None:
     scope, seats, parties = setup_scope(db, "westminster")
     store_with_summary(
-        only_the_test_database, scope, 1, seats[0], parties, 60,
+        only_the_test_database,
+        scope,
+        1,
+        seats[0],
+        parties,
+        60,
         national_block(parties),
     )
     with closing(sqlite3.connect(only_the_test_database)) as conn:

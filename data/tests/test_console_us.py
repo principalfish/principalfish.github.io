@@ -62,19 +62,29 @@ def _seed_us_house(db: Database) -> dict[str, int]:
     first = db.add_seat(m.id, "ME-01", region_id=region.id, electorate=1000)
     second = db.add_seat(m.id, "ME-02", region_id=region.id, electorate=1000)
 
-    baseline = db.add_election(m.id, 2024, "2024 US House Election", ElectionType.us_house)
+    baseline = db.add_election(
+        m.id, 2024, "2024 US House Election", ElectionType.us_house
+    )
     db.add_vote(baseline.id, first.id, party_id=dem.id, vote_total=500.0, elected=True)
     db.add_vote(baseline.id, first.id, party_id=rep.id, vote_total=300.0)
     db.add_vote(baseline.id, second.id, party_id=rep.id, vote_total=450.0, elected=True)
     db.add_vote(baseline.id, second.id, party_id=dem.id, vote_total=400.0)
 
-    model = db.add_election(m.id, 2026, "US House UNS 2026-06-01", ElectionType.us_house_model)
+    model = db.add_election(
+        m.id, 2026, "US House UNS 2026-06-01", ElectionType.us_house_model
+    )
     db.add_vote(model.id, first.id, party_id=dem.id, vote_total=55.0, elected=True)
     db.add_vote(model.id, first.id, party_id=rep.id, vote_total=45.0)
     db.add_vote(model.id, second.id, party_id=dem.id, vote_total=51.0, elected=True)
     db.add_vote(model.id, second.id, party_id=rep.id, vote_total=49.0)
 
-    return {"map_id": m.id, "baseline_id": baseline.id, "model_id": model.id, "dem_id": dem.id, "rep_id": rep.id}
+    return {
+        "map_id": m.id,
+        "baseline_id": baseline.id,
+        "model_id": model.id,
+        "dem_id": dem.id,
+        "rep_id": rep.id,
+    }
 
 
 def _seed_us_president(db: Database) -> dict[str, int]:
@@ -90,20 +100,30 @@ def _seed_us_president(db: Database) -> dict[str, int]:
     big = db.add_seat(m.id, "Big State", region_id=region.id, electoral_votes=20)
     small = db.add_seat(m.id, "Small State", region_id=region.id, electoral_votes=3)
 
-    baseline = db.add_election(m.id, 2024, "2024 US Presidential Election", ElectionType.us_presidential)
+    baseline = db.add_election(
+        m.id, 2024, "2024 US Presidential Election", ElectionType.us_presidential
+    )
     db.add_vote(baseline.id, big.id, party_id=rep.id, vote_total=51.0, elected=True)
     db.add_vote(baseline.id, big.id, party_id=dem.id, vote_total=49.0)
     db.add_vote(baseline.id, small.id, party_id=rep.id, vote_total=60.0, elected=True)
     db.add_vote(baseline.id, small.id, party_id=dem.id, vote_total=40.0)
 
-    model = db.add_election(m.id, 2028, "US President UNS 2028-06-01", ElectionType.us_presidential_model)
+    model = db.add_election(
+        m.id, 2028, "US President UNS 2028-06-01", ElectionType.us_presidential_model
+    )
     set_model_target(db, model.id)
     db.add_vote(model.id, big.id, party_id=dem.id, vote_total=52.0, elected=True)
     db.add_vote(model.id, big.id, party_id=rep.id, vote_total=48.0)
     db.add_vote(model.id, small.id, party_id=rep.id, vote_total=58.0, elected=True)
     db.add_vote(model.id, small.id, party_id=dem.id, vote_total=42.0)
 
-    return {"map_id": m.id, "baseline_id": baseline.id, "model_id": model.id, "dem_id": dem.id, "rep_id": rep.id}
+    return {
+        "map_id": m.id,
+        "baseline_id": baseline.id,
+        "model_id": model.id,
+        "dem_id": dem.id,
+        "rep_id": rep.id,
+    }
 
 
 class TestUsRoutesRegistered:
@@ -312,11 +332,17 @@ class TestPresidentElectoralVotes:
         seeded = _seed_us_president(db)
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
         monkeypatch.setattr("console.us.outputs.get_db", lambda: db)
-        body = app.test_client().get(f"/president/outputs/{seeded['model_id']}").get_data(as_text=True)
+        body = (
+            app.test_client()
+            .get(f"/president/outputs/{seeded['model_id']}")
+            .get_data(as_text=True)
+        )
         assert "Electoral Votes" in body
         assert "Electoral Votes by Party" in body
 
-    def test_president_list_trend_plots_electoral_votes(self, db: Database, tmp_path: Path) -> None:
+    def test_president_list_trend_plots_electoral_votes(
+        self, db: Database, tmp_path: Path
+    ) -> None:
         # A president trend cache with an "e" value drives the list chart onto EV.
         import json
 
@@ -326,14 +352,19 @@ class TestPresidentElectoralVotes:
         dem, rep = str(seeded["dem_id"]), str(seeded["rep_id"])
         trend = tmp_path / "us-president-trends.json"
         trend.write_text(
-            json.dumps([
-                {
-                    "election_id": 1,
-                    "election_name": "US President UNS 2028-06-01",
-                    "as_of_date": "2028-06-01",
-                    "parties": {dem: {"s": 1, "v": 49.0, "e": 20}, rep: {"s": 1, "v": 48.0, "e": 3}},
-                }
-            ]),
+            json.dumps(
+                [
+                    {
+                        "election_id": 1,
+                        "election_name": "US President UNS 2028-06-01",
+                        "as_of_date": "2028-06-01",
+                        "parties": {
+                            dem: {"s": 1, "v": 49.0, "e": 20},
+                            rep: {"s": 1, "v": 48.0, "e": 3},
+                        },
+                    }
+                ]
+            ),
             encoding="utf-8",
         )
         context = build_outputs_context(
@@ -343,7 +374,11 @@ class TestPresidentElectoralVotes:
             show_all=True,
         )
         assert context["shows_electoral_votes"] is True
-        dem_dataset = next(d for d in context["trend_data"]["seats_datasets"] if d["label"] == "Democratic")
+        dem_dataset = next(
+            d
+            for d in context["trend_data"]["seats_datasets"]
+            if d["label"] == "Democratic"
+        )
         assert dem_dataset["data"] == [20]  # electoral votes, not the state count (1)
 
     def test_house_list_trend_plots_seats(self, db: Database, tmp_path: Path) -> None:
@@ -355,14 +390,19 @@ class TestPresidentElectoralVotes:
         dem, rep = str(seeded["dem_id"]), str(seeded["rep_id"])
         trend = tmp_path / "us-house-trends.json"
         trend.write_text(
-            json.dumps([
-                {
-                    "election_id": 1,
-                    "election_name": "US House UNS 2026-06-29",
-                    "as_of_date": "2026-06-29",
-                    "parties": {dem: {"s": 234, "v": 52.0}, rep: {"s": 199, "v": 45.0}},
-                }
-            ]),
+            json.dumps(
+                [
+                    {
+                        "election_id": 1,
+                        "election_name": "US House UNS 2026-06-29",
+                        "as_of_date": "2026-06-29",
+                        "parties": {
+                            dem: {"s": 234, "v": 52.0},
+                            rep: {"s": 199, "v": 45.0},
+                        },
+                    }
+                ]
+            ),
             encoding="utf-8",
         )
         context = build_outputs_context(
@@ -372,7 +412,11 @@ class TestPresidentElectoralVotes:
             show_all=True,
         )
         assert context["shows_electoral_votes"] is False
-        dem_dataset = next(d for d in context["trend_data"]["seats_datasets"] if d["label"] == "Democratic")
+        dem_dataset = next(
+            d
+            for d in context["trend_data"]["seats_datasets"]
+            if d["label"] == "Democratic"
+        )
         assert dem_dataset["data"] == [234]
 
 
@@ -494,7 +538,9 @@ class TestRunUsChamberServiceGating:
         from importers.polls.us.us_wikipedia_polls import US_CONTESTS
 
         offered = [
-            slug for chamber in US_CHAMBERS_BY_SLUG.values() for slug in chamber.contest_slugs
+            slug
+            for chamber in US_CHAMBERS_BY_SLUG.values()
+            for slug in chamber.contest_slugs
         ]
         assert sorted(offered) == sorted(contest.slug for contest in US_CONTESTS)
 
@@ -1148,8 +1194,12 @@ def _add_matchup_polls(
             matchup=matchup,
             seat_id=seat_id,
         )
-        db.add_poll_row(poll.id, parties["Republican"], 48.0, candidate_name="Rep Candidate")
-        db.add_poll_row(poll.id, parties["Democratic"], 46.0, candidate_name="Dem Candidate")
+        db.add_poll_row(
+            poll.id, parties["Republican"], 48.0, candidate_name="Rep Candidate"
+        )
+        db.add_poll_row(
+            poll.id, parties["Democratic"], 46.0, candidate_name="Dem Candidate"
+        )
         poll_ids.append(poll.id)
     return poll_ids
 
@@ -1162,7 +1212,9 @@ def _seed_president_matchups(db: Database) -> int:
     _add_matchup_polls(db, map_id, VANCE_NEWSOM, [date(2026, 8, 1), date(2026, 9, 10)])
     _add_matchup_polls(db, map_id, VANCE_SHAPIRO, [date(2026, 7, 4)])
     # A statewide poll's label must never be offered as a national matchup.
-    _add_matchup_polls(db, map_id, "Vance (R) vs Buttigieg (D)", [date(2026, 9, 1)], seat_id=nevada.id)
+    _add_matchup_polls(
+        db, map_id, "Vance (R) vs Buttigieg (D)", [date(2026, 9, 1)], seat_id=nevada.id
+    )
     return map_id
 
 
@@ -1173,10 +1225,18 @@ def _seed_senate_races(db: Database) -> dict[str, int]:
     texas = db.add_seat(map_id, "Texas", region_id=region.id)
     georgia = db.add_seat(map_id, "Georgia", region_id=region.id)
     _add_matchup_polls(
-        db, map_id, PAXTON_TALARICO, [date(2026, 8, 20), date(2026, 9, 5)], seat_id=texas.id
+        db,
+        map_id,
+        PAXTON_TALARICO,
+        [date(2026, 8, 20), date(2026, 9, 5)],
+        seat_id=texas.id,
     )
-    _add_matchup_polls(db, map_id, CORNYN_TALARICO, [date(2026, 6, 1)], seat_id=texas.id)
-    _add_matchup_polls(db, map_id, OSSOFF_COLLINS, [date(2026, 9, 2)], seat_id=georgia.id)
+    _add_matchup_polls(
+        db, map_id, CORNYN_TALARICO, [date(2026, 6, 1)], seat_id=texas.id
+    )
+    _add_matchup_polls(
+        db, map_id, OSSOFF_COLLINS, [date(2026, 9, 2)], seat_id=georgia.id
+    )
     return {"map_id": map_id, "texas": texas.id, "georgia": georgia.id}
 
 
@@ -1215,9 +1275,12 @@ class TestMatchupRoutesRegistered:
         }
         assert {"GET", "POST"} <= methods["/president/matchup"]
         assert "GET" in methods["/<any(house,senate):chamber>/matchups"]
-        assert "POST" in methods[
-            "/<any(house,senate):chamber>/matchups/<int:map_id>/<int:seat_id>"
-        ]
+        assert (
+            "POST"
+            in methods[
+                "/<any(house,senate):chamber>/matchups/<int:map_id>/<int:seat_id>"
+            ]
+        )
 
     def test_landing_pages_link_to_their_matchup_pages(self, app: Flask) -> None:
         client = app.test_client()
@@ -1275,13 +1338,17 @@ class TestPresidentMatchupPage:
         tracked = db.get_tracked_matchup(map_id, None)
         assert tracked is not None
         assert (tracked.matchup, tracked.source) == (VANCE_SHAPIRO, "manual")
-        assert _flashes(client, response) == [f"Now tracking {VANCE_SHAPIRO} nationally."]
+        assert _flashes(client, response) == [
+            f"Now tracking {VANCE_SHAPIRO} nationally."
+        ]
         assert recording_runner.calls == []
 
         body = client.get("/president/matchup").get_data(as_text=True)
         assert f"{VANCE_SHAPIRO} (manual)" in body
 
-    def test_unknown_label_is_rejected_with_a_flash(self, app: Flask, db: Database) -> None:
+    def test_unknown_label_is_rejected_with_a_flash(
+        self, app: Flask, db: Database
+    ) -> None:
         map_id = _seed_president_matchups(db)
         db.set_tracked_matchup(map_id, None, VANCE_NEWSOM, source="manual")
         client = app.test_client()
@@ -1290,7 +1357,9 @@ class TestPresidentMatchupPage:
         for label in ("Vance (R) vs Harris (D)", "Vance (R) vs Buttigieg (D)"):
             response = client.post("/president/matchup", data={"matchup": label})
             assert response.status_code == 302
-            assert _flashes(client, response) == [f"Not saved: {label!r} is not a stored national matchup."]
+            assert _flashes(client, response) == [
+                f"Not saved: {label!r} is not a stored national matchup."
+            ]
 
         tracked = db.get_tracked_matchup(map_id, None)
         assert tracked is not None and tracked.matchup == VANCE_NEWSOM
@@ -1419,7 +1488,10 @@ class TestPollDetailShowsUsScope:
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         assert "<strong>Seat:</strong> Alaska" in body
-        assert "<strong>Matchup:</strong> Sullivan (R) vs Peltola (D) vs Sullivan (R)" in body
+        assert (
+            "<strong>Matchup:</strong> Sullivan (R) vs Peltola (D) vs Sullivan (R)"
+            in body
+        )
         assert "<th>Candidate</th>" in body
         for name, value in (
             ("Dan S. Sullivan", "40.0"),
@@ -1454,12 +1526,16 @@ class TestRaceMatchupsPage:
     def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("console.us.views.get_db", lambda: db)
 
-    def test_lists_auto_manual_and_effective_values(self, app: Flask, db: Database) -> None:
+    def test_lists_auto_manual_and_effective_values(
+        self, app: Flask, db: Database
+    ) -> None:
         seeded = _seed_senate_races(db)
         map_id = seeded["map_id"]
         # Texas: the importer chose Paxton, the user overrode to Cornyn.
         db.set_tracked_matchup(map_id, seeded["texas"], PAXTON_TALARICO, source="auto")
-        db.set_tracked_matchup(map_id, seeded["texas"], CORNYN_TALARICO, source="manual")
+        db.set_tracked_matchup(
+            map_id, seeded["texas"], CORNYN_TALARICO, source="manual"
+        )
         # Georgia: automatic only.
         db.set_tracked_matchup(map_id, seeded["georgia"], OSSOFF_COLLINS, source="auto")
 
@@ -1469,7 +1545,7 @@ class TestRaceMatchupsPage:
         body = response.get_data(as_text=True)
         assert "US Senate Race Matchups" in body
         assert "2 race(s) on US Senate 2024" in body
-        texas_row = body[body.index('<th scope="row">Texas</th>'):]
+        texas_row = body[body.index('<th scope="row">Texas</th>') :]
         texas_row = texas_row[: texas_row.index("</tr>")]
         assert f"<td> {CORNYN_TALARICO} (manual) </td>" in _squash(texas_row)
         assert f"<td>{PAXTON_TALARICO}</td>" in texas_row
@@ -1477,7 +1553,7 @@ class TestRaceMatchupsPage:
         assert "2026-09-05" in texas_row
         assert f"{CORNYN_TALARICO} — 1 poll(s), latest" in texas_row
         assert f"/senate/matchups/{map_id}/{seeded['texas']}" in texas_row
-        georgia_row = body[body.index('<th scope="row">Georgia</th>'):]
+        georgia_row = body[body.index('<th scope="row">Georgia</th>') :]
         georgia_row = georgia_row[: georgia_row.index("</tr>")]
         assert f"{OSSOFF_COLLINS} (auto)" in georgia_row
         # Georgia sorts before Texas.
@@ -1500,14 +1576,18 @@ class TestRaceMatchupsPage:
             f"No map named '{map_name}'; import the US maps first."
         ]
 
-    def test_untracked_race_with_polls_is_listed(self, app: Flask, db: Database) -> None:
+    def test_untracked_race_with_polls_is_listed(
+        self, app: Flask, db: Database
+    ) -> None:
         _seed_senate_races(db)
 
         body = app.test_client().get("/senate/matchups").get_data(as_text=True)
 
         assert body.count("Not tracked (polls ignored)") == 2
 
-    def test_tracked_race_without_polls_is_listed(self, app: Flask, db: Database) -> None:
+    def test_tracked_race_without_polls_is_listed(
+        self, app: Flask, db: Database
+    ) -> None:
         map_id = db.add_map("US House Districts 2024").id
         seat = db.add_seat(map_id, "TX-07")
         db.set_tracked_matchup(map_id, seat.id, None, source="manual")
@@ -1541,11 +1621,15 @@ class TestRaceMatchupsPage:
 
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/senate/matchups")
-        assert _flashes(client, response) == [f"Texas: The race now tracks {CORNYN_TALARICO}."]
+        assert _flashes(client, response) == [
+            f"Texas: The race now tracks {CORNYN_TALARICO}."
+        ]
         assert recording_runner.calls == []
 
         # A later import picks a new lead table.
-        outcome = db.set_tracked_matchup(map_id, texas, "Paxton (R) vs Allred (D)", source="auto")
+        outcome = db.set_tracked_matchup(
+            map_id, texas, "Paxton (R) vs Allred (D)", source="auto"
+        )
 
         assert outcome == "kept_manual"
         tracked = db.get_tracked_matchup(map_id, texas)
@@ -1556,19 +1640,25 @@ class TestRaceMatchupsPage:
             "Paxton (R) vs Allred (D)",
         )
 
-    def test_auto_restores_the_automatic_matchup(self, app: Flask, db: Database) -> None:
+    def test_auto_restores_the_automatic_matchup(
+        self, app: Flask, db: Database
+    ) -> None:
         seeded = _seed_senate_races(db)
         map_id, texas = seeded["map_id"], seeded["texas"]
         db.set_tracked_matchup(map_id, texas, PAXTON_TALARICO, source="auto")
         db.set_tracked_matchup(map_id, texas, CORNYN_TALARICO, source="manual")
         client = app.test_client()
 
-        response = client.post(f"/senate/matchups/{map_id}/{texas}", data={"action": "auto"})
+        response = client.post(
+            f"/senate/matchups/{map_id}/{texas}", data={"action": "auto"}
+        )
 
         tracked = db.get_tracked_matchup(map_id, texas)
         assert tracked is not None
         assert (tracked.matchup, tracked.source) == (PAXTON_TALARICO, "auto")
-        assert _flashes(client, response) == ["Texas: The race now follows its automatic matchup."]
+        assert _flashes(client, response) == [
+            "Texas: The race now follows its automatic matchup."
+        ]
 
     def test_auto_without_a_tracked_row_says_there_was_nothing_to_reset(
         self, app: Flask, db: Database
@@ -1578,7 +1668,8 @@ class TestRaceMatchupsPage:
         client = app.test_client()
 
         response = client.post(
-            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}", data={"action": "auto"}
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
+            data={"action": "auto"},
         )
 
         assert response.status_code == 302
@@ -1600,14 +1691,16 @@ class TestRaceMatchupsPage:
             db.clear_tracked_matchup_override(map_id, texas)
         client = app.test_client()
 
-        response = client.post(f"/senate/matchups/{map_id}/{texas}", data={"action": "auto"})
+        response = client.post(
+            f"/senate/matchups/{map_id}/{texas}", data={"action": "auto"}
+        )
 
         assert db.get_tracked_matchup(map_id, texas) is None
         (message,) = _flashes(client, response)
         assert message.startswith("Texas: The importer has not chosen a matchup")
         assert "now not tracked" in message
         page = client.get("/senate/matchups").get_data(as_text=True)
-        texas_row = page[page.index('<th scope="row">Texas</th>'):]
+        texas_row = page[page.index('<th scope="row">Texas</th>') :]
         assert "Not tracked (polls ignored)" in texas_row[: texas_row.index("</tr>")]
 
     def test_ignore_stores_null_as_manual(self, app: Flask, db: Database) -> None:
@@ -1616,7 +1709,9 @@ class TestRaceMatchupsPage:
         db.set_tracked_matchup(map_id, texas, PAXTON_TALARICO, source="auto")
         client = app.test_client()
 
-        response = client.post(f"/senate/matchups/{map_id}/{texas}", data={"action": "ignore"})
+        response = client.post(
+            f"/senate/matchups/{map_id}/{texas}", data={"action": "ignore"}
+        )
 
         tracked = db.get_tracked_matchup(map_id, texas)
         assert tracked is not None
@@ -1625,7 +1720,9 @@ class TestRaceMatchupsPage:
             "manual",
             PAXTON_TALARICO,
         )
-        assert _flashes(client, response) == ["Texas: The race's polls are now ignored."]
+        assert _flashes(client, response) == [
+            "Texas: The race's polls are now ignored."
+        ]
 
     def test_label_stored_for_a_different_seat_is_rejected(
         self, app: Flask, db: Database
@@ -1652,7 +1749,10 @@ class TestRaceMatchupsPage:
         seeded = _seed_senate_races(db)
         client = app.test_client()
 
-        response = client.post(f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}", data={"action": "set"})
+        response = client.post(
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
+            data={"action": "set"},
+        )
 
         assert "not a matchup stored for this race" in _flashes(client, response)[0]
         assert db.get_tracked_matchup(seeded["map_id"], seeded["texas"]) is None
@@ -1662,10 +1762,13 @@ class TestRaceMatchupsPage:
         client = app.test_client()
 
         response = client.post(
-            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}", data={"action": "delete"}
+            f"/senate/matchups/{seeded['map_id']}/{seeded['texas']}",
+            data={"action": "delete"},
         )
 
-        assert _flashes(client, response) == ["Texas: not saved — Unknown matchup action 'delete'."]
+        assert _flashes(client, response) == [
+            "Texas: not saved — Unknown matchup action 'delete'."
+        ]
 
     @pytest.mark.parametrize("action", ["ignore", "set", "auto"])
     def test_seat_on_another_map_is_flashed_not_500(
@@ -1687,31 +1790,41 @@ class TestRaceMatchupsPage:
         assert db.get_tracked_matchups_for_map(seeded["map_id"]) == []
         assert db.get_tracked_matchups_for_map(house_map_id) == []
 
-    def test_seat_on_another_map_names_the_owning_map(self, app: Flask, db: Database) -> None:
+    def test_seat_on_another_map_names_the_owning_map(
+        self, app: Flask, db: Database
+    ) -> None:
         seeded = _seed_senate_races(db)
         house_map_id = db.add_map("US House Districts 2024").id
         house_seat = db.add_seat(house_map_id, "TX-07")
         client = app.test_client()
 
-        response = client.post(f"/senate/matchups/{seeded['map_id']}/{house_seat.id}", data={"action": "ignore"})
+        response = client.post(
+            f"/senate/matchups/{seeded['map_id']}/{house_seat.id}",
+            data={"action": "ignore"},
+        )
 
         assert _flashes(client, response) == [
             f"TX-07: not saved — seat {house_seat.id} belongs to map {house_map_id},"
             f" not map {seeded['map_id']}"
         ]
 
-    def test_map_without_race_matchups_is_flashed(self, app: Flask, db: Database) -> None:
+    def test_map_without_race_matchups_is_flashed(
+        self, app: Flask, db: Database
+    ) -> None:
         president_map_id = _seed_president_matchups(db)
         nevada = db.get_seats_for_map(president_map_id)[0]
         db.add_map("US Senate 2024")  # so the page the refusal returns to renders
         client = app.test_client()
 
         response = client.post(
-            f"/senate/matchups/{president_map_id}/{nevada.id}", data={"action": "ignore"}
+            f"/senate/matchups/{president_map_id}/{nevada.id}",
+            data={"action": "ignore"},
         )
 
         assert response.status_code == 302
-        assert _flashes(client, response) == [f"Map #{president_map_id} has no per-race matchups."]
+        assert _flashes(client, response) == [
+            f"Map #{president_map_id} has no per-race matchups."
+        ]
         assert db.get_tracked_matchup(president_map_id, nevada.id) is None
 
     def test_a_chamber_that_does_not_own_the_map_is_refused(
@@ -1760,7 +1873,10 @@ class TestRaceMatchupsPage:
 
         assert response.status_code == 200
         assert recording_runner.calls == [
-            ("run_us_senate_model.py", ("--since-days-back", "60", "--rebuild-history")),
+            (
+                "run_us_senate_model.py",
+                ("--since-days-back", "60", "--rebuild-history"),
+            ),
             ("export_elections.py", ()),
         ]
         body = response.get_data(as_text=True)
@@ -1779,8 +1895,14 @@ class TestRaceMatchupsPage:
             follow_redirects=True,
         )
 
-        assert recording_runner.scripts == ["run_us_house_model.py", "export_elections.py"]
-        assert recording_runner.args_for("run_us_house_model.py")[-1] == "--rebuild-history"
+        assert recording_runner.scripts == [
+            "run_us_house_model.py",
+            "export_elections.py",
+        ]
+        assert (
+            recording_runner.args_for("run_us_house_model.py")[-1]
+            == "--rebuild-history"
+        )
 
     def test_refused_change_never_rebuilds(
         self, app: Flask, db: Database, recording_runner: _RecordingRunner
@@ -1826,7 +1948,9 @@ class TestRunUsChamberAndExport:
 class _TimeoutRecorder:
     """Runner that records each step's timeout and can fail one script."""
 
-    def __init__(self, *, fail: str | None = None, error: Exception | None = None) -> None:
+    def __init__(
+        self, *, fail: str | None = None, error: Exception | None = None
+    ) -> None:
         self.timeouts: list[tuple[str, int]] = []
         self._fail = fail
         self._error = error
@@ -1941,7 +2065,11 @@ class TestRebuildRouteFailure:
                 "TimeoutExpired",
                 "REBUILD-HISTORY from=2026-08-01 to=2026-09-10",
             ),
-            (FileNotFoundError(2, "No such file or directory"), "FileNotFoundError", None),
+            (
+                FileNotFoundError(2, "No such file or directory"),
+                "FileNotFoundError",
+                None,
+            ),
         ],
     )
     def test_the_page_says_history_may_be_partial(
@@ -1972,7 +2100,9 @@ class TestRebuildRouteFailure:
         if partial is not None:
             assert partial in body
         # The export never runs over a half-rebuilt history.
-        assert [name for name, _timeout in runner.timeouts] == ["run_us_presidential_model.py"]
+        assert [name for name, _timeout in runner.timeouts] == [
+            "run_us_presidential_model.py"
+        ]
         assert 'href="/president/matchup"' in body
 
     def test_a_race_rebuild_timeout_is_caught_too(
@@ -2366,7 +2496,7 @@ class TestUsModelJobs:
             "=== Export elections to static data files ===\nran export_elections.py"
         ) in body
         assert "=== Export elections to static data files ===\nboom" in body
-        assert "Status:</strong> <span class=\"text-error\">failed</span>" in body
+        assert 'Status:</strong> <span class="text-error">failed</span>' in body
         assert f'href="/{slug}/model"' in body
 
     def test_a_successful_job_page_has_the_summary_and_empty_stderr(
@@ -2381,9 +2511,7 @@ class TestUsModelJobs:
             "<strong>The run finished and the export was requested; its output is "
             "below.</strong>"
         ) in body
-        assert (
-            '<h4>Stderr</h4>\n<pre class="terminal-output">(no stderr)</pre>' in body
-        )
+        assert '<h4>Stderr</h4>\n<pre class="terminal-output">(no stderr)</pre>' in body
         assert "<strong>Exit code:</strong> 0</p>" in body
 
     def test_a_skipped_president_job_page_says_so(

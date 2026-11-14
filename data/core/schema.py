@@ -86,7 +86,9 @@ class Party(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     short_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    colour: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # hex e.g. "#E4003B"
+    colour: Mapped[Optional[str]] = mapped_column(
+        String, nullable=True
+    )  # hex e.g. "#E4003B"
 
     votes: Mapped[list["Vote"]] = relationship("Vote", back_populates="party")
 
@@ -117,10 +119,16 @@ class Map(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
-    parliament: Mapped[str] = mapped_column(String, nullable=False, server_default="westminster")
+    parliament: Mapped[str] = mapped_column(
+        String, nullable=False, server_default="westminster"
+    )
 
-    regions: Mapped[list["Region"]] = relationship("Region", back_populates="map", cascade="all, delete-orphan")
-    seats: Mapped[list["Seat"]] = relationship("Seat", back_populates="map", cascade="all, delete-orphan")
+    regions: Mapped[list["Region"]] = relationship(
+        "Region", back_populates="map", cascade="all, delete-orphan"
+    )
+    seats: Mapped[list["Seat"]] = relationship(
+        "Seat", back_populates="map", cascade="all, delete-orphan"
+    )
     elections: Mapped[list["Election"]] = relationship(
         "Election", back_populates="map", cascade="all, delete-orphan"
     )
@@ -154,11 +162,15 @@ class Region(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     map_id: Mapped[int] = mapped_column(Integer, ForeignKey("maps.id"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    parent_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("regions.id"), nullable=True)
+    parent_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("regions.id"), nullable=True
+    )
     population: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     map: Mapped["Map"] = relationship("Map", back_populates="regions")
-    parent: Mapped[Optional["Region"]] = relationship("Region", remote_side="Region.id", backref="children")
+    parent: Mapped[Optional["Region"]] = relationship(
+        "Region", remote_side="Region.id", backref="children"
+    )
     seats: Mapped[list["Seat"]] = relationship("Seat", back_populates="region")
 
     def __repr__(self) -> str:
@@ -192,13 +204,17 @@ class Seat(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     map_id: Mapped[int] = mapped_column(Integer, ForeignKey("maps.id"), nullable=False)
     seat_name: Mapped[str] = mapped_column(String, nullable=False)
-    region_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("regions.id"), nullable=True)
+    region_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("regions.id"), nullable=True
+    )
     electorate: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     electoral_votes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     map: Mapped["Map"] = relationship("Map", back_populates="seats")
     region: Mapped[Optional["Region"]] = relationship("Region", back_populates="seats")
-    votes: Mapped[list["Vote"]] = relationship("Vote", back_populates="seat", cascade="all, delete-orphan")
+    votes: Mapped[list["Vote"]] = relationship(
+        "Vote", back_populates="seat", cascade="all, delete-orphan"
+    )
     seat_statuses: Mapped[list["ElectionSeatStatus"]] = relationship(
         "ElectionSeatStatus", back_populates="seat", cascade="all, delete-orphan"
     )
@@ -236,7 +252,9 @@ class USElectoralVoteAllocation(Base):
     )
 
     era_year: Mapped[int] = mapped_column(
-        Integer, ForeignKey("us_electoral_vote_eras.census_year"), primary_key=True,
+        Integer,
+        ForeignKey("us_electoral_vote_eras.census_year"),
+        primary_key=True,
     )
     unit_name: Mapped[str] = mapped_column(String, primary_key=True)
     electoral_votes: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -277,14 +295,20 @@ class Election(Base):
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     type: Mapped[ElectionType] = mapped_column(Enum(ElectionType), nullable=False)
-    parent_election_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("elections.id"), nullable=True)
+    parent_election_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("elections.id"), nullable=True
+    )
     election_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     target_election_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     source_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     map: Mapped["Map"] = relationship("Map", back_populates="elections")
-    parent_election: Mapped[Optional["Election"]] = relationship("Election", remote_side="Election.id")
-    votes: Mapped[list["Vote"]] = relationship("Vote", back_populates="election", cascade="all, delete-orphan")
+    parent_election: Mapped[Optional["Election"]] = relationship(
+        "Election", remote_side="Election.id"
+    )
+    votes: Mapped[list["Vote"]] = relationship(
+        "Vote", back_populates="election", cascade="all, delete-orphan"
+    )
     # passive_deletes: deleting an election must not SELECT this table, which
     # a database migrated before archive/migrate_add_model_uncertainty.py lacks; the
     # foreign key's ON DELETE CASCADE removes the row where it exists.
@@ -330,10 +354,18 @@ class Vote(Base):
     __tablename__ = "votes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    election_id: Mapped[int] = mapped_column(Integer, ForeignKey("elections.id"), nullable=False)
-    seat_id: Mapped[int] = mapped_column(Integer, ForeignKey("seats.id"), nullable=False)
-    party_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("parties.id"), nullable=True)  # nullable for independents
-    candidate_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # empty for model_run/model_uns/holyrood_uns elections
+    election_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("elections.id"), nullable=False
+    )
+    seat_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("seats.id"), nullable=False
+    )
+    party_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("parties.id"), nullable=True
+    )  # nullable for independents
+    candidate_name: Mapped[Optional[str]] = mapped_column(
+        String, nullable=True
+    )  # empty for model_run/model_uns/holyrood_uns elections
     vote_total: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     elected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
@@ -439,15 +471,25 @@ class ElectionSeatStatus(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    election_id: Mapped[int] = mapped_column(Integer, ForeignKey("elections.id"), nullable=False)
-    seat_id: Mapped[int] = mapped_column(Integer, ForeignKey("seats.id"), nullable=False)
-    called: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))
+    election_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("elections.id"), nullable=False
+    )
+    seat_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("seats.id"), nullable=False
+    )
+    called: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("1")
+    )
     pct_counted: Mapped[float | None] = mapped_column(Float, nullable=True)
-    same_party: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
+    same_party: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0")
+    )
     decisive_round: Mapped[str | None] = mapped_column(Text, nullable=True)
     senate_class: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    election: Mapped["Election"] = relationship("Election", back_populates="seat_statuses")
+    election: Mapped["Election"] = relationship(
+        "Election", back_populates="seat_statuses"
+    )
     seat: Mapped["Seat"] = relationship("Seat", back_populates="seat_statuses")
 
     def __repr__(self) -> str:
@@ -488,7 +530,9 @@ class Pollster(Base):
     weight: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=1.0)
     regions_mapping: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    polls: Mapped[list["Poll"]] = relationship("Poll", back_populates="pollster", cascade="all, delete-orphan")
+    polls: Mapped[list["Poll"]] = relationship(
+        "Poll", back_populates="pollster", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         """Return a debug string representation of the Pollster."""
@@ -541,19 +585,25 @@ class Poll(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    pollster_id: Mapped[int] = mapped_column(Integer, ForeignKey("pollsters.id"), nullable=False)
+    pollster_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("pollsters.id"), nullable=False
+    )
     map_id: Mapped[int] = mapped_column(Integer, ForeignKey("maps.id"), nullable=False)
     fieldwork_start: Mapped[date] = mapped_column(Date, nullable=False)
     fieldwork_end: Mapped[date] = mapped_column(Date, nullable=False)
     sample_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     source_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     matchup: Mapped[str | None] = mapped_column(String, nullable=True)
-    seat_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("seats.id"), nullable=True)  # null = national
+    seat_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("seats.id"), nullable=True
+    )  # null = national
 
     pollster: Mapped["Pollster"] = relationship("Pollster", back_populates="polls")
     map: Mapped["Map"] = relationship("Map")
     seat: Mapped["Seat | None"] = relationship("Seat")
-    rows: Mapped[list["PollRow"]] = relationship("PollRow", back_populates="poll", cascade="all, delete-orphan")
+    rows: Mapped[list["PollRow"]] = relationship(
+        "PollRow", back_populates="poll", cascade="all, delete-orphan"
+    )
     bases: Mapped[list["PollBase"]] = relationship(
         "PollBase", back_populates="poll", cascade="all, delete-orphan"
     )
@@ -615,9 +665,15 @@ class PollRow(Base):
     __tablename__ = "poll_rows"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    poll_id: Mapped[int] = mapped_column(Integer, ForeignKey("polls.id"), nullable=False)
-    region_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("regions.id"), nullable=True)  # null = national
-    party_id: Mapped[int] = mapped_column(Integer, ForeignKey("parties.id"), nullable=False)
+    poll_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("polls.id"), nullable=False
+    )
+    region_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("regions.id"), nullable=True
+    )  # null = national
+    party_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("parties.id"), nullable=False
+    )
     percentage: Mapped[float] = mapped_column(Float, nullable=False)
     candidate_name: Mapped[str | None] = mapped_column(String, nullable=True)
 
@@ -764,7 +820,9 @@ class TrackedMatchup(Base):
 
     __tablename__ = "tracked_matchups"
     __table_args__ = (
-        CheckConstraint("source IN ('auto', 'manual')", name="ck_tracked_matchups_source"),
+        CheckConstraint(
+            "source IN ('auto', 'manual')", name="ck_tracked_matchups_source"
+        ),
         # One row per race; IFNULL folds the national race (NULL seat) onto 0,
         # which no autoincrement seat id can take.
         Index(
@@ -777,8 +835,12 @@ class TrackedMatchup(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     map_id: Mapped[int] = mapped_column(Integer, ForeignKey("maps.id"), nullable=False)
-    seat_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("seats.id"), nullable=True)  # null = national
-    matchup: Mapped[str | None] = mapped_column(String, nullable=True)  # null = ignore the race's polls
+    seat_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("seats.id"), nullable=True
+    )  # null = national
+    matchup: Mapped[str | None] = mapped_column(
+        String, nullable=True
+    )  # null = ignore the race's polls
     source: Mapped[TrackedMatchupSource] = mapped_column(String, nullable=False)
     auto_matchup: Mapped[str | None] = mapped_column(String, nullable=True)
 

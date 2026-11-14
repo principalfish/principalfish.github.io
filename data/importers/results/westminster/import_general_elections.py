@@ -162,7 +162,9 @@ def humanize_party_name(party_key: str) -> str:
     return " ".join(part.title() for part in re.split(r"[_\-\s]+", party_key) if part)
 
 
-def choose_map(db: Database, map_name: str | None, map_candidates: tuple[str, ...], label: str) -> Map:
+def choose_map(
+    db: Database, map_name: str | None, map_candidates: tuple[str, ...], label: str
+) -> Map:
     """Resolve a Map record by explicit name or by trying a list of candidate names.
 
     If ``map_name`` is provided it is used as an exact lookup; an error is raised
@@ -189,7 +191,7 @@ def choose_map(db: Database, map_name: str | None, map_candidates: tuple[str, ..
             raise ValueError(f"Map '{map_name}' not found")
         return selected
 
-    for candidate in  map_candidates:
+    for candidate in map_candidates:
         selected = db.get_map_by_name(candidate)
         if selected is not None:
             return selected
@@ -286,8 +288,12 @@ def main() -> None:
             not set.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--map-name", help="Override map lookup for all elections by explicit map name")
-    parser.add_argument("--map-name-pre", help="Override map name for 2010/2015/2017/2019 imports")
+    parser.add_argument(
+        "--map-name", help="Override map lookup for all elections by explicit map name"
+    )
+    parser.add_argument(
+        "--map-name-pre", help="Override map name for 2010/2015/2017/2019 imports"
+    )
     parser.add_argument("--map-name-post", help="Override map name for 2024 imports")
     parser.add_argument(
         "--only-year",
@@ -316,7 +322,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    specs = [spec for spec in ELECTION_SPECS if args.only_year is None or spec.year in args.only_year]
+    specs = [
+        spec
+        for spec in ELECTION_SPECS
+        if args.only_year is None or spec.year in args.only_year
+    ]
     if not specs:
         raise ValueError("No elections selected to import")
 
@@ -333,7 +343,9 @@ def main() -> None:
 
     selected_map_by_group = {
         "pre": choose_map(db, pre_map_name, PRE_2019_MAP_NAME_CANDIDATES, "pre-2019"),
-        "post": choose_map(db, post_map_name, POST_2022_MAP_NAME_CANDIDATES, "post-2022"),
+        "post": choose_map(
+            db, post_map_name, POST_2022_MAP_NAME_CANDIDATES, "post-2022"
+        ),
     }
 
     seats_cache: dict[int, tuple[dict[str, Seat], dict[str, Seat]]] = {}
@@ -426,7 +438,9 @@ def main() -> None:
                 stats.seat_electorates_updated += 1
 
             current_party_key = seat_info.get("current", "")
-            winner_key = pick_winner_key(current_party_key, party_info) if party_info else ""
+            winner_key = (
+                pick_winner_key(current_party_key, party_info) if party_info else ""
+            )
 
             for party_key, candidate_data in party_info.items():
                 if not isinstance(candidate_data, dict):
@@ -444,7 +458,9 @@ def main() -> None:
                         seat.id,
                         party_id=party.id,
                         candidate_name=candidate_name,
-                        vote_total=float(vote_total) if vote_total is not None else None,
+                        vote_total=float(vote_total)
+                        if vote_total is not None
+                        else None,
                         elected=elected,
                     )
                     stats.votes_inserted += 1

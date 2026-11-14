@@ -48,8 +48,16 @@ MACRO_REGION_TO_INTERNAL = {
     "Scotland": ["Scotland"],
     "London": ["London"],
     "South excl London": ["South East England", "South West England"],
-    "Midlands incl East of England": ["East Midlands", "West Midlands", "East of England"],
-    "North excl Scotland": ["North East England", "North West England", "Yorkshire and The Humber"],
+    "Midlands incl East of England": [
+        "East Midlands",
+        "West Midlands",
+        "East of England",
+    ],
+    "North excl Scotland": [
+        "North East England",
+        "North West England",
+        "Yorkshire and The Humber",
+    ],
 }
 
 REGION_COLUMN_ORDER = [
@@ -167,7 +175,9 @@ def extract_pdf_text(pdf_url: str) -> str:
         ValueError: If the response body is not a valid PDF.
         urllib.error.URLError: If the HTTP request fails.
     """
-    req = Request(pdf_url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
+    req = Request(
+        pdf_url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"}
+    )
     with urlopen(req, timeout=60) as response:
         payload = response.read()
 
@@ -183,7 +193,8 @@ def extract_pdf_text(pdf_url: str) -> str:
             page.extract_text(
                 extraction_mode="layout",
                 layout_mode_strip_rotated=False,
-            ) or "",
+            )
+            or "",
         )
     return "\n".join(pages)
 
@@ -226,7 +237,9 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
             previous month
             gives a window longer than ``MAX_INFERRED_FIELDWORK_DAYS``.
     """
-    fieldwork_line = next((line for line in lines if "fieldwork dates" in line.lower()), None)
+    fieldwork_line = next(
+        (line for line in lines if "fieldwork dates" in line.lower()), None
+    )
     if fieldwork_line is None:
         raise ValueError("Fieldwork line not found in PDF")
 
@@ -258,7 +271,9 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
     else:
         month_start = month_end
     if month_start is None or month_end is None:
-        raise ValueError(f"Could not parse month names in fieldwork line: {fieldwork_line!r}")
+        raise ValueError(
+            f"Could not parse month names in fieldwork line: {fieldwork_line!r}"
+        )
 
     year_start = year_end - 1 if month_start > month_end else year_end
     try:
@@ -563,15 +578,14 @@ def _layout_party_rows(lines: list[str], width: int) -> dict[str, list[float]]:
         if re.search(r"\s(?:\d+|\*|-)(?:\s|$)", line) is None:
             continue
         tokens = re.findall(
-            r"(?<!\S)(\d{1,3}%|\*|-)(?:s)?(?=\s|$)", lines[index + 1],
+            r"(?<!\S)(\d{1,3}%|\*|-)(?:s)?(?=\s|$)",
+            lines[index + 1],
         )
         if len(tokens) != width:
             raise ValueError(f"Incomplete aligned Ipsos percentage row: {party}")
         if party in parsed:
             raise ValueError(f"Duplicate aligned Ipsos party row: {party}")
-        values = [
-            0.0 if token in {"*", "-"} else float(token[:-1]) for token in tokens
-        ]
+        values = [0.0 if token in {"*", "-"} else float(token[:-1]) for token in tokens]
         if any(value > 100 for value in values):
             raise ValueError(f"Invalid aligned Ipsos percentage: {party}")
         parsed[party] = values
@@ -586,7 +600,7 @@ def _layout_row_cells(lines: list[str], label: str) -> list[str] | None:
     row = next((line for line in lines if line.strip().startswith(label)), None)
     if row is None:
         return None
-    return _LAYOUT_CELL.findall(row.strip()[len(label):])
+    return _LAYOUT_CELL.findall(row.strip()[len(label) :])
 
 
 def _layout_national_base(table: str, lines: list[str]) -> ParsedBase | None:
@@ -701,7 +715,11 @@ def _parse_layout_tables(
             if len(set(columns.values())) != len(columns):
                 raise ValueError("Overlapping Ipsos regional column anchors")
             required = {
-                "Conservative", "Labour", "Liberal Democrats", "Reform UK", "Green",
+                "Conservative",
+                "Labour",
+                "Liberal Democrats",
+                "Reform UK",
+                "Green",
             }
             if not required <= rows.keys():
                 raise ValueError("Missing aligned Ipsos regional parties")
@@ -796,7 +814,9 @@ def parse_poll(pdf_text: str) -> ParsedPoll:
     )
 
 
-def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+def _find_existing_poll(
+    db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll
+) -> Poll | None:
     """Look up an existing poll row matching the parsed poll's key fields.
 
     Matches on pollster, map, fieldwork start/end dates, and sample size.
@@ -890,12 +910,13 @@ def build_import_plan(
     ]
     if missing_parties:
         raise ValueError(
-            "Missing parties in database (run party importer first): "
-            f"{missing_parties}"
+            f"Missing parties in database (run party importer first): {missing_parties}"
         )
 
     rows: list[PlannedPollRow] = []
-    region_by_name = {region.name: region for region in db.get_regions_for_map(poll_map.id)}
+    region_by_name = {
+        region.name: region for region in db.get_regions_for_map(poll_map.id)
+    }
     for party_name, percentage in parsed.party_percentages.items():
         rows.append(
             PlannedPollRow(
@@ -913,7 +934,9 @@ def build_import_plan(
                 for internal_region_name in MACRO_REGION_TO_INTERNAL[macro_region_name]:
                     region = region_by_name.get(internal_region_name)
                     if region is None:
-                        raise ValueError(f"Missing region in database: {internal_region_name!r}")
+                        raise ValueError(
+                            f"Missing region in database: {internal_region_name!r}"
+                        )
 
                     rows.append(
                         PlannedPollRow(
@@ -1016,9 +1039,11 @@ def commit_import_plan(
         created_poll_row = False
 
     with db.session() as session:
-        existing_rows = session.execute(
-            select(PollRow).where(PollRow.poll_id == poll_id)
-        ).scalars().all()
+        existing_rows = (
+            session.execute(select(PollRow).where(PollRow.poll_id == poll_id))
+            .scalars()
+            .all()
+        )
 
         if existing_rows and not replace_rows:
             return PollImportResult(
@@ -1146,8 +1171,7 @@ def main() -> None:
 
     if result.skipped_existing_rows:
         print(
-            f"poll {result.poll_id} already has rows; "
-            "use --replace-rows to overwrite"
+            f"poll {result.poll_id} already has rows; use --replace-rows to overwrite"
         )
     else:
         if result.replaced_rows:

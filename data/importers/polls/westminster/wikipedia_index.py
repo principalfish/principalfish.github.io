@@ -53,9 +53,7 @@ _PARENTHETICAL_RE = re.compile(r"\(.*?\)")
 _NON_SLUG_RE = re.compile(r"[^a-zA-Z0-9_ ]")
 _UNDERSCORE_RUN_RE = re.compile(r"_+")
 _CITE_ANCHOR_SELECTOR = 'a[href^="#cite_note"]'
-_YOUGOV_HOST_PATTERN = (
-    r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)*yougov\.net"
-)
+_YOUGOV_HOST_PATTERN = r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)*yougov\.net"
 _CONCATENATED_YOUGOV_PDF_RE = re.compile(
     rf"(?P<first>https?://{_YOUGOV_HOST_PATTERN}/documents/[^/?#\s]+\.pdf)"
     rf"(?:https?://)?{_YOUGOV_HOST_PATTERN}/documents/[^/?#\s]+\.pdf"

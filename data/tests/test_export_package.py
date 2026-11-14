@@ -65,7 +65,10 @@ def test_every_module_imports_in_a_fresh_interpreter_under_its_package_name() ->
         "assert not legacy, legacy\n"
     )
     result = subprocess.run(
-        [sys.executable, "-I", "-c", code], cwd=DATA_DIR.parent, capture_output=True, text=True
+        [sys.executable, "-I", "-c", code],
+        cwd=DATA_DIR.parent,
+        capture_output=True,
+        text=True,
     )
     assert result.returncode == 0, result.stderr
 
@@ -91,7 +94,9 @@ def test_the_console_and_rebuild_point_at_the_script() -> None:
 def test_the_script_derives_the_data_and_repo_folders_from_its_location() -> None:
     assert export_elections.DATA_DIR == DATA_DIR
     assert export_elections.REPO_ROOT == REPO_ROOT
-    assert export_elections.LEGACY_FILES_DIR_DEFAULT == DATA_DIR / "inputs" / "westminster"
+    assert (
+        export_elections.LEGACY_FILES_DIR_DEFAULT == DATA_DIR / "inputs" / "westminster"
+    )
 
 
 @pytest.mark.parametrize(

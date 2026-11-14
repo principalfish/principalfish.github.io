@@ -322,7 +322,10 @@ def convert_races(
     """
     warnings: list[str] = []
     main_races, special_races = _split_races(
-        races, year=year, chamber=chamber, warnings=warnings,
+        races,
+        year=year,
+        chamber=chamber,
+        warnings=warnings,
     )
     map_ref = map_for(year, chamber)
     main = _election_file(

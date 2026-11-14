@@ -141,7 +141,10 @@ class _FakePdfPage:
         self.rotation_transferred = True
 
     def extract_text(
-        self, *, extraction_mode: str, layout_mode_strip_rotated: bool,
+        self,
+        *,
+        extraction_mode: str,
+        layout_mode_strip_rotated: bool,
     ) -> str | None:
         """Return the fixed text this page was built with."""
         assert self.rotation_transferred
@@ -174,7 +177,9 @@ class TestExtractPdfText:
     @pytest.fixture(autouse=True)
     def fake_writer(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            ipsos_import, "PdfWriter", lambda *, clone_from: clone_from,
+            ipsos_import,
+            "PdfWriter",
+            lambda *, clone_from: clone_from,
         )
 
     def test_returns_joined_page_text(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -622,7 +627,20 @@ class TestExtractRegionValues:
 
     def test_standard_layout_returns_the_six_region_values(self) -> None:
         tokens: list[float | None] = [
-            22.0, 24.0, 20.0, 18.0, 15.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
+            22.0,
+            24.0,
+            20.0,
+            18.0,
+            15.0,
+            10.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
         ]
         assert _extract_region_values(tokens) == [22.0, 24.0, 20.0, 18.0, 15.0, 10.0]
 
@@ -638,17 +656,13 @@ class TestExtractRegionValues:
 
     def test_extended_layout_skips_the_greater_england_column(self) -> None:
         tokens: list[float | None] = (
-            [20.0]
-            + [None] * 8
-            + [25.0, 30.0, None, 15.0, 10.0, 5.0, 2.0, 99.0, 98.0]
+            [20.0] + [None] * 8 + [25.0, 30.0, None, 15.0, 10.0, 5.0, 2.0, 99.0, 98.0]
         )
         assert _extract_region_values(tokens) == [25.0, 30.0, 15.0, 10.0, 5.0, 2.0]
 
     def test_extended_layout_suppressed_region_cell_becomes_zero(self) -> None:
         tokens: list[float | None] = (
-            [20.0]
-            + [None] * 8
-            + [25.0, None, None, 15.0, 10.0, 5.0, 2.0, 99.0, 98.0]
+            [20.0] + [None] * 8 + [25.0, None, None, 15.0, 10.0, 5.0, 2.0, 99.0, 98.0]
         )
         assert _extract_region_values(tokens) == [25.0, 0.0, 15.0, 10.0, 5.0, 2.0]
 
@@ -1690,7 +1704,9 @@ class TestAnnotatedFieldwork:
         assert _parse_fieldwork([line]) == (date(2026, 9, 10), date(2026, 9, 15))
 
     def test_annotation_preserves_cross_month_and_year(self) -> None:
-        line = "Fieldwork dates: Monday 30th December to Wednesday 2nd (pm) January 2026"
+        line = (
+            "Fieldwork dates: Monday 30th December to Wednesday 2nd (pm) January 2026"
+        )
         assert _parse_fieldwork([line]) == (date(2025, 12, 30), date(2026, 1, 2))
 
     @pytest.mark.parametrize("annotation", ["(night)", "(am", "(am) (pm)"])
@@ -1713,11 +1729,14 @@ class TestAlignedSourceTables:
         assert parse_poll(text).model_dump(mode="json", exclude={"bases"}) == expected
 
     def test_actual_rotated_pdf_extraction(
-        self, monkeypatch: pytest.MonkeyPatch,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         payload = (_IPSOS_FIXTURES / "tables-2026-09-15.pdf").read_bytes()
         monkeypatch.setattr(
-            ipsos_import, "urlopen", lambda *_a, **_k: FakeUrlResponse(payload),
+            ipsos_import,
+            "urlopen",
+            lambda *_a, **_k: FakeUrlResponse(payload),
         )
         text = extract_pdf_text("https://www.ipsos.com/source.pdf")
         expected = json.loads(
@@ -1782,8 +1801,10 @@ class TestAlignedSourceTables:
     def test_duplicate_party_row_fails(self) -> None:
         text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
         rows = text.splitlines()
-        index = next(i for i, line in enumerate(rows) if line.startswith("Conservative"))
-        rows[index:index] = rows[index:index + 2]
+        index = next(
+            i for i, line in enumerate(rows) if line.startswith("Conservative")
+        )
+        rows[index:index] = rows[index : index + 2]
         with pytest.raises(ValueError, match="Duplicate aligned"):
             parse_poll("\n".join(rows))
 

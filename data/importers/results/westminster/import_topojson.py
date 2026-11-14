@@ -71,10 +71,12 @@ def decode_topojson(topo: dict[str, Any], object_name: str) -> list[dict[str, An
             for dx, dy in arc:
                 x += dx
                 y += dy
-                coords.append([
-                    x * scale[0] + translate[0],
-                    y * scale[1] + translate[1],
-                ])
+                coords.append(
+                    [
+                        x * scale[0] + translate[0],
+                        y * scale[1] + translate[1],
+                    ]
+                )
             decoded_arcs.append(coords)
     else:
         decoded_arcs = arcs
@@ -130,8 +132,7 @@ def decode_topojson(topo: dict[str, Any], object_name: str) -> list[dict[str, An
             geo = {"type": "Polygon", "coordinates": coordinates}
         elif geom_type == "MultiPolygon":
             coordinates = [
-                [decode_ring(ring) for ring in polygon]
-                for polygon in geom["arcs"]
+                [decode_ring(ring) for ring in polygon] for polygon in geom["arcs"]
             ]
             geo = {"type": "MultiPolygon", "coordinates": coordinates}
         else:

@@ -220,7 +220,9 @@ class TestExtractPdfText:
             lambda *_a, **_k: FakeUrlResponse(b"%PDF-1.4 bytes"),
         )
         monkeypatch.setattr(
-            techne_import, "PdfReader", _fake_pdf_reader_factory(["Page one", "Page two"])
+            techne_import,
+            "PdfReader",
+            _fake_pdf_reader_factory(["Page one", "Page two"]),
         )
 
         result = extract_pdf_text("https://www.techneuk.com/report.pdf")
@@ -255,7 +257,9 @@ class TestExtractPdfText:
             return FakeUrlResponse(b"%PDF-1.4 bytes")
 
         monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
-        monkeypatch.setattr(techne_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         extract_pdf_text("https://www.techneuk.com/report.pdf")
 
@@ -275,7 +279,9 @@ class TestExtractPdfText:
             return FakeUrlResponse(b"%PDF-1.4 bytes")
 
         monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
-        monkeypatch.setattr(techne_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         extract_pdf_text("https://www.techneuk.com/report.pdf")
 
@@ -302,7 +308,9 @@ class TestExtractPdfText:
             return FakeUrlResponse(b"%PDF-1.4 bytes")
 
         monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
-        monkeypatch.setattr(techne_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         result = extract_pdf_text(pdf_url)
 
@@ -323,7 +331,9 @@ class TestExtractPdfText:
             return FakeUrlResponse(b"%PDF-1.4 bytes")
 
         monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
-        monkeypatch.setattr(techne_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         extract_pdf_text(pdf_url)
 
@@ -345,7 +355,9 @@ class TestExtractPdfText:
             return FakeUrlResponse(b"%PDF-1.4 bytes")
 
         monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
-        monkeypatch.setattr(techne_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         result = extract_pdf_text(pdf_url)
 
@@ -517,18 +529,14 @@ class TestParseSampleSize:
         assert _parse_sample_size("Unweighted Sample 1636 1644 808") == 1644
 
     def test_missing_label_raises(self) -> None:
-        with pytest.raises(
-            ValueError, match="Unweighted sample size not found in PDF"
-        ):
+        with pytest.raises(ValueError, match="Unweighted sample size not found in PDF"):
             _parse_sample_size("FIELDWORK: February 11th - February 13th")
 
     def test_lowercase_label_does_not_match(self) -> None:
         # The regex has no re.IGNORECASE flag, unlike _parse_fieldwork's and
         # _parse_party_percentages's patterns. Harmless against real Techne
         # PDFs, which always capitalise "Unweighted Sample" exactly.
-        with pytest.raises(
-            ValueError, match="Unweighted sample size not found in PDF"
-        ):
+        with pytest.raises(ValueError, match="Unweighted sample size not found in PDF"):
             _parse_sample_size("unweighted sample 1636 1644")
 
     @pytest.mark.parametrize(
@@ -900,9 +908,7 @@ Unweighted Sample 1647 1636 795 841
 
     def test_missing_sample_size_propagates(self) -> None:
         text = f"FIELDWORK: February 11th - February 13th\n{_FULL_BLOCK_TEXT}"
-        with pytest.raises(
-            ValueError, match="Unweighted sample size not found in PDF"
-        ):
+        with pytest.raises(ValueError, match="Unweighted sample size not found in PDF"):
             parse_poll(text, inferred_year=2026)
 
     def test_missing_fieldwork_propagates(self) -> None:

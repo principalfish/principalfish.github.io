@@ -72,12 +72,8 @@ def test_each_blueprint_imports_first_in_a_fresh_interpreter(module: str) -> Non
 
 
 def test_the_us_results_blueprint_works_in_either_import_order() -> None:
-    forward = _run_isolated(
-        "import console.us.results\nimport console.us.views\n"
-    )
-    backward = _run_isolated(
-        "import console.us.views\nimport console.us.results\n"
-    )
+    forward = _run_isolated("import console.us.results\nimport console.us.views\n")
+    backward = _run_isolated("import console.us.views\nimport console.us.results\n")
     assert forward.returncode == 0, forward.stderr
     assert backward.returncode == 0, backward.stderr
 
@@ -107,7 +103,9 @@ def test_no_live_code_imports_from_the_archive() -> None:
             if isinstance(node, ast.Import):
                 parts = [part for alias in node.names for part in alias.name.split(".")]
             elif isinstance(node, ast.ImportFrom) and not node.level:
-                parts = (node.module or "").split(".") + [alias.name for alias in node.names]
+                parts = (node.module or "").split(".") + [
+                    alias.name for alias in node.names
+                ]
             else:
                 continue
             # Any component counts, so ``from scripts import backfill_poll_bases`` and

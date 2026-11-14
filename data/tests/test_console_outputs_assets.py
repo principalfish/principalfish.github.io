@@ -63,7 +63,9 @@ def test_the_page_loads_only_scripts_the_console_serves(
 def test_the_vendored_chart_library_is_pinned_and_licensed() -> None:
     folder = STATIC_DIR / "vendor" / "chart.js-4.6.1"
 
-    assert (folder / "chart.umd.min.js").read_text().startswith(
-        "/*!\n * Chart.js v4.6.1\n"
+    assert (
+        (folder / "chart.umd.min.js")
+        .read_text()
+        .startswith("/*!\n * Chart.js v4.6.1\n")
     )
     assert "MIT License" in (folder / "LICENSE.md").read_text()

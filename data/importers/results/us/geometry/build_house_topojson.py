@@ -62,27 +62,108 @@ from importers.results.us.geometry import house_2026_sources as sources
 Feature = dict[str, Any]
 
 FIPS_TO_ST = {
-    "01": "AL", "02": "AK", "04": "AZ", "05": "AR", "06": "CA", "08": "CO", "09": "CT",
-    "10": "DE", "12": "FL", "13": "GA", "15": "HI", "16": "ID", "17": "IL", "18": "IN",
-    "19": "IA", "20": "KS", "21": "KY", "22": "LA", "23": "ME", "24": "MD", "25": "MA",
-    "26": "MI", "27": "MN", "28": "MS", "29": "MO", "30": "MT", "31": "NE", "32": "NV",
-    "33": "NH", "34": "NJ", "35": "NM", "36": "NY", "37": "NC", "38": "ND", "39": "OH",
-    "40": "OK", "41": "OR", "42": "PA", "44": "RI", "45": "SC", "46": "SD", "47": "TN",
-    "48": "TX", "49": "UT", "50": "VT", "51": "VA", "53": "WA", "54": "WV", "55": "WI",
+    "01": "AL",
+    "02": "AK",
+    "04": "AZ",
+    "05": "AR",
+    "06": "CA",
+    "08": "CO",
+    "09": "CT",
+    "10": "DE",
+    "12": "FL",
+    "13": "GA",
+    "15": "HI",
+    "16": "ID",
+    "17": "IL",
+    "18": "IN",
+    "19": "IA",
+    "20": "KS",
+    "21": "KY",
+    "22": "LA",
+    "23": "ME",
+    "24": "MD",
+    "25": "MA",
+    "26": "MI",
+    "27": "MN",
+    "28": "MS",
+    "29": "MO",
+    "30": "MT",
+    "31": "NE",
+    "32": "NV",
+    "33": "NH",
+    "34": "NJ",
+    "35": "NM",
+    "36": "NY",
+    "37": "NC",
+    "38": "ND",
+    "39": "OH",
+    "40": "OK",
+    "41": "OR",
+    "42": "PA",
+    "44": "RI",
+    "45": "SC",
+    "46": "SD",
+    "47": "TN",
+    "48": "TX",
+    "49": "UT",
+    "50": "VT",
+    "51": "VA",
+    "53": "WA",
+    "54": "WV",
+    "55": "WI",
     "56": "WY",
 }
 ST_NAME = {
-    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
-    "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia",
-    "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa",
-    "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
-    "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi",
-    "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire",
-    "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York", "NC": "North Carolina",
-    "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania",
-    "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee",
-    "TX": "Texas", "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington",
-    "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming",
+    "AL": "Alabama",
+    "AK": "Alaska",
+    "AZ": "Arizona",
+    "AR": "Arkansas",
+    "CA": "California",
+    "CO": "Colorado",
+    "CT": "Connecticut",
+    "DE": "Delaware",
+    "FL": "Florida",
+    "GA": "Georgia",
+    "HI": "Hawaii",
+    "ID": "Idaho",
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "IA": "Iowa",
+    "KS": "Kansas",
+    "KY": "Kentucky",
+    "LA": "Louisiana",
+    "ME": "Maine",
+    "MD": "Maryland",
+    "MA": "Massachusetts",
+    "MI": "Michigan",
+    "MN": "Minnesota",
+    "MS": "Mississippi",
+    "MO": "Missouri",
+    "MT": "Montana",
+    "NE": "Nebraska",
+    "NV": "Nevada",
+    "NH": "New Hampshire",
+    "NJ": "New Jersey",
+    "NM": "New Mexico",
+    "NY": "New York",
+    "NC": "North Carolina",
+    "ND": "North Dakota",
+    "OH": "Ohio",
+    "OK": "Oklahoma",
+    "OR": "Oregon",
+    "PA": "Pennsylvania",
+    "RI": "Rhode Island",
+    "SC": "South Carolina",
+    "SD": "South Dakota",
+    "TN": "Tennessee",
+    "TX": "Texas",
+    "UT": "Utah",
+    "VT": "Vermont",
+    "VA": "Virginia",
+    "WA": "Washington",
+    "WV": "West Virginia",
+    "WI": "Wisconsin",
+    "WY": "Wyoming",
 }
 # Non-voting delegate districts (DC + 5 territories) are numbered "98".
 NON_VOTING_CD = "98"
@@ -169,7 +250,11 @@ def _polygonal(geom: BaseGeometry) -> BaseGeometry:
     """Drop the lines and points an intersection can leave beside the polygons."""
     if geom.geom_type in ("Polygon", "MultiPolygon"):
         return geom
-    parts = [g for g in getattr(geom, "geoms", []) if g.geom_type in ("Polygon", "MultiPolygon")]
+    parts = [
+        g
+        for g in getattr(geom, "geoms", [])
+        if g.geom_type in ("Polygon", "MultiPolygon")
+    ]
     return unary_union(parts) if parts else geom.buffer(0)
 
 
@@ -242,7 +327,9 @@ def stitch_states(
     for state, features in sorted(replacements.items()):
         region = _region_of(state)
         outline_parts = [
-            make_valid(shape(f["geometry"])) for f in base if f["properties"]["region"] == region
+            make_valid(shape(f["geometry"]))
+            for f in base
+            if f["properties"]["region"] == region
         ]
         if not outline_parts:
             raise ValueError(f"{state}: not present in the base map")
@@ -250,10 +337,14 @@ def stitch_states(
         clipped: dict[str, BaseGeometry] = {}
         for feature in features:
             name = feature["properties"]["name"]
-            geom = _polygonal(make_valid(shape(feature["geometry"])).intersection(outline))
+            geom = _polygonal(
+                make_valid(shape(feature["geometry"])).intersection(outline)
+            )
             if geom.is_empty:
                 continue
-            clipped[name] = unary_union([clipped[name], geom]) if name in clipped else geom
+            clipped[name] = (
+                unary_union([clipped[name], geom]) if name in clipped else geom
+            )
         clipped = _fill_gaps(clipped, outline, state)
         for name, geom in clipped.items():
             geom = _polygonal(make_valid(geom))
@@ -294,9 +385,19 @@ def build_topojson(
         )
         out_path.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(
-            ["mapshaper", str(clean_path), *(["-clean"] if clean else []),
-             "-rename-layers", "map", "-simplify", simplify, "keep-shapes",
-             "-o", "format=topojson", str(out_path)],
+            [
+                "mapshaper",
+                str(clean_path),
+                *(["-clean"] if clean else []),
+                "-rename-layers",
+                "map",
+                "-simplify",
+                simplify,
+                "keep-shapes",
+                "-o",
+                "format=topojson",
+                str(out_path),
+            ],
             check=True,
         )
 
@@ -304,8 +405,17 @@ def build_topojson(
 def shapefile_to_geojson(shp: Path, select: str, out: Path) -> dict[str, Any]:
     """Convert ``shp`` to WGS84 GeoJSON with ``ogr2ogr`` and return the parsed result."""
     subprocess.run(
-        ["ogr2ogr", "-f", "GeoJSON", "-t_srs", "EPSG:4326", "-select", select,
-         str(out), str(shp)],
+        [
+            "ogr2ogr",
+            "-f",
+            "GeoJSON",
+            "-t_srs",
+            "EPSG:4326",
+            "-select",
+            select,
+            str(out),
+            str(shp),
+        ],
         check=True,
     )
     data: dict[str, Any] = json.loads(out.read_text(encoding="utf-8"))
@@ -327,7 +437,9 @@ def fetch_zip(url: str, dest_dir: Path) -> Path:
     if not zip_path.exists():
         req = urllib.request.Request(url, headers={"User-Agent": "election-maps-build"})
         with urllib.request.urlopen(req, timeout=120) as resp:  # noqa: S310
-            sources.check_url(resp.geturl())  # a redirect must stay on Census over https
+            sources.check_url(
+                resp.geturl()
+            )  # a redirect must stay on Census over https
             part = zip_path.with_name(zip_path.name + ".part")
             part.write_bytes(resp.read())
         part.replace(zip_path)
@@ -346,7 +458,9 @@ def build_map(
     base_dir = fetch_zip(recipe.base_url, scratch)
     base_shp = next(base_dir.glob("*.shp"))
     with tempfile.TemporaryDirectory() as tmp:
-        raw = shapefile_to_geojson(base_shp, f"STATEFP,{recipe.base_field}", Path(tmp) / "b.json")
+        raw = shapefile_to_geojson(
+            base_shp, f"STATEFP,{recipe.base_field}", Path(tmp) / "b.json"
+        )
         base = voting_districts(raw, recipe.base_field)
         replacements: dict[str, list[Feature]] = {}
         for state, src in recipe.replace.items():
@@ -356,27 +470,42 @@ def build_map(
                 f"STATEFP,{sources.TIGER_CD120_DISTRICT_FIELD}",
                 Path(tmp) / f"{state}.json",
             )
-            replacements[state] = voting_districts(raw_state, sources.TIGER_CD120_DISTRICT_FIELD)
+            replacements[state] = voting_districts(
+                raw_state, sources.TIGER_CD120_DISTRICT_FIELD
+            )
     features = stitch_states(base, replacements)
     check_districts(features)
-    build_topojson(features, out_path, simplify or recipe.simplify, clean=bool(recipe.replace))
+    build_topojson(
+        features, out_path, simplify or recipe.simplify, clean=bool(recipe.replace)
+    )
     return features
 
 
 def main() -> None:
     """CLI entry point: Census shapefiles -> cleaned, stitched GeoJSON -> TopoJSON."""
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument("--out", required=True, type=Path, help="Output TopoJSON path")
     parser.add_argument(
-        "--simplify", help="mapshaper simplification (default: the map's recipe, 12%% or 6%%)"
+        "--simplify",
+        help="mapshaper simplification (default: the map's recipe, 12%% or 6%%)",
     )
-    parser.add_argument("--map", type=int, choices=sorted(RECIPES), help="Map id to build")
-    parser.add_argument("--fetch", type=Path, help="Scratch dir: download and extract sources here")
-    parser.add_argument("--shp", type=Path, help="Base shapefile, instead of --map/--fetch (map 21)")
+    parser.add_argument(
+        "--map", type=int, choices=sorted(RECIPES), help="Map id to build"
+    )
+    parser.add_argument(
+        "--fetch", type=Path, help="Scratch dir: download and extract sources here"
+    )
+    parser.add_argument(
+        "--shp", type=Path, help="Base shapefile, instead of --map/--fetch (map 21)"
+    )
     args = parser.parse_args()
 
     if (args.map is None) == (args.shp is None):
-        parser.error("give either --map (with --fetch DIR) or --shp, not both or neither")
+        parser.error(
+            "give either --map (with --fetch DIR) or --shp, not both or neither"
+        )
     if args.map is not None:
         if args.fetch is None:
             parser.error("--map needs --fetch DIR")
@@ -385,7 +514,9 @@ def main() -> None:
         if args.fetch is not None:
             parser.error("--fetch only goes with --map")
         with tempfile.TemporaryDirectory() as tmp:
-            raw = shapefile_to_geojson(args.shp, "STATEFP,CD119FP", Path(tmp) / "raw.json")
+            raw = shapefile_to_geojson(
+                args.shp, "STATEFP,CD119FP", Path(tmp) / "raw.json"
+            )
             features = voting_districts(raw, "CD119FP")
         check_districts(features)
         build_topojson(features, args.out, args.simplify or "12%")

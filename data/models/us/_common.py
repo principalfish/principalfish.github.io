@@ -514,7 +514,9 @@ def poll_usage(reading: PollReading) -> LatestPollUsage:
     )
 
 
-def latest_poll_usage_of(usages: Iterable[LatestPollUsage | None]) -> LatestPollUsage | None:
+def latest_poll_usage_of(
+    usages: Iterable[LatestPollUsage | None],
+) -> LatestPollUsage | None:
     """The most recent usage by fieldwork end, start and actual poll ID."""
     latest: LatestPollUsage | None = None
     for usage in usages:
@@ -714,7 +716,9 @@ def collect_poll_readings(
             continue
 
         decay_weight = math.exp(-math.log(2.0) * float(days_since) / half_life_days)
-        pollster_weight = effective_pollster_weight(pollster_weight_by_id.get(poll.pollster_id))
+        pollster_weight = effective_pollster_weight(
+            pollster_weight_by_id.get(poll.pollster_id)
+        )
         poll_weight = decay_weight * pollster_weight
         if poll_weight <= 0:
             continue
@@ -728,7 +732,9 @@ def collect_poll_readings(
             continue
 
         shares: dict[int, float] = defaultdict(float)
-        region_shares: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+        region_shares: dict[int, dict[int, float]] = defaultdict(
+            lambda: defaultdict(float)
+        )
         candidate_shares: dict[str, float] = defaultdict(float)
         candidate_count = 0
         for row in rows:
@@ -755,7 +761,11 @@ def collect_poll_readings(
                     region_id: dict(party_shares)
                     for region_id, party_shares in region_shares.items()
                 },
-                pollster=str(pollster_name_by_id.get(poll.pollster_id, f"Pollster {poll.pollster_id}")),
+                pollster=str(
+                    pollster_name_by_id.get(
+                        poll.pollster_id, f"Pollster {poll.pollster_id}"
+                    )
+                ),
                 fieldwork_start=poll.fieldwork_start,
                 fieldwork_end=poll.fieldwork_end,
                 candidate_count=candidate_count,
@@ -771,7 +781,11 @@ def aggregate_national(
     national_matchup: str | None,
     *,
     contributors: list[LatestPollUsage] | None = None,
-) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], LatestPollUsage | None]:
+) -> tuple[
+    dict[tuple[int | None, int], float],
+    dict[tuple[int | None, int], float],
+    LatestPollUsage | None,
+]:
     """Aggregate the national series out of a map's readings.
 
     Keeps only readings that are national (``seat_id is None``) *and* carry
@@ -850,20 +864,32 @@ def compute_region_diffs(
     """
     party_universe: set[int] = set(national_party_totals.keys())
     party_universe.update(party_id for _, party_id in weighted_sums.keys())
-    region_ids = sorted({seat.region_id for seat in seats if seat.region_id is not None})
+    region_ids = sorted(
+        {seat.region_id for seat in seats if seat.region_id is not None}
+    )
 
     # National swing delta per party, used as the fallback for region-poll-less regions.
     national_swing: dict[int, float] = {}
     for party_id in party_universe:
-        national_poll = weighted_average(weighted_sums[(None, party_id)], total_weights[(None, party_id)])
+        national_poll = weighted_average(
+            weighted_sums[(None, party_id)], total_weights[(None, party_id)]
+        )
         if national_poll is not None:
-            national_swing[party_id] = national_poll - baseline_national_shares.get(party_id, 0.0)
+            national_swing[party_id] = national_poll - baseline_national_shares.get(
+                party_id, 0.0
+            )
 
     region_swings: dict[int, dict[int, float]] = defaultdict(dict)
     region_diff_rows: list[dict[str, Any]] = []
     for region_id in region_ids:
-        region_name = region_by_id[region_id].name if region_id in region_by_id else str(region_id)
-        for party_id in sorted(party_universe, key=lambda party: party_name_by_id.get(party, "")):
+        region_name = (
+            region_by_id[region_id].name
+            if region_id in region_by_id
+            else str(region_id)
+        )
+        for party_id in sorted(
+            party_universe, key=lambda party: party_name_by_id.get(party, "")
+        ):
             baseline_share = baseline_region_shares.get(region_id, {}).get(
                 party_id,
                 baseline_national_shares.get(party_id, 0.0),
@@ -1063,7 +1089,9 @@ def usable_seat_readings(
         blocking: tuple[str, ...] = ()
         skip = False
         if record.unnamed:
-            skip = record.reading.candidate_count < matchup_stored_candidate_count(required)
+            skip = record.reading.candidate_count < matchup_stored_candidate_count(
+                required
+            )
         elif record.missing:
             n_complete = complete_counts.get(seat_id, 0)
             if n_complete:
@@ -1071,7 +1099,8 @@ def usable_seat_readings(
                 blocking = tuple(
                     candidate.name
                     for candidate in record.missing
-                    if sums.get(candidate.name, 0.0) / n_complete >= MATERIAL_CANDIDATE_SHARE
+                    if sums.get(candidate.name, 0.0) / n_complete
+                    >= MATERIAL_CANDIDATE_SHARE
                 )
             else:
                 blocking = tuple(
@@ -1086,7 +1115,9 @@ def usable_seat_readings(
         usable.append(record.reading)
 
     return usable, {
-        seat_id: tuple(sorted(names)) for seat_id, names in blocking_by_seat.items() if names
+        seat_id: tuple(sorted(names))
+        for seat_id, names in blocking_by_seat.items()
+        if names
     }
 
 
@@ -1198,7 +1229,9 @@ def aggregate_seat_polls(
         latest = latest_by_seat.get(seat_id)
         if latest is None or latest_poll_key(
             reading.fieldwork_end, reading.fieldwork_start, reading.poll_id
-        ) > latest_poll_key(latest.fieldwork_end, latest.fieldwork_start, latest.poll_id):
+        ) > latest_poll_key(
+            latest.fieldwork_end, latest.fieldwork_start, latest.poll_id
+        ):
             latest_by_seat[seat_id] = reading
         for party_id, share in decided.items():
             weighted_sums[seat_id][party_id] += share * reading.weight
@@ -1217,7 +1250,9 @@ def aggregate_seat_polls(
             n_skipped=skipped_counts.get(seat_id, 0),
             blocking_candidates=blocking_by_seat.get(seat_id, ()),
             latest_poll=(
-                poll_usage(latest_by_seat[seat_id]) if seat_id in latest_by_seat else None
+                poll_usage(latest_by_seat[seat_id])
+                if seat_id in latest_by_seat
+                else None
             ),
         )
         for seat_id in sorted({*seat_weights, *skipped_counts})
@@ -1244,7 +1279,9 @@ def seat_parent_ids(seats: Iterable[SeatRef]) -> dict[int, int]:
     return parents
 
 
-def _blend_order(seat_ids: Iterable[int], parent_seat_by_id: Mapping[int, int]) -> list[int]:
+def _blend_order(
+    seat_ids: Iterable[int], parent_seat_by_id: Mapping[int, int]
+) -> list[int]:
     """Order seats so a parent is always blended before its district children.
 
     Ranks by distance to the top of the parent chain, so ``Maine`` precedes
@@ -1340,7 +1377,9 @@ def blend_seat_swings(
             else (region_swings.get(region_id, {}) if region_id is not None else {})
         )
 
-        alpha = poll_blend_alpha(average.total_weight if average is not None else 0.0, prior_weight)
+        alpha = poll_blend_alpha(
+            average.total_weight if average is not None else 0.0, prior_weight
+        )
         base_shares = baseline_shares_for_seat(seat_party_vote_totals.get(seat_id, {}))
         poll_shares = average.shares if average is not None else {}
 
@@ -1442,7 +1481,9 @@ def project_seat_votes(
         swing_for_seat = seat_swings.get(seat_id) if seat_swings is not None else None
         if swing_for_seat is None:
             region_id = region_by_seat_id.get(seat_id)
-            swing_for_seat = region_swings.get(region_id, {}) if region_id is not None else {}
+            swing_for_seat = (
+                region_swings.get(region_id, {}) if region_id is not None else {}
+            )
 
         projection_raw: dict[int, float] = {}
         for party_id in party_universe:
@@ -1452,7 +1493,10 @@ def project_seat_votes(
 
         projection_sum = sum(projection_raw.values())
         if projection_sum <= 0:
-            projection_raw = {party_id: base_share_by_party.get(party_id, 0.0) for party_id in party_universe}
+            projection_raw = {
+                party_id: base_share_by_party.get(party_id, 0.0)
+                for party_id in party_universe
+            }
             projection_sum = sum(projection_raw.values())
             if projection_sum <= 0:
                 continue
@@ -1462,7 +1506,9 @@ def project_seat_votes(
             for party_id, value in projection_raw.items()
         }
         winner_party_id = max(normalized, key=lambda k: normalized.get(k, 0.0))
-        winners_by_party[party_name_by_id.get(winner_party_id, str(winner_party_id))] += 1
+        winners_by_party[
+            party_name_by_id.get(winner_party_id, str(winner_party_id))
+        ] += 1
 
         for party_id, pct in normalized.items():
             projected_votes.append(
@@ -1482,7 +1528,9 @@ def project_seat_votes(
 # ── DB reference loading ──────────────────────────────────────────────────────
 
 
-def fetch_seat_refs(db: Database, map_id: int, allowlist: frozenset[str] | None = None) -> list[SeatRef]:
+def fetch_seat_refs(
+    db: Database, map_id: int, allowlist: frozenset[str] | None = None
+) -> list[SeatRef]:
     """Fetch seats for a map (optionally restricted to ``allowlist`` names)."""
     with db.session() as session:
         rows = session.execute(
@@ -1530,7 +1578,9 @@ def build_reference_data(
     regions = db.get_regions_for_map(map_id)
     seat_by_id = {seat.id: seat for seat in seats}
     region_by_id = {region.id: region for region in regions}
-    region_by_seat_id: dict[int, int | None] = {seat.id: seat.region_id for seat in seats}
+    region_by_seat_id: dict[int, int | None] = {
+        seat.id: seat.region_id for seat in seats
+    }
 
     all_parties = db.get_all_parties()
     party_name_by_id = {party.id: party.name for party in all_parties}
@@ -1609,7 +1659,9 @@ def resolve_special_baselines(
         for election in db.get_elections_for_map(map_id)
         if not is_folded_senate_special(election)
     ]
-    manifest_ids = {election: manifest_id_for_election(election) for election in elections}
+    manifest_ids = {
+        election: manifest_id_for_election(election) for election in elections
+    }
     resolved = {
         manifest_id: int(election.id)
         for election, manifest_id in manifest_ids.items()
@@ -1627,7 +1679,10 @@ def resolve_special_baselines(
 
 
 def resolve_seat_baselines(
-    db: Database, map_id: int, seats: Iterable[SeatRef], seat_baseline_overrides: Mapping[str, str]
+    db: Database,
+    map_id: int,
+    seats: Iterable[SeatRef],
+    seat_baseline_overrides: Mapping[str, str],
 ) -> dict[int, int]:
     """Seat id → baseline election id, for the seats whose baseline is overridden.
 
@@ -1695,7 +1750,10 @@ def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
         )
 
     projected_seat_ids = (
-        frozenset(seat.id for seat in fetch_seat_refs(db, seat_map.id, spec.seat_name_allowlist))
+        frozenset(
+            seat.id
+            for seat in fetch_seat_refs(db, seat_map.id, spec.seat_name_allowlist)
+        )
         if spec.seat_name_allowlist is not None
         else None
     )
@@ -2333,7 +2391,9 @@ def run_simulation(
         # represented at all. Unpolled seats are untouched: the new party has no
         # region swing and no baseline there, so it projects at zero.
         party_universe = party_universe | {
-            party_id for average in seat_averages.values() for party_id in average.shares
+            party_id
+            for average in seat_averages.values()
+            for party_id in average.shares
         }
         seat_swings = blend_seat_swings(
             seat_averages=seat_averages,
@@ -2470,7 +2530,9 @@ def rebuild_window(
     return (start, end) if start <= end else None
 
 
-def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace) -> None:
+def run_retrospective(
+    db: Database, spec: UsModelSpec, args: argparse.Namespace
+) -> None:
     """Run daily projections across ``[--start-date, --end-date]`` to backfill trends.
 
     Raises:
@@ -2624,7 +2686,9 @@ def _positive_election_year(raw: str) -> int:
 
 def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
     """Build the shared CLI parser for a runner, defaulted from ``spec``."""
-    parser = argparse.ArgumentParser(description=f"Run the {spec.election_name_prefix} forecast model.")
+    parser = argparse.ArgumentParser(
+        description=f"Run the {spec.election_name_prefix} forecast model."
+    )
     if spec.election_type == "us_presidential_model":
         parser.add_argument(
             "--target-election-year",
@@ -2641,11 +2705,17 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
         "--as-of-date", default=None, help="Upper-bound poll date (YYYY-MM-DD)"
     )
     parser.add_argument("--as-of-days-back", type=int, default=0)
-    parser.add_argument("--since-date", default=None, help="Lower-bound poll date (YYYY-MM-DD)")
+    parser.add_argument(
+        "--since-date", default=None, help="Lower-bound poll date (YYYY-MM-DD)"
+    )
     parser.add_argument("--since-days-back", type=int, default=30)
     # Retrospective flags
-    parser.add_argument("--start-date", default=None, help="First date for retrospective backfill")
-    parser.add_argument("--end-date", default=None, help="Last date for retrospective backfill")
+    parser.add_argument(
+        "--start-date", default=None, help="First date for retrospective backfill"
+    )
+    parser.add_argument(
+        "--end-date", default=None, help="Last date for retrospective backfill"
+    )
     parser.add_argument("--lookback-days", type=int, default=365)
     parser.add_argument(
         "--reset-existing",
@@ -2686,7 +2756,9 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
     return parser
 
 
-def _build_config_from_args(spec: UsModelSpec, args: argparse.Namespace) -> UsSimulationConfig:
+def _build_config_from_args(
+    spec: UsModelSpec, args: argparse.Namespace
+) -> UsSimulationConfig:
     """Construct a single-date :class:`UsSimulationConfig` from CLI args."""
     validate_half_life(args.half_life_days)
     validate_prior_weight(args.seat_prior_weight)
@@ -2826,7 +2898,9 @@ def _drop_points_outside(
         )
 
 
-def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None = None) -> int:
+def main_for_spec(
+    spec: UsModelSpec, db_factory: Callable[[], Database] | None = None
+) -> int:
     """CLI entry point shared by the three runners; returns a process exit code.
 
     Pass ``--start-date`` + ``--end-date`` for retrospective backfill; otherwise a
@@ -2882,7 +2956,9 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
     if not args.dry_run:
         validate_output_target(spec.trend_cache_json, database=database_file(db))
         if not (args.start_date and args.end_date):
-            validate_output_target(spec.trend_cache_meta_json, database=database_file(db))
+            validate_output_target(
+                spec.trend_cache_meta_json, database=database_file(db)
+            )
 
     if args.start_date and args.end_date:
         run_retrospective(db, spec, args)
@@ -2900,7 +2976,9 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
         include_earliest=args.rebuild_history,
     )
     if latest_end is not None and cfg.as_of_date > latest_end:
-        print(f"CAPPING as_of_date {cfg.as_of_date.isoformat()} → {latest_end.isoformat()}")
+        print(
+            f"CAPPING as_of_date {cfg.as_of_date.isoformat()} → {latest_end.isoformat()}"
+        )
         cfg = UsSimulationConfig(
             spec=spec,
             as_of_date=latest_end,
@@ -2915,7 +2993,9 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
     lookback_days = max(0, (cfg.as_of_date - cfg.since_date).days)
 
     if args.rebuild_history:
-        _rebuild_history(db, spec, args, cfg, first_poll=first_poll, lookback_days=lookback_days)
+        _rebuild_history(
+            db, spec, args, cfg, first_poll=first_poll, lookback_days=lookback_days
+        )
 
     run_dates = dates_to_run_for_cfg(
         cfg, database_file(db), map_id=_output_map_id(db, spec)
@@ -2945,7 +3025,9 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
         ):
             run_dates.append(cfg.as_of_date)
     if len(run_dates) > 1:
-        print(f"AUTO-BACKFILL missing_dates={len(run_dates)} from={run_dates[0]} to={run_dates[-1]}")
+        print(
+            f"AUTO-BACKFILL missing_dates={len(run_dates)} from={run_dates[0]} to={run_dates[-1]}"
+        )
 
     latest_poll_usage: LatestPollUsage | None = None
 
@@ -2994,7 +3076,8 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
                 print(f"Backfill progress: {index}/{len(run_dates)}")
             snippet = latest_poll_snippet(
                 latest_poll_usage,
-                generic_ballot=spec.election_type in {"us_house_model", "us_senate_model"},
+                generic_ballot=spec.election_type
+                in {"us_house_model", "us_senate_model"},
             )
             if snippet:
                 print(snippet)

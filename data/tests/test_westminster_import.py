@@ -50,7 +50,9 @@ class GeneralElectionImporter(Protocol):
 
 
 def _load() -> GeneralElectionImporter:
-    module = importlib.import_module("importers.results.westminster.import_general_elections")
+    module = importlib.import_module(
+        "importers.results.westminster.import_general_elections"
+    )
     return cast(GeneralElectionImporter, module)
 
 
@@ -121,7 +123,9 @@ class TestPartyKeyToName:
         assert importer.humanize_party_name("ukip") == "UK Independence Party"
 
     def test_reform_and_ukip_are_distinct(self) -> None:
-        assert importer.PARTY_KEY_TO_NAME["reform"] != importer.PARTY_KEY_TO_NAME["ukip"]
+        assert (
+            importer.PARTY_KEY_TO_NAME["reform"] != importer.PARTY_KEY_TO_NAME["ukip"]
+        )
 
 
 def test_normalize_names_and_party_keys() -> None:
@@ -301,8 +305,10 @@ def test_main_existing_election_raises_then_skip_existing(
     post_map = db.get_map_by_name("UK 2024 Constituencies")
     assert post_map is not None
     election = db.add_election(
-        post_map.id, 2024,
-        "2024 General Election", ElectionType.uk_general,
+        post_map.id,
+        2024,
+        "2024 General Election",
+        ElectionType.uk_general,
     )
     party = db.add_party("Labour")
     db.add_vote(election.id, seat_id, party_id=party.id, vote_total=1, elected=True)
@@ -324,8 +330,10 @@ def test_main_refresh_keeps_election_id_and_replaces_votes(
     post_map = db.get_map_by_name("UK 2024 Constituencies")
     assert post_map is not None
     election = db.add_election(
-        post_map.id, 2024,
-        "2024 General Election", ElectionType.uk_general,
+        post_map.id,
+        2024,
+        "2024 General Election",
+        ElectionType.uk_general,
     )
     party = db.add_party("Old party")
     db.add_vote(election.id, seat_id, party_id=party.id, vote_total=1, elected=True)

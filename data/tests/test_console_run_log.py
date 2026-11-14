@@ -199,9 +199,7 @@ def test_a_successful_run_is_recorded(folder: Path) -> None:
 
 
 def test_a_failed_run_is_recorded_with_its_exit_code(folder: Path) -> None:
-    result = run_command(
-        _py("import sys; print('partial'); sys.exit(3)"), timeout=30
-    )
+    result = run_command(_py("import sys; print('partial'); sys.exit(3)"), timeout=30)
 
     record, path = _only_record(folder)
     assert result.returncode == 3 and result.stdout == "partial\n"
@@ -250,9 +248,7 @@ def test_timeout_output_in_bytes_or_none_is_decoded(
     folder: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     def expire(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
-        raise subprocess.TimeoutExpired(
-            "x", 1, output=b"caf\xc3\xa9 \xff", stderr=None
-        )
+        raise subprocess.TimeoutExpired("x", 1, output=b"caf\xc3\xa9 \xff", stderr=None)
 
     monkeypatch.setattr("console.shared.runner.subprocess.run", expire)
 
@@ -380,7 +376,9 @@ def test_an_unwritable_log_does_not_swallow_a_timeout(
 
 
 def test_a_write_failure_is_flashed_in_a_request(
-    app: Flask, tmp_path: Path, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+    app: Flask,  # noqa: F811
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def explode(*args: object, **kwargs: object) -> None:
         raise OSError("disk full")
@@ -846,9 +844,7 @@ def test_the_us_steps_run_inside_their_sections_context(
 
     # A chamber that needs no tracked matchup, so the model step is not skipped.
     chamber = next(
-        c
-        for c in US_CHAMBERS_BY_SLUG.values()
-        if c.tracked_matchup_map_name is None
+        c for c in US_CHAMBERS_BY_SLUG.values() if c.tracked_matchup_map_name is None
     )
 
     run_us_chamber_and_export(db, chamber, runner=runner, rebuild_history=False)

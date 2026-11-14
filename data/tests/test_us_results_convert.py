@@ -40,7 +40,9 @@ FIXTURES = Path(__file__).parent / "fixtures" / "nyt"
 RETRIEVED = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
 
 
-def _fetched(year: int, chamber: Chamber, fixture: str, kind: str = "general") -> FetchResult:
+def _fetched(
+    year: int, chamber: Chamber, fixture: str, kind: str = "general"
+) -> FetchResult:
     source = source_for(year, chamber, "runoff" if kind == "runoff" else "general")
     data: dict[str, Any] = json.loads((FIXTURES / fixture).read_text(encoding="utf-8"))
     return FetchResult(
@@ -60,9 +62,15 @@ def _convert(
     runoff_fixture: str | None = None,
 ) -> ConversionResult:
     general = _fetched(year, chamber, fixture)
-    runoffs = [] if runoff_fixture is None else [_fetched(year, chamber, runoff_fixture, "runoff")]
+    runoffs = (
+        []
+        if runoff_fixture is None
+        else [_fetched(year, chamber, runoff_fixture, "runoff")]
+    )
     races = parse(general.source, general.data)
-    runoff_races = [race for result in runoffs for race in parse(result.source, result.data)]
+    runoff_races = [
+        race for result in runoffs for race in parse(result.source, result.data)
+    ]
     return convert_races(
         apply_runoffs(races, runoff_races),
         year=year,
@@ -72,7 +80,14 @@ def _convert(
 
 
 def _seed_us_parties(db: Database) -> None:
-    for name in ("Democratic", "Republican", "Libertarian", "US Green", "Independent", "Others"):
+    for name in (
+        "Democratic",
+        "Republican",
+        "Libertarian",
+        "US Green",
+        "Independent",
+        "Others",
+    ):
         db.add_party(name)
 
 
@@ -104,7 +119,9 @@ def _race(**overrides: Any) -> Race:
 def _meta() -> SourceMeta:
     return SourceMeta(
         election_date=date(2026, 11, 3),
-        files=(SourceFile("general", "https://static01.nyt.com/x.json", RETRIEVED, None),),
+        files=(
+            SourceFile("general", "https://static01.nyt.com/x.json", RETRIEVED, None),
+        ),
     )
 
 
@@ -243,7 +260,10 @@ def test_winner_mismatch_with_earlier_totals_warns() -> None:
 
     warnings = _convert_over(previous).warnings
 
-    assert "FL-10: earlier totals not used, winner was republican, now democrat" in warnings
+    assert (
+        "FL-10: earlier totals not used, winner was republican, now democrat"
+        in warnings
+    )
 
 
 def test_the_unopposed_nominal_total_is_100() -> None:
@@ -302,7 +322,10 @@ def test_runoff_sources_are_listed_in_meta() -> None:
 
     meta = result.main["meta"]
     assert [source["kind"] for source in meta["sources"]] == ["general", "runoff"]
-    assert meta["source_urls"] == [source_for(2020, "senate").url, source_for(2020, "senate", "runoff").url]
+    assert meta["source_urls"] == [
+        source_for(2020, "senate").url,
+        source_for(2020, "senate", "runoff").url,
+    ]
     assert meta["election_date"] == "2020-11-03"
     assert result.main["Georgia"]["seatInfo"]["round"] == "runoff"
     assert result.main["Arizona"]["seatInfo"]["special"] is True
@@ -348,11 +371,16 @@ def test_source_note_variants() -> None:
     assert source_note(2026, "house", [_race(certified=None)], main=True) == base
     provisional = f"{base} Provisional until certified."
     assert convert.current_cycle() == 2026
-    assert source_note(2026, "house", [_race(certified=False)], main=True) == provisional
+    assert (
+        source_note(2026, "house", [_race(certified=False)], main=True) == provisional
+    )
     assert source_note(2026, "house", [_race(winners=())], main=True) == provisional
     # Past cycles are settled, whatever NYT's archived file says.
     assert source_note(2018, "house", [_race(year=2018, winners=())], main=True) == base
-    assert source_note(2022, "house", [_race(year=2022, certified=False)], main=True) == base
+    assert (
+        source_note(2022, "house", [_race(year=2022, certified=False)], main=True)
+        == base
+    )
     assert source_note(2020, "house", called, main=True) == (
         f"{base} North Carolina districts shown on 2018 boundaries."
     )
@@ -391,7 +419,9 @@ def test_zero_votes_with_several_candidates_warns() -> None:
 
 def test_race_from_another_cycle_is_refused() -> None:
     with pytest.raises(ConvertError, match="2024 house"):
-        convert_races([_race(year=2024)], year=2026, chamber="house", source_meta=_meta())
+        convert_races(
+            [_race(year=2024)], year=2026, chamber="house", source_meta=_meta()
+        )
 
 
 def test_two_specials_for_one_state_are_refused() -> None:
@@ -408,7 +438,11 @@ def test_source_meta_needs_the_general_file_first() -> None:
     with pytest.raises(ConvertError, match="general"):
         SourceMeta(
             election_date=date(2026, 11, 3),
-            files=(SourceFile("runoff", "https://static01.nyt.com/x.json", RETRIEVED, None),),
+            files=(
+                SourceFile(
+                    "runoff", "https://static01.nyt.com/x.json", RETRIEVED, None
+                ),
+            ),
         )
 
 
@@ -425,7 +459,9 @@ def _write_and_import(
     refresh: bool = False,
 ) -> None:
     write_conversion(result, year=year, chamber=chamber, out_dir=out_dir)
-    import_files(db, year=year, chamber=chamber, out_dir=out_dir, refresh=refresh, dry_run=False)
+    import_files(
+        db, year=year, chamber=chamber, out_dir=out_dir, refresh=refresh, dry_run=False
+    )
 
 
 def _elected(db: Database, election_id: int) -> dict[str, str]:
@@ -440,19 +476,33 @@ def _elected(db: Database, election_id: int) -> dict[str, str]:
     }
 
 
-def test_house_import_writes_winners_statuses_note_map_and_date(db: Database, tmp_path: Path) -> None:
+def test_house_import_writes_winners_statuses_note_map_and_date(
+    db: Database, tmp_path: Path
+) -> None:
     _seed_us_parties(db)
-    _write_and_import(db, _convert(2026, "house", "schema-a.json"), tmp_path, year=2026, chamber="house")
+    _write_and_import(
+        db,
+        _convert(2026, "house", "schema-a.json"),
+        tmp_path,
+        year=2026,
+        chamber="house",
+    )
 
     election = db.get_election_by_name("2026 US House Election")
     assert election is not None
     assert election.map_id == 24
     assert election.type == ElectionType.us_house
     assert election.election_date == date(2026, 11, 3)
-    assert election.source_note == "Results: The New York Times / AP. Provisional until certified."
+    assert (
+        election.source_note
+        == "Results: The New York Times / AP. Provisional until certified."
+    )
     house_map = db.get_map(24)
     assert house_map is not None
-    assert (house_map.name, house_map.parliament) == ("US House Districts 2026", "us_house")
+    assert (house_map.name, house_map.parliament) == (
+        "US House Districts 2026",
+        "us_house",
+    )
 
     assert _elected(db, election.id) == {
         "TX-28": "Democratic",
@@ -464,7 +514,12 @@ def test_house_import_writes_winners_statuses_note_map_and_date(db: Database, tm
     statuses = db.get_seat_statuses(election.id)
     assert len(statuses) == 6
     az = statuses[seat_ids["AZ-06"]]
-    assert (az.called, az.pct_counted, az.same_party, az.decisive_round) == (False, 80.5, False, None)
+    assert (az.called, az.pct_counted, az.same_party, az.decisive_round) == (
+        False,
+        80.5,
+        False,
+        None,
+    )
     assert statuses[seat_ids["CA-12"]].same_party is True
     assert statuses[seat_ids["AK-01"]].decisive_round == "rcv-final"
     assert statuses[seat_ids["FL-10"]].pct_counted is None
@@ -474,9 +529,17 @@ def test_house_import_writes_winners_statuses_note_map_and_date(db: Database, tm
     assert not any(vote.elected for vote in az_votes)
 
 
-def test_clashing_special_imports_as_child_election(db: Database, tmp_path: Path) -> None:
+def test_clashing_special_imports_as_child_election(
+    db: Database, tmp_path: Path
+) -> None:
     _seed_us_parties(db)
-    _write_and_import(db, _convert(2026, "senate", "schema-a.json"), tmp_path, year=2026, chamber="senate")
+    _write_and_import(
+        db,
+        _convert(2026, "senate", "schema-a.json"),
+        tmp_path,
+        year=2026,
+        chamber="senate",
+    )
 
     regular = db.get_election_by_name("2026 US Senate Election")
     special = db.get_election_by_name("2026 US Senate Special Election")
@@ -490,10 +553,15 @@ def test_clashing_special_imports_as_child_election(db: Database, tmp_path: Path
     assert _elected(db, regular.id) == {"Ohio": "Democratic", "Minnesota": "Democratic"}
     assert _elected(db, special.id) == {"Minnesota": "Republican"}
     # Both elections use the one Minnesota seat.
-    assert {seat.seat_name for seat in db.get_seats_for_map(23)} == {"Ohio", "Minnesota"}
+    assert {seat.seat_name for seat in db.get_seats_for_map(23)} == {
+        "Ohio",
+        "Minnesota",
+    }
     (special_status,) = db.get_seat_statuses(special.id).values()
     assert special_status.senate_class == 1
-    regular_classes = {status.senate_class for status in db.get_seat_statuses(regular.id).values()}
+    regular_classes = {
+        status.senate_class for status in db.get_seat_statuses(regular.id).values()
+    }
     assert regular_classes == {2, 3}
 
 
@@ -504,10 +572,14 @@ def test_refresh_keeps_ids_and_replaces_statuses(db: Database, tmp_path: Path) -
     regular = db.get_election_by_name("2026 US Senate Election")
     special = db.get_election_by_name("2026 US Senate Special Election")
     assert regular is not None and special is not None
-    ohio = next(seat.id for seat in db.get_seats_for_map(23) if seat.seat_name == "Ohio")
+    ohio = next(
+        seat.id for seat in db.get_seats_for_map(23) if seat.seat_name == "Ohio"
+    )
 
     # Ohio goes back to uncalled at 50% counted in the next refresh.
-    result.main["Ohio"]["seatInfo"].update({"current": None, "called": False, "pct": 50.0})
+    result.main["Ohio"]["seatInfo"].update(
+        {"current": None, "called": False, "pct": 50.0}
+    )
     _write_and_import(db, result, tmp_path, year=2026, chamber="senate", refresh=True)
 
     regular_after = db.get_election_by_name("2026 US Senate Election")
@@ -522,14 +594,23 @@ def test_refresh_keeps_ids_and_replaces_statuses(db: Database, tmp_path: Path) -
     assert len(db.get_votes_for_election(regular.id)) == 5
 
 
-def test_refresh_updates_date_and_note_of_a_538_import(db: Database, tmp_path: Path) -> None:
+def test_refresh_updates_date_and_note_of_a_538_import(
+    db: Database, tmp_path: Path
+) -> None:
     """Re-sourcing a FiveThirtyEight election keeps its id and takes the file's meta."""
     _seed_us_parties(db)
     legacy = tmp_path / "legacy.json"
-    legacy.write_text(json.dumps({
-        "Ohio": {"seatInfo": {"current": "republican"},
-                 "partyInfo": {"republican": {"total": 1, "name": "R"}}},
-    }), encoding="utf-8")
+    legacy.write_text(
+        json.dumps(
+            {
+                "Ohio": {
+                    "seatInfo": {"current": "republican"},
+                    "partyInfo": {"republican": {"total": 1, "name": "R"}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     import_senate_mod.import_senate(db, legacy, 2026, "2026 US Senate Election")
     before = db.get_election_by_name("2026 US Senate Election")
     assert before is not None and before.election_date == date(2026, 11, 5)
@@ -553,7 +634,9 @@ def test_refresh_onto_another_map_is_refused(db: Database, tmp_path: Path) -> No
     result.main["meta"]["map_name"] = "US House Districts 2024"
 
     with pytest.raises(CliError, match="map 24, not 21"):
-        _write_and_import(db, result, tmp_path, year=2026, chamber="house", refresh=True)
+        _write_and_import(
+            db, result, tmp_path, year=2026, chamber="house", refresh=True
+        )
 
 
 def test_election_names_match_rebuild_database(tmp_path: Path) -> None:
@@ -563,7 +646,9 @@ def test_election_names_match_rebuild_database(tmp_path: Path) -> None:
         (tmp_path / name).write_text("{}", encoding="utf-8")
     regular = {"meta": {"special_file": "senate-2020-special.json"}}
     (tmp_path / "senate-2020.json").write_text(json.dumps(regular), encoding="utf-8")
-    rebuild_names = {step.args[step.args.index("--name") + 1] for step in us_election_steps(tmp_path)}
+    rebuild_names = {
+        step.args[step.args.index("--name") + 1] for step in us_election_steps(tmp_path)
+    }
 
     assert rebuild_names == {
         election_name(2026, "house"),
@@ -574,22 +659,32 @@ def test_election_names_match_rebuild_database(tmp_path: Path) -> None:
 
 def test_race_without_candidates_is_refused() -> None:
     with pytest.raises(ConvertError, match="has no candidates"):
-        convert_races([_race(candidates=(), winners=())], year=2026, chamber="house", source_meta=_meta())
+        convert_races(
+            [_race(candidates=(), winners=())],
+            year=2026,
+            chamber="house",
+            source_meta=_meta(),
+        )
 
 
 def test_winners_from_two_parties_are_refused() -> None:
     with pytest.raises(ConvertError, match="winners span parties"):
-        convert_races([_race(winners=("a", "b"))], year=2026, chamber="house", source_meta=_meta())
+        convert_races(
+            [_race(winners=("a", "b"))], year=2026, chamber="house", source_meta=_meta()
+        )
 
 
-def test_refresh_with_a_bad_file_leaves_the_election_intact(db: Database, tmp_path: Path) -> None:
+def test_refresh_with_a_bad_file_leaves_the_election_intact(
+    db: Database, tmp_path: Path
+) -> None:
     _seed_us_parties(db)
     result = _convert(2026, "house", "schema-a.json")
     _write_and_import(db, result, tmp_path, year=2026, chamber="house")
     election = db.get_election_by_name("2026 US House Election")
     assert election is not None
     votes_before = [
-        (v.seat_id, v.party_id, v.vote_total, v.elected) for v in db.get_votes_for_election(election.id)
+        (v.seat_id, v.party_id, v.vote_total, v.elected)
+        for v in db.get_votes_for_election(election.id)
     ]
     statuses_before = db.get_seat_statuses(election.id)
     note_before = election.source_note
@@ -602,25 +697,34 @@ def test_refresh_with_a_bad_file_leaves_the_election_intact(db: Database, tmp_pa
     # Straight to the importer: the CLI would refuse the file before it got there.
     with pytest.raises(SystemExit, match="Unknown party key 'whigs'"):
         import_house_mod.import_house(
-            db, tmp_path / "house-2026.json", 2026, "2026 US House Election", refresh=True,
+            db,
+            tmp_path / "house-2026.json",
+            2026,
+            "2026 US House Election",
+            refresh=True,
         )
 
     after = db.get_election_by_name("2026 US House Election")
     assert after is not None and after.source_note == note_before
     assert [
-        (v.seat_id, v.party_id, v.vote_total, v.elected) for v in db.get_votes_for_election(election.id)
+        (v.seat_id, v.party_id, v.vote_total, v.elected)
+        for v in db.get_votes_for_election(election.id)
     ] == votes_before
     assert db.get_seat_statuses(election.id) == statuses_before
 
 
-def test_refused_refresh_onto_another_map_creates_no_map(db: Database, tmp_path: Path) -> None:
+def test_refused_refresh_onto_another_map_creates_no_map(
+    db: Database, tmp_path: Path
+) -> None:
     _seed_us_parties(db)
     result = _convert(2026, "house", "schema-a.json")
     _write_and_import(db, result, tmp_path, year=2026, chamber="house")
     result.main["meta"]["map_id"] = 25
 
     with pytest.raises(CliError, match="map 24, not 25"):
-        _write_and_import(db, result, tmp_path, year=2026, chamber="house", refresh=True)
+        _write_and_import(
+            db, result, tmp_path, year=2026, chamber="house", refresh=True
+        )
 
     assert db.get_map(25) is None
 
@@ -658,7 +762,9 @@ def test_refresh_with_a_538_file_clears_the_note_and_keeps_the_date(
 
 def test_general_source_needs_a_date() -> None:
     general = _fetched(2026, "house", "schema-a.json")
-    pending = replace(general.source, status=SourceStatus.PENDING, url=None, election_date=None)
+    pending = replace(
+        general.source, status=SourceStatus.PENDING, url=None, election_date=None
+    )
     with pytest.raises(ConvertError, match="is not a dated general source"):
         SourceMeta.from_fetches(replace(general, source=pending))
 

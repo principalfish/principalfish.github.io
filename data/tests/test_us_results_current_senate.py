@@ -44,7 +44,9 @@ def _seat(payload: dict[str, Any], state: str) -> dict[str, Any]:
 
 
 class TestBuild:
-    def test_fixture_splits_65_holdovers_and_35_winners(self, snapshot: dict[str, Any]) -> None:
+    def test_fixture_splits_65_holdovers_and_35_winners(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         built = build_current_senate(snapshot, senate_election(snapshot))
 
         members = [m for seat in built.payload["seats"] for m in seat["members"]]
@@ -60,10 +62,14 @@ class TestBuild:
         built = build_current_senate(snapshot, senate_election(snapshot))
 
         assert _member(built.payload, "Georgia", 2) == {
-            "party": "democrat", "name": "Winner Georgia", "class": 2,
+            "party": "democrat",
+            "name": "Winner Georgia",
+            "class": 2,
         }
         assert _member(built.payload, "Florida", 3) == {
-            "party": "republican", "name": "Special Florida", "class": 3,
+            "party": "republican",
+            "name": "Special Florida",
+            "class": 3,
         }
         assert _member(built.payload, "Ohio", 3)["name"] == "Special Ohio"
         # Their other seats were not up and carry over unchanged.
@@ -72,7 +78,9 @@ class TestBuild:
         # Class 3 seats elsewhere stay with their sitting senators.
         assert _member(built.payload, "Arizona", 3) == _member(snapshot, "Arizona", 3)
 
-    def test_state_colour_is_the_shared_party_or_split(self, snapshot: dict[str, Any]) -> None:
+    def test_state_colour_is_the_shared_party_or_split(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         built = build_current_senate(snapshot, senate_election(snapshot))
 
         # Maine: Collins' class 2 seat won by a Democrat, King (independent) stays.
@@ -84,17 +92,23 @@ class TestBuild:
         # Alabama: Britt (R) stays, the class 2 seat goes to a Democrat.
         assert _seat(built.payload, "Alabama")["w"] == "split"
 
-    def test_output_has_the_converter_shape_and_order(self, snapshot: dict[str, Any]) -> None:
+    def test_output_has_the_converter_shape_and_order(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         built = build_current_senate(snapshot, senate_election(snapshot))
 
         payload = built.payload
         assert list(payload) == ["schema", "seats"]
         assert payload["schema"] == "pf-senate-current-v1"
-        assert [seat["n"] for seat in payload["seats"]] == [seat["n"] for seat in snapshot["seats"]]
+        assert [seat["n"] for seat in payload["seats"]] == [
+            seat["n"] for seat in snapshot["seats"]
+        ]
         for seat, old in zip(payload["seats"], snapshot["seats"], strict=True):
             assert list(seat) == ["n", "r", "w", "members"]
             assert seat["r"] == old["r"]
-            assert [m["class"] for m in seat["members"]] == sorted(m["class"] for m in seat["members"])
+            assert [m["class"] for m in seat["members"]] == sorted(
+                m["class"] for m in seat["members"]
+            )
             assert all(list(m) == ["party", "name", "class"] for m in seat["members"])
 
     def test_the_inputs_are_not_modified(self, snapshot: dict[str, Any]) -> None:
@@ -109,7 +123,8 @@ class TestBuild:
         self, snapshot: dict[str, Any]
     ) -> None:
         election = senate_election(
-            snapshot, Texas=senate_race("republican", None, seat_class=2),
+            snapshot,
+            Texas=senate_race("republican", None, seat_class=2),
         )
 
         built = build_current_senate(snapshot, election)
@@ -126,7 +141,9 @@ class TestBuild:
         election = senate_election(snapshot)
         special = {
             "meta": {"chamber": "senate", "year": 2026, "special": True},
-            "Georgia": senate_race("republican", "Special Georgia", seat_class=3, special=True),
+            "Georgia": senate_race(
+                "republican", "Special Georgia", seat_class=3, special=True
+            ),
         }
 
         built = build_current_senate(snapshot, election, special_election=special)
@@ -137,9 +154,12 @@ class TestBuild:
 
 
 class TestUncalled:
-    def _build(self, snapshot: dict[str, Any], **overrides: dict[str, Any]) -> dict[str, Any]:
+    def _build(
+        self, snapshot: dict[str, Any], **overrides: dict[str, Any]
+    ) -> dict[str, Any]:
         payload: dict[str, Any] = build_current_senate(
-            snapshot, senate_election(snapshot, **overrides),
+            snapshot,
+            senate_election(snapshot, **overrides),
         ).payload
         return payload
 
@@ -148,17 +168,33 @@ class TestUncalled:
     ) -> None:
         # The Republican leads on votes, but no winner is called.
         uncalled = senate_race(None, None, seat_class=2, called=False, pct=62.54)
-        built = build_current_senate(snapshot, senate_election(snapshot, Texas=uncalled))
+        built = build_current_senate(
+            snapshot, senate_election(snapshot, Texas=uncalled)
+        )
 
         assert (built.holdovers, built.winners, built.uncalled) == (65, 34, 1)
         assert _member(built.payload, "Texas", 2) == {
-            "party": None, "name": None, "class": 2, "c": False, "pc": 62.5,
+            "party": None,
+            "name": None,
+            "class": 2,
+            "c": False,
+            "pc": 62.5,
         }
 
-    def test_pc_is_left_out_when_the_count_is_unknown(self, snapshot: dict[str, Any]) -> None:
-        payload = self._build(snapshot, Texas=senate_race(None, None, seat_class=2, called=False, pct=None))
+    def test_pc_is_left_out_when_the_count_is_unknown(
+        self, snapshot: dict[str, Any]
+    ) -> None:
+        payload = self._build(
+            snapshot,
+            Texas=senate_race(None, None, seat_class=2, called=False, pct=None),
+        )
 
-        assert _member(payload, "Texas", 2) == {"party": None, "name": None, "class": 2, "c": False}
+        assert _member(payload, "Texas", 2) == {
+            "party": None,
+            "name": None,
+            "class": 2,
+            "c": False,
+        }
 
     def test_one_called_and_one_uncalled_member_colours_the_state_by_the_called_one(
         self, snapshot: dict[str, Any]
@@ -175,7 +211,11 @@ class TestUncalled:
         # Only the member carries the uncalled flag.
         assert [m.get("c") for m in texas["members"]] == [None, False]
         assert texas["members"][1] == {
-            "party": None, "name": None, "class": 2, "c": False, "pc": 40.0,
+            "party": None,
+            "name": None,
+            "class": 2,
+            "c": False,
+            "pc": 40.0,
         }
 
     def test_a_mixed_state_follows_the_called_member_whatever_its_party(
@@ -214,11 +254,16 @@ class TestUncalled:
 
     def test_an_uncalled_special_is_unknown_too(self, snapshot: dict[str, Any]) -> None:
         payload = self._build(
-            snapshot, Ohio=senate_race(None, None, seat_class=3, special=True, called=False, pct=10),
+            snapshot,
+            Ohio=senate_race(
+                None, None, seat_class=3, special=True, called=False, pct=10
+            ),
         )
 
         assert _member(payload, "Ohio", 3)["c"] is False
-        assert _member(payload, "Ohio", 1)["name"] == _member(snapshot, "Ohio", 1)["name"]
+        assert (
+            _member(payload, "Ohio", 1)["name"] == _member(snapshot, "Ohio", 1)["name"]
+        )
 
     def test_a_called_race_with_no_winning_party_is_refused(
         self, snapshot: dict[str, Any]
@@ -226,12 +271,16 @@ class TestUncalled:
         broken = senate_race("democrat", "X", seat_class=2)
         broken["seatInfo"]["current"] = None
 
-        with pytest.raises(CurrentSenateError, match="Texas class 2 is called but names no"):
+        with pytest.raises(
+            CurrentSenateError, match="Texas class 2 is called but names no"
+        ):
             build_current_senate(snapshot, senate_election(snapshot, Texas=broken))
 
 
 class TestValidation:
-    def test_a_missing_class_two_state_is_refused(self, snapshot: dict[str, Any]) -> None:
+    def test_a_missing_class_two_state_is_refused(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         election = senate_election(snapshot)
         del election["Georgia"]
 
@@ -246,14 +295,20 @@ class TestValidation:
         with pytest.raises(CurrentSenateError, match="no special race for: Ohio"):
             build_current_senate(snapshot, election)
 
-    def test_a_race_for_a_seat_no_one_holds_is_refused(self, snapshot: dict[str, Any]) -> None:
+    def test_a_race_for_a_seat_no_one_holds_is_refused(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         # Arizona holds classes 1 and 3: it has no class 2 senator to replace.
-        election = senate_election(snapshot, Arizona=senate_race("democrat", "A", seat_class=2))
+        election = senate_election(
+            snapshot, Arizona=senate_race("democrat", "A", seat_class=2)
+        )
 
         with pytest.raises(CurrentSenateError, match="Arizona has no sitting class 2"):
             build_current_senate(snapshot, election)
 
-    def test_a_state_with_the_wrong_member_count_is_refused(self, snapshot: dict[str, Any]) -> None:
+    def test_a_state_with_the_wrong_member_count_is_refused(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         broken = copy.deepcopy(snapshot)
         _seat(broken, "Texas")["members"].append(
             {"party": "republican", "name": "Extra", "class": 1},
@@ -262,7 +317,9 @@ class TestValidation:
         with pytest.raises(CurrentSenateError, match="Texas has 3 members, not 2"):
             build_current_senate(broken, senate_election(snapshot))
 
-    def test_a_state_left_with_one_member_is_refused(self, snapshot: dict[str, Any]) -> None:
+    def test_a_state_left_with_one_member_is_refused(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         broken = copy.deepcopy(snapshot)
         _seat(broken, "Texas")["members"].pop(0)  # Cruz, class 1
         broken_election = senate_election(snapshot)
@@ -270,15 +327,21 @@ class TestValidation:
         with pytest.raises(CurrentSenateError, match="Texas has 1 members, not 2"):
             build_current_senate(broken, broken_election)
 
-    def test_two_members_of_one_class_are_refused(self, snapshot: dict[str, Any]) -> None:
+    def test_two_members_of_one_class_are_refused(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         broken = copy.deepcopy(snapshot)
         for member in _seat(broken, "Texas")["members"]:
             member["class"] = 3
 
-        with pytest.raises(CurrentSenateError, match="Texas has two members of class 3"):
+        with pytest.raises(
+            CurrentSenateError, match="Texas has two members of class 3"
+        ):
             build_current_senate(broken, senate_election(broken))
 
-    def test_a_chamber_that_is_not_100_is_refused(self, snapshot: dict[str, Any]) -> None:
+    def test_a_chamber_that_is_not_100_is_refused(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         short = copy.deepcopy(snapshot)
         short["seats"].pop()  # Wyoming
         election = senate_election(snapshot)
@@ -288,7 +351,9 @@ class TestValidation:
             build_current_senate(short, election)
 
     def test_a_non_state_seat_is_refused(self, snapshot: dict[str, Any]) -> None:
-        election = senate_election(snapshot, **{"TX-01": senate_race("democrat", "A", seat_class=2)})
+        election = senate_election(
+            snapshot, **{"TX-01": senate_race("democrat", "A", seat_class=2)}
+        )
 
         with pytest.raises(CurrentSenateError, match="'TX-01' is not a state"):
             build_current_senate(snapshot, election)
@@ -300,17 +365,23 @@ class TestValidation:
         with pytest.raises(CurrentSenateError, match="house election, not senate"):
             build_current_senate(snapshot, election)
 
-    def test_the_wrong_snapshot_schema_is_refused(self, snapshot: dict[str, Any]) -> None:
+    def test_the_wrong_snapshot_schema_is_refused(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         snapshot["schema"] = "other"
 
         with pytest.raises(CurrentSenateError, match="schema"):
             build_current_senate(snapshot, senate_election(snapshot))
 
-    def test_a_special_without_a_class_is_refused(self, snapshot: dict[str, Any]) -> None:
+    def test_a_special_without_a_class_is_refused(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         race = senate_race("republican", "S", seat_class=3, special=True)
         del race["seatInfo"]["senateClass"]
 
-        with pytest.raises(CurrentSenateError, match="special in Ohio has no senateClass"):
+        with pytest.raises(
+            CurrentSenateError, match="special in Ohio has no senateClass"
+        ):
             build_current_senate(snapshot, senate_election(snapshot, Ohio=race))
 
     def test_the_same_state_in_both_election_files_is_refused(
@@ -318,14 +389,22 @@ class TestValidation:
     ) -> None:
         election = senate_election(snapshot)
 
-        with pytest.raises(CurrentSenateError, match="Florida class 3 is contested in both"):
-            build_current_senate(snapshot, election, special_election={"Florida": election["Florida"]})
+        with pytest.raises(
+            CurrentSenateError, match="Florida class 3 is contested in both"
+        ):
+            build_current_senate(
+                snapshot, election, special_election={"Florida": election["Florida"]}
+            )
 
-    def test_custom_expected_specials_are_respected(self, snapshot: dict[str, Any]) -> None:
+    def test_custom_expected_specials_are_respected(
+        self, snapshot: dict[str, Any]
+    ) -> None:
         election = senate_election(snapshot)
         del election["Ohio"]
 
-        built = build_current_senate(snapshot, election, expected_specials={"Florida": 3})
+        built = build_current_senate(
+            snapshot, election, expected_specials={"Florida": 3}
+        )
 
         assert _member(built.payload, "Ohio", 3) == _member(snapshot, "Ohio", 3)
 
@@ -378,7 +457,10 @@ class TestValidation:
         built = build_current_senate(snapshot, senate_election(snapshot, Texas=race))
 
         assert _member(built.payload, "Texas", 2) == {
-            "party": None, "name": None, "class": 2, "c": False,
+            "party": None,
+            "name": None,
+            "class": 2,
+            "c": False,
         }
         [warning] = built.warnings
         assert warning.startswith("Texas class 2: percent counted")
@@ -389,7 +471,9 @@ class TestValidation:
     ) -> None:
         for pct in (0, 100):
             race = senate_race(None, None, seat_class=2, called=False, pct=pct)
-            built = build_current_senate(snapshot, senate_election(snapshot, Texas=race))
+            built = build_current_senate(
+                snapshot, senate_election(snapshot, Texas=race)
+            )
             assert _member(built.payload, "Texas", 2)["pc"] == pct
             assert built.warnings == []
 
@@ -402,7 +486,9 @@ class TestIdempotence:
     def test_rerunning_over_its_own_output_gives_identical_bytes(
         self, snapshot: dict[str, Any]
     ) -> None:
-        election = senate_election(snapshot, Texas=senate_race(None, None, seat_class=2, called=False, pct=40))
+        election = senate_election(
+            snapshot, Texas=senate_race(None, None, seat_class=2, called=False, pct=40)
+        )
         first = build_current_senate(snapshot, election)
 
         second = build_current_senate(first.payload, election)
@@ -413,8 +499,12 @@ class TestIdempotence:
     def test_a_later_election_state_replaces_the_earlier_derived_seats(
         self, snapshot: dict[str, Any]
     ) -> None:
-        early = senate_election(snapshot, Texas=senate_race(None, None, seat_class=2, called=False))
-        late = senate_election(snapshot, Texas=senate_race("republican", "Texan Winner", seat_class=2))
+        early = senate_election(
+            snapshot, Texas=senate_race(None, None, seat_class=2, called=False)
+        )
+        late = senate_election(
+            snapshot, Texas=senate_race("republican", "Texan Winner", seat_class=2)
+        )
         derived_early = build_current_senate(snapshot, early).payload
 
         from_derived = build_current_senate(derived_early, late)
@@ -442,9 +532,13 @@ class TestModelLoader:
     ) -> None:
         from models.us.run_us_senate_model import class_state_allowlist
 
-        election = senate_election(snapshot, Texas=senate_race(None, None, seat_class=2, called=False))
+        election = senate_election(
+            snapshot, Texas=senate_race(None, None, seat_class=2, called=False)
+        )
         path = tmp_path / "senate-current.json"
-        path.write_text(render(build_current_senate(snapshot, election).payload), encoding="utf-8")
+        path.write_text(
+            render(build_current_senate(snapshot, election).payload), encoding="utf-8"
+        )
 
         class_two = class_state_allowlist(2, path)
         class_three = class_state_allowlist(3, path)
@@ -463,15 +557,21 @@ class TestRebuild:
         snapshot_path = tmp_path / "senate-current.json"
         snapshot_path.write_text(render(snapshot), encoding="utf-8")
         election_path = tmp_path / "senate-2026.json"
-        election_path.write_text(json.dumps(senate_election(snapshot)), encoding="utf-8")
+        election_path.write_text(
+            json.dumps(senate_election(snapshot)), encoding="utf-8"
+        )
         return snapshot_path, election_path
 
-    def test_writes_the_converter_text_to_out(self, snapshot: dict[str, Any], tmp_path: Path) -> None:
+    def test_writes_the_converter_text_to_out(
+        self, snapshot: dict[str, Any], tmp_path: Path
+    ) -> None:
         snapshot_path, election_path = self._files(snapshot, tmp_path)
         out = tmp_path / "nested" / "derived.json"
 
         report = rebuild_current_senate(
-            snapshot_path=snapshot_path, election_path=election_path, out_path=out,
+            snapshot_path=snapshot_path,
+            election_path=election_path,
+            out_path=out,
         )
 
         assert "65 holdovers, 35 winners, 0 uncalled (100 members)" in report
@@ -486,19 +586,26 @@ class TestRebuild:
 
         rebuild_current_senate(snapshot_path=snapshot_path, election_path=election_path)
         first = snapshot_path.read_text(encoding="utf-8")
-        report = rebuild_current_senate(snapshot_path=snapshot_path, election_path=election_path)
+        report = rebuild_current_senate(
+            snapshot_path=snapshot_path, election_path=election_path
+        )
 
         assert first != render(snapshot)
         assert snapshot_path.read_text(encoding="utf-8") == first
         assert f"unchanged {snapshot_path}" in report
         assert [p.name for p in tmp_path.iterdir() if p.name.endswith(".tmp")] == []
 
-    def test_dry_run_writes_nothing(self, snapshot: dict[str, Any], tmp_path: Path) -> None:
+    def test_dry_run_writes_nothing(
+        self, snapshot: dict[str, Any], tmp_path: Path
+    ) -> None:
         snapshot_path, election_path = self._files(snapshot, tmp_path)
         out = tmp_path / "out.json"
 
         report = rebuild_current_senate(
-            snapshot_path=snapshot_path, election_path=election_path, out_path=out, dry_run=True,
+            snapshot_path=snapshot_path,
+            election_path=election_path,
+            out_path=out,
+            dry_run=True,
         )
 
         assert "65 holdovers, 35 winners, 0 uncalled" in report
@@ -506,12 +613,16 @@ class TestRebuild:
         assert not out.exists()
         assert snapshot_path.read_text(encoding="utf-8") == render(snapshot)
 
-    def test_missing_election_file_is_an_error(self, snapshot: dict[str, Any], tmp_path: Path) -> None:
+    def test_missing_election_file_is_an_error(
+        self, snapshot: dict[str, Any], tmp_path: Path
+    ) -> None:
         snapshot_path, election_path = self._files(snapshot, tmp_path)
         election_path.unlink()
 
         with pytest.raises(CurrentSenateError, match="election file not found"):
-            rebuild_current_senate(snapshot_path=snapshot_path, election_path=election_path)
+            rebuild_current_senate(
+                snapshot_path=snapshot_path, election_path=election_path
+            )
 
     def test_an_election_file_of_another_year_is_refused(
         self, snapshot: dict[str, Any], tmp_path: Path
@@ -522,7 +633,9 @@ class TestRebuild:
         election_path.write_text(json.dumps(election), encoding="utf-8")
 
         with pytest.raises(CurrentSenateError, match="2024 senate election, not 2026"):
-            rebuild_current_senate(snapshot_path=snapshot_path, election_path=election_path)
+            rebuild_current_senate(
+                snapshot_path=snapshot_path, election_path=election_path
+            )
 
     def test_a_named_specials_file_is_read_and_must_exist(
         self, snapshot: dict[str, Any], tmp_path: Path
@@ -533,25 +646,47 @@ class TestRebuild:
         election_path.write_text(json.dumps(election), encoding="utf-8")
 
         with pytest.raises(CurrentSenateError, match="specials file not found"):
-            rebuild_current_senate(snapshot_path=snapshot_path, election_path=election_path)
+            rebuild_current_senate(
+                snapshot_path=snapshot_path, election_path=election_path
+            )
 
-        special = {"Georgia": senate_race("republican", "Special Georgia", seat_class=3, special=True)}
-        (tmp_path / "senate-2026-special.json").write_text(json.dumps(special), encoding="utf-8")
+        special = {
+            "Georgia": senate_race(
+                "republican", "Special Georgia", seat_class=3, special=True
+            )
+        }
+        (tmp_path / "senate-2026-special.json").write_text(
+            json.dumps(special), encoding="utf-8"
+        )
         report = rebuild_current_senate(
-            snapshot_path=snapshot_path, election_path=election_path, dry_run=True,
+            snapshot_path=snapshot_path,
+            election_path=election_path,
+            dry_run=True,
         )
         assert "64 holdovers, 36 winners" in report
 
-    def test_invalid_json_is_an_error(self, snapshot: dict[str, Any], tmp_path: Path) -> None:
+    def test_invalid_json_is_an_error(
+        self, snapshot: dict[str, Any], tmp_path: Path
+    ) -> None:
         snapshot_path, election_path = self._files(snapshot, tmp_path)
         election_path.write_text("{nope", encoding="utf-8")
 
         with pytest.raises(CurrentSenateError, match="not valid JSON"):
-            rebuild_current_senate(snapshot_path=snapshot_path, election_path=election_path)
+            rebuild_current_senate(
+                snapshot_path=snapshot_path, election_path=election_path
+            )
 
     @pytest.mark.parametrize(
         "special_file",
-        ["../senate-2026-special.json", "sub/special.json", "..", ".", "", "a\\b.json", 7],
+        [
+            "../senate-2026-special.json",
+            "sub/special.json",
+            "..",
+            ".",
+            "",
+            "a\\b.json",
+            7,
+        ],
     )
     def test_a_special_file_that_is_not_a_plain_name_is_refused(
         self, snapshot: dict[str, Any], tmp_path: Path, special_file: Any
@@ -561,7 +696,9 @@ class TestRebuild:
         election["meta"]["special_file"] = special_file
         election_path.write_text(json.dumps(election), encoding="utf-8")
         # A file the traversal would reach, so a read would succeed if it were allowed.
-        (tmp_path.parent / "senate-2026-special.json").write_text("{}", encoding="utf-8")
+        (tmp_path.parent / "senate-2026-special.json").write_text(
+            "{}", encoding="utf-8"
+        )
 
         with pytest.raises(CurrentSenateError, match="plain file name"):
             rebuild_current_senate(
@@ -671,11 +808,22 @@ class TestCli:
         snapshot_path = tmp_path / "senate-current.json"
         snapshot_path.write_text(render(snapshot), encoding="utf-8")
         election_path = tmp_path / "senate-2026.json"
-        election_path.write_text(json.dumps(senate_election(snapshot)), encoding="utf-8")
-        return ["current-senate", "--snapshot", str(snapshot_path), "--election-file", str(election_path)]
+        election_path.write_text(
+            json.dumps(senate_election(snapshot)), encoding="utf-8"
+        )
+        return [
+            "current-senate",
+            "--snapshot",
+            str(snapshot_path),
+            "--election-file",
+            str(election_path),
+        ]
 
     def test_writes_the_snapshot_in_place(
-        self, snapshot: dict[str, Any], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        snapshot: dict[str, Any],
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         argv = self._files(snapshot, tmp_path)
 
@@ -683,11 +831,16 @@ class TestCli:
 
         out = capsys.readouterr().out
         assert "65 holdovers, 35 winners, 0 uncalled (100 members)" in out
-        derived = json.loads((tmp_path / "senate-current.json").read_text(encoding="utf-8"))
+        derived = json.loads(
+            (tmp_path / "senate-current.json").read_text(encoding="utf-8")
+        )
         assert _member(derived, "Georgia", 2)["name"] == "Winner Georgia"
 
     def test_dry_run_prints_counts_and_writes_nothing(
-        self, snapshot: dict[str, Any], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        snapshot: dict[str, Any],
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         argv = self._files(snapshot, tmp_path)
         out_path = tmp_path / "elsewhere.json"
@@ -696,10 +849,15 @@ class TestCli:
 
         assert "65 holdovers, 35 winners, 0 uncalled" in capsys.readouterr().out
         assert not out_path.exists()
-        assert (tmp_path / "senate-current.json").read_text(encoding="utf-8") == render(snapshot)
+        assert (tmp_path / "senate-current.json").read_text(encoding="utf-8") == render(
+            snapshot
+        )
 
     def test_missing_election_file_is_a_clean_error(
-        self, snapshot: dict[str, Any], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        snapshot: dict[str, Any],
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         argv = self._files(snapshot, tmp_path)
         (tmp_path / "senate-2026.json").unlink()
@@ -708,7 +866,9 @@ class TestCli:
 
         captured = capsys.readouterr()
         assert "error: election file not found" in captured.err
-        assert (tmp_path / "senate-current.json").read_text(encoding="utf-8") == render(snapshot)
+        assert (tmp_path / "senate-current.json").read_text(encoding="utf-8") == render(
+            snapshot
+        )
 
     def test_never_opens_the_database(
         self, snapshot: dict[str, Any], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -721,7 +881,10 @@ class TestCli:
         assert cli.main([*self._files(snapshot, tmp_path), "--dry-run"]) == 0
 
     def test_an_unwritable_output_is_a_clean_error(
-        self, snapshot: dict[str, Any], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        snapshot: dict[str, Any],
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         argv = self._files(snapshot, tmp_path)
         out = tmp_path / "a-directory"
@@ -734,7 +897,10 @@ class TestCli:
         assert [p.name for p in tmp_path.iterdir() if p.name.endswith(".tmp")] == []
 
     def test_an_unreadable_snapshot_is_a_clean_error(
-        self, snapshot: dict[str, Any], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        snapshot: dict[str, Any],
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         argv = self._files(snapshot, tmp_path)
         (tmp_path / "senate-current.json").write_bytes(b"\xff\xfe")
@@ -744,15 +910,23 @@ class TestCli:
         assert "error: snapshot" in capsys.readouterr().err
 
     def test_a_malformed_snapshot_is_a_clean_error(
-        self, snapshot: dict[str, Any], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        snapshot: dict[str, Any],
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         argv = self._files(snapshot, tmp_path)
         snapshot["seats"][0]["members"][0]["class"] = "two"
-        (tmp_path / "senate-current.json").write_text(json.dumps(snapshot), encoding="utf-8")
+        (tmp_path / "senate-current.json").write_text(
+            json.dumps(snapshot), encoding="utf-8"
+        )
 
         assert cli.main(argv) == 1
 
-        assert "error: snapshot member of Alabama has class 'two'" in capsys.readouterr().err
+        assert (
+            "error: snapshot member of Alabama has class 'two'"
+            in capsys.readouterr().err
+        )
 
     def test_the_default_paths_are_the_committed_files(self) -> None:
         parser = cli._current_senate_parser()

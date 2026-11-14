@@ -590,9 +590,7 @@ class TestParseHeadlineViTableOctober2026:
         extra_value: bool,
     ) -> None:
         row = next(
-            line
-            for line in OCT_2026_TEXT.splitlines()
-            if line.startswith(f"{label} ")
+            line for line in OCT_2026_TEXT.splitlines() if line.startswith(f"{label} ")
         )
         replacement = f"{row} 99" if extra_value else row.rsplit(" ", 1)[0]
         text = OCT_2026_TEXT.replace(row, replacement, 1)
@@ -620,11 +618,9 @@ class TestParseHeadlineViTableOctober2026:
         cell: str,
     ) -> None:
         row = next(
-            line
-            for line in OCT_2026_TEXT.splitlines()
-            if line.startswith(f"{label} ")
+            line for line in OCT_2026_TEXT.splitlines() if line.startswith(f"{label} ")
         )
-        values = row[len(label):].split()
+        values = row[len(label) :].split()
         values[column] = cell
         text = OCT_2026_TEXT.replace(row, f"{label} {' '.join(values)}", 1)
 
@@ -691,7 +687,10 @@ class TestParseHeadlineViTableRepeatedPages:
         ("filename", "sample_size", "start", "end", "shares"),
         [
             (
-                "20260928", 2310, date(2026, 9, 27), date(2026, 9, 28),
+                "20260928",
+                2310,
+                date(2026, 9, 27),
+                date(2026, 9, 28),
                 {
                     "Conservative": [13, 13, 18, 20, 19, 22],
                     "Labour": [18, 17, 31, 27, 32, 18],
@@ -704,7 +703,10 @@ class TestParseHeadlineViTableRepeatedPages:
                 },
             ),
             (
-                "20260921", 2286, date(2026, 9, 20), date(2026, 9, 21),
+                "20260921",
+                2286,
+                date(2026, 9, 20),
+                date(2026, 9, 21),
                 {
                     "Conservative": [12, 12, 18, 21, 24, 25],
                     "Labour": [24, 15, 33, 27, 27, 16],
@@ -717,7 +719,10 @@ class TestParseHeadlineViTableRepeatedPages:
                 },
             ),
             (
-                "20260209", 2466, date(2026, 2, 8), date(2026, 2, 9),
+                "20260209",
+                2466,
+                date(2026, 2, 8),
+                date(2026, 2, 9),
                 {
                     "Conservative": [10, 5, 16, 23, 16, 23],
                     "Labour": [19, 21, 22, 16, 30, 14],
@@ -781,7 +786,9 @@ class TestParseHeadlineViTableRepeatedPages:
         elif change == "missing":
             repeated = repeated.replace("Your Party 0 0\n", "", 1)
         else:
-            repeated = repeated.replace("Other 1 2\n", "Other 1 2\nExtra Party 0 0\n", 1)
+            repeated = repeated.replace(
+                "Other 1 2\n", "Other 1 2\nExtra Party 0 0\n", 1
+            )
 
         with pytest.raises(ValueError, match="different party order"):
             parse_headline_vi_table(f"{prefix}Westminster Voting Intention{repeated}")
@@ -793,7 +800,9 @@ class TestParseHeadlineViTableRepeatedPages:
     ) -> None:
         sections = self._source_text().split("Westminster Voting Intention")
         block = sections[block_index + 1]
-        row = next(line for line in block.splitlines() if line.startswith("Your Party "))
+        row = next(
+            line for line in block.splitlines() if line.startswith("Your Party ")
+        )
         sections[block_index + 1] = block.replace(row, f"{row} 99", 1)
 
         with pytest.raises(ValueError, match="inconsistent row widths"):
@@ -801,7 +810,8 @@ class TestParseHeadlineViTableRepeatedPages:
 
     def test_routine_header_must_agree_with_percentage_width(self) -> None:
         text = self._source_text("20260921").replace(
-            "% % % % % % % %\n", "% % % % % % %\n",
+            "% % % % % % % %\n",
+            "% % % % % % %\n",
         )
 
         with pytest.raises(ValueError, match="Regions table has 7 columns"):
@@ -809,7 +819,8 @@ class TestParseHeadlineViTableRepeatedPages:
 
     def test_anonymous_extra_column_is_rejected(self) -> None:
         text = self._source_text("20260921").replace(
-            "Routine England Wales Scotland", "Unknown England Wales Scotland",
+            "Routine England Wales Scotland",
+            "Unknown England Wales Scotland",
         )
 
         with pytest.raises(ValueError, match="Regions table has 8 columns"):
@@ -817,7 +828,8 @@ class TestParseHeadlineViTableRepeatedPages:
 
     def test_truncated_routine_row_is_rejected(self) -> None:
         text = self._source_text("20260921").replace(
-            "18 22 12 12 18 21 24 25\n", "22 12 12 18 21 24 25\n",
+            "18 22 12 12 18 21 24 25\n",
+            "22 12 12 18 21 24 25\n",
         )
 
         with pytest.raises(ValueError, match="Unexpected line in regions table"):
@@ -910,11 +922,15 @@ class TestParseHeadlineViTableMarchToAugust2026:
 
     def test_page_one_without_country_columns_raises(self) -> None:
         text = AUG_2026_TEXT.replace(" England Wales Scotland\n", "\n")
-        with pytest.raises(ValueError, match="Wales and Scotland columns found in neither"):
+        with pytest.raises(
+            ValueError, match="Wales and Scotland columns found in neither"
+        ):
             parse_headline_vi_table(text)
 
     def test_missing_second_question_raises(self) -> None:
-        text = AUG_2026_TEXT.replace("If there were a general election", "Were there an election")
+        text = AUG_2026_TEXT.replace(
+            "If there were a general election", "Were there an election"
+        )
         with pytest.raises(ValueError, match="end of the MRP headline rows"):
             parse_headline_vi_table(text)
 
@@ -951,7 +967,7 @@ class TestParseHeadlineViTableOldFormat:
     ) -> None:
         text = OLD_FORMAT_TEXT
         if not keep_header:
-            text = text[text.index("Westminster Voting Intention"):]
+            text = text[text.index("Westminster Voting Intention") :]
         text = text.replace(
             "Now, thinking specifically",
             "Conservative 1 2 3 4 5 6\nNow, thinking specifically",
@@ -1854,14 +1870,22 @@ class TestRegionTableAfterSection:
 
         shares = parsed.party_macro_percentages
         assert shares["Scottish National Party"] == {
-            "Wales": 0.0, "Scotland": 39.0, "North": 0.0, "Midlands": 0.0,
-            "London": 0.0, "Rest of South": 0.0,
+            "Wales": 0.0,
+            "Scotland": 39.0,
+            "North": 0.0,
+            "Midlands": 0.0,
+            "London": 0.0,
+            "Rest of South": 0.0,
         }
         assert shares["Plaid Cymru"]["Wales"] == 27.0
         assert shares["Plaid Cymru"]["London"] == 0.0
         assert shares["Labour"] == {
-            "Wales": 23.0, "Scotland": 15.0, "North": 27.0, "Midlands": 19.0,
-            "London": 34.0, "Rest of South": 16.0,
+            "Wales": 23.0,
+            "Scotland": 15.0,
+            "North": 27.0,
+            "Midlands": 19.0,
+            "London": 34.0,
+            "Rest of South": 16.0,
         }
         assert shares["Conservative"]["Rest of South"] == 19.0
 
@@ -1913,9 +1937,12 @@ class TestRegionalAlignmentGuard:
         values[-1] = "3"
         text = text.replace(row, " ".join(values), 1)
 
-        assert parse_poll(text).party_macro_percentages["Scottish National Party"][
-            "Rest of South"
-        ] == 3.0
+        assert (
+            parse_poll(text).party_macro_percentages["Scottish National Party"][
+                "Rest of South"
+            ]
+            == 3.0
+        )
 
 
 class TestSplitLayoutBaseTotals:

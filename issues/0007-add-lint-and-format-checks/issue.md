@@ -12,15 +12,15 @@ Rules that no linter can check, such as how booleans are named, guard clauses or
 
 ## Plan
 
-_2026-11-14 · 2 of 8 pieces done · now: piece 3 in progress_
+_2026-11-14 · 3 of 8 pieces done · now: piece 4 in progress_
 
 - [x] **1/8 Pin the tools and add their settings** · `68720459`
   Pin ruff, shellcheck and Biome and add their settings.
 - [x] **2/8 Reformat the Python once** · `5fb62b38`
   One formatting-only commit with ruff format.
-- [ ] **3/8 Reformat the JavaScript once** · in progress
+- [x] **3/8 Reformat the JavaScript once** · `36dfaf34`
   One formatting-only commit with Biome, bundles rebuilt.
-- [ ] **4/8 Fix the ruff findings in the tests** · not started
+- [ ] **4/8 Fix the ruff findings in the tests** · in progress
   Clean up the tests, including how shared fixtures are registered.
 - [ ] **5/8 Fix the ruff findings in the pipeline code** · not started
   Clean up the pipeline code without changing behaviour.

@@ -9,6 +9,14 @@
   "gh_issue": 86,
   "build_model": null,
   "created": "2026-11-14 06:57",
-  "updated": "2026-11-14 07:13",
-  "done": null
+  "updated": "2026-11-14 07:15",
+  "done": null,
+  "local": [
+    {
+      "kind": "session",
+      "name": "local_6f405315-09d0-4980-937c-86eb98187dae",
+      "added": "2026-11-14 07:15",
+      "note": "builder: add-lint-and-format-checks"
+    }
+  ]
 }

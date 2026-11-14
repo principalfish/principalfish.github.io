@@ -28,7 +28,7 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 ## Prerequisites
 
 - Linux/macOS shell
-- Python 3.10+
+- Python 3.12+
 - `sqlite3` CLI (for inspection)
 - Network access (poll importers fetch remote PDFs/XLSX/HTML)
 

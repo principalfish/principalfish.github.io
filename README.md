@@ -5,7 +5,7 @@ pipeline behind its UK and US election maps, forecasts and poll trackers.
 
 ## Basic commands
 
-Needs Node.js with npm (22+ for the Referdle benchmark), Python 3.10+ and the
+Needs Node.js with npm (22+ for the Referdle benchmark), Python 3.12+ and the
 `sqlite3` CLI. One-time setup:
 
 ```bash

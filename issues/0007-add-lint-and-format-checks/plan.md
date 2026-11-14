@@ -113,7 +113,7 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
    - Model: claude-sonnet-5-5
 
 ## Checkpoints
-- [ ] 1. Tools pinned; ruff, Biome and shellcheck settings picked up
+- [x] 1. Tools pinned; ruff, Biome and shellcheck settings picked up
 - [ ] 2. Python formatting-only commit; `ruff format --check` clean
 - [ ] 3. JS formatting-only commit with bundles; `biome format` clean
 - [ ] 4. `ruff check` clean in `data/tests/`; fixtures registered; `.git-blame-ignore-revs` lists pieces 2 and 3
@@ -133,3 +133,4 @@ After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh`
 - Piece 1: `data/pyproject.toml` `requires-python` bumped `>=3.10` → `>=3.12` (verified review finding) so it agrees with ruff's py312 target, mypy.ini and CI; the code already needed 3.11+ (StrEnum, Self, datetime.UTC). The explicit `target-version = "py312"` stays, so guesstheyear's `extend` doesn't rely on inference.
 - Piece 1 measurements with the pins: ruff from `data/` 698 findings (659 + 39 N/PTH/C4), 164 safe fixes; format 151 of 309; guesstheyear 8 findings (the 6 defaults + PTH123 + N806), 3 to reformat; `biome ci .` covers exactly the 139 tracked JS files, 128 to format, 138 lint diagnostics (41 errors, 85 warnings, 12 infos; Context said 137/40); shellcheck clean.
 - Piece 1: the first `planner.py setup` raced the `requirements.txt` edit and didn't install ruff/shellcheck; a re-run did (acceptance met).
+- Piece 1 committed 68720459 (2026-11-14). User decisions at review: README.md and data/README.md changed to "Python 3.12+" in piece 1 ("Fix in piece 1"); Biome assist stays off ("Keep it off"), so `biome ci` checks format and lint only.

@@ -9,8 +9,6 @@ from pathlib import Path
 import pytest
 from flask import Flask
 
-from tests.console_fixtures import app, seeded_app  # noqa: F401  (pytest fixtures)
-
 STATIC_DIR = Path(__file__).resolve().parent.parent / "console" / "static"
 OUTPUTS_PAGES = [
     ("/westminster/outputs", "Seats"),
@@ -23,7 +21,7 @@ OUTPUTS_PAGES = [
 
 @pytest.mark.parametrize(("path", "seats_label"), OUTPUTS_PAGES)
 def test_the_page_embeds_its_data_as_json(
-    seeded_app: Flask,  # noqa: F811
+    seeded_app: Flask,
     path: str,
     seats_label: str,
 ) -> None:
@@ -43,7 +41,7 @@ def test_the_page_embeds_its_data_as_json(
 
 @pytest.mark.parametrize(("path", "_label"), OUTPUTS_PAGES)
 def test_the_page_loads_only_scripts_the_console_serves(
-    seeded_app: Flask,  # noqa: F811
+    seeded_app: Flask,
     path: str,
     _label: str,
 ) -> None:

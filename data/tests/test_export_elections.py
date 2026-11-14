@@ -11,7 +11,7 @@ from contextlib import closing
 from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import pytest
 from sqlalchemy import select
@@ -603,7 +603,7 @@ class TestStateTrendsExport:
     """
 
     # Two-party splits per unit (dem, rep) — chosen so shares are exact 2dp values.
-    _UNITS: dict[str, tuple[int, int]] = {
+    _UNITS: ClassVar[dict[str, tuple[int, int]]] = {
         "California": (60, 40),
         "Texas": (45, 55),
         "Maine CD-1": (64, 36),
@@ -931,8 +931,10 @@ class TestModelRunUncertaintyExport:
             == "results/flag-under-test.json"
         )
         assert result["stdout"].splitlines() == [
-            "Wrote uncertainty: <root>/out/results/prediction-uncertainty.json "
-            f"({len(document['regions'])} regions)",
+            (
+                "Wrote uncertainty: <root>/out/results/prediction-uncertainty.json "
+                f"({len(document['regions'])} regions)"
+            ),
             "Warning: no mapModes entry for map id(s) [2] in <root>/out/map-modes-shell.json",
             "Wrote manifest: <root>/out/map-modes.json (3 elections)",
         ]

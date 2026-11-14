@@ -24,7 +24,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
-
 import pytest
 
 from core.db import Database
@@ -33,8 +32,8 @@ from models.support.io import OutputPublicationError
 from models.support.uncertainty import load_uncertainty_config
 from models.westminster import run_uns_model
 from models.westminster.run_uns_model import (
-    LatestPollUsage,
     PARTY_ID_ALIASES,
+    LatestPollUsage,
     SeatRef,
     SimulationConfig,
     aggregate_poll_shares,
@@ -63,7 +62,6 @@ from tests.uk_fixtures import (
     WestminsterWorld,
     add_poll_with_rows,
 )
-
 
 # ── weighted_average ──────────────────────────────────────────────────────────
 
@@ -302,7 +300,7 @@ class TestComputeRegionDiffs:
             party_name_by_id={1: "Labour", 2: "Conservative"},
             national_totals={1: 400.0, 2: 600.0},
             weighted_sums=sums,
-            total_weights={key: 1.0 for key in sums},
+            total_weights=dict.fromkeys(sums, 1.0),
             baseline_national={1: 40.0, 2: 60.0},
             baseline_regional={10: {1: 60.0, 2: 40.0}},
         )
@@ -343,7 +341,7 @@ class TestComputeRegionDiffs:
             party_name_by_id={1: "Labour", 8: "Scottish National Party"},
             national_totals={1: 9748.0, 8: 252.0},
             weighted_sums=sums,
-            total_weights={key: 1.0 for key in sums},
+            total_weights=dict.fromkeys(sums, 1.0),
             baseline_national={1: 97.48, 8: 2.52},
             baseline_regional={
                 18: {1: 100.0, **({8: 0.0} if explicit_zero else {})},
@@ -1893,8 +1891,10 @@ class TestWriteOutputCsvs:
         assert [row["predicted_pct"] for row in rows] == ["0.0000", "0.0000"]
         diff_csv = tmp_path / "zero_regional_diffs.csv"
         assert diff_csv.read_text(encoding="utf-8").splitlines() == [
-            "region_id,region_name,party_id,party_name,baseline_share,"
-            "weighted_share,swing"
+            (
+                "region_id,region_name,party_id,party_name,baseline_share,"
+                "weighted_share,swing"
+            )
         ]
 
 
@@ -2709,10 +2709,14 @@ class TestRunRetrospective:
         )
         progress = [line for line in lines if line.startswith("PROGRESS")]
         assert progress == [
-            "PROGRESS success=1 failed=0 as_of=2026-06-09 "
-            "election=UNS 2026-06-09 rows=32",
-            "PROGRESS success=2 failed=0 as_of=2026-06-10 "
-            "election=UNS 2026-06-10 rows=32",
+            (
+                "PROGRESS success=1 failed=0 as_of=2026-06-09 "
+                "election=UNS 2026-06-09 rows=32"
+            ),
+            (
+                "PROGRESS success=2 failed=0 as_of=2026-06-10 "
+                "election=UNS 2026-06-10 rows=32"
+            ),
         ]
         assert lines[lines.index("SUMMARY") :] == [
             "SUMMARY",
@@ -2763,8 +2767,10 @@ class TestRunRetrospective:
         lines = capsys.readouterr().out.splitlines()
         assert lines[0] == "RESET skipped for dry-run mode"
         assert [line for line in lines if line.startswith("PROGRESS")] == [
-            "PROGRESS success=2 failed=0 as_of=2026-06-09 "
-            "election=UNS 2026-06-09 rows=32",
+            (
+                "PROGRESS success=2 failed=0 as_of=2026-06-09 "
+                "election=UNS 2026-06-09 rows=32"
+            ),
         ]
         assert "DRY_RUN=True" in lines
         assert "SUCCESS=3 FAILED=0" in lines
@@ -3022,7 +3028,7 @@ class TestMain:
         only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
-        trend_json, meta_json = _guard_writes(
+        _trend_json, meta_json = _guard_writes(
             tmp_path, monkeypatch, only_the_test_database
         )
         world = westminster_world
@@ -3332,14 +3338,22 @@ class TestMain:
         # Parties absent from a region's baseline are marked inapplicable;
         # Scotland's SNP swing still comes from its regional crossbreak.
         assert summary == [
-            f"- London: Conservative: -5.00, {unswung}, Others: +0.00, "
-            "Plaid Cymru: N/A, Reform UK: +0.00, Scottish National Party: N/A",
-            f"- North East England: Conservative: -5.00, {unswung}, Others: +0.00, "
-            "Plaid Cymru: N/A, Reform UK: +0.00, Scottish National Party: N/A",
-            f"- Scotland: Conservative: -5.00, {unswung}, Others: N/A, "
-            "Plaid Cymru: N/A, Reform UK: +0.00, Scottish National Party: -4.29",
-            f"- Wales: Conservative: -5.00, {unswung}, Others: N/A, "
-            "Plaid Cymru: +0.00, Reform UK: +0.00, Scottish National Party: N/A",
+            (
+                f"- London: Conservative: -5.00, {unswung}, Others: +0.00, "
+                "Plaid Cymru: N/A, Reform UK: +0.00, Scottish National Party: N/A"
+            ),
+            (
+                f"- North East England: Conservative: -5.00, {unswung}, Others: +0.00, "
+                "Plaid Cymru: N/A, Reform UK: +0.00, Scottish National Party: N/A"
+            ),
+            (
+                f"- Scotland: Conservative: -5.00, {unswung}, Others: N/A, "
+                "Plaid Cymru: N/A, Reform UK: +0.00, Scottish National Party: -4.29"
+            ),
+            (
+                f"- Wales: Conservative: -5.00, {unswung}, Others: N/A, "
+                "Plaid Cymru: +0.00, Reform UK: +0.00, Scottish National Party: N/A"
+            ),
         ]
 
     def test_region_without_key_parties_is_left_out_of_the_summary(

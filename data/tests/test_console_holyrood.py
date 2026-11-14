@@ -45,13 +45,23 @@ from core.db import Database
 from core.schema import ElectionType
 from tests.console_fixtures import (
     RecordingRunner as _RecordingRunner,
-    app,
+)
+from tests.console_fixtures import (
     command_line as _command_line,
+)
+from tests.console_fixtures import (
     flashes as _flashes,
+)
+from tests.console_fixtures import (
     flashes_on_page as _flashes_on_page,
+)
+from tests.console_fixtures import (
     forbid_call,
+)
+from tests.console_fixtures import (
     pre_after_heading as _pre_after_heading,
-    seeded_app,
+)
+from tests.console_fixtures import (
     select_block as _select_block,
 )
 from tests.uk_fixtures import HolyroodWorld, seed_holyrood_world
@@ -115,7 +125,7 @@ class _RecordingScriptRunner:
     """
 
     def __init__(
-        self, results: "list[subprocess.CompletedProcess[str]] | None" = None
+        self, results: list[subprocess.CompletedProcess[str]] | None = None
     ) -> None:
         self.calls: list[tuple[Path, tuple[str, ...], int]] = []
         self.results = list(results or [])
@@ -562,8 +572,10 @@ class TestRunHolyroodModelExecute:
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         assert _flashes_on_page(body) == [
-            "Invalid model argument value: Value error, "
-            "Since-days-back must be >= as-of-days-back"
+            (
+                "Invalid model argument value: Value error, "
+                "Since-days-back must be >= as-of-days-back"
+            )
         ]
         assert recording_runner.calls == []
         # The rejected form's own values are re-rendered (not reset to the
@@ -809,7 +821,7 @@ class TestRunHolyroodModelExecute:
     )
     def test_only_the_holyrood_form_says_the_run_writes_the_forecast_file(
         self,
-        seeded_app: Flask,  # noqa: F811
+        seeded_app: Flask,
         path: str,
     ) -> None:
         note = escape(

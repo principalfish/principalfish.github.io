@@ -180,7 +180,7 @@ def test_schema_a_house() -> None:
             (("frost-m", "democrat", 0),),
         ),
     }  # fmt: skip
-    assert [race.nyt_race_id for race in races][0] == "TX-G-H-28-2026-11-03"
+    assert next(race.nyt_race_id for race in races) == "TX-G-H-28-2026-11-03"
 
 
 def test_schema_a_full_race() -> None:

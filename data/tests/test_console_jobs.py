@@ -11,7 +11,7 @@ import subprocess
 import sys
 import threading
 from collections.abc import Callable, Generator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -24,7 +24,6 @@ from console.shared.jobs import Job, JobBusy, JobOutcome, start_job
 from console.shared.runner import run_command
 from console.us.models import MODEL_RUN_LOCK, busy_message, model_run_slot
 from core import backup
-from tests.console_fixtures import app  # noqa: F401  (pytest fixture)
 
 WAIT_SECONDS = 20
 
@@ -116,7 +115,7 @@ def backups(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 
 @pytest.fixture()
-def client(app: Flask) -> FlaskClient[Response]:  # noqa: F811
+def client(app: Flask) -> FlaskClient[Response]:
     return app.test_client()
 
 
@@ -453,7 +452,7 @@ def test_an_orphan_holding_the_pipe_open_is_a_timeout(
 
 def _recording_popen(
     monkeypatch: pytest.MonkeyPatch,
-) -> list["subprocess.Popen[bytes]"]:
+) -> list[subprocess.Popen[bytes]]:
     started: list[subprocess.Popen[bytes]] = []
 
     class Recording(subprocess.Popen[bytes]):
@@ -587,7 +586,7 @@ def test_a_second_start_is_refused_with_the_running_jobs_id(threaded: None) -> N
         with pytest.raises(JobBusy) as busy:
             _start(lambda: JobOutcome({}, ok=True), label="Second")
         assert busy.value.job_id == job.id
-        assert [seen for seen in jobs._jobs] == [job.id]
+        assert list(jobs._jobs) == [job.id]
     finally:
         gate.release.set()
     _finished(job)
@@ -892,7 +891,7 @@ def test_the_registry_keeps_a_running_job_and_only_the_last_finished_ones() -> N
         section=None,
         dry_run=True,
         result_kind="command",
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(UTC),
     )
     with jobs._lock:
         jobs._jobs[running.id] = running
@@ -1007,7 +1006,7 @@ def test_the_refusal_has_no_job_when_something_else_holds_the_slot() -> None:
 
 
 def test_a_flashed_refusal_links_to_the_job_only_when_there_is_one(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     job_id = "20261110T120000000000Z-1a2b3c4d"
     page = '{% extends "base.html" %}{% block content %}{% endblock %}'
@@ -1033,7 +1032,7 @@ def test_a_flashed_refusal_links_to_the_job_only_when_there_is_one(
 
 
 def test_a_flash_with_a_hostile_job_id_cannot_inject_markup(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     @app.route("/_flash_bad")
     def flash_bad() -> str:
@@ -1414,7 +1413,8 @@ def test_a_running_job_page_shows_the_step_and_the_live_blocks(
     assert "<strong>Step 1:</strong> Westminster model" in body
     assert f'data-status-url="/runs/{job.id}/status"' in body
     assert 'data-step="0"' in body
-    assert 'data-stdout-offset="%d"' % len("hello <b>\n") in body
+    stdout_offset = len("hello <b>\n")
+    assert f'data-stdout-offset="{stdout_offset}"' in body
     assert (
         '<pre id="run-live-stdout" class="terminal-output">hello &lt;b&gt;\n</pre>'
     ) in body

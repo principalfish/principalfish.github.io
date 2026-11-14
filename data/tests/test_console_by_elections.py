@@ -26,7 +26,6 @@ from core.schema import ElectionType
 from importers.results.westminster import by_election_import
 from tests.console_fixtures import (
     RecordingRunner,
-    app,
     command_line,
     flashes,
     flashes_on_page,
@@ -438,8 +437,10 @@ class TestByElectionConfirm:
         assert repeated.status_code == 302
         assert repeated.headers["Location"] == "/westminster/by-elections"
         assert flashes(client, repeated) == [
-            f"Import failed: Election '{_ELECTION_NAME}' already exists "
-            f"(id={election.id})"
+            (
+                f"Import failed: Election '{_ELECTION_NAME}' already exists "
+                f"(id={election.id})"
+            )
         ]
         assert second_token in PREVIEW_CACHE
         assert len(export_runner.calls) == 1

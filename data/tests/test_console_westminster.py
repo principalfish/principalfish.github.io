@@ -29,11 +29,20 @@ from core.db import Database
 from core.schema import ElectionType
 from tests.console_fixtures import (
     RecordingRunner as _RecordingRunner,
-    app,
+)
+from tests.console_fixtures import (
     flashes as _flashes,
+)
+from tests.console_fixtures import (
     flashes_on_page as _flashes_on_page,
+)
+from tests.console_fixtures import (
     forbid_call,
+)
+from tests.console_fixtures import (
     pre_after_heading as _pre_after_heading,
+)
+from tests.console_fixtures import (
     select_block as _select_block,
 )
 from tests.uk_fixtures import WestminsterWorld
@@ -86,7 +95,7 @@ class _FixedDate(date):
     """``date`` whose ``today()`` is pinned to 2026-05-20."""
 
     @classmethod
-    def today(cls) -> "_FixedDate":
+    def today(cls) -> _FixedDate:
         return cls(2026, 5, 20)
 
 
@@ -318,8 +327,10 @@ class TestModelRunExecute:
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         assert _flashes_on_page(body) == [
-            "Invalid model argument value: Value error, "
-            "Since-days-back must be >= as-of-days-back"
+            (
+                "Invalid model argument value: Value error, "
+                "Since-days-back must be >= as-of-days-back"
+            )
         ]
         assert recording_runner.calls == []
 

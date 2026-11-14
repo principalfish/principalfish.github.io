@@ -21,7 +21,7 @@ from contextlib import closing
 from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Literal, cast
+from typing import Any, ClassVar, Literal, cast
 
 import pytest
 from sqlalchemy import event, text
@@ -69,7 +69,6 @@ from models.us._common import (
     resolve_special_baselines,
     run_simulation,
     seat_parent_ids,
-    update_trend_cache_json,
     weighted_average,
     write_trend_cache_meta,
 )
@@ -298,7 +297,7 @@ class TestComputeRegionDiffs:
             seats=[_make_seat(1, 10)],
             region_by_id={10: _make_region(10, "Pacific")},
             weighted_sums=sums,
-            total_weights={key: 1.0 for key in sums},
+            total_weights=dict.fromkeys(sums, 1.0),
             baseline_national={DEMOCRAT: 48.0, REPUBLICAN: 50.0},
             baseline_regional={10: {DEMOCRAT: 55.0, REPUBLICAN: 43.0}},
         )
@@ -937,7 +936,7 @@ class TestAggregateNational:
         assert latest is None
 
     def test_regional_rows_key_by_region(self, db: Database) -> None:
-        dem, rep = _parties(db)
+        dem, _rep = _parties(db)
         pollster = db.add_pollster("Regional", "regional_us_house")
         house_map = db.add_map(HOUSE_MAP, parliament="us_house")
         region = db.add_region(house_map.id, "Pacific")
@@ -3576,7 +3575,7 @@ class TestBuildBaselineVoteStateOverrides:
         )
 
     def test_the_seat_filter_still_applies_to_an_override(self, db: Database) -> None:
-        dem, rep = _parties(db)
+        _dem, rep = _parties(db)
         senate_map, e2020, e2022 = _senate_elections(db)
         ohio = db.add_seat(senate_map.id, "Ohio")
         texas = db.add_seat(senate_map.id, "Texas")
@@ -3590,7 +3589,7 @@ class TestBuildBaselineVoteStateOverrides:
         assert set(seat_totals) == {texas.id}
 
     def test_no_overrides_is_the_old_behaviour(self, db: Database) -> None:
-        dem, rep = _parties(db)
+        _dem, rep = _parties(db)
         senate_map, e2020, e2022 = _senate_elections(db)
         ohio = db.add_seat(senate_map.id, "Ohio")
         db.add_vote(e2020, ohio.id, party_id=rep.id, vote_total=100.0)
@@ -3898,7 +3897,7 @@ class TestRebuildWindow:
 
 class TestPollDateBounds:
     def test_first_and_last_usable_poll(self, db: Database, tmp_path: Path) -> None:
-        dem, rep = _parties(db)
+        dem, _rep = _parties(db)
         house_map = db.add_map(HOUSE_MAP, parliament="us_house")
         pollster = db.add_pollster("YouGov", "yougov_us_house")
         for end in (date(2026, 5, 1), date(2026, 6, 10), date(2026, 5, 20)):
@@ -3968,7 +3967,11 @@ class TestRebuildHistoryRun:
     against the ``db`` fixture.
     """
 
-    EXISTING = {date(2026, 5, 25), date(2026, 6, 2), date(2026, 6, 4)}
+    EXISTING: ClassVar[set[date]] = {
+        date(2026, 5, 25),
+        date(2026, 6, 2),
+        date(2026, 6, 4),
+    }
 
     def _run(
         self,
@@ -4036,7 +4039,7 @@ class TestRebuildHistoryRun:
     # window with it, so the single-date run looks back 80 days: 22 March → 10
     # June. Today rather than --as-of-date because --rebuild-history rejects it.
     TODAY = date(2026, 6, 20)
-    ARGV = ["--since-date", "2026-04-01"]
+    ARGV: ClassVar[list[str]] = ["--since-date", "2026-04-01"]
 
     def test_existing_dates_are_recomputed_then_the_meta_is_written(
         self, db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -4897,7 +4900,7 @@ class TestDatabasePathAtCallTime:
 # ── --rebuild-history: usage errors and the real thing ────────────────────────
 
 
-class _StopAfterParsing(Exception):
+class _StopAfterParsingError(Exception):
     """Raised by a stub ``db_factory`` to prove argument parsing let the run through."""
 
 
@@ -4958,9 +4961,9 @@ class TestRebuildHistoryRejectsABackfillRange:
 
         def counting_database() -> Database:
             opened.count += 1
-            raise _StopAfterParsing
+            raise _StopAfterParsingError
 
-        with pytest.raises(_StopAfterParsing):
+        with pytest.raises(_StopAfterParsingError):
             main_for_spec(spec, db_factory=counting_database)
 
         assert opened.count == 1

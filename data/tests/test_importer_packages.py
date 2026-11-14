@@ -105,6 +105,7 @@ def test_every_importer_imports_in_a_fresh_interpreter_under_its_package_name() 
         cwd=DATA_DIR.parent,
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
 
@@ -138,6 +139,7 @@ def test_each_runnable_importer_still_runs_by_path(
         cwd=tmp_path,
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout

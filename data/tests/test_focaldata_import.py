@@ -572,13 +572,17 @@ class TestCanonicalParty:
             ("Another party", "Other"),
             ("Other", "Other"),
             (
-                "An independent candidate or other party (e.g. Workers Party "
-                "/ SDP / Yorkshire Party)",
+                (
+                    "An independent candidate or other party (e.g. Workers Party "
+                    "/ SDP / Yorkshire Party)"
+                ),
                 "Other",
             ),
             (
-                "An independent candidate or other party (e.g. Your Party / "
-                "Workers Party / SDP)",
+                (
+                    "An independent candidate or other party (e.g. Your Party / "
+                    "Workers Party / SDP)"
+                ),
                 "Other",
             ),
             ("Another party (e.g. Workers Party / SDP / Yorkshire Party)", "Other"),
@@ -672,7 +676,7 @@ class TestParseInfoSheet:
                 ]
             }
         )
-        start, end, sample = fd._parse_info_sheet(workbook, 2026)
+        start, _end, sample = fd._parse_info_sheet(workbook, 2026)
         assert start == date(2026, 1, 16)
         assert sample == 2032
 
@@ -1438,7 +1442,7 @@ class TestBuildImportPlan:
         # value leaked into Northern Ireland's row it would show up here as
         # non-zero.
         macros_all_parties = {
-            party: {macro: 0.5 for macro in fd.MACRO_TO_INTERNAL_REGIONS}
+            party: dict.fromkeys(fd.MACRO_TO_INTERNAL_REGIONS, 0.5)
             for party in _NATIONAL_FRACTIONS
         }
 

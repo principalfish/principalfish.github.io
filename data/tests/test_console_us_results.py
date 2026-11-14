@@ -39,7 +39,6 @@ from importers.results.us.nyt.sources import source_for, supported_years
 from importers.results.us.us_import import PARTY_KEY_TO_NAME
 from tests.console_fixtures import (
     RecordingRunner,
-    app,
     command_line,
     flashes,
     flashes_on_page,

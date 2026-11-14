@@ -26,7 +26,6 @@ from models.westminster.westminster_validation import (
     reliability_bins,
 )
 from models.westminster.westminster_validation_replay import replay_validation
-from tests.console_fixtures import app as app
 from tests.test_calibrate_uncertainty import SPEAKER, _seed_database
 from tests.test_monte_carlo import WORLD, world_config
 
@@ -68,9 +67,8 @@ def test_database_is_read_only_and_missing_file_not_created(
             connection.execute("DELETE FROM votes")
     assert historical_database.read_bytes() == before
     missing = tmp_path / "missing.db"
-    with pytest.raises(sqlite3.OperationalError):
-        with read_only_database(missing):
-            pass
+    with pytest.raises(sqlite3.OperationalError), read_only_database(missing):
+        pass
     assert not missing.exists()
 
 

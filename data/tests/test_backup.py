@@ -337,11 +337,13 @@ def test_backup_waits_for_a_backup_in_another_process(
         [
             sys.executable,
             "-c",
-            "import fcntl, sys, time\n"
-            "f = open(sys.argv[1], 'a')\n"
-            "fcntl.flock(f, fcntl.LOCK_EX)\n"
-            "print('held', flush=True)\n"
-            "time.sleep(0.6)\n",
+            (
+                "import fcntl, sys, time\n"
+                "f = open(sys.argv[1], 'a')\n"
+                "fcntl.flock(f, fcntl.LOCK_EX)\n"
+                "print('held', flush=True)\n"
+                "time.sleep(0.6)\n"
+            ),
             str(archive / backup.LOCK_NAME),
         ],
         stdout=subprocess.PIPE,

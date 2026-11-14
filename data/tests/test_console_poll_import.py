@@ -47,10 +47,11 @@ from importers.polls.types import PollImportResult
 from importers.polls.westminster import survation_import
 from tests.console_fixtures import (
     RecordingRunner,
-    app,
-    flashes as _flashes,
     forbid_call,
     select_block,
+)
+from tests.console_fixtures import (
+    flashes as _flashes,
 )
 from tests.job_fixtures import job_holding_the_slot
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows, build_workbook
@@ -146,12 +147,16 @@ def _survation_workbook() -> Workbook:
     """
     tables_rows: list[list[object]] = [
         [
-            "Table_1. If there was a UK Parliament General Election "
-            "tomorrow, for which party would you vote?"
+            (
+                "Table_1. If there was a UK Parliament General Election "
+                "tomorrow, for which party would you vote?"
+            )
         ],
         [
-            "Base: all respondents, excluding undecided voters and those "
-            "who would remove their preference"
+            (
+                "Base: all respondents, excluding undecided voters and those "
+                "who would remove their preference"
+            )
         ],
     ]
     for party, pct in _SURVATION_PARTY_FIGURES:
@@ -423,8 +428,10 @@ class TestImportPreviewBases:
 
         poll_id = _poll_id_from_redirect(response.headers["Location"])
         assert _flashes(client, response) == [
-            f"Import complete. Poll #{poll_id}, inserted 104 rows"
-            " and 13 respondent bases."
+            (
+                f"Import complete. Poll #{poll_id}, inserted 104 rows"
+                " and 13 respondent bases."
+            )
         ]
 
     def test_no_bases_hides_the_table(
@@ -561,8 +568,10 @@ class TestImportPollConfirm:
         assert response.status_code == 302
         assert response.headers["Location"].endswith(f"/polls/{existing.id}")
         assert _flashes(client, response) == [
-            f"Import complete. Poll #{existing.id}, inserted "
-            f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            (
+                f"Import complete. Poll #{existing.id}, inserted "
+                f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            )
         ]
         rows = db.get_rows_for_poll(existing.id)
         assert len(rows) == _SURVATION_PLANNED_ROW_COUNT
@@ -593,8 +602,10 @@ class TestImportPollConfirm:
         assert len(decoy_ids) == 2
         assert len({poll_id, *decoy_ids}) == 3
         assert _flashes(client, response) == [
-            f"Import complete. Poll #{poll_id}, inserted "
-            f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            (
+                f"Import complete. Poll #{poll_id}, inserted "
+                f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            )
         ]
         assert len(db.get_rows_for_poll(poll_id)) == _SURVATION_PLANNED_ROW_COUNT
         pollster = db.get_pollster_by_identifier("survation")
@@ -642,8 +653,10 @@ class TestImportPollConfirm:
         ]
         assert recording_runner.timeouts == [1800, 900]
         assert _flashes(client, response) == [
-            f"Import complete. Poll #{poll_id}, inserted "
-            f"{_SURVATION_PLANNED_ROW_COUNT} rows.",
+            (
+                f"Import complete. Poll #{poll_id}, inserted "
+                f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            ),
             "UNS model updated.",
             "Prediction simulation exported.",
         ]
@@ -724,8 +737,10 @@ class TestImportPollConfirm:
         assert response.status_code == 302
         poll_id = _poll_id_from_redirect(response.headers["Location"])
         assert _flashes(client, response) == [
-            f"Import complete. Poll #{poll_id}, inserted "
-            f"{_SURVATION_PLANNED_ROW_COUNT} rows.",
+            (
+                f"Import complete. Poll #{poll_id}, inserted "
+                f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            ),
             f"Warning: UNS model run failed: {expected_detail}",
         ]
         assert runner.calls == expected_commands

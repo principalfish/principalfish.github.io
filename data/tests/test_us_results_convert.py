@@ -155,7 +155,7 @@ def test_house_seats_carry_winner_and_status() -> None:
     assert main["AZ-06"]["seatInfo"]["called"] is False
     assert main["AZ-06"]["partyInfo"]["democrat"]["total"] == 91000
     assert main["AK-01"]["seatInfo"]["round"] == "rcv-final"
-    assert list(main)[0] == "meta"
+    assert next(iter(main)) == "meta"
     assert list(main)[1:] == sorted(key for key in main if key != "meta")
 
 

@@ -33,7 +33,6 @@ from models.support.monte_carlo import (
 from models.support.persistence import OutputVote, replace_output, westminster_uns_scope
 from models.support.simulation_replay import replay_simulation
 from models.westminster import run_uns_model as runner
-from tests.console_fixtures import app, saved  # noqa: F401  (pytest fixtures)
 from tests.export_golden import run_export
 from tests.test_westminster_uncertainty_integration import DAY, _poll
 

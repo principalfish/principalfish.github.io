@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from flask import Flask
 
-import console.admin.db_admin as db_admin
 from console import create_app
+from console.admin import db_admin
 from console.us.models import MODEL_RUN_LOCK, model_run_slot
 from core import backup
 from tests.job_fixtures import job_holding_the_slot

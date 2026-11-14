@@ -1561,12 +1561,12 @@ def _staged_vi_workbook(
 ) -> Workbook:
     rows = [
         _row({2: _VI_MARKER}),
-        *_national_block({party: 0.01 for party in final}),
+        *_national_block(dict.fromkeys(final, 0.01)),
     ]
     rows.extend([_row({2: "Table 2"}), _row({2: _VI_MARKER}), _row({2: base})])
     rows.extend(_national_block(final))
     rows.append(_row({2: "Table 3: unrelated party question"}))
-    rows.extend(_national_block({party: 0.99 for party in _REQUIRED_PARTIES}))
+    rows.extend(_national_block(dict.fromkeys(_REQUIRED_PARTIES, 0.99)))
     return build_workbook(
         {
             "Methodology": _methodology_sheet(
@@ -1731,7 +1731,7 @@ def _counted_table(
     rows.append(_row({2: "Base: Total", **weighted}))
     for party, fraction in fractions.items():
         rows.append(_row({2: party, 3: fraction * 1000}))
-        regional = {col: fraction for col in _BASE_REGION_COLUMNS.values()}
+        regional = dict.fromkeys(_BASE_REGION_COLUMNS.values(), fraction)
         rows.append(_row({3: fraction, **regional}))
     return rows
 

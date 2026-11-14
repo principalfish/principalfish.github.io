@@ -1,6 +1,7 @@
 """Tests for the Map table and Database map methods."""
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from core.db import Database
 
@@ -15,7 +16,7 @@ class TestAddMap:
 
     def test_duplicate_name_raises(self, db: Database) -> None:
         db.add_map("UK 2024")
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             db.add_map("UK 2024")
 
 

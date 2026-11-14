@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import statistics
 from collections.abc import Mapping
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 from core.schema import Party, Vote
 from export.payload import SeatRow, build_result_payload, choose_winner
@@ -244,7 +244,7 @@ class TestWinnerLeaderMismatches:
 class TestPartyRatioStdevs:
     """Detector 2 — 0.0000 for every party before the fix."""
 
-    BASELINE_SEATS = {
+    BASELINE_SEATS: ClassVar[dict[str, dict[int, int]]] = {
         "A": {SNP: 10000, LABOUR: 8000, CONSERVATIVE: 6000},
         "B": {SNP: 12000, LABOUR: 5000, CONSERVATIVE: 4000},
         "C": {SNP: 9000, LABOUR: 9500, CONSERVATIVE: 3000},

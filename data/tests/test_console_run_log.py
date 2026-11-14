@@ -9,7 +9,7 @@ import os
 import subprocess
 import sys
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from typing import NoReturn
@@ -35,11 +35,7 @@ from console.us.models import (
 from console.westminster import by_elections
 from core.db import Database
 from importers.results.westminster import by_election_import
-from tests.console_fixtures import (  # noqa: F401  (pytest fixtures)
-    ALERT,
-    app,
-    seeded_app,
-)
+from tests.console_fixtures import ALERT
 from tests.uk_fixtures import WestminsterWorld, seed_holyrood_world
 
 # Taken before the autouse fixture replaces it, so the default can be tested.
@@ -72,7 +68,7 @@ def _make(
     stderr: str = "err",
 ) -> Path:
     """Write a valid record folder directly."""
-    moment = datetime(2026, 11, 10, 12, 0, 0, tzinfo=timezone.utc)
+    moment = datetime(2026, 11, 10, 12, 0, 0, tzinfo=UTC)
     record = run_log.RunRecord(
         id=run_id,
         section=section,
@@ -138,7 +134,7 @@ def test_a_run_through_the_runner_writes_only_the_test_folder(
 
 
 def test_ids_are_sortable_unique_and_match_the_pattern() -> None:
-    early = datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=timezone.utc)
+    early = datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=UTC)
     late = early + timedelta(microseconds=1)
 
     first, second = run_log.new_run_id(early), run_log.new_run_id(late)
@@ -376,7 +372,7 @@ def test_an_unwritable_log_does_not_swallow_a_timeout(
 
 
 def test_a_write_failure_is_flashed_in_a_request(
-    app: Flask,  # noqa: F811
+    app: Flask,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -509,7 +505,7 @@ def test_a_half_written_record_leaves_no_folder_behind(
 
 
 @pytest.fixture()
-def client(app: Flask, folder: Path) -> FlaskClient[Response]:  # noqa: F811
+def client(app: Flask, folder: Path) -> FlaskClient[Response]:
     return app.test_client()
 
 
@@ -713,7 +709,7 @@ def test_the_pages_are_get_only(client: FlaskClient[Response], folder: Path) -> 
 
 
 def test_a_westminster_dry_run_is_logged_under_westminster(
-    seeded_app: Flask,  # noqa: F811
+    seeded_app: Flask,
     westminster_world: WestminsterWorld,
     folder: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -747,7 +743,7 @@ def test_a_westminster_dry_run_is_logged_under_westminster(
 
 
 def test_a_run_refused_for_a_busy_slot_is_not_logged(
-    seeded_app: Flask,  # noqa: F811
+    seeded_app: Flask,
     folder: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -773,7 +769,7 @@ def test_a_run_refused_for_a_busy_slot_is_not_logged(
 
 
 def test_the_top_bar_has_a_runs_item_between_export_and_admin(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     body = app.test_client().get("/").get_data(as_text=True)
 
@@ -784,7 +780,7 @@ def test_the_top_bar_has_a_runs_item_between_export_and_admin(
 
 
 def test_the_runs_item_is_active_on_both_pages(
-    app: Flask,  # noqa: F811
+    app: Flask,
     folder: Path,
 ) -> None:
     _make(folder, _id(1))
@@ -797,7 +793,7 @@ def test_the_runs_item_is_active_on_both_pages(
 
 
 def test_the_breadcrumbs_of_the_runs_pages(
-    app: Flask,  # noqa: F811
+    app: Flask,
     folder: Path,
 ) -> None:
     _make(folder, _id(1))
@@ -820,7 +816,7 @@ def test_the_breadcrumbs_of_the_runs_pages(
     "slug", ["westminster", "holyrood", "house", "senate", "president"]
 )
 def test_each_section_page_links_to_its_recent_runs(
-    app: Flask,  # noqa: F811
+    app: Flask,
     slug: str,
 ) -> None:
     body = app.test_client().get(f"/{slug}").get_data(as_text=True)
@@ -860,7 +856,7 @@ def test_the_us_steps_run_inside_their_sections_context(
 
 
 def _valid_json() -> dict[str, object]:
-    moment = datetime(2026, 11, 10, 12, 0, 0, tzinfo=timezone.utc)
+    moment = datetime(2026, 11, 10, 12, 0, 0, tzinfo=UTC)
     return run_log.RunRecord(
         id=_id(1),
         section=None,
@@ -951,7 +947,7 @@ def test_pruning_a_missing_folder_does_nothing(tmp_path: Path) -> None:
 
 
 def test_a_failing_flash_is_logged_and_the_result_is_unchanged(
-    app: Flask,  # noqa: F811
+    app: Flask,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -975,7 +971,7 @@ def test_a_failing_flash_is_logged_and_the_result_is_unchanged(
 
 
 def test_the_rebuild_route_logs_a_run_with_no_section(
-    app: Flask,  # noqa: F811
+    app: Flask,
     folder: Path,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -1005,7 +1001,7 @@ def test_a_timestamp_with_an_offset_is_converted_to_utc() -> None:
 
     record = run_log.RunRecord.from_json(data)
 
-    assert record.started_at == datetime(2026, 11, 10, 12, 0, tzinfo=timezone.utc)
+    assert record.started_at == datetime(2026, 11, 10, 12, 0, tzinfo=UTC)
     assert record.started_at.utcoffset() == timedelta(0)
     assert record.finished_at is not None
     assert record.finished_at.utcoffset() == timedelta(0)
@@ -1103,7 +1099,7 @@ def test_an_entry_that_vanishes_during_pruning_is_skipped(
 
 
 def test_a_pruning_failure_is_not_a_write_failure(
-    app: Flask,  # noqa: F811
+    app: Flask,
     folder: Path,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
@@ -1188,7 +1184,7 @@ def _stub_script(tmp_path: Path, name: str) -> Path:
 
 
 def test_the_holyrood_model_and_its_export_are_logged_under_holyrood(
-    app: Flask,  # noqa: F811
+    app: Flask,
     db: Database,
     folder: Path,
     tmp_path: Path,
@@ -1222,7 +1218,7 @@ def test_the_holyrood_model_and_its_export_are_logged_under_holyrood(
 
 
 def test_the_holyrood_poll_imports_are_logged_under_holyrood(
-    app: Flask,  # noqa: F811
+    app: Flask,
     folder: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1239,7 +1235,7 @@ def test_the_holyrood_poll_imports_are_logged_under_holyrood(
 
 
 def test_the_westminster_model_and_its_export_are_logged_under_westminster(
-    seeded_app: Flask,  # noqa: F811
+    seeded_app: Flask,
     westminster_world: WestminsterWorld,
     folder: Path,
     tmp_path: Path,
@@ -1274,7 +1270,7 @@ def test_the_westminster_model_and_its_export_are_logged_under_westminster(
 
 
 def test_the_by_election_export_is_logged_under_westminster(
-    app: Flask,  # noqa: F811
+    app: Flask,
     folder: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1299,7 +1295,7 @@ def test_the_by_election_export_is_logged_under_westminster(
 
 
 def test_the_export_page_logs_a_run_with_no_section(
-    app: Flask,  # noqa: F811
+    app: Flask,
     folder: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

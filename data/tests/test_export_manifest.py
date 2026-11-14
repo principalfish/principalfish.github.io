@@ -13,7 +13,7 @@ import argparse
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 from sqlalchemy import select, update
@@ -39,7 +39,10 @@ from export.uncertainty import UNCERTAINTY_FILENAME
 class TestSenateClassNextElection:
     """Resolve each class's next election year from a durable cycle definition."""
 
-    CYCLE = {"base": {"1": 2018, "2": 2020, "3": 2022}, "period": 6}
+    CYCLE: ClassVar[dict[str, object]] = {
+        "base": {"1": 2018, "2": 2020, "3": 2022},
+        "period": 6,
+    }
 
     def test_between_cycles_rolls_forward(self) -> None:
         # 2025: class 1 next in 2030, class 2 in 2026, class 3 in 2028.
@@ -139,7 +142,10 @@ class TestBuildMapModesWithRegions:
 class TestSenateClassFloor:
     """A class that has just voted must not read as "up this year"."""
 
-    CYCLE = {"base": {"1": 2018, "2": 2020, "3": 2022}, "period": 6}
+    CYCLE: ClassVar[dict[str, object]] = {
+        "base": {"1": 2018, "2": 2020, "3": 2022},
+        "period": 6,
+    }
 
     @staticmethod
     def _next_up(features: dict[str, Any], *, current_year: int | None = None) -> Any:
@@ -191,7 +197,7 @@ class TestSenateClassFloor:
 class TestSenateSpecialElections:
     """Specials are filtered once, at export, to the ones the next Senate election holds."""
 
-    SPECIALS = [
+    SPECIALS: ClassVar[list[dict[str, object]]] = [
         {
             "seat": "Florida",
             "class": 3,
@@ -205,7 +211,9 @@ class TestSenateSpecialElections:
             "baselineElectionId": "2022-us-senate",
         },
     ]
-    FEATURES_2026 = {"us_senate": {"nextElectionYear": 2026}}
+    FEATURES_2026: ClassVar[dict[str, dict[str, int]]] = {
+        "us_senate": {"nextElectionYear": 2026}
+    }
 
     @staticmethod
     def _live(
@@ -349,11 +357,13 @@ def test_committed_westminster_shell_points_at_the_uncertainty_file() -> None:
 class TestSenateBaselineOverrides:
     """Per-seat baseline overrides pass through the export, cleaned but never expired."""
 
-    OVERRIDES = [
+    OVERRIDES: ClassVar[list[dict[str, object]]] = [
         {"seat": "Florida", "class": 3, "baselineElectionId": "2026-us-senate"},
         {"seat": "Ohio", "class": 3, "baselineElectionId": "2026-us-senate"},
     ]
-    FEATURES_2028 = {"us_senate": {"nextElectionYear": 2028}}
+    FEATURES_2028: ClassVar[dict[str, dict[str, int]]] = {
+        "us_senate": {"nextElectionYear": 2028}
+    }
 
     @staticmethod
     def _built(
@@ -518,7 +528,10 @@ class TestShippedUsShell:
 
 
 class TestSenateClassUpIn:
-    CYCLE = {"base": {"1": 2018, "2": 2020, "3": 2022}, "period": 6}
+    CYCLE: ClassVar[dict[str, object]] = {
+        "base": {"1": 2018, "2": 2020, "3": 2022},
+        "period": 6,
+    }
 
     def test_each_class_is_up_on_its_cycle_years(self) -> None:
         from export.manifest import senate_class_up_in
@@ -1163,8 +1176,10 @@ class TestMissingExportInputs:
             single_election_mode=True,
         )
         assert missing == [
-            f"pre-built map {root / 'maps' / 'map-24.topo.json'} "
-            "(needed by '2026 US House Election', '2028 US House Election')"
+            (
+                f"pre-built map {root / 'maps' / 'map-24.topo.json'} "
+                "(needed by '2026 US House Election', '2028 US House Election')"
+            )
         ]
 
     def test_present_files_report_nothing(self, tmp_path: Path) -> None:

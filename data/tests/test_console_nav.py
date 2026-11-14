@@ -27,11 +27,7 @@ from console.nav import (
     section_links,
 )
 from console.sections import SECTIONS, SECTIONS_BY_SLUG, Section
-from tests.console_fixtures import (  # noqa: F401  (pytest fixtures)
-    app,
-    crawl,
-    seeded_app,
-)
+from tests.console_fixtures import crawl
 
 
 def test_the_crawl_from_home_finds_no_error_pages(seeded_app: Flask) -> None:
@@ -81,7 +77,7 @@ def test_every_page_has_navigation(seeded_app: Flask) -> None:
         assert 'href="/runs"' in body, key
 
 
-def test_home_is_links_only(app: Flask) -> None:  # noqa: F811
+def test_home_is_links_only(app: Flask) -> None:
     body = app.test_client().get("/").get_data(as_text=True)
 
     assert "<form" not in body
@@ -91,7 +87,7 @@ def test_home_is_links_only(app: Flask) -> None:  # noqa: F811
 
 
 def test_the_admin_page_holds_the_database_forms_and_no_site_export(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     body = app.test_client().get("/admin").get_data(as_text=True)
 
@@ -102,7 +98,7 @@ def test_the_admin_page_holds_the_database_forms_and_no_site_export(
 
 
 def test_the_holyrood_landing_page_holds_the_one_click_import(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     body = app.test_client().get("/holyrood").get_data(as_text=True)
 
@@ -111,7 +107,7 @@ def test_the_holyrood_landing_page_holds_the_one_click_import(
 
 
 def test_every_landing_page_links_to_its_own_model_page(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     client = app.test_client()
     for section in SECTIONS:
@@ -172,7 +168,7 @@ def test_each_section_nav_is_built_from_its_capabilities() -> None:
 
 
 def test_every_endpoint_belongs_to_an_area_or_is_listed_as_sectionless(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     for rule in app.url_map.iter_rules():
         blueprint = rule.endpoint.partition(".")[0]
@@ -270,7 +266,7 @@ def test_pages_outside_a_section_have_no_section_nav(
         assert 'class="subnav"' not in client.get(path).get_data(as_text=True), path
 
 
-def _nav(app: Flask, path: str, method: str = "GET") -> Nav:  # noqa: F811
+def _nav(app: Flask, path: str, method: str = "GET") -> Nav:
     with app.test_request_context(path, method=method):
         return build_nav()
 
@@ -321,7 +317,7 @@ def _active(items: tuple[NavItem, ...]) -> list[str]:
     ],
 )
 def test_breadcrumbs(
-    app: Flask,  # noqa: F811
+    app: Flask,
     path: str,
     crumbs: list[tuple[str, str | None]],
 ) -> None:
@@ -353,7 +349,7 @@ def test_breadcrumbs(
     ],
 )
 def test_the_top_bar_marks_the_current_area(
-    app: Flask,  # noqa: F811
+    app: Flask,
     path: str,
     top: list[str],
 ) -> None:
@@ -397,7 +393,7 @@ def test_the_top_bar_marks_the_current_area(
     ],
 )
 def test_the_section_nav_marks_the_current_link(
-    app: Flask,  # noqa: F811
+    app: Flask,
     path: str,
     label: str | None,
 ) -> None:
@@ -408,7 +404,7 @@ def test_the_section_nav_marks_the_current_link(
 
 
 def test_the_matchups_link_belongs_to_its_own_chamber(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     house = _nav(app, "/house/matchups").section_items
     senate = _nav(app, "/senate/matchups").section_items
@@ -418,7 +414,7 @@ def test_the_matchups_link_belongs_to_its_own_chamber(
 
 
 def test_a_request_that_matches_no_route_still_gets_navigation(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     response = app.test_client().get("/no-such-page")
 
@@ -428,7 +424,7 @@ def test_a_request_that_matches_no_route_still_gets_navigation(
     assert nav.breadcrumbs[0].label == "Home"
 
 
-def test_home_cards_link_to_each_sections_pages(app: Flask) -> None:  # noqa: F811
+def test_home_cards_link_to_each_sections_pages(app: Flask) -> None:
     body = app.test_client().get("/").get_data(as_text=True)
     cards = body[body.index("console-columns") :]
 
@@ -451,7 +447,7 @@ def test_home_cards_link_to_each_sections_pages(app: Flask) -> None:  # noqa: F8
 
 @pytest.mark.parametrize("section", SECTIONS, ids=lambda section: section.slug)
 def test_a_sections_label_is_used_everywhere_it_is_named(
-    app: Flask,  # noqa: F811
+    app: Flask,
     section: Section,
 ) -> None:
     client = app.test_client()
@@ -489,7 +485,7 @@ def test_every_crawled_page_links_both_icons(seeded_app: Flask) -> None:
 
 @pytest.mark.parametrize(("url", "content_type"), ICON_LINKS)
 def test_the_icons_are_served_with_an_image_type(
-    app: Flask,  # noqa: F811
+    app: Flask,
     url: str,
     content_type: str,
 ) -> None:
@@ -500,7 +496,7 @@ def test_the_icons_are_served_with_an_image_type(
     assert len(response.data) > 100
 
 
-def test_the_svg_icon_is_self_contained(app: Flask) -> None:  # noqa: F811
+def test_the_svg_icon_is_self_contained(app: Flask) -> None:
     root = ElementTree.fromstring(app.test_client().get(SVG_ICON).data)
 
     assert root.tag == "{http://www.w3.org/2000/svg}svg"
@@ -514,7 +510,7 @@ def test_the_svg_icon_is_self_contained(app: Flask) -> None:  # noqa: F811
             assert "url(" not in value and "//" not in value, (name, value)
 
 
-def test_the_png_icon_is_a_32_by_32_png(app: Flask) -> None:  # noqa: F811
+def test_the_png_icon_is_a_32_by_32_png(app: Flask) -> None:
     data = app.test_client().get(PNG_ICON).data
 
     assert data[:8] == b"\x89PNG\r\n\x1a\n"

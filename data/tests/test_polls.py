@@ -12,7 +12,6 @@ from sqlalchemy.exc import IntegrityError
 from core.db import Database, MatchupSummary
 from core.schema import Map, Party, Poll, Pollster, Seat, TrackedMatchup
 
-
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
@@ -70,7 +69,7 @@ class TestAddPollster:
 
     def test_duplicate_identifier_raises(self, db: Database) -> None:
         _make_pollster(db, "yougov_v1")
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             _make_pollster(db, "yougov_v1")
 
     def test_same_name_different_identifier(self, db: Database) -> None:
@@ -160,12 +159,12 @@ class TestAddPoll:
 
     def test_invalid_pollster_raises(self, db: Database) -> None:
         m = db.add_map("UK")
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             db.add_poll(9999, m.id, date(2026, 1, 1), date(2026, 1, 1))
 
     def test_invalid_map_raises(self, db: Database) -> None:
         pollster = _make_pollster(db)
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             db.add_poll(pollster.id, 9999, date(2026, 1, 1), date(2026, 1, 1))
 
 
@@ -188,11 +187,13 @@ class TestInvertedFieldworkGuard:
         pollster, m, _, _ = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 20), date(2026, 2, 23))
 
-        with pytest.raises(ValueError, match="is after fieldwork_end 2026-02-13"):
-            with db.session() as session:
-                stored = session.get(Poll, poll.id)
-                assert stored is not None
-                stored.fieldwork_end = date(2026, 2, 13)
+        with (
+            pytest.raises(ValueError, match="is after fieldwork_end 2026-02-13"),
+            db.session() as session,
+        ):
+            stored = session.get(Poll, poll.id)
+            assert stored is not None
+            stored.fieldwork_end = date(2026, 2, 13)
 
         reloaded = db.get_poll(poll.id)
         assert reloaded is not None
@@ -269,7 +270,7 @@ class TestAddPollRow:
     """Tests for Database.add_poll_row — national and regional rows, and FK validation."""
 
     def test_national(self, db: Database) -> None:
-        pollster, m, lab, con = _make_poll_scaffold(db)
+        pollster, m, lab, _con = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 10), date(2026, 2, 12))
         row = db.add_poll_row(poll.id, lab.id, 42.5)
         assert row.id is not None
@@ -287,7 +288,7 @@ class TestAddPollRow:
 
     def test_invalid_poll_raises(self, db: Database) -> None:
         lab = db.add_party("Labour")
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             db.add_poll_row(9999, lab.id, 40.0)
 
 
@@ -688,9 +689,11 @@ class TestTrackedMatchupWritesAreAtomic:
         def insert(other: Database) -> None:
             other.set_tracked_matchup(m.id, texas.id, TX_PICK, source="manual")
 
-        with _competing_write(db, insert, before="INSERT"):
-            with pytest.raises(IntegrityError, match="UNIQUE"):
-                db.set_tracked_matchup(m.id, texas.id, TX_LEAD, source="auto")
+        with (
+            _competing_write(db, insert, before="INSERT"),
+            pytest.raises(IntegrityError, match="UNIQUE"),
+        ):
+            db.set_tracked_matchup(m.id, texas.id, TX_LEAD, source="auto")
         assert len(db.get_tracked_matchups_for_map(m.id)) == 1
         assert _tracked_state(db, m.id, texas.id) == (TX_PICK, "manual", None)
 

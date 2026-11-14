@@ -28,7 +28,7 @@ from flask import Flask
 from console.sections import SECTIONS, SECTIONS_BY_SLUG, Section
 from core.db import Database
 from core.schema import PollBase
-from tests.console_fixtures import app, flashes as _flashes, seeded_app  # noqa: F401
+from tests.console_fixtures import flashes as _flashes
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 
 
@@ -775,7 +775,7 @@ class TestSectionPollsNav:
     @pytest.mark.parametrize("section", SECTIONS, ids=lambda s: s.slug)
     def test_polls_is_the_first_link_and_resolves(
         self,
-        seeded_app: Flask,  # noqa: F811
+        seeded_app: Flask,
         section: Section,
     ) -> None:
         client = seeded_app.test_client()

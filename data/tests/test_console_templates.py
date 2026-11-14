@@ -11,12 +11,7 @@ from typing import Any
 import pytest
 from flask import Flask, render_template_string
 
-from tests.console_fixtures import (  # noqa: F401  (pytest fixtures)
-    app,
-    saved,
-    seeded_app,
-    select_block,
-)
+from tests.console_fixtures import select_block
 
 UNCERTAINTY = "/westminster/uncertainty"
 NAV_LINKS = [
@@ -28,7 +23,7 @@ NAV_LINKS = [
     ("Odds history", f"{UNCERTAINTY}/history"),
     ("Explore simulations", f"{UNCERTAINTY}/sims"),
 ]
-NAV_BLOCK = re.compile(r'<nav class="uncertainty-nav">(.*?)</nav>', re.S)
+NAV_BLOCK = re.compile(r'<nav class="uncertainty-nav">(.*?)</nav>', re.DOTALL)
 NAV_LINK = re.compile(r'<a href="([^"]*)">([^<]*)</a>')
 
 
@@ -60,7 +55,7 @@ def _assert_full_nav(body: str) -> None:
     ["", "/calibration", "/validation", "/budget", "/results", "/history", "/sims"],
 )
 def test_every_uncertainty_page_shows_the_full_sub_nav(
-    seeded_app: Flask,  # noqa: F811
+    seeded_app: Flask,
     suffix: str,
 ) -> None:
     response = seeded_app.test_client().get(f"{UNCERTAINTY}{suffix}")
@@ -70,8 +65,8 @@ def test_every_uncertainty_page_shows_the_full_sub_nav(
 
 @pytest.mark.parametrize("suffix", ["/budget", "/results", "/sims", "/sims/0"])
 def test_stored_run_pages_keep_the_full_sub_nav(
-    app: Flask,  # noqa: F811
-    saved: dict[str, Any],  # noqa: F811
+    app: Flask,
+    saved: dict[str, Any],
     suffix: str,
 ) -> None:
     response = app.test_client().get(f"{UNCERTAINTY}{suffix}")
@@ -94,7 +89,7 @@ RUN_RESULT = (
 
 
 def _render(
-    app: Flask,  # noqa: F811
+    app: Flask,
     source: str,
     **context: Any,
 ) -> str:
@@ -112,7 +107,7 @@ def _block(command: str = "python run.py", **fields: Any) -> dict[str, Any]:
 
 
 def test_run_result_macro_shows_command_exit_code_and_streams(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     result = _block(return_code=3, stdout="line one\nline two", stderr="boom <b>")
     body = _render(app, RUN_RESULT, result=result, heading="Run Result", level=4)
@@ -126,7 +121,7 @@ def test_run_result_macro_shows_command_exit_code_and_streams(
 
 
 def test_run_result_macro_falls_back_when_a_stream_is_empty(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     body = _render(app, RUN_RESULT, result=_block(), heading="Run Result", level=4)
     assert '<pre class="terminal-output">(no stdout)</pre>' in body
@@ -139,7 +134,7 @@ def test_run_result_macro_falls_back_when_a_stream_is_empty(
 
 
 def test_run_result_macro_heading_levels_follow_the_level_argument(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     body = _render(
         app, RUN_RESULT, result=_block(), heading="Static Data Export", level=5
@@ -153,7 +148,7 @@ def test_run_result_macro_heading_levels_follow_the_level_argument(
 
 
 def test_run_result_pieces_can_be_laid_out_separately(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     source = (
         '{% from "_macros/run_result.html" import command_line, stream %}'
@@ -205,7 +200,7 @@ HOLYROOD_FIELDS = [
     ],
 )
 def test_the_shared_run_form_renders_each_parliaments_fields(
-    seeded_app: Flask,  # noqa: F811
+    seeded_app: Flask,
     path: str,
     title: str,
     action: str,
@@ -224,7 +219,7 @@ def test_the_shared_run_form_renders_each_parliaments_fields(
 
 
 def test_the_run_form_marks_the_default_option_selected(
-    seeded_app: Flask,  # noqa: F811
+    seeded_app: Flask,
 ) -> None:
     body = seeded_app.test_client().get("/westminster/model").get_data(as_text=True)
     assert '<option value="0" selected>0</option>' in body
@@ -234,7 +229,7 @@ def test_the_run_form_marks_the_default_option_selected(
 
 
 def test_the_optional_csv_select_offers_none_for_the_empty_value(
-    seeded_app: Flask,  # noqa: F811
+    seeded_app: Flask,
 ) -> None:
     body = seeded_app.test_client().get("/westminster/model").get_data(as_text=True)
     select = select_block(body, "output_csv")
@@ -252,7 +247,7 @@ def test_the_optional_csv_select_offers_none_for_the_empty_value(
     ],
 )
 def test_every_model_run_form_offers_the_export_checkbox(
-    seeded_app: Flask,  # noqa: F811
+    seeded_app: Flask,
     path: str,
 ) -> None:
     body = seeded_app.test_client().get(path).get_data(as_text=True)
@@ -322,7 +317,9 @@ JS_STRING = re.compile(r"""(["'`])((?:\\.|(?!\1).)*)\1""")
 
 
 def _stylesheet_selectors() -> str:
-    css = re.sub(r"/\*.*?\*/", "", STYLESHEET.read_text(encoding="utf-8"), flags=re.S)
+    css = re.sub(
+        r"/\*.*?\*/", "", STYLESHEET.read_text(encoding="utf-8"), flags=re.DOTALL
+    )
     rules = (part for part in re.findall(r"([^{}]+)\{", css))
     return "\n".join(part for part in rules if not part.strip().startswith("@"))
 

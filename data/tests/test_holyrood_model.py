@@ -38,10 +38,8 @@ from models.holyrood.run_holyrood_uns_model import (
     existing_trend_dates,
     fetch_holyrood_poll_averages,
     group_list_seats_by_region,
-    load_list_regional_votes,
     persist_projection,
     project_constituency_seats,
-    project_list_seats,
     reset_existing_model_outputs,
     resolve_poll_shares,
     run_holyrood_projection,
@@ -53,7 +51,6 @@ from models.holyrood.run_holyrood_uns_model import (
 from models.support.io import OutputPublicationError
 from models.support.polling import PollAggregation
 from tests.uk_fixtures import HolyroodWorld, add_poll_with_rows, seed_holyrood_world
-
 
 # ── dhondt_allocate_ordered ───────────────────────────────────────────────────
 
@@ -966,14 +963,14 @@ class TestRunHolyroodProjection:
 
     def test_zero_swing_constituency_winners(self, db: Database) -> None:
         """Zero swing: constituency projections match the baseline election winners."""
-        _, const_e, p1, p2, p3, reg_a, reg_b = self._build_scenario(db)
+        _, const_e, p1, p2, _p3, _reg_a, _reg_b = self._build_scenario(db)
 
         cfg = HolyroodSimulationConfig(
             constituency_election_name=const_e.name,
             swing_by_region_party={},
             dry_run=True,
         )
-        const_proj, list_proj, summary = run_holyrood_projection(db, cfg)
+        const_proj, _list_proj, _summary = run_holyrood_projection(db, cfg)
 
         elected_const = {
             row["seat_id"]: row["party_id"] for row in const_proj if row["elected"]
@@ -986,7 +983,7 @@ class TestRunHolyroodProjection:
 
     def test_zero_swing_list_seat_count(self, db: Database) -> None:
         """Zero swing: total list seats allocated equals expected count."""
-        _, const_e, p1, p2, p3, _, _ = self._build_scenario(db)
+        _, const_e, _p1, _p2, _p3, _, _ = self._build_scenario(db)
 
         cfg = HolyroodSimulationConfig(
             constituency_election_name=const_e.name,
@@ -1030,7 +1027,7 @@ class TestRunHolyroodProjection:
 
     def test_seat_summary_totals(self, db: Database) -> None:
         """Seat summary contains correct constituency + list totals per party."""
-        _, const_e, p1, p2, p3, _, _ = self._build_scenario(db)
+        _, const_e, _p1, _p2, _p3, _, _ = self._build_scenario(db)
 
         cfg = HolyroodSimulationConfig(
             constituency_election_name=const_e.name,
@@ -1478,17 +1475,17 @@ class TestDeleteHolyroodUnsForAsOfDate:
 
 
 def _retro_args(**overrides: object) -> argparse.Namespace:
-    base = dict(
-        start_date="2026-07-01",
-        end_date="2026-07-05",
-        lookback_days=365,
-        half_life_days=30.0,
-        reset_existing=False,
-        continue_on_error=False,
-        progress_every=25,
-        dry_run=True,
-        election_name="2021 Test Holyrood Election",
-    )
+    base = {
+        "start_date": "2026-07-01",
+        "end_date": "2026-07-05",
+        "lookback_days": 365,
+        "half_life_days": 30.0,
+        "reset_existing": False,
+        "continue_on_error": False,
+        "progress_every": 25,
+        "dry_run": True,
+        "election_name": "2021 Test Holyrood Election",
+    }
     base.update(overrides)
     return argparse.Namespace(**base)
 
@@ -2807,8 +2804,10 @@ class TestRunRetrospective:
         votes = _election_names_and_votes(only_the_test_database)
         assert _output_lines(out, "RESET", "PROGRESS", "ERROR") == [
             "RESET recomputing dates; previous results retained until replacement succeeds",
-            "PROGRESS success=2 failed=0 as_of=2026-06-02 "
-            f"election=Holyrood UNS 2026-06-02 rows={votes['Holyrood UNS 2026-06-02']}",
+            (
+                "PROGRESS success=2 failed=0 as_of=2026-06-02 "
+                f"election=Holyrood UNS 2026-06-02 rows={votes['Holyrood UNS 2026-06-02']}"
+            ),
         ]
         assert _summary(out) == [
             "SUMMARY",
@@ -2946,11 +2945,15 @@ class TestRunRetrospective:
         out = capsys.readouterr().out
         votes = _election_names_and_votes(only_the_test_database)
         assert _output_lines(out, "RESET", "PROGRESS", "ERROR") == [
-            "PROGRESS success=1 failed=0 as_of=2026-06-01 "
-            f"election=Holyrood UNS 2026-06-01 rows={votes['Holyrood UNS 2026-06-01']}",
+            (
+                "PROGRESS success=1 failed=0 as_of=2026-06-01 "
+                f"election=Holyrood UNS 2026-06-01 rows={votes['Holyrood UNS 2026-06-01']}"
+            ),
             "ERROR as_of=2026-06-02 err=boom",
-            "PROGRESS success=2 failed=1 as_of=2026-06-03 "
-            f"election=Holyrood UNS 2026-06-03 rows={votes['Holyrood UNS 2026-06-03']}",
+            (
+                "PROGRESS success=2 failed=1 as_of=2026-06-03 "
+                f"election=Holyrood UNS 2026-06-03 rows={votes['Holyrood UNS 2026-06-03']}"
+            ),
         ]
         assert _summary(out)[4:] == [
             "SUCCESS=2 FAILED=1",

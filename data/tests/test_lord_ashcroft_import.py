@@ -28,8 +28,8 @@ from __future__ import annotations
 
 import json
 from datetime import date
-from pathlib import Path
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 import xlrd
@@ -1877,9 +1877,11 @@ class TestMain:
             "-but-plenty-agree-with-him-that-britain-is-broken/" in out
         )
         assert resolved_with == [
-            "https://lordashcroftpolls.com/2026/01/kemis-been-tough-and-jenricks"
-            "-a-bit-of-a-bounder-say-tory-voters-but-plenty-agree-with-him-that"
-            "-britain-is-broken/"
+            (
+                "https://lordashcroftpolls.com/2026/01/kemis-been-tough-and-jenricks"
+                "-a-bit-of-a-bounder-say-tory-voters-but-plenty-agree-with-him-that"
+                "-britain-is-broken/"
+            )
         ]
         # Exact-line check: "would create poll" (printed on its own line
         # just below) is a literal prefix of this pollster line's text.

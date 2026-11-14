@@ -36,7 +36,6 @@ from models.support.persistence import (
     UncertaintyStatus,
     replace_output,
 )
-from tests.console_fixtures import app  # noqa: F401  (pytest fixture)
 
 
 @pytest.fixture(autouse=True)

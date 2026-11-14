@@ -1,0 +1,8 @@
+# Formatting-only commits for `git blame` to skip.
+# Switch on with: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Format the Python with ruff
+5fb62b38bb8e4600888e38c2d49ff98225218c3a
+
+# Format the JavaScript with Biome
+36dfaf349d54e36bddc420b8704f2ccbd55072fb

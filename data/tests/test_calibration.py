@@ -623,7 +623,7 @@ class TestEngineUnits:
             region_by_seat_id=regions,
             party_universe=[1, 2, 3, 4, 5],
             region_swings={1: {}},
-            region_baseline_shares={1: {party: 20.0 for party in range(1, 6)}},
+            region_baseline_shares={1: dict.fromkeys(range(1, 6), 20.0)},
             region_average_shares={},
             region_variances={},
             national_average_shares={},

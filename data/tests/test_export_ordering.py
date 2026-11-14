@@ -991,7 +991,7 @@ def test_us_chamber_forecast_flag_off_drops_house_and_senate_forecasts(
     us_page: tuple[Path, list[int]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    output_root, election_ids = us_page
+    output_root, _election_ids = us_page
     # An earlier export left the forecasts in the manifest and on disk.
     old_files = {
         "current-us-house": "results/us-house-forecast.json",

@@ -96,9 +96,11 @@ class TestOpenDatabase:
         with closing(sqlite3.connect(path)) as setup:
             setup.execute("CREATE TABLE t (x INTEGER)")
 
-        with closing(open_database(path, read_only=True)) as read_only:
-            with pytest.raises(sqlite3.OperationalError):
-                read_only.execute("INSERT INTO t VALUES (1)")
+        with (
+            closing(open_database(path, read_only=True)) as read_only,
+            pytest.raises(sqlite3.OperationalError),
+        ):
+            read_only.execute("INSERT INTO t VALUES (1)")
 
     def test_read_write_accepts_writes(self, tmp_path: Path) -> None:
         path = tmp_path / "existing.db"

@@ -292,7 +292,7 @@ def _expected_plan_rows(world: WestminsterWorld) -> list[_StoredRow]:
     )
 
 
-def _count(db: Database, model: type[Poll] | type[Pollster]) -> int:
+def _count(db: Database, model: type[Poll | Pollster]) -> int:
     """Return the number of rows in ``model``'s table."""
     with db.session() as session:
         count: int = session.execute(

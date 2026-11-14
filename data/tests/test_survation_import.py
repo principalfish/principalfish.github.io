@@ -48,7 +48,6 @@ from tests.uk_fixtures import (
     workbook_bytes,
 )
 
-
 _GROUPED_SOURCE_URL = (
     "https://cdn.survation.com/wp-content/uploads/2026/09/24091952/"
     "Survation_2026-09-22_Tables.xlsx"
@@ -532,12 +531,16 @@ _DEFAULT_PARTY_FIGURES: tuple[tuple[str, float, Mapping[str, object]], ...] = (
 )
 
 _TITLE_ROW: tuple[object, ...] = (
-    "Table_1. If there was a UK Parliament General Election tomorrow, for "
-    "which party would you vote?",
+    (
+        "Table_1. If there was a UK Parliament General Election tomorrow, for "
+        "which party would you vote?"
+    ),
 )
 _PREFERRED_BASE_ROW: tuple[object, ...] = (
-    "Base: all respondents, excluding undecided voters and those who would "
-    "remove their preference",
+    (
+        "Base: all respondents, excluding undecided voters and those who would "
+        "remove their preference"
+    ),
 )
 
 
@@ -784,8 +787,10 @@ class TestFindViTableStart:
                     ["Table_1. Westminster election for which party would you vote?"],
                     ["Table_2. General election for which party (percentage share)"],
                     [
-                        "Table_3. General election voting intention: who "
-                        "would you vote for?"
+                        (
+                            "Table_3. General election voting intention: who "
+                            "would you vote for?"
+                        )
                     ],
                 ]
             }

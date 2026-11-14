@@ -305,8 +305,10 @@ class TestParseFieldwork:
 
     def test_parenthetical_week_annotation_before_year_is_tolerated(self) -> None:
         lines = [
-            "Fieldwork dates: Monday 27th January to Wednesday 29th "
-            "January (week 4) 2026"
+            (
+                "Fieldwork dates: Monday 27th January to Wednesday 29th "
+                "January (week 4) 2026"
+            )
         ]
         assert _parse_fieldwork(lines) == (date(2026, 1, 27), date(2026, 1, 29))
 

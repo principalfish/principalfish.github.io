@@ -1140,8 +1140,7 @@ class TestExtractPdfText:
         captured_bytes: list[bytes] = []
 
         def _reading_reader(path: str) -> _FakePdfReader:
-            with open(path, "rb") as handle:
-                captured_bytes.append(handle.read())
+            captured_bytes.append(Path(path).read_bytes())
             return _FakePdfReader(["text"])
 
         monkeypatch.setattr(yougov_import, "PdfReader", _reading_reader)

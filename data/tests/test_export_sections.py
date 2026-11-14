@@ -865,8 +865,10 @@ class TestDryRun:
         assert world.tree() == before
         assert out.splitlines() == [
             "Export scope: sections=house content=metadata",
-            "Would write manifest metadata: "
-            f"{world.base}/uselectionmaps/data/map-modes.json",
+            (
+                "Would write manifest metadata: "
+                f"{world.base}/uselectionmaps/data/map-modes.json"
+            ),
             f"parties={len(world.manifest('uselectionmaps')['parties'])} maps=1",
         ]
 

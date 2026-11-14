@@ -31,9 +31,9 @@ from core.db import Database
 from core.schema import ElectionType
 from importers.results.westminster import by_election_import
 from importers.results.westminster.by_election_import import (
-    ByElectionImportPlan,
     DEFAULT_MAP_NAME,
     DEFAULT_PARENT_ELECTION_NAME,
+    ByElectionImportPlan,
     ParsedCandidate,
     _extract_party_from_row,
     _find_column,
@@ -217,7 +217,7 @@ class TestFetchWikipediaHtml:
 
         def fake_urlopen(req: Request, timeout: int) -> FakeUrlResponse:
             seen.append((req.get_header("User-agent") or "", timeout))
-            return FakeUrlResponse("<html>café result</html>".encode("utf-8"))
+            return FakeUrlResponse("<html>café result</html>".encode())
 
         monkeypatch.setattr(by_election_import, "urlopen", fake_urlopen)
 

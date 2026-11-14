@@ -12,6 +12,7 @@ import re
 import sys
 from datetime import date
 from pathlib import Path
+from typing import Self
 from urllib.request import Request
 
 import pytest
@@ -29,8 +30,10 @@ from importers.polls.holyrood.holyrood_wikipedia_import import (
     fetch_html,
     identify_party_columns,
     main,
-    parse_polls as parse_constituency_polls,
     parse_date_range,
+)
+from importers.polls.holyrood.holyrood_wikipedia_import import (
+    parse_polls as parse_constituency_polls,
 )
 from tests.uk_fixtures import HolyroodWorld, add_poll_with_rows, seed_holyrood_world
 
@@ -455,7 +458,7 @@ class _FakeWikiResponse:
     def __init__(self, body: bytes) -> None:
         self._body = body
 
-    def __enter__(self) -> "_FakeWikiResponse":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc_info: object) -> None:
@@ -475,7 +478,7 @@ class TestFetchHtml:
 
         def fake_urlopen(req: Request, timeout: int) -> _FakeWikiResponse:
             seen.append((req.get_header("User-agent") or "", timeout))
-            return _FakeWikiResponse("<html>hello</html>".encode())
+            return _FakeWikiResponse(b"<html>hello</html>")
 
         monkeypatch.setattr(wikipedia_common, "urlopen", fake_urlopen)
 

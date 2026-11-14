@@ -18,12 +18,14 @@ import pytest
 from flask import Flask, Response
 from flask.testing import FlaskClient
 
-from console import create_app, paths as console_paths
+from console import create_app
+from console import paths as console_paths
 from console.shared import jobs, run_log
 from console.shared.runner import run_command
 from console.us.model_form import rebuild_confirm_message
 from console.us.models import (
     MODEL_RUN_LOCK,
+    NO_MATCHUP_NOTE,
     REBUILD_TIMEOUT_SECONDS,
     STEP_TIMEOUT_SECONDS,
     US_CHAMBER_CONVERTER,
@@ -32,10 +34,9 @@ from console.us.models import (
     US_CHAMBERS_BY_SLUG,
     US_RACE_CHAMBER_CONVERTER,
     US_RACE_CHAMBER_SLUGS,
+    UsModelOptions,
     UsModelRunInterrupted,
     model_run_slot,
-    NO_MATCHUP_NOTE,
-    UsModelOptions,
     run_us_chamber_and_export,
 )
 from core import backup
@@ -1804,8 +1805,10 @@ class TestRaceMatchupsPage:
         )
 
         assert _flashes(client, response) == [
-            f"TX-07: not saved — seat {house_seat.id} belongs to map {house_map_id},"
-            f" not map {seeded['map_id']}"
+            (
+                f"TX-07: not saved — seat {house_seat.id} belongs to map {house_map_id},"
+                f" not map {seeded['map_id']}"
+            )
         ]
 
     def test_map_without_race_matchups_is_flashed(
@@ -2227,9 +2230,8 @@ class TestModelRunSlot:
         assert not MODEL_RUN_LOCK.locked()
 
     def test_the_slot_is_released_when_the_run_raises(self) -> None:
-        with pytest.raises(RuntimeError):
-            with model_run_slot():
-                raise RuntimeError("boom")
+        with pytest.raises(RuntimeError), model_run_slot():
+            raise RuntimeError("boom")
         assert not MODEL_RUN_LOCK.locked()
 
 

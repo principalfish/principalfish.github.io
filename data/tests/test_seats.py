@@ -1,6 +1,7 @@
 """Tests for the Seat table and Database seat methods."""
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from core.db import Database
 
@@ -22,7 +23,7 @@ class TestAddSeat:
         assert seat.region_id == r.id
 
     def test_invalid_map_raises(self, db: Database) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             db.add_seat(9999, "Ghost Seat")
 
 

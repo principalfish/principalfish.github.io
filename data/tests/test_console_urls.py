@@ -12,15 +12,11 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.routing import MapAdapter
 from werkzeug.routing.exceptions import BuildError
 
-from tests.console_fixtures import (  # noqa: F401  (pytest fixtures)
-    app,
-    crawl,
-    seeded_app,
-)
+from tests.console_fixtures import crawl
 
 
 def test_the_new_matchup_urls_build_from_the_chamber(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     with app.test_request_context():
         assert url_for("us.race_matchups", chamber="house") == "/house/matchups"
@@ -33,7 +29,7 @@ def test_the_new_matchup_urls_build_from_the_chamber(
 
 
 def test_the_shared_us_pages_build_from_the_chamber(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     with app.test_request_context():
         assert url_for("us_poll_import.import_form", chamber="house") == (
@@ -107,7 +103,7 @@ _REMOVED_EXPORT_PATHS = (
 )
 
 
-def test_no_old_us_rule_is_registered(app: Flask) -> None:  # noqa: F811
+def test_no_old_us_rule_is_registered(app: Flask) -> None:
     rules = [str(rule) for rule in app.url_map.iter_rules()]
 
     assert [rule for rule in rules if rule.startswith("/us/")] == []
@@ -115,7 +111,7 @@ def test_no_old_us_rule_is_registered(app: Flask) -> None:  # noqa: F811
 
 @pytest.mark.parametrize("path", _OLD_US_PATHS)
 def test_the_old_us_urls_no_longer_exist(
-    app: Flask,  # noqa: F811
+    app: Flask,
     path: str,
 ) -> None:
     client = app.test_client()
@@ -126,7 +122,7 @@ def test_the_old_us_urls_no_longer_exist(
 
 @pytest.mark.parametrize("path", _REMOVED_EXPORT_PATHS)
 def test_the_old_export_urls_no_longer_exist(
-    app: Flask,  # noqa: F811
+    app: Flask,
     path: str,
 ) -> None:
     client = app.test_client()
@@ -136,7 +132,7 @@ def test_the_old_export_urls_no_longer_exist(
 
 
 def test_the_run_log_has_exactly_three_get_only_rules(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     rules = {
         str(rule): (
@@ -159,7 +155,7 @@ def test_the_run_log_has_exactly_three_get_only_rules(
 
 
 def test_the_president_has_none_of_the_chamber_only_pages(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     client = app.test_client()
 
@@ -197,7 +193,7 @@ def _endpoint(adapter: MapAdapter, target: str, method: str) -> str | None:
 
 
 def test_every_post_form_on_a_crawled_page_posts_to_a_rule_that_allows_it(
-    seeded_app: Flask,  # noqa: F811
+    seeded_app: Flask,
 ) -> None:
     pages = crawl(seeded_app.test_client())
     adapter = seeded_app.url_map.bind("localhost")

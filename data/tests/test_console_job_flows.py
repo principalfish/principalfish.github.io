@@ -25,13 +25,7 @@ from console.shared.run_form import run_summary
 from console.us.models import MODEL_RUN_LOCK, model_run_slot
 from core import backup
 from core.db import Database
-from tests.console_fixtures import (  # noqa: F401  (pytest fixtures)
-    app,
-    command_line,
-    flashes_on_page,
-    pre_after_heading,
-    seeded_app,
-)
+from tests.console_fixtures import command_line, flashes_on_page, pre_after_heading
 from tests.uk_fixtures import seed_holyrood_world
 
 WAIT_SECONDS = 20
@@ -479,7 +473,7 @@ def test_a_refused_rebuild_goes_back_to_the_admin_page(flow: Flow) -> None:
 
 
 def test_the_rebuild_with_a_missing_script_still_redirects_home(
-    app: Flask,  # noqa: F811
+    app: Flask,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:

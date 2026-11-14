@@ -728,7 +728,7 @@ class TestRebuild:
         self, snapshot: dict[str, Any], tmp_path: Path
     ) -> None:
         snapshot_path, election_path = self._files(snapshot, tmp_path)
-        os.chmod(snapshot_path, 0o640)
+        snapshot_path.chmod(0o640)
 
         rebuild_current_senate(snapshot_path=snapshot_path, election_path=election_path)
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from datetime import date
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import pytest
 from sqlalchemy import select
@@ -559,8 +559,8 @@ class TestPreviousSenateResults:
     """``pv``: the previous same-state, same-class result on off-cycle Senate seats."""
 
     # 2022 regular class 3 results, as the helper indexes them (names dropped).
-    _FL_2022 = {"w": 21, "p": [[21, 500], [20, 400]]}
-    _OK_2020 = {"w": 21, "p": [[21, 700], [20, 200]]}
+    _FL_2022: ClassVar[dict[str, object]] = {"w": 21, "p": [[21, 500], [20, 400]]}
+    _OK_2020: ClassVar[dict[str, object]] = {"w": 21, "p": [[21, 700], [20, 200]]}
 
     def _earlier(self) -> list[Any]:
         return [

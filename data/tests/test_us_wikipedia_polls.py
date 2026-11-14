@@ -20,14 +20,13 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from core.db import Database
-import importers.polls.us.us_poll_cli as us_poll_cli
+from importers.polls.us import us_poll_cli, us_wikipedia_polls
 from importers.polls.us.us_poll_cli import run_importer
 from importers.polls.us.us_polls_common import (
     CandidateReading,
     PageTables,
     parse_poll_tables,
 )
-import importers.polls.us.us_wikipedia_polls as us_wikipedia_polls
 from importers.polls.us.us_wikipedia_polls import (
     HOUSE_DISTRICTS,
     HOUSE_INDEX_URL,
@@ -703,10 +702,9 @@ class TestDiscoverSenatePages:
         discovered = discover_senate_pages(html)
         # Two pages reach the duplicate-seat check; the rest are reported.
         assert discovered.urls == (TEXAS_SENATE_URL, TEXAS_SENATE_VARIANT_URLS[0])
-        assert discovered.dropped == {
-            url: "Texas already has 2 race pages on the index"
-            for url in TEXAS_SENATE_VARIANT_URLS[1:]
-        }
+        assert discovered.dropped == dict.fromkeys(
+            TEXAS_SENATE_VARIANT_URLS[1:], "Texas already has 2 race pages on the index"
+        )
 
     def test_the_page_count_is_capped(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(us_wikipedia_polls, "_MAX_DISCOVERED_PAGES", 30)
@@ -1337,8 +1335,10 @@ class TestOversizedTables:
         # The per-table line first, then one line for all the skipped tables.
         assert [t.heading_path for t in page.oversized_tables] == [
             "General election › Polling",
-            "5 further table(s) not read: "
-            "the page's 400,000-cell grid budget was reached",
+            (
+                "5 further table(s) not read: "
+                "the page's 400,000-cell grid budget was reached"
+            ),
         ]
 
 

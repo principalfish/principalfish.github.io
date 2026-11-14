@@ -50,6 +50,7 @@ def _run_isolated(code: str) -> subprocess.CompletedProcess[str]:
         cwd=DATA_DIR.parent,
         capture_output=True,
         text=True,
+        check=False,
     )
 
 

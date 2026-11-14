@@ -1,6 +1,7 @@
 """Tests for the Party table and Database party methods."""
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from core.db import Database
 
@@ -24,7 +25,7 @@ class TestAddParty:
 
     def test_duplicate_name_raises(self, db: Database) -> None:
         db.add_party("Labour")
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             db.add_party("Labour")
 
     def test_nullable_optional_fields(self, db: Database) -> None:

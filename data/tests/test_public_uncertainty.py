@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 
@@ -338,7 +338,7 @@ def test_basis_label_states_interval_and_count(
 
 
 class TestLargestRemainderSeats:
-    NAMES = {"a": "Alba", "b": "Brexit", "c": "Conservative"}
+    NAMES: ClassVar[dict[str, str]] = {"a": "Alba", "b": "Brexit", "c": "Conservative"}
 
     @pytest.mark.parametrize(
         ("means", "total", "expected"),

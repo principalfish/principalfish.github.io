@@ -21,7 +21,7 @@ from console.us.model_form import rebuild_confirm_message
 from console.us.models import US_CHAMBERS_BY_SLUG
 from core.db import Database
 from core.schema import ElectionType
-from tests.console_fixtures import app, confirm_text, onsubmit_handlers  # noqa: F401
+from tests.console_fixtures import confirm_text, onsubmit_handlers
 from tests.test_console_us import (
     _add_matchup_polls,
     _seed_president_matchups,
@@ -220,13 +220,17 @@ class TestExistingConfirmsAreUnchanged:
         body = app.test_client().get("/admin").get_data(as_text=True)
 
         assert onsubmit_handlers(body) == [
-            "return confirm('Rebuild the DATABASE from source files? This re-imports "
-            "parties, maps, geometry and every historical election result, and "
-            "downloads live boundary/by-election data from the internet — it can "
-            "take many minutes (up to an hour). Your polls and model runs are "
-            "preserved.');",
-            "return confirm('Restore the database from the newest archive? This "
-            "overwrites the current local database (a .prerestore copy is kept).');",
+            (
+                "return confirm('Rebuild the DATABASE from source files? This re-imports "
+                "parties, maps, geometry and every historical election result, and "
+                "downloads live boundary/by-election data from the internet — it can "
+                "take many minutes (up to an hour). Your polls and model runs are "
+                "preserved.');"
+            ),
+            (
+                "return confirm('Restore the database from the newest archive? This "
+                "overwrites the current local database (a .prerestore copy is kept).');"
+            ),
         ]
 
     def test_the_us_model_rebuild_confirm(
@@ -251,10 +255,12 @@ class TestExistingConfirmsAreUnchanged:
         body = app.test_client().get("/export").get_data(as_text=True)
 
         assert onsubmit_handlers(body) == [
-            "return this.dry_run.value !== 'false' || confirm("
-            '"Write the export into the repository for: " + '
-            "Array.from(this.querySelectorAll('input[name=sections]:checked'), "
-            "function (box) { return box.dataset.label; }).join(', ') + '?');"
+            (
+                "return this.dry_run.value !== 'false' || confirm("
+                '"Write the export into the repository for: " + '
+                "Array.from(this.querySelectorAll('input[name=sections]:checked'), "
+                "function (box) { return box.dataset.label; }).join(', ') + '?');"
+            )
         ]
 
 

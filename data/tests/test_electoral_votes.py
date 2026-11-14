@@ -112,9 +112,11 @@ def test_reader_rejects_unseeded_years(
 ) -> None:
     with pytest.raises(ElectoralVoteError, match=f"year {year}.*found 0"):
         get_electoral_votes_sqlite(allocations, year, ["California"])
-    with db.session() as session:
-        with pytest.raises(ElectoralVoteError, match=f"year {year}.*found 0"):
-            get_electoral_votes(session, year, ["California"])
+    with (
+        db.session() as session,
+        pytest.raises(ElectoralVoteError, match=f"year {year}.*found 0"),
+    ):
+        get_electoral_votes(session, year, ["California"])
 
 
 def test_readers_reject_missing_units(
@@ -173,12 +175,14 @@ def test_readers_reject_corrupt_weights(weight: object) -> None:
             (weight,),
         )
     try:
-        with Session(engine) as session:
-            with pytest.raises(
+        with (
+            Session(engine) as session,
+            pytest.raises(
                 ElectoralVoteError,
                 match="California.*positive integer",
-            ):
-                get_electoral_votes(session, 2028, ["California"])
+            ),
+        ):
+            get_electoral_votes(session, 2028, ["California"])
         with engine.connect() as conn:
             raw = conn.connection.driver_connection
             assert isinstance(raw, sqlite3.Connection)
@@ -194,9 +198,11 @@ def test_readers_reject_corrupt_weights(weight: object) -> None:
 def test_missing_schema_points_to_migration() -> None:
     engine = create_engine("sqlite://")
     try:
-        with Session(engine) as session:
-            with pytest.raises(ElectoralVoteError, match="migrate_us_electoral_votes"):
-                get_electoral_votes(session, 2028, ["California"])
+        with (
+            Session(engine) as session,
+            pytest.raises(ElectoralVoteError, match="migrate_us_electoral_votes"),
+        ):
+            get_electoral_votes(session, 2028, ["California"])
         with closing(sqlite3.connect(":memory:")) as conn:
             with pytest.raises(ElectoralVoteError, match="migrate_us_electoral_votes"):
                 get_electoral_votes_sqlite(conn, 2028, ["California"])
@@ -229,14 +235,18 @@ def test_readers_preserve_database_locked_errors(tmp_path: Path) -> None:
         writer.commit()
         migrate(writer, dry_run=False)
         writer.execute("BEGIN EXCLUSIVE")
-        with closing(sqlite3.connect(path, timeout=0)) as reader:
-            with pytest.raises(sqlite3.OperationalError, match="locked"):
-                get_electoral_votes_sqlite(reader, 2028, ["California"])
+        with (
+            closing(sqlite3.connect(path, timeout=0)) as reader,
+            pytest.raises(sqlite3.OperationalError, match="locked"),
+        ):
+            get_electoral_votes_sqlite(reader, 2028, ["California"])
         engine = create_engine(f"sqlite:///{path}", connect_args={"timeout": 0})
         try:
-            with Session(engine) as session:
-                with pytest.raises(OperationalError, match="locked"):
-                    get_electoral_votes(session, 2028, ["California"])
+            with (
+                Session(engine) as session,
+                pytest.raises(OperationalError, match="locked"),
+            ):
+                get_electoral_votes(session, 2028, ["California"])
         finally:
             engine.dispose()
         writer.rollback()

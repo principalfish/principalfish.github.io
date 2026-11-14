@@ -14,7 +14,6 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
@@ -31,12 +30,16 @@ from importers.polls.westminster import (
 from importers.polls.westminster.registry import IMPORTERS
 from models.holyrood.run_holyrood_uns_model import (
     BASELINE_ELECTION_NAME as HOLYROOD_BASELINE_ELECTION_NAME,
+)
+from models.holyrood.run_holyrood_uns_model import (
     HolyroodSimulationConfig,
     _is_list_seat,
     run_holyrood_projection,
 )
 from models.westminster.run_uns_model import (
     BASELINE_ELECTION_NAME as WESTMINSTER_BASELINE_ELECTION_NAME,
+)
+from models.westminster.run_uns_model import (
     PARTY_ID_ALIASES,
     build_baseline_vote_state,
 )

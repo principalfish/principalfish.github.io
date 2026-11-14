@@ -78,6 +78,7 @@ def test_importing_every_runner_in_a_fresh_interpreter_loads_no_bare_module() ->
         cwd=DATA_DIR.parent,
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
 
@@ -92,6 +93,7 @@ def test_each_runner_still_runs_by_path(
         cwd=tmp_path,
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout

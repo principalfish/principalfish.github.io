@@ -3,12 +3,12 @@
   "slug": "add-lint-and-format-checks",
   "title": "Add lint and format checks",
   "mode": "build",
-  "state": "investigating",
+  "state": "planned",
   "branch": "add-lint-and-format-checks",
   "base": "master",
   "gh_issue": 86,
   "build_model": null,
   "created": "2026-11-14 06:57",
-  "updated": "2026-11-14 07:10",
+  "updated": "2026-11-14 07:13",
   "done": null
 }

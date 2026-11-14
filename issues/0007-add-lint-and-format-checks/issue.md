@@ -7,3 +7,22 @@ Python under `data/` (and the three `guesstheyear` scripts) is checked against r
 The one-off reformat lands as one formatting-only commit per language. Both commits are listed in `.git-blame-ignore-revs` so `git blame` skips them. The tools are pinned so every machine and CI see the same results.
 
 Rules that no linter can check, such as how booleans are named, guard clauses or comments that explain why, stay with review.
+
+## Plan
+
+_2026-11-14 · 0 of 7 pieces done · now: piece 1 not started_
+
+- [ ] **1/7 Pin the tools and add their settings** · not started
+  Pin ruff, shellcheck and Biome and add their settings.
+- [ ] **2/7 Reformat the Python once** · not started
+  One formatting-only commit with ruff format.
+- [ ] **3/7 Reformat the JavaScript once** · not started
+  One formatting-only commit with Biome, bundles rebuilt.
+- [ ] **4/7 Fix the ruff findings in the tests** · not started
+  Clean up the tests, including how shared fixtures are registered.
+- [ ] **5/7 Fix the ruff findings in the pipeline code** · not started
+  Clean up the pipeline code without changing behaviour.
+- [ ] **6/7 Fix the Biome findings** · not started
+  Clean up the JavaScript across every page, checked by hand in the browser.
+- [ ] **7/7 One lint script, CI and docs** · not started
+  `./lint.sh`, a CI lint job, and the docs.

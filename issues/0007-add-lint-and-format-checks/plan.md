@@ -129,7 +129,7 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
 - [x] 1. Tools pinned; ruff, Biome and shellcheck settings picked up
 - [x] 2. Python formatting-only commit; `ruff format --check` clean
 - [x] 3. JS formatting-only commit with bundles; `biome format` clean
-- [ ] 4. `ruff check` clean in `data/tests/`; fixtures registered; `.git-blame-ignore-revs` lists pieces 2 and 3
+- [x] 4. `ruff check` clean in `data/tests/`; fixtures registered; `.git-blame-ignore-revs` lists pieces 2 and 3
 - [ ] 5. `ruff check` clean everywhere; strict mypy still clean
 - [ ] 6. `biome ci` clean; bundles in sync
 - [ ] 7. `./lint.sh` runs all checks and fails at the right steps; CI lint job
@@ -159,3 +159,5 @@ After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh`
 - Piece 4 (2026-11-14): 480 findings under `data/tests/` at the start (Context said 469). F811 (283) via `pytest_plugins = ["tests.console_fixtures"]` in `tests/conftest.py`; pytest accepted it (no fallback needed): `run_tests.sh`, a file-path run and a bare `pytest` from `data/` all collect 7410, with the same node IDs as HEAD. Dropping the fixture imports also made the `# noqa: F401 (pytest fixture[s])` on those imports and 63 `# noqa: F811` on fixture parameters unused, so they went; no `noqa` remains under `tests/`.
 - Piece 4: ruff's safe B009 fix turned the deliberate `getattr(fetch_module._OPENER, "handlers")` in `test_us_results_fetch.py` into attribute access, breaking strict mypy; it's attribute access with `# type: ignore[attr-defined]` now (the comment above already gives the reason). B017 narrowed to `sqlalchemy.exc.IntegrityError` at all 10 sites, all passing. N818 renamed the test-only `_StopAfterParsing` to `_StopAfterParsingError`.
 - Piece 4 review: correctness, security, coverage clean apart from one dropped finding (`.git-blame-ignore-revs` needs a merge-commit merge; plan Context already says so). Changed-lines coverage: no lines (test-only change). For /publish: say in the PR description that it must merge with a merge commit, and the branch must not be rebased, or the blame-ignore SHAs go stale.
+- Piece 4 committed 149e3967 (2026-11-14), approved under the standing instruction with the B009 `type: ignore` and the `_StopAfterParsingError` rename accepted.
+- Piece 5 decisions (planner, 2026-11-14): TRY004 keeps ValueError with `# noqa: TRY004` and a reason wherever any caller or test catches ValueError, else raises TypeError; RUF046 drops `int()` only where the argument is a Python int/float, keeping it with a noqa and reason where it may be a numpy scalar; F401 in `__init__` re-exports becomes an explicit `__all__`.

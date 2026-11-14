@@ -36,3 +36,4 @@
 - Shell: `server.sh`, `data/run_tests.sh`, `data/archive/import_all.sh`. shellcheck 0.11 clean on all three; shfmt 3.14 flags only the archive script.
 - CI (`.github/workflows/ci.yml`) runs mypy+pytest and vitest + a built-asset sync check; PRs merge with merge commits.
 - 2026-11-14 — piece 1 review: user chose "Fix in piece 1": README.md:8 and data/README.md:31 say "Python 3.12+" to match `requires-python = ">=3.12"` (raised by a verified review fix). User chose "Keep it off": Biome assist (organizeImports) stays disabled; `biome ci` checks format and lint only. Approved: "Approve".
+- 2026-11-14 — piece 2 briefing: user chose "Normalise docstrings": the same-meaning check compares parse trees with docstrings normalised (`inspect.cleandoc` plus trailing-space strip) and lists every file where only docstrings differ. Go-ahead: "Start piece 2".

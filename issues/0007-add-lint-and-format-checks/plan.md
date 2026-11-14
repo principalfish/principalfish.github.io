@@ -114,7 +114,7 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
 
 ## Checkpoints
 - [x] 1. Tools pinned; ruff, Biome and shellcheck settings picked up
-- [ ] 2. Python formatting-only commit; `ruff format --check` clean
+- [x] 2. Python formatting-only commit; `ruff format --check` clean
 - [ ] 3. JS formatting-only commit with bundles; `biome format` clean
 - [ ] 4. `ruff check` clean in `data/tests/`; fixtures registered; `.git-blame-ignore-revs` lists pieces 2 and 3
 - [ ] 5. `ruff check` clean everywhere; strict mypy still clean
@@ -137,3 +137,4 @@ After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh`
 - Piece 2 (2026-11-14), deviation from "no hand edits": `ruff format` moved 4 `# type: ignore[attr-defined]` comments off their `.rowcount` lines (`console/shared/model_outputs.py` ×3, `console/polls/views.py` ×1), which broke strict mypy (8 errors), and stranded 2 `# noqa: F811` when parameter lists were split (`tests/test_console_job_flows.py`, `tests/test_console_run_log.py`). Each comment was moved back onto the line it applies to. These are comment-only edits, so parse trees are unchanged and `ruff format --check` stays clean. The formatting commit is therefore `ruff format` plus 6 comment moves. Put to the user at the piece 2 review.
 - Piece 2 same-meaning check (docstrings normalised, user's choice): 154 files, 153 identical parse trees, 1 docstrings-only (`data/tests/test_uk_fixtures.py`: `""""Other"…` → `""" "Other"…`), 0 different. `ruff check` from `data/` 698 → 691.
 - Piece 2 review: correctness, security and coverage all clean (security ran before the 6 comment moves, which don't touch its surface). Changed-lines coverage 93% (34 of 498 lines uncovered); accepted reason for all 34: reformatted only, already uncovered on master (mostly importer/geometry CLI entry points and `export_elections.py`).
+- Piece 2 committed 5fb62b38 (2026-11-14); the user chose "Keep in format commit" for the 6 comment moves. This is the SHA piece 4 lists in `.git-blame-ignore-revs`.

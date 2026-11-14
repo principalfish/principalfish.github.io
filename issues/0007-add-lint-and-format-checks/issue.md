@@ -6,23 +6,27 @@ Python under `data/` (and the three `guesstheyear` scripts) is checked against r
 
 The one-off reformat lands as one formatting-only commit per language. Both commits are listed in `.git-blame-ignore-revs` so `git blame` skips them. The tools are pinned so every machine and CI see the same results.
 
+The front-door docs are brought up to date at the same time. The README becomes a short guide for a person new to the repo: what it is, setup, development and checks, how the site ships, and where to read more. `AGENTS.md` keeps only what a coding agent would otherwise get wrong. `data/README.md` stays the pipeline's front door. Detail that doesn't belong in a front door moves to the topic docs that already exist, and nothing is lost.
+
 Rules that no linter can check, such as how booleans are named, guard clauses or comments that explain why, stay with review.
 
 ## Plan
 
-_2026-11-14 · 2 of 7 pieces done · now: piece 3 not started_
+_2026-11-14 · 2 of 8 pieces done · now: piece 3 in progress_
 
-- [x] **1/7 Pin the tools and add their settings** · `68720459`
+- [x] **1/8 Pin the tools and add their settings** · `68720459`
   Pin ruff, shellcheck and Biome and add their settings.
-- [x] **2/7 Reformat the Python once** · `5fb62b38`
+- [x] **2/8 Reformat the Python once** · `5fb62b38`
   One formatting-only commit with ruff format.
-- [ ] **3/7 Reformat the JavaScript once** · not started
+- [ ] **3/8 Reformat the JavaScript once** · in progress
   One formatting-only commit with Biome, bundles rebuilt.
-- [ ] **4/7 Fix the ruff findings in the tests** · not started
+- [ ] **4/8 Fix the ruff findings in the tests** · not started
   Clean up the tests, including how shared fixtures are registered.
-- [ ] **5/7 Fix the ruff findings in the pipeline code** · not started
+- [ ] **5/8 Fix the ruff findings in the pipeline code** · not started
   Clean up the pipeline code without changing behaviour.
-- [ ] **6/7 Fix the Biome findings** · not started
+- [ ] **6/8 Fix the Biome findings** · not started
   Clean up the JavaScript across every page, checked by hand in the browser.
-- [ ] **7/7 One lint script, CI and docs** · not started
-  `./lint.sh`, a CI lint job, and the docs.
+- [ ] **7/8 One lint script and CI** · not started
+  `./lint.sh` and a CI lint job.
+- [ ] **8/8 Front-door docs** · not started, added 2026-11-14: the user asked for the README, AGENTS.md and data/README.md to follow the docs guide
+  Rewrite the README, AGENTS.md and data/README.md as short front doors, carrying the lint commands.

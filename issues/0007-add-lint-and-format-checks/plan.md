@@ -32,7 +32,8 @@ Assumed, confirmed with the ledger:
 - Biome formats JS only (not CSS, HTML or JSON).
 - `lint.sh` finds the venv as `run_tests.sh` does (`data/election_data`, then `data/.venv`) and says how to install the tools if they're missing; `.ruff_cache/` is gitignored.
 - Lint fixes keep behaviour. Genuine top-level boundaries that log keep their `except Exception` (ruff exempts handlers that call `logger.exception`; otherwise a `noqa` with a one-line reason). Where a fix would change what a user or a caller sees, the builder stops and asks.
-- README/AGENTS.md gain the lint command. After the merge, the planner chat updates `project.md`'s Checks line.
+- After the merge, the planner chat updates `project.md`'s Checks line.
+- Added 2026-11-14 at the user's request ("please also improve README / Agents / other docs as per isntructions in .claude - make it an additional part of this issue"): piece 8 rewrites `README.md`, `AGENTS.md` and `data/README.md` to `~/.claude/guides/project-docs.md`, carrying the lint commands.
 - The house-guide mismatches (`shell.md` forbids a global `set -euo pipefail`, which both live scripts use; `javascript.md` assumes no bundler) are fixed in `~/.claude`, not here.
 
 Shared state never to write: the live database (`DATABASE_PATH`, default `/home/philiph/dbs/elections.db`). No piece runs an import, a model or an export into the repo. `data/run_tests.sh` rewrites the tracked `model_output_trends.json`, so stage files explicitly, never `git add -A`.
@@ -103,14 +104,26 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
    - Tests: `npm test` passes with the same test count; drive the election maps engine under jsdom for Westminster and US as `AGENTS.md` describes, and say what was checked.
    - Manual review: `./server.sh` from the worktree (it serves on 8000, so stop the main checkout's if it runs, or `PORT=8001 ./server.sh`), then open `/electionmaps/` and `/uselectionmaps/` (switch a few elections and modes, open the predict and poll-tracker panels), `/guesstheyear/`, `/referdle-solver/` and `/routeweather/`, and check each behaves as on master.
 
-7. One lint script, CI and docs
-   - Files: `lint.sh` (new), `.github/workflows/ci.yml`, `AGENTS.md`, `README.md`, `data/README.md`
-   - What: `lint.sh` at the repo root in the style of `data/run_tests.sh` (`#!/usr/bin/env bash`, `set -euo pipefail`, tabs, `[[ ]]`, `cd "$(dirname "$0")"`): finds the venv like `run_tests.sh`, checks that `ruff`, `shellcheck` and `node_modules/.bin/biome` exist and prints how to install them if not (`./data/election_data/bin/pip install -r data/requirements.txt`, `npm ci`); then runs, each under an echo line, `ruff check` and `ruff format --check` for `data/` and `guesstheyear/`, `biome ci .`, and `shellcheck` on `git ls-files '*.sh' ':!data/archive/*'`. It runs every step and exits non-zero if any failed, naming the failed steps. `--fix` runs `ruff check --fix`, `ruff format`, `biome check --write` and then the checks; `-h`/`--help` prints the header; any other argument is refused with exit 2. `ci.yml` gains a `lint` job (Python 3.12 with pip cache + `pip install -r data/requirements.txt`, Node 22 + `npm ci`, then `./lint.sh`). `AGENTS.md` Testing gets `./lint.sh` (and `--fix`) before the test commands; `README.md` key commands and `data/README.md`'s Python environment section say the venv now holds ruff and shellcheck, how to add them to an existing venv, and how to switch on `.git-blame-ignore-revs` (`git config blame.ignoreRevsFile .git-blame-ignore-revs`).
+7. One lint script and CI
+   - Files: `lint.sh` (new), `.github/workflows/ci.yml`
+   - What: `lint.sh` at the repo root in the style of `data/run_tests.sh` (`#!/usr/bin/env bash`, `set -euo pipefail`, tabs, `[[ ]]`, `cd "$(dirname "$0")"`): finds the venv like `run_tests.sh`, checks that `ruff`, `shellcheck` and `node_modules/.bin/biome` exist and prints how to install them if not (`./data/election_data/bin/pip install -r data/requirements.txt`, `npm ci`); then runs, each under an echo line, `ruff check` and `ruff format --check` for `data/` and `guesstheyear/`, `biome ci .`, and `shellcheck` on `git ls-files '*.sh' ':!data/archive/*'`. It runs every step and exits non-zero if any failed, naming the failed steps. `--fix` runs `ruff check --fix`, `ruff format`, `biome check --write` and then the checks; `-h`/`--help` prints the header; any other argument is refused with exit 2. `ci.yml` gains a `lint` job (Python 3.12 with pip cache + `pip install -r data/requirements.txt`, Node 22 + `npm ci`, then `./lint.sh`). The docs for it are piece 8.
    - Functions: none
    - Depends on: 4, 5, 6
    - Acceptance: `./lint.sh` exits 0 on the branch; a lint error, a format change, a Biome error and a shellcheck warning each make it exit non-zero, naming its step; `--fix` repairs the fixable ones; shellcheck passes on `lint.sh` itself.
    - Tests: script only; prove each failure mode by hand once (each edit reverted) and list them in the review request. CI is proven when the draft PR runs it.
    - Model: claude-sonnet-5-5
+
+8. Bring the front-door docs up to the project-docs guide (added 2026-11-14 at the user's request)
+   - Files: `README.md`, `AGENTS.md`, `data/README.md`, and existing topic docs that receive moved detail (`data/docs/console.md`, `data/docs/database.md`, the area READMEs); `CLAUDE.md` stays `@AGENTS.md`
+   - What: rewrite the three front doors to `~/.claude/guides/project-docs.md` (read it first; it is the spec), adding this issue's lint facts as part of the rewrite rather than appending them. Measured today: `README.md` 129 lines / 629 words, `AGENTS.md` 79 / 492, `data/README.md` 170 / 1,143.
+     - `README.md` (aim under 100 lines, never over 150 or 1,000 words), in the guide's order: **What it is** (2–4 sentences: the principalfish.co.uk Pages site and the data pipeline); **Set up** (fresh clone to working copy: `npm ci`, the `data/` venv with the editable install, `.env` from `.env_example`, Python 3.12+, Node 22, sqlite3); **Develop** (`./server.sh`, the data console, and the checks: `./lint.sh` (`--fix`), `cd data && ./run_tests.sh`, `npm test`; switching on `git config blame.ignoreRevsFile .git-blame-ignore-revs`); **Ship** (GitHub Pages serves `master` as committed, so the rebuilt `.min` bundles and exported data files must be committed; CI checks the bundles are in sync); **More** (one line per area README and `data/README.md`). The per-section "Sections" walkthrough and command blocks move to the area READMEs they describe where those don't already hold them; the environment-variable table moves to `data/README.md` (one home per fact), leaving the `.env` setup step.
+     - `AGENTS.md` (aim under 60 lines, never over 100 or 800 words): only what an agent would otherwise get wrong: the check commands (`./lint.sh` first, `--fix`; `run_tests.sh` with its venv and arg forwarding; `npm test`; `npm run minify:electionmaps` after engine edits), the editable-install requirement and no `sys.path` edits, `map-modes.json` generated from `map-modes-shell.json`, the live database and `.env` override trap, the tracked `model_output_trends.json` the tests rewrite, conventions linters don't enforce, and the headless jsdom harness traps. Not the README again: drop what README or `data/README.md` already says and link instead.
+     - `data/README.md` (it is data's front door; hold it to the README limits): keep what it is, layout, setup (venv now holds ruff and shellcheck; how to add them to an existing venv: `./election_data/bin/pip install -r requirements.txt`), how imports work, and running the console; move the "Import polls" walkthrough into `data/docs/console.md` and "Quick validation queries" and "Common troubleshooting" into `data/docs/database.md`, leaving one-line links. Fix any fact that's now wrong (e.g. Python 3.12+ is already done).
+     - Rules from the guide: replace, don't append; no history or "previously"; one home per fact; never delete a setup step or command, move it. No new `docs/` file unless a moved block is a real topic with no existing home (say why in the review request). Don't rewrite the area READMEs beyond receiving moved text and fixing facts that are wrong.
+   - Functions: none
+   - Depends on: 7
+   - Acceptance: `README.md` and `AGENTS.md` within the guide's size limits (report lines and words), README in the guide's section order; every command that was in the old README, AGENTS.md or data/README.md still appears in exactly one doc (list where each went); every command in the three front doors runs as written from a fresh worktree, except long or live ones (`./server.sh`, the console, real exports, backups), which are named as not run; all relative links resolve.
+   - Tests: docs only, nothing to unit-test; the builder runs each command it documents and checks every relative link, and says so in the review request.
 
 ## Checkpoints
 - [x] 1. Tools pinned; ruff, Biome and shellcheck settings picked up
@@ -119,13 +132,14 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
 - [ ] 4. `ruff check` clean in `data/tests/`; fixtures registered; `.git-blame-ignore-revs` lists pieces 2 and 3
 - [ ] 5. `ruff check` clean everywhere; strict mypy still clean
 - [ ] 6. `biome ci` clean; bundles in sync
-- [ ] 7. `./lint.sh` runs all checks and fails at the right steps; CI lint job; docs updated
+- [ ] 7. `./lint.sh` runs all checks and fails at the right steps; CI lint job
+- [ ] 8. README, AGENTS.md and data/README.md meet the project-docs guide; every command accounted for and checked
 
 ## Verification
 
 After every piece: `cd data && ./run_tests.sh` (strict mypy then pytest; note the test count, which must not change unless the piece says why), `npm test`, `npm run minify:electionmaps` after any front-end change with the bundles committed, and `git diff --check`. From piece 1, also report the `ruff check`, `ruff format --check`, `npx biome ci .` and `shellcheck` counts until they gate; from piece 7, `./lint.sh`. Coverage: `"$(python3 ~/.claude/lib/planner.py tools)/coverage-changed.sh"` after each piece; uncovered changed lines get a test or a one-line reason (for the formatting pieces: reformatted only, already uncovered on master).
 
-After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh` (`--fix` applies fixes) as its first item.
+After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh` (`--fix` applies fixes) as its first item, and its Instructions shrink to a pointer at `AGENTS.md` where they now repeat it.
 
 ## Notes
 - Piece 1 (2026-11-14): `biome.json` uses `"linter": {"rules": {"preset": "recommended"}}`, not `"recommended": true`, which Biome 2.6.7 reports as deprecated (a notice that made `biome ci` count biome.json as a 140th file).

@@ -25,3 +25,11 @@ Cost: 3 check subagents (correctness, security, coverage) · ~199k tokens · ~5 
 
 | Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
 |-|-|-|-|-|-|-|-|
+
+## piece 4 · 2026-11-14 · Fix the ruff findings in the tests
+
+Cost: 4 subagents (correctness, security, coverage, verifier) · ~249k tokens · ~6 min · no re-check (nothing verified)
+
+| Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
+|-|-|-|-|-|-|-|-|
+| round | correctness | low | risk | dropped | - | `.git-blame-ignore-revs:5,8` | Lists the branch's own SHAs, inert if the PR is squash- or rebase-merged — dropped: plan Context already requires a merge-commit merge, as PRs #74/#80/#84/#85 were; worth a line in the PR description |

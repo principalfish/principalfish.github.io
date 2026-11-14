@@ -3,7 +3,11 @@ import { describe, it, expect, beforeEach } from "vitest";
 
 import * as realLeaflet from "../../site/vendor/leaflet/leaflet.esm.js";
 import {
-  createMapUI, simplifyIndices, unwrapLatLngs, unwrapNear, windArrowDeg,
+  createMapUI,
+  simplifyIndices,
+  unwrapLatLngs,
+  unwrapNear,
+  windArrowDeg,
 } from "../js/map-view.js";
 import { buildRoute, positionAtDistance } from "../js/route.js";
 import { TILE_ATTRIBUTION, TILE_MAX_ZOOM, TILE_SUBDOMAINS, TILE_URL } from "../js/config.js";
@@ -17,7 +21,14 @@ const IMPERIAL = resolveUnits("imperial");
 // Just enough of Leaflet's API for map-view.js, recording what it was asked to
 // draw so the tests can assert on it directly.
 function fakeLeaflet() {
-  const made = { maps: [], tileLayers: [], polylines: [], circleMarkers: [], markers: [], groups: [] };
+  const made = {
+    maps: [],
+    tileLayers: [],
+    polylines: [],
+    circleMarkers: [],
+    markers: [],
+    groups: [],
+  };
   const layer = (props) => ({
     ...props,
     tooltip: null,
@@ -30,7 +41,9 @@ function fakeLeaflet() {
     latLng: (lat, lng) => ({ lat, lng }),
     latLngBounds: (latlngs) => ({ latlngs }),
     SVG: class {
-      constructor(options) { this.options = options; }
+      constructor(options) {
+        this.options = options;
+      }
     },
     map(el, options) {
       const map = {
@@ -41,27 +54,57 @@ function fakeLeaflet() {
         fits: [],
         invalidated: 0,
         removed: false,
-        addLayer(l) { this.layers.add(l); return this; },
-        removeLayer(l) { this.layers.delete(l); return this; },
-        hasLayer(l) { return this.layers.has(l); },
+        addLayer(l) {
+          this.layers.add(l);
+          return this;
+        },
+        removeLayer(l) {
+          this.layers.delete(l);
+          return this;
+        },
+        hasLayer(l) {
+          return this.layers.has(l);
+        },
         createPane(name) {
           this.panes[name] = { style: {} };
           return this.panes[name];
         },
-        fitBounds(bounds, opts) { this.fits.push({ bounds, opts }); return this; },
-        invalidateSize() { this.invalidated++; return this; },
-        remove() { this.removed = true; },
+        fitBounds(bounds, opts) {
+          this.fits.push({ bounds, opts });
+          return this;
+        },
+        invalidateSize() {
+          this.invalidated++;
+          return this;
+        },
+        remove() {
+          this.removed = true;
+        },
       };
       made.maps.push(map);
       return map;
     },
     tileLayer(url, options) {
-      const t = { url, options, addTo(map) { map.addLayer(this); return this; } };
+      const t = {
+        url,
+        options,
+        addTo(map) {
+          map.addLayer(this);
+          return this;
+        },
+      };
       made.tileLayers.push(t);
       return t;
     },
     polyline(latlngs, options) {
-      const p = layer({ latlngs, options, setLatLngs(l) { this.latlngs = l; return this; } });
+      const p = layer({
+        latlngs,
+        options,
+        setLatLngs(l) {
+          this.latlngs = l;
+          return this;
+        },
+      });
       made.polylines.push(p);
       return p;
     },
@@ -71,7 +114,14 @@ function fakeLeaflet() {
       return c;
     },
     marker(latlng, options) {
-      const m = layer({ latlng, options, setLatLng(l) { this.latlng = l; return this; } });
+      const m = layer({
+        latlng,
+        options,
+        setLatLng(l) {
+          this.latlng = l;
+          return this;
+        },
+      });
       made.markers.push(m);
       return m;
     },
@@ -97,7 +147,9 @@ const POINTS = [
 ];
 
 const sampleAt = (route, index, kind) => ({
-  index, ...route.points[index], kind,
+  index,
+  ...route.points[index],
+  kind,
 });
 
 function makeState(route = buildRoute(POINTS), overrides = {}) {
@@ -129,14 +181,23 @@ const lngs = (latlngs) => latlngs.map((ll) => ll.lng);
 describe("unwrapLatLngs", () => {
   it("keeps consecutive longitudes within 180° across the antimeridian", () => {
     const out = unwrapLatLngs([
-      { lat: 0, lon: 179.9 }, { lat: 0, lon: -179.9 }, { lat: 0, lon: -179.8 },
+      { lat: 0, lon: 179.9 },
+      { lat: 0, lon: -179.9 },
+      { lat: 0, lon: -179.8 },
     ]);
-    expect(out.map(([, lon]) => lon)).toEqual([179.9, expect.closeTo(180.1, 9), expect.closeTo(180.2, 9)]);
+    expect(out.map(([, lon]) => lon)).toEqual([
+      179.9,
+      expect.closeTo(180.1, 9),
+      expect.closeTo(180.2, 9),
+    ]);
     expect(out[0][0]).toBe(0);
   });
 
   it("unwraps westward crossings and leaves ordinary routes alone", () => {
-    const west = unwrapLatLngs([{ lat: 1, lon: -179.95 }, { lat: 1, lon: 179.95 }]);
+    const west = unwrapLatLngs([
+      { lat: 1, lon: -179.95 },
+      { lat: 1, lon: 179.95 },
+    ]);
     expect(west[1][1]).toBeCloseTo(-180.05, 9);
     const plain = unwrapLatLngs(POINTS);
     expect(plain.map(([, lon]) => lon)).toEqual(POINTS.map((p) => p.lon));
@@ -151,10 +212,20 @@ describe("unwrapLatLngs", () => {
   it("simplifyIndices drops collinear and near-duplicate vertices, keeping the ends", () => {
     const line = Array.from({ length: 101 }, (_, i) => [54, -3 + i * 0.001]);
     expect(simplifyIndices(line)).toEqual([0, 100]);
-    const bend = [[0, 0], [0, 0.000001], [0, 1], [1, 1]];
+    const bend = [
+      [0, 0],
+      [0, 0.000001],
+      [0, 1],
+      [1, 1],
+    ];
     expect(simplifyIndices(bend)).toEqual([0, 2, 3]);
     expect(simplifyIndices([[0, 0]])).toEqual([0]);
-    expect(simplifyIndices([[0, 0], [0, 0]])).toEqual([0, 1]);
+    expect(
+      simplifyIndices([
+        [0, 0],
+        [0, 0],
+      ]),
+    ).toEqual([0, 1]);
   });
 
   it("windArrowDeg points where the wind goes", () => {
@@ -181,9 +252,10 @@ describe("createMapUI (fake Leaflet)", () => {
   });
 
   // The arrow lives in the position marker's divIcon element.
-  const arrow = () => made.markers
-    .find((m) => m.options.icon.className === "rw-position")
-    .options.icon.html.querySelector(".rw-wind");
+  const arrow = () =>
+    made.markers
+      .find((m) => m.options.icon.className === "rw-position")
+      .options.icon.html.querySelector(".rw-wind");
   const toggle = () => container.querySelector(".map-toggle input");
   const map = () => made.maps[0];
   const routeLines = () => made.polylines.filter((p) => p.options.pane === undefined);
@@ -209,7 +281,9 @@ describe("createMapUI (fake Leaflet)", () => {
     expect(made.maps).toHaveLength(1);
     expect(map().el).toBe(container.querySelector(".route-map"));
     expect(routeLines()).toHaveLength(2);
-    expect(made.markers.filter((m) => m.options.icon.className.startsWith("rw-extreme"))).toHaveLength(2);
+    expect(
+      made.markers.filter((m) => m.options.icon.className.startsWith("rw-extreme")),
+    ).toHaveLength(2);
     expect(made.circleMarkers.filter((c) => c.options.pane === "rwCells")).toHaveLength(0);
     expect(arrow().hidden).toBe(true);
     const peak = made.markers.find((m) => m.options.icon.className === "rw-extreme rw-peak");
@@ -237,7 +311,11 @@ describe("createMapUI (fake Leaflet)", () => {
     expect(dot.tooltip.content.textContent).toContain("model elevation 600 m");
 
     // Only `locations` changes (e.g. a retry with the same cells).
-    ui.update({ ...state, results: null, locations: locations.map((l) => ({ cellElev: l.cellElev + 100 })) });
+    ui.update({
+      ...state,
+      results: null,
+      locations: locations.map((l) => ({ cellElev: l.cellElev + 100 })),
+    });
     expect(dot.tooltip.content.textContent).toContain("model elevation 700 m");
   });
 
@@ -258,7 +336,9 @@ describe("createMapUI (fake Leaflet)", () => {
     const [tiles] = made.tileLayers;
     expect(tiles.url).toBe(TILE_URL);
     expect(tiles.options).toEqual({
-      subdomains: TILE_SUBDOMAINS, maxZoom: TILE_MAX_ZOOM, attribution: TILE_ATTRIBUTION,
+      subdomains: TILE_SUBDOMAINS,
+      maxZoom: TILE_MAX_ZOOM,
+      attribution: TILE_ATTRIBUTION,
     });
     expect(map().hasLayer(tiles)).toBe(true);
   });
@@ -284,10 +364,17 @@ describe("createMapUI (fake Leaflet)", () => {
       { lat: -16.75, lon: -179.9, ele: 50 },
       { lat: -16.8, lon: -179.8, ele: 20 },
     ]);
-    const samples = [sampleAt(route, 0, "start"), sampleAt(route, 1, "peak"), sampleAt(route, 2, "end")];
-    const cells = [179.95, -179.85, -179.75].map((lon) => (
-      { lat: -16.8, lon, offsetKm: 5, offsetBearingDeg: 90 }
-    ));
+    const samples = [
+      sampleAt(route, 0, "start"),
+      sampleAt(route, 1, "peak"),
+      sampleAt(route, 2, "end"),
+    ];
+    const cells = [179.95, -179.85, -179.75].map((lon) => ({
+      lat: -16.8,
+      lon,
+      offsetKm: 5,
+      offsetBearingDeg: 90,
+    }));
     const results = samples.map(() => ({ windKmh: 10, windFromDeg: 0, cellElev: 0, eleUsed: 0 }));
     ui.update({ route, samples, cells, results, units: METRIC });
 
@@ -299,11 +386,15 @@ describe("createMapUI (fake Leaflet)", () => {
     expect(peak.latlng.lng).toBeCloseTo(180.1, 9);
     const connectors = made.polylines.filter((p) => p.options.pane === "rwCells");
     expect(lngs(connectors.map((c) => c.latlngs[0]))).toEqual([
-      179.9, expect.closeTo(180.1, 9), expect.closeTo(180.2, 9),
+      179.9,
+      expect.closeTo(180.1, 9),
+      expect.closeTo(180.2, 9),
     ]);
     const dots = made.circleMarkers.filter((c) => c.options.pane === "rwCells");
     expect(lngs(dots.map((d) => d.latlng))).toEqual([
-      179.95, expect.closeTo(180.15, 9), expect.closeTo(180.25, 9),
+      179.95,
+      expect.closeTo(180.15, 9),
+      expect.closeTo(180.25, 9),
     ]);
 
     // The position marker follows the unwrapped line too.
@@ -314,7 +405,10 @@ describe("createMapUI (fake Leaflet)", () => {
 
   it("skips cells beyond the samples", () => {
     const state = makeState();
-    ui.update({ ...state, cells: [...state.cells, { lat: 1, lon: 1, offsetKm: 0, offsetBearingDeg: 0 }] });
+    ui.update({
+      ...state,
+      cells: [...state.cells, { lat: 1, lon: 1, offsetKm: 0, offsetBearingDeg: 0 }],
+    });
     expect(made.circleMarkers.filter((c) => c.options.pane === "rwCells")).toHaveLength(3);
   });
 
@@ -326,7 +420,10 @@ describe("createMapUI (fake Leaflet)", () => {
     expect(dots).toHaveLength(3); // the NaN cell is skipped
     expect(connectors).toHaveLength(3);
     expect(dots[0].latlng).toEqual({ lat: 54.448, lng: -3.211 });
-    expect(connectors[0].latlngs).toEqual([{ lat: 54.4, lng: -3.2 }, { lat: 54.448, lng: -3.211 }]);
+    expect(connectors[0].latlngs).toEqual([
+      { lat: 54.4, lng: -3.2 },
+      { lat: 54.448, lng: -3.211 },
+    ]);
     expect(connectors[0].options.interactive).toBe(false);
     // Rendered in their own pane under the route.
     expect(map().panes.rwCells.style.zIndex).toBe("350");
@@ -339,14 +436,20 @@ describe("createMapUI (fake Leaflet)", () => {
     const dot = made.circleMarkers.find((c) => c.options.pane === "rwCells");
     const node = dot.tooltip.content;
     expect(node.nodeType).toBe(1); // a DOM node, not an HTML string
-    expect(node.textContent).toBe("Forecast cell 54.448, −3.211 · 0.7 km SW · model elevation 509 m");
+    expect(node.textContent).toBe(
+      "Forecast cell 54.448, −3.211 · 0.7 km SW · model elevation 509 m",
+    );
 
     ui.update({ ...state, units: IMPERIAL });
-    expect(node.textContent).toBe("Forecast cell 54.448, −3.211 · 0.4 mi SW · model elevation 1670 ft");
+    expect(node.textContent).toBe(
+      "Forecast cell 54.448, −3.211 · 0.4 mi SW · model elevation 1670 ft",
+    );
 
     // Wind, rain and temperature overrides leave distance and elevation on the preset.
     ui.update({ ...state, units: resolveUnits("metric", { wind: "mph", rain: "in", temp: "f" }) });
-    expect(node.textContent).toBe("Forecast cell 54.448, −3.211 · 0.7 km SW · model elevation 509 m");
+    expect(node.textContent).toBe(
+      "Forecast cell 54.448, −3.211 · 0.7 km SW · model elevation 509 m",
+    );
   });
 
   it("toggles the forecast-cell layer from the checkbox", () => {
@@ -386,7 +489,8 @@ describe("createMapUI (fake Leaflet)", () => {
     ui.update(makeState());
     const extremes = made.markers.filter((m) => m.options.icon.className.startsWith("rw-extreme"));
     expect(extremes.map((m) => m.options.icon.className)).toEqual([
-      "rw-extreme rw-peak", "rw-extreme rw-valley",
+      "rw-extreme rw-peak",
+      "rw-extreme rw-valley",
     ]);
     expect(extremes[0].latlng).toEqual({ lat: 54.41, lng: -3.165 });
     expect(extremes[0].tooltip.content.textContent).toBe("Peak · 407 m");
@@ -477,8 +581,13 @@ describe("createMapUI (fake Leaflet)", () => {
     let writes = 0;
     Object.defineProperty(a, "className", {
       configurable: true,
-      get() { return native.get.call(this); },
-      set(v) { writes++; native.set.call(this, v); },
+      get() {
+        return native.get.call(this);
+      },
+      set(v) {
+        writes++;
+        native.set.call(this, v);
+      },
     });
 
     ui.setPosition(0, { windKmh: 9.9, windFromDeg: 0 });
@@ -553,9 +662,16 @@ describe("createMapUI (fake Leaflet)", () => {
   it("re-measures on resize and re-fits a route fitted while the map had no size", () => {
     const observers = [];
     window.ResizeObserver = class {
-      constructor(callback) { this.callback = callback; observers.push(this); }
-      observe(el) { this.el = el; }
-      disconnect() { this.disconnected = true; }
+      constructor(callback) {
+        this.callback = callback;
+        observers.push(this);
+      }
+      observe(el) {
+        this.el = el;
+      }
+      disconnect() {
+        this.disconnected = true;
+      }
     };
     try {
       container.replaceChildren();

@@ -66,9 +66,7 @@
   createLineChart("seats-trend-chart", trendData.seats_datasets, page.seats_label);
   createLineChart("vote-totals-trend-chart", trendData.vote_pct_datasets, "Vote %");
   drawCharts();
-  window
-    .matchMedia("(prefers-color-scheme: dark)")
-    .addEventListener("change", drawCharts);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawCharts);
 
   const selectAll = document.getElementById("select-all-models");
   const checkboxes = Array.from(document.querySelectorAll(".model-select"));
@@ -109,7 +107,9 @@
         return;
       }
 
-      bulkDeleteForm.querySelectorAll('input[name="election_ids"]').forEach((node) => node.remove());
+      bulkDeleteForm
+        .querySelectorAll('input[name="election_ids"]')
+        .forEach((node) => node.remove());
       selected.forEach((id) => {
         const hidden = document.createElement("input");
         hidden.type = "hidden";

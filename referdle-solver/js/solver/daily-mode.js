@@ -8,7 +8,10 @@ import { freshSlots, reconstructSlots } from "./engine.js";
 import { dailyClueGrid } from "./data.js";
 import { isCancelled } from "./worker-client.js";
 import {
-  buildOverlay, renderWordLists, renderStepSuggest, renderAutoSolveTable,
+  buildOverlay,
+  renderWordLists,
+  renderStepSuggest,
+  renderAutoSolveTable,
 } from "./render.js";
 
 export function initDailyMode(state, manual, clueUI, uiEls, compute = createComputeService(state)) {
@@ -27,7 +30,7 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
   let animToken = 0;
   let solving = false;
   let skipRequested = false;
-  const ANIM_MS = 420;   // pause between moves during playback
+  const ANIM_MS = 420; // pause between moves during playback
   const delay = (ms) => new Promise((r) => setTimeout(r, ms));
   let revision = 0;
   let pendingTurn = null;
@@ -58,11 +61,15 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
       loaded = await compute.request({ type: "load-day", day: d });
       if (token !== revision) return false;
     } catch (error) {
-      if (token === revision && !isCancelled(error)) status(`Failed to load daily: ${error.message} Retry by selecting the day again.`);
+      if (token === revision && !isCancelled(error))
+        status(`Failed to load daily: ${error.message} Retry by selecting the day again.`);
       return false;
     }
     words = loaded.words || null;
-    if (!words) { status(`No bundled puzzle for day ${d}.`); return false; }
+    if (!words) {
+      status(`No bundled puzzle for day ${d}.`);
+      return false;
+    }
     compute.acceptDaily?.({ day, continuation: loaded.continuation });
     const grid = loaded.grid;
     clueUI.setClueGrid(grid);
@@ -90,7 +97,8 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
     if (!words) return day == null ? undefined : loadDay(day);
     const token = revision;
     compute.resetDaily?.(day);
-    const loaded = compute.resetDaily ? { grid: dailyClueGrid(words) }
+    const loaded = compute.resetDaily
+      ? { grid: dailyClueGrid(words) }
       : await compute.request({ type: "reset-daily" });
     if (token !== revision) return;
     clueUI.setClueGrid(loaded.grid);
@@ -124,7 +132,10 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
       return;
     }
     // A re-click while a run is underway means "skip the pacing, jump to end".
-    if (solving) { skipRequested = true; return; }
+    if (solving) {
+      skipRequested = true;
+      return;
+    }
 
     solving = true;
     skipRequested = false;
@@ -157,7 +168,8 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
       if (aborted()) return;
       summaryStatus();
     } catch (error) {
-      if (!aborted() && !isCancelled(error)) status(`Calculation failed: ${error.message} Press "Solve" or "Next turn" to retry.`);
+      if (!aborted() && !isCancelled(error))
+        status(`Calculation failed: ${error.message} Press "Solve" or "Next turn" to retry.`);
     } finally {
       if (myToken === animToken) {
         solving = false;
@@ -169,7 +181,7 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
   // One-line description of an actual played move, for the live status line.
   function describeMove(m, n) {
     if (!m) return `Working out move ${n}`;
-    const what = m.isClosing ? "locking in" : (m.probe ? "probing" : "guessing");
+    const what = m.isClosing ? "locking in" : m.probe ? "probing" : "guessing";
     return `Move ${n}: ${what} ${m.word} on board ${m.board + 1}`;
   }
 
@@ -185,15 +197,17 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
     const closing = total - guesses;
     const solved = lastAutoSolve.game && lastAutoSolve.game.solved;
     const breakdown = closing > 0 ? ` (${guesses} guesses + ${closing} closing)` : "";
-    status(solved
-      ? `Daily #${day} solved in ${total} move${total === 1 ? "" : "s"}${breakdown}.`
-      : `Daily #${day} — ${total} move${total === 1 ? "" : "s"} played (not fully solved).`);
+    status(
+      solved
+        ? `Daily #${day} solved in ${total} move${total === 1 ? "" : "s"}${breakdown}.`
+        : `Daily #${day} — ${total} move${total === 1 ? "" : "s"} played (not fully solved).`,
+    );
   }
 
   // --- Next turn (one solver move per press) ------------------------------------
 
   async function nextTurn(fromSolve = false) {
-    if (!words || solving && !fromSolve) return false;
+    if (!words || (solving && !fromSolve)) return false;
     if (pendingTurn) {
       if (!fromSolve) return false;
       const existing = pendingTurn;
@@ -209,7 +223,9 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
     }
     if (turn.done) return;
     const owner = { revision };
-    owner.completion = new Promise((resolve) => { owner.complete = resolve; });
+    owner.completion = new Promise((resolve) => {
+      owner.complete = resolve;
+    });
     pendingTurn = owner;
     if (uiEls.nextTurnBtn) uiEls.nextTurnBtn.disabled = true;
     status("Calculating next move…");
@@ -267,7 +283,9 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
     if (turn.done) {
       summaryStatus();
     } else {
-      status(`Daily #${day} — ${n} move${n === 1 ? "" : "s"} played. Press "Next turn" to continue.`);
+      status(
+        `Daily #${day} — ${n} move${n === 1 ? "" : "s"} played. Press "Next turn" to continue.`,
+      );
     }
   }
 
@@ -313,18 +331,33 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
     if (lastAutoSolve) status(`Move ${activeIdx + 1} / ${lastAutoSolve.moves.length}`);
   }
   function prev() {
-    if (lastAutoSolve && activeIdx > 0) { cancelAnim(); jumpToMove(activeIdx - 1); posStatus(); }
+    if (lastAutoSolve && activeIdx > 0) {
+      cancelAnim();
+      jumpToMove(activeIdx - 1);
+      posStatus();
+    }
   }
   function next() {
     if (lastAutoSolve && activeIdx < lastAutoSolve.moves.length - 1) {
-      cancelAnim(); jumpToMove(activeIdx + 1); posStatus();
+      cancelAnim();
+      jumpToMove(activeIdx + 1);
+      posStatus();
     }
   }
-  function scrubTo(v) { if (lastAutoSolve) { cancelAnim(); jumpToMove(+v); posStatus(); } }
+  function scrubTo(v) {
+    if (lastAutoSolve) {
+      cancelAnim();
+      jumpToMove(+v);
+      posStatus();
+    }
+  }
 
   function notifyReady() {
     enableControls(!!words);
-    if (!words) { status("Select a daily, or \"Reload day\" to retry loading."); return; }
+    if (!words) {
+      status('Select a daily, or "Reload day" to retry loading.');
+      return;
+    }
     clueUI.setClueGrid(dailyClueGrid(words));
     if (lastAutoSolve?.moves.length) {
       jumpToMove(activeIdx >= 0 ? activeIdx : lastAutoSolve.moves.length - 1);
@@ -337,6 +370,19 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
     }
   }
 
-  return { loadDay, solveToEnd, nextTurn, resetSolve, jumpToMove, prev, next, scrubTo, notifyReady, stop: cancelAnim,
-           getDay: () => day, getWords: () => words, getTiming: () => compute.getTiming?.() };
+  return {
+    loadDay,
+    solveToEnd,
+    nextTurn,
+    resetSolve,
+    jumpToMove,
+    prev,
+    next,
+    scrubTo,
+    notifyReady,
+    stop: cancelAnim,
+    getDay: () => day,
+    getWords: () => words,
+    getTiming: () => compute.getTiming?.(),
+  };
 }

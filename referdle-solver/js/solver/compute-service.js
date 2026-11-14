@@ -18,7 +18,8 @@ export function createComputeService(state) {
         return dailyGame(state, message.day).then((words) => {
           day = message.day;
           answers = words ? words.slice() : null;
-          return answers ? { status: "loaded", day, ...daily.load(answers) }
+          return answers
+            ? { status: "loaded", day, ...daily.load(answers) }
             : { status: "unavailable-day", day };
         });
       case "advance-daily":

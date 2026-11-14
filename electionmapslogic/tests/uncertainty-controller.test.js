@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../dom.js", () => ({
-  renderHeader: vi.fn(), renderVoteTotals: vi.fn(), refreshOpenSeatPopup: vi.fn(),
+  renderHeader: vi.fn(),
+  renderVoteTotals: vi.fn(),
+  refreshOpenSeatPopup: vi.fn(),
 }));
 vi.mock("../files.js", () => ({ fetchJson: vi.fn() }));
 
@@ -12,8 +14,14 @@ import { activateUncertaintyView } from "../uncertainty-controller.js";
 
 function payload() {
   return {
-    schema: "pf-uncertainty-v1", uncertaintyId: "saved-run", interval: 0.9,
-    simulations: 10000, national: { parties: { 1: { v: [20, 30], s: [200, 300, 400], m: 297, pm: 0.3, pl: 0.8 } }, hung: 0.7 },
+    schema: "pf-uncertainty-v1",
+    uncertaintyId: "saved-run",
+    interval: 0.9,
+    simulations: 10000,
+    national: {
+      parties: { 1: { v: [20, 30], s: [200, 300, 400], m: 297, pm: 0.3, pl: 0.8 } },
+      hung: 0.7,
+    },
     regions: {},
   };
 }
@@ -44,42 +52,59 @@ describe("optional uncertainty loading", () => {
     expect(refreshOpenSeatPopup).toHaveBeenCalledOnce();
   });
 
-  it.each(["view", "election", "parliament", "results"])("ignores a delayed summary after %s changes", async (change) => {
-    let resolve;
-    fetchJson.mockImplementation(() => new Promise((done) => { resolve = done; }));
-    const loading = activateUncertaintyView();
-    const original = state.electionData;
-    if (change === "view") state.view = "predict";
-    if (change === "election") state.currentElection = { ...state.currentElection };
-    if (change === "parliament") state.currentParliament = "us_house";
-    if (change === "results") state.electionData = new ElectionData({ seats: [] });
-    resolve(payload());
-    await loading;
-    expect(original.uncertainty).toBeNull();
-    expect(state.electionData.uncertainty).toBeNull();
-    expect(renderVoteTotals).not.toHaveBeenCalled();
-  });
+  it.each(["view", "election", "parliament", "results"])(
+    "ignores a delayed summary after %s changes",
+    async (change) => {
+      let resolve;
+      fetchJson.mockImplementation(
+        () =>
+          new Promise((done) => {
+            resolve = done;
+          }),
+      );
+      const loading = activateUncertaintyView();
+      const original = state.electionData;
+      if (change === "view") state.view = "predict";
+      if (change === "election") state.currentElection = { ...state.currentElection };
+      if (change === "parliament") state.currentParliament = "us_house";
+      if (change === "results") state.electionData = new ElectionData({ seats: [] });
+      resolve(payload());
+      await loading;
+      expect(original.uncertainty).toBeNull();
+      expect(state.electionData.uncertainty).toBeNull();
+      expect(renderVoteTotals).not.toHaveBeenCalled();
+    },
+  );
 
-  it.each(["run", "unrelated-derived"])("rejects delayed results after a %s identity change", async (change) => {
-    let resolve;
-    fetchJson.mockImplementation(() => new Promise((done) => { resolve = done; }));
-    const original = state.electionData;
-    const loading = activateUncertaintyView();
-    if (change === "run") original.uncertaintyId = "new-run";
-    // A different results object carrying the same run id must not adopt the summary either.
-    else state.electionData = new ElectionData({ seats: [], uncertaintyId: "saved-run" });
-    resolve(payload());
-    await loading;
-    expect(original.uncertainty).toBeNull();
-    expect(state.electionData.uncertainty).toBeNull();
-    // The run id is matched when decoding, so a changed id re-renders the central result
-    // without uncertainty; only a replaced results object skips the render altogether.
-    if (change === "run") expect(renderVoteTotals).toHaveBeenCalledOnce();
-    else expect(renderVoteTotals).not.toHaveBeenCalled();
-  });
+  it.each(["run", "unrelated-derived"])(
+    "rejects delayed results after a %s identity change",
+    async (change) => {
+      let resolve;
+      fetchJson.mockImplementation(
+        () =>
+          new Promise((done) => {
+            resolve = done;
+          }),
+      );
+      const original = state.electionData;
+      const loading = activateUncertaintyView();
+      if (change === "run") original.uncertaintyId = "new-run";
+      // A different results object carrying the same run id must not adopt the summary either.
+      else state.electionData = new ElectionData({ seats: [], uncertaintyId: "saved-run" });
+      resolve(payload());
+      await loading;
+      expect(original.uncertainty).toBeNull();
+      expect(state.electionData.uncertainty).toBeNull();
+      // The run id is matched when decoding, so a changed id re-renders the central result
+      // without uncertainty; only a replaced results object skips the render altogether.
+      if (change === "run") expect(renderVoteTotals).toHaveBeenCalledOnce();
+      else expect(renderVoteTotals).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([null, { ...payload(), uncertaintyId: "different-same-day-run" }, { schema: "unknown" }])(
-    "ignores malformed or mismatched data: %j", async (data) => {
+    "ignores malformed or mismatched data: %j",
+    async (data) => {
       fetchJson.mockResolvedValue(data);
       await activateUncertaintyView();
       expect(state.electionData.uncertainty).toBeNull();

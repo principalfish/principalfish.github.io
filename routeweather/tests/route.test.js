@@ -1,9 +1,18 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  haversineKm, bearingDeg, hasFullElevation, buildRoute, smoothElevation,
-  sampleRoute, arrivalTimes, positionAtDistance, spacedSampleIndices, nearestPointIndices,
-  EARTH_RADIUS_KM, MERGE_DISTANCE_KM,
+  haversineKm,
+  bearingDeg,
+  hasFullElevation,
+  buildRoute,
+  smoothElevation,
+  sampleRoute,
+  arrivalTimes,
+  positionAtDistance,
+  spacedSampleIndices,
+  nearestPointIndices,
+  EARTH_RADIUS_KM,
+  MERGE_DISTANCE_KM,
 } from "../js/route.js";
 
 // One degree of arc on a sphere of EARTH_RADIUS_KM — the exact great-circle
@@ -155,7 +164,9 @@ describe("buildRoute", () => {
       { lat: 0.01, lon: 0.01 },
     ]);
     expect(route.points.map((p) => p.bearingDeg)).toEqual([
-      expect.closeTo(90, 6), expect.closeTo(0, 6), expect.closeTo(0, 6),
+      expect.closeTo(90, 6),
+      expect.closeTo(0, 6),
+      expect.closeTo(0, 6),
     ]);
   });
 
@@ -168,15 +179,21 @@ describe("buildRoute", () => {
       { lat: 0.01, lon: 0.01 },
     ]);
     expect(route.points.map((p) => p.bearingDeg)).toEqual([
-      expect.closeTo(90, 6), expect.closeTo(90, 6), expect.closeTo(0, 6),
-      expect.closeTo(0, 6), expect.closeTo(0, 6),
+      expect.closeTo(90, 6),
+      expect.closeTo(90, 6),
+      expect.closeTo(0, 6),
+      expect.closeTo(0, 6),
+      expect.closeTo(0, 6),
     ]);
     expect(route.points[1].cumDistKm).toBe(0);
   });
 
   it("gives null bearings when no two points differ", () => {
     expect(buildRoute([{ lat: 1, lon: 1 }]).points[0].bearingDeg).toBeNull();
-    const route = buildRoute([{ lat: 1, lon: 1 }, { lat: 1, lon: 1 }]);
+    const route = buildRoute([
+      { lat: 1, lon: 1 },
+      { lat: 1, lon: 1 },
+    ]);
     expect(route.points.map((p) => p.bearingDeg)).toEqual([null, null]);
     expect(route.totalDistKm).toBe(0);
   });
@@ -234,16 +251,17 @@ describe("smoothElevation", () => {
 
   // Spacings that put neighbours exactly windowM/2 away, where float error in
   // cumDistKm would otherwise drop one side of the window but not the other.
-  it.each([50 / 3, 12.5, 25, 50 / 7, 10])("includes neighbours at the window edge (%s m)", (
-    spacingM,
-  ) => {
-    const eles = Array(41).fill(100);
-    eles[20] = 200;
-    const smoothed = smoothElevation(buildRoute(lineRoute(eles, spacingM)), 100);
-    const perSide = Math.round(50 / spacingM);
-    expect(smoothed[20]).toBeCloseTo((2 * perSide * 100 + 200) / (2 * perSide + 1), 9);
-    expect(smoothed[19]).toBeCloseTo(smoothed[21], 9);
-  });
+  it.each([50 / 3, 12.5, 25, 50 / 7, 10])(
+    "includes neighbours at the window edge (%s m)",
+    (spacingM) => {
+      const eles = Array(41).fill(100);
+      eles[20] = 200;
+      const smoothed = smoothElevation(buildRoute(lineRoute(eles, spacingM)), 100);
+      const perSide = Math.round(50 / spacingM);
+      expect(smoothed[20]).toBeCloseTo((2 * perSide * 100 + 200) / (2 * perSide + 1), 9);
+      expect(smoothed[19]).toBeCloseTo(smoothed[21], 9);
+    },
+  );
 
   it("weights by distance, so stationary duplicates count as one point", () => {
     // Flat 100 m at 20 m spacing, with one 130 m reading at vertex 10. The
@@ -263,7 +281,10 @@ describe("smoothElevation", () => {
   });
 
   it("falls back to the plain mean when every point is at one spot", () => {
-    const route = buildRoute([{ lat: 1, lon: 1, ele: 10 }, { lat: 1, lon: 1, ele: 20 }]);
+    const route = buildRoute([
+      { lat: 1, lon: 1, ele: 10 },
+      { lat: 1, lon: 1, ele: 20 },
+    ]);
     expect(smoothElevation(route)).toEqual([15, 15]);
     expect(smoothElevation(buildRoute([{ lat: 1, lon: 1, ele: 7 }]))).toEqual([7]);
   });
@@ -280,9 +301,8 @@ describe("sampleRoute", () => {
   const summitEles = profile(401, 50, (km) => 100 + Math.max(0, 100 - Math.abs(km - 10.05) * 200));
 
   const kinds = (samples) => samples.map((s) => s.kind);
-  const minGapKm = (samples) => Math.min(
-    ...samples.slice(1).map((s, i) => s.cumDistKm - samples[i].cumDistKm),
-  );
+  const minGapKm = (samples) =>
+    Math.min(...samples.slice(1).map((s, i) => s.cumDistKm - samples[i].cumDistKm));
 
   it("always samples a prominent summit", () => {
     const route = buildRoute(lineRoute(summitEles, 50));
@@ -377,7 +397,9 @@ describe("sampleRoute", () => {
     const samples = sampleRoute(route);
     expect(samples[0]).toMatchObject({ index: 0, kind: "start", cumDistKm: 0 });
     expect(samples.at(-1)).toMatchObject({
-      index: 400, kind: "end", cumDistKm: route.totalDistKm,
+      index: 400,
+      kind: "end",
+      cumDistKm: route.totalDistKm,
     });
   });
 
@@ -421,7 +443,10 @@ describe("sampleRoute", () => {
 
   it("samples a sparse 2-point route along its length, not just at the ends", () => {
     // Planner-exported <rtept>s can be tens of km apart: here one 111 km leg.
-    const route = buildRoute([{ lat: 0, lon: 0 }, { lat: 1, lon: 0 }]);
+    const route = buildRoute([
+      { lat: 0, lon: 0 },
+      { lat: 1, lon: 0 },
+    ]);
     const samples = sampleRoute(route);
     expect(samples).toHaveLength(112); // floor(111.19 / 1) segments + 1
     expect(samples.slice(1, -1).every((s) => s.index === null)).toBe(true);
@@ -438,7 +463,10 @@ describe("sampleRoute", () => {
   });
 
   it("thins interpolated fillers on a sparse route to maxSamples", () => {
-    const route = buildRoute([{ lat: 0, lon: 0 }, { lat: 3, lon: 0 }]); // ~334 km
+    const route = buildRoute([
+      { lat: 0, lon: 0 },
+      { lat: 3, lon: 0 },
+    ]); // ~334 km
     const samples = sampleRoute(route, { maxSamples: 150 });
     expect(samples.length).toBeLessThanOrEqual(150);
     expect(samples.length).toBeGreaterThanOrEqual(149);
@@ -607,12 +635,8 @@ describe("sampleRoute", () => {
     // Sparse points so smoothing is a pass-through; the dip sits 199 or 201 m
     // in. (Exactly 200 m can't be hit reliably through haversine float error.)
     const at = (km, ele) => ({ lat: 50 + km / KM_PER_DEG, lon: 0, ele });
-    const dipAt = (metres) => sampleRoute(buildRoute([
-      at(0, 300),
-      at(metres / 1000, 200),
-      at(1, 300),
-      at(2, 300),
-    ]));
+    const dipAt = (metres) =>
+      sampleRoute(buildRoute([at(0, 300), at(metres / 1000, 200), at(1, 300), at(2, 300)]));
     expect(kinds(dipAt(201))).toContain("valley");
     expect(kinds(dipAt(199))).not.toContain("valley");
   });
@@ -659,16 +683,28 @@ describe("spacedSampleIndices", () => {
 
 describe("nearestPointIndices", () => {
   it("gives each sample the nearest point on the ground", () => {
-    const points = [{ lat: 50, lon: 0 }, { lat: 50.2, lon: 0 }];
+    const points = [
+      { lat: 50, lon: 0 },
+      { lat: 50.2, lon: 0 },
+    ];
     const samples = [
-      { lat: 50, lon: 0 }, { lat: 50.09, lon: 0 }, { lat: 50.11, lon: 0 }, { lat: 50.3, lon: 0 },
+      { lat: 50, lon: 0 },
+      { lat: 50.09, lon: 0 },
+      { lat: 50.11, lon: 0 },
+      { lat: 50.3, lon: 0 },
     ];
     expect(nearestPointIndices(samples, points)).toEqual([0, 0, 1, 1]);
   });
 
   it("shares points between an out-and-back's two legs", () => {
-    const points = [{ lat: 50, lon: 0 }, { lat: 50.1, lon: 0 }];
-    const back = [{ lat: 50.1, lon: 0 }, { lat: 50.01, lon: 0 }];
+    const points = [
+      { lat: 50, lon: 0 },
+      { lat: 50.1, lon: 0 },
+    ];
+    const back = [
+      { lat: 50.1, lon: 0 },
+      { lat: 50.01, lon: 0 },
+    ];
     expect(nearestPointIndices(back, points)).toEqual([1, 0]);
   });
 });
@@ -703,13 +739,19 @@ describe("positionAtDistance", () => {
 
   it("returns the first point exactly at distance 0", () => {
     expect(positionAtDistance(route, 0)).toEqual({
-      lat: 0, lon: 0, ele: 100, bearingDeg: route.points[0].bearingDeg,
+      lat: 0,
+      lon: 0,
+      ele: 100,
+      bearingDeg: route.points[0].bearingDeg,
     });
   });
 
   it("returns the last point exactly at totalDistKm", () => {
     expect(positionAtDistance(route, route.totalDistKm)).toEqual({
-      lat: 0.01, lon: 0.01, ele: 150, bearingDeg: route.points[2].bearingDeg,
+      lat: 0.01,
+      lon: 0.01,
+      ele: 150,
+      bearingDeg: route.points[2].bearingDeg,
     });
   });
 
@@ -739,12 +781,16 @@ describe("positionAtDistance", () => {
   it("clamps before the start and past the end", () => {
     expect(positionAtDistance(route, -5)).toEqual(positionAtDistance(route, 0));
     expect(positionAtDistance(route, NaN)).toEqual(positionAtDistance(route, 0));
-    expect(positionAtDistance(route, route.totalDistKm + 10))
-      .toEqual(positionAtDistance(route, route.totalDistKm));
+    expect(positionAtDistance(route, route.totalDistKm + 10)).toEqual(
+      positionAtDistance(route, route.totalDistKm),
+    );
   });
 
   it("returns null elevation for a route without elevation data", () => {
-    const flat = buildRoute([{ lat: 0, lon: 0 }, { lat: 0, lon: 0.01 }]);
+    const flat = buildRoute([
+      { lat: 0, lon: 0 },
+      { lat: 0, lon: 0.01 },
+    ]);
     expect(positionAtDistance(flat, 0).ele).toBeNull();
     expect(positionAtDistance(flat, STEP_KM / 2).ele).toBeNull();
     expect(positionAtDistance(flat, 99).ele).toBeNull();
@@ -765,22 +811,26 @@ describe("positionAtDistance", () => {
   it.each([
     ["eastbound", 179.99, -179.99, 90, 179.995, -179.995],
     ["westbound", -179.99, 179.99, 270, -179.995, 179.995],
-  ])("interpolates the short way across the antimeridian (%s)", (
-    _, fromLon, toLon, heading, quarterLon, threeQuarterLon,
-  ) => {
-    const crossing = buildRoute([{ lat: 10, lon: fromLon }, { lat: 10, lon: toLon }]);
-    expect(crossing.totalDistKm).toBeLessThan(3);
-    const at = (fraction) => positionAtDistance(crossing, crossing.totalDistKm * fraction);
-    expect(Math.abs(at(0.5).lon)).toBeCloseTo(180, 9);
-    expect(at(0.25).lon).toBeCloseTo(quarterLon, 9);
-    expect(at(0.75).lon).toBeCloseTo(threeQuarterLon, 9);
-    // A great circle along a parallel isn't quite due east/west.
-    expect(at(0.5).bearingDeg).toBeCloseTo(heading, 2);
-    for (const fraction of [0.1, 0.5, 0.9]) {
-      expect(at(fraction).lon).toBeGreaterThanOrEqual(-180);
-      expect(at(fraction).lon).toBeLessThan(180);
-    }
-  });
+  ])(
+    "interpolates the short way across the antimeridian (%s)",
+    (_, fromLon, toLon, heading, quarterLon, threeQuarterLon) => {
+      const crossing = buildRoute([
+        { lat: 10, lon: fromLon },
+        { lat: 10, lon: toLon },
+      ]);
+      expect(crossing.totalDistKm).toBeLessThan(3);
+      const at = (fraction) => positionAtDistance(crossing, crossing.totalDistKm * fraction);
+      expect(Math.abs(at(0.5).lon)).toBeCloseTo(180, 9);
+      expect(at(0.25).lon).toBeCloseTo(quarterLon, 9);
+      expect(at(0.75).lon).toBeCloseTo(threeQuarterLon, 9);
+      // A great circle along a parallel isn't quite due east/west.
+      expect(at(0.5).bearingDeg).toBeCloseTo(heading, 2);
+      for (const fraction of [0.1, 0.5, 0.9]) {
+        expect(at(fraction).lon).toBeGreaterThanOrEqual(-180);
+        expect(at(fraction).lon).toBeLessThan(180);
+      }
+    },
+  );
 
   it("handles a one-point route", () => {
     const single = buildRoute([{ lat: 1, lon: 2, ele: 3 }]);

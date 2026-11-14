@@ -2,14 +2,23 @@
 // All modules import these objects and mutate their properties directly.
 // A single shared object reference means every importer sees the same state.
 
-import * as d3 from '../site/vendor/d3.v7.esm.js';
-import { normalizeRegionKey, formatInt, formatPct, formatSigned, seatLookupKey, getRegionLabel, clampNumber, DEFAULT_PARTY_COLOUR } from './utils.js';
-import { fetchJson } from './files.js';
+import * as d3 from "../site/vendor/d3.v7.esm.js";
+import {
+  normalizeRegionKey,
+  formatInt,
+  formatPct,
+  formatSigned,
+  seatLookupKey,
+  getRegionLabel,
+  clampNumber,
+  DEFAULT_PARTY_COLOUR,
+} from "./utils.js";
+import { fetchJson } from "./files.js";
 import { decodeSeatUncertainty } from "./uncertainty.js";
 
 // Colour for a "split" seat — a multi-member seat whose members are from different parties.
 // A distinct purple from the Independent party colour so the two don't blur.
-const SPLIT_COLOUR = '#7d3c98';
+const SPLIT_COLOUR = "#7d3c98";
 
 // Optional per-page config a host HTML may set before the engine loads (window.MAPS_PAGE); no
 // page sets it today. Its only field is a data-path override; everything else comes from the
@@ -17,7 +26,7 @@ const SPLIT_COLOUR = '#7d3c98';
 // (misc.title), parliament tabs (misc.parliamentTabs) and landing election (defaultElection).
 // Unset => defaults.
 //   dataBase?: string           — base path for data fetches (default 'data')
-export const page = (typeof window !== 'undefined' && window.MAPS_PAGE) || {};
+export const page = (typeof window !== "undefined" && window.MAPS_PAGE) || {};
 
 // The active election's mapMode config, resolved from the manifest via the current election.
 // Use this (not state.mapConfig) where config is needed before render — e.g. when an
@@ -43,7 +52,7 @@ export function activeMapMode() {
  */
 export function seatComparisonHidden() {
   if (state.isReferendumType) return true;
-  if (state.view === 'predict') return false;
+  if (state.view === "predict") return false;
   return activeMapMode().seatComparison === false;
 }
 
@@ -120,11 +129,11 @@ class Manifest {
       regionRows.forEach((region) => {
         const id = Number(region?.id);
         if (!Number.isFinite(id)) return;
-        this.regionsById.set(id, normalizeRegionKey(region?.name || ''));
+        this.regionsById.set(id, normalizeRegionKey(region?.name || ""));
       });
 
       if (!Array.isArray(mapMode.voteTotalsViews) || mapMode.voteTotalsViews.length === 0) {
-        mapMode.voteTotalsViews = [{ id: 'all', label: 'All' }];
+        mapMode.voteTotalsViews = [{ id: "all", label: "All" }];
       }
     });
   }
@@ -143,7 +152,7 @@ class Manifest {
    * @returns {string}
    */
   defaultParliament() {
-    return this.elections.find((e) => e.id === this.defaultElection)?.parliament ?? '';
+    return this.elections.find((e) => e.id === this.defaultElection)?.parliament ?? "";
   }
 
   /**
@@ -194,7 +203,7 @@ class Manifest {
   parliamentLabel(parliament) {
     const tab = this.parliamentTabs().find((t) => t.parliament === parliament);
     if (tab?.label) return tab.label;
-    return parliament ? parliament[0].toUpperCase() + parliament.slice(1) : '';
+    return parliament ? parliament[0].toUpperCase() + parliament.slice(1) : "";
   }
 
   /**
@@ -203,7 +212,7 @@ class Manifest {
    * @returns {string}
    */
   labelParty(partyKey) {
-    if (partyKey === 'split') return 'Split';
+    if (partyKey === "split") return "Split";
     return this.partiesByKey?.[partyKey]?.name ?? partyKey;
   }
 
@@ -213,7 +222,7 @@ class Manifest {
    * @returns {string}
    */
   colourParty(partyKey) {
-    if (partyKey === 'split') return SPLIT_COLOUR;
+    if (partyKey === "split") return SPLIT_COLOUR;
     return this.partiesByKey?.[partyKey]?.colour ?? DEFAULT_PARTY_COLOUR;
   }
 
@@ -232,11 +241,13 @@ class Manifest {
       if (party?.key) return party.key;
       return String(num);
     }
-    const raw = String(ref || '').trim().toLowerCase();
-    if (!raw) return 'others';
+    const raw = String(ref || "")
+      .trim()
+      .toLowerCase();
+    if (!raw) return "others";
     // Fold known alias spellings (e.g. 'uup' → 'uu', 'reform uk' → 'reform') onto canonical
     // keys after stripping non-alphanumerics, matching the legacy normalizePartyKey behaviour.
-    const alnum = raw.replace(/[^a-z0-9]/g, '');
+    const alnum = raw.replace(/[^a-z0-9]/g, "");
     return this.partyKeyAliases[alnum] || raw;
   }
 
@@ -250,10 +261,10 @@ class Manifest {
     const mapFile = this.files.elections.mapsById[String(election.mapId)];
     const dataFile = this.files.elections.electionsById[election.id];
     if (!mapFile || !dataFile) {
-      throw new Error(`Missing file configuration for election ${election?.id || 'unknown'}`);
+      throw new Error(`Missing file configuration for election ${election?.id || "unknown"}`);
     }
     const comparisonDataFile = election.comparisonElectionId
-      ? this.files.elections.electionsById[election.comparisonElectionId] ?? null
+      ? (this.files.elections.electionsById[election.comparisonElectionId] ?? null)
       : null;
     return { mapFile, dataFile, comparisonDataFile };
   }
@@ -267,7 +278,7 @@ class Manifest {
     const lookup = new Map();
     const regionRows = this.regionsByMapId?.[String(mapId)] || [];
     regionRows.forEach((region) => {
-      const key = normalizeRegionKey(region?.name || '');
+      const key = normalizeRegionKey(region?.name || "");
       if (!key) return;
       lookup.set(key, region.name);
     });
@@ -282,7 +293,7 @@ class Manifest {
   async fetchPredictionMeta(parliament) {
     try {
       const payload = await fetchJson(`data/${this.files.meta[parliament]}`);
-      return String(payload?.latest_poll_snippet || '').trim();
+      return String(payload?.latest_poll_snippet || "").trim();
     } catch {
       return null;
     }
@@ -290,7 +301,6 @@ class Manifest {
 }
 
 export const manifest = new Manifest();
-
 
 // ─── Application state ────────────────────────────────────────────────────────
 
@@ -309,17 +319,21 @@ function listSeatRegexFor(pattern) {
   if (!pattern) return DEFAULT_LIST_SEAT_REGEX;
   let regex = listSeatRegexCache.get(pattern);
   if (!regex) {
-    try { regex = new RegExp(pattern, 'i'); } catch { regex = DEFAULT_LIST_SEAT_REGEX; }
+    try {
+      regex = new RegExp(pattern, "i");
+    } catch {
+      regex = DEFAULT_LIST_SEAT_REGEX;
+    }
     listSeatRegexCache.set(pattern, regex);
   }
   return regex;
 }
 
 // Popup wording for the per-seat status notes (see Seat#statusNotes).
-const SAME_PARTY_NOTE = 'Same-party contest: votes combined';
+const SAME_PARTY_NOTE = "Same-party contest: votes combined";
 const DECISIVE_ROUND_LABELS = {
-  'rcv-final': 'Decided by ranked-choice final round',
-  runoff: 'Decided in a runoff',
+  "rcv-final": "Decided by ranked-choice final round",
+  runoff: "Decided in a runoff",
 };
 
 /**
@@ -338,8 +352,8 @@ export class Seat {
    *   The status fields are optional; a seat built without them is a called, ordinary result.
    */
   constructor(input) {
-    this.seat = input?.seat || 'Unknown seat';
-    this.region = String(input?.region || 'unknown');
+    this.seat = input?.seat || "Unknown seat";
+    this.region = String(input?.region || "unknown");
     // False only for a seat explicitly marked uncalled (results still coming in); called by default.
     this.called = input?.called !== false;
     // An uncalled seat's winner is the party leading on votes. When no party leads (no
@@ -347,15 +361,19 @@ export class Seat {
     // unresolved (null) rather than defaulting to 'others' — the fill goes neutral and the
     // tallies skip it. Called seats keep the 'others' default for a missing winner.
     const rawWinner = input?.winner;
-    const hasWinner = rawWinner !== undefined && rawWinner !== null && rawWinner !== '';
-    this.winner = (!this.called && !hasWinner) ? null : manifest.resolvePartyRef(rawWinner ?? 'others');
+    const hasWinner = rawWinner !== undefined && rawWinner !== null && rawWinner !== "";
+    this.winner =
+      !this.called && !hasWinner ? null : manifest.resolvePartyRef(rawWinner ?? "others");
     // Percent (0-100) of the expected vote counted so far; uncalled seats only, null when unknown.
     const pct = input?.pctCounted;
-    this.pctCounted = pct === null || pct === undefined || pct === '' || !Number.isFinite(Number(pct)) ? null : Number(pct);
+    this.pctCounted =
+      pct === null || pct === undefined || pct === "" || !Number.isFinite(Number(pct))
+        ? null
+        : Number(pct);
     // True when the top candidates share a party (top-two / jungle races) and were merged into one row.
     this.sameParty = input?.sameParty === true;
     // Decisive round when the first round did not decide the seat: 'rcv-final' | 'runoff' | null.
-    this.round = typeof input?.round === 'string' && input.round ? input.round : null;
+    this.round = typeof input?.round === "string" && input.round ? input.round : null;
     // Senate class (1-3) of a same-day special election; null for every ordinary seat.
     this.senateClass = Number(input?.senateClass) || null;
     this.votes = Seat.#normalizeVotes(input?.votes);
@@ -386,9 +404,10 @@ export class Seat {
    * @returns {{winner: (string|null), votes: Object<string, number>}|null} Null when absent or empty.
    */
   static #normalizePrevious(previous) {
-    if (!previous || typeof previous !== 'object') return null;
+    if (!previous || typeof previous !== "object") return null;
     const votes = Seat.#normalizeVotes(previous.votes);
-    const hasWinner = previous.winner !== undefined && previous.winner !== null && previous.winner !== '';
+    const hasWinner =
+      previous.winner !== undefined && previous.winner !== null && previous.winner !== "";
     if (!hasWinner && !Object.keys(votes).length) return null;
     return { winner: hasWinner ? manifest.resolvePartyRef(previous.winner) : null, votes };
   }
@@ -418,9 +437,10 @@ export class Seat {
       sameParty: rawSeat?.sp === true,
       round: rawSeat?.rd,
       senateClass: rawSeat?.cl,
-      previous: rawSeat?.pv && typeof rawSeat.pv === 'object'
-        ? { winner: rawSeat.pv.w, votes: Seat.#decodeCompactVotes(rawSeat.pv.p) }
-        : null,
+      previous:
+        rawSeat?.pv && typeof rawSeat.pv === "object"
+          ? { winner: rawSeat.pv.w, votes: Seat.#decodeCompactVotes(rawSeat.pv.p) }
+          : null,
     });
   }
 
@@ -457,7 +477,7 @@ export class Seat {
       const party = manifest.resolvePartyRef(entry[0]);
       const votes = Number(entry[1] || 0);
       if (!party || votes <= 0) return;
-      rows.push({ party, votes, name: entry[2] ? String(entry[2]) : '' });
+      rows.push({ party, votes, name: entry[2] ? String(entry[2]) : "" });
     });
     const repeated = new Set(rows.map((row) => row.party)).size < rows.length;
     return repeated ? rows : null;
@@ -472,7 +492,11 @@ export class Seat {
     if (!Array.isArray(rows)) return null;
     const out = rows
       .filter((row) => row && Number(row.votes) > 0)
-      .map((row) => ({ party: manifest.resolvePartyRef(row.party), votes: Number(row.votes), name: row.name ? String(row.name) : '' }));
+      .map((row) => ({
+        party: manifest.resolvePartyRef(row.party),
+        votes: Number(row.votes),
+        name: row.name ? String(row.name) : "",
+      }));
     return out.length ? out : null;
   }
 
@@ -484,10 +508,10 @@ export class Seat {
    * @returns {string} Normalised region key, or `'unknown'` when the ref cannot be resolved.
    */
   static #resolveRegion(raw) {
-    if (typeof raw === 'number' && manifest.regionsById?.size) {
-      return manifest.regionsById.get(raw) || 'unknown';
+    if (typeof raw === "number" && manifest.regionsById?.size) {
+      return manifest.regionsById.get(raw) || "unknown";
     }
-    return String(raw || 'unknown');
+    return String(raw || "unknown");
   }
 
   /**
@@ -540,9 +564,10 @@ export class Seat {
    */
   static voteSharePct(seat, partyKey) {
     const turnout = Number(seat?.turnout || 0);
-    const totalVotes = turnout > 0
-      ? turnout
-      : Object.values(seat?.votes || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+    const totalVotes =
+      turnout > 0
+        ? turnout
+        : Object.values(seat?.votes || {}).reduce((sum, value) => sum + Number(value || 0), 0);
     if (totalVotes <= 0) return 0;
     const partyVotes = Number(seat?.votes?.[partyKey] || 0);
     return (partyVotes / totalVotes) * 100;
@@ -561,7 +586,10 @@ export class Seat {
   static choroplethValue(seat, comparisonSeat, isDelta, choroplethParty) {
     if (isDelta) {
       if (!comparisonSeat) return null;
-      return Seat.voteSharePct(seat, choroplethParty) - Seat.voteSharePct(comparisonSeat, choroplethParty);
+      return (
+        Seat.voteSharePct(seat, choroplethParty) -
+        Seat.voteSharePct(comparisonSeat, choroplethParty)
+      );
     }
     return Seat.voteSharePct(seat, choroplethParty);
   }
@@ -576,7 +604,7 @@ export class Seat {
    * @returns {boolean}
    */
   static isList(seat) {
-    return listSeatRegexFor(state.mapConfig?.listSeatPattern).test(seat?.seat || '');
+    return listSeatRegexFor(state.mapConfig?.listSeatPattern).test(seat?.seat || "");
   }
 
   // ── Seat data utilities ────────────────────────────────────────────────────
@@ -628,7 +656,7 @@ export class Seat {
   gainFromParty(comparisonSeatWinner) {
     // An uncalled seat has no settled winner yet, so it can be neither a gain nor a hold.
     if (!this.called) return null;
-    const winner = this.winner || 'others';
+    const winner = this.winner || "others";
     const previousWinner = comparisonSeatWinner || null;
     if (!previousWinner || previousWinner === winner) return null;
     return previousWinner;
@@ -644,8 +672,8 @@ export class Seat {
    * @returns {('called'|'provisional'|'neutral')}
    */
   fillKind() {
-    if (this.called) return 'called';
-    return this.winner ? 'provisional' : 'neutral';
+    if (this.called) return "called";
+    return this.winner ? "provisional" : "neutral";
   }
 
   /**
@@ -658,16 +686,19 @@ export class Seat {
    * @returns {{uncalledTag: string, samePartyNote: string, roundNote: string}}
    */
   statusNotes() {
-    let uncalledTag = '';
+    let uncalledTag = "";
     if (!this.called) {
-      uncalledTag = this.pctCounted === null
-        ? 'UNCALLED'
-        : `UNCALLED · ${Number(this.pctCounted.toFixed(1))}% counted`;
+      uncalledTag =
+        this.pctCounted === null
+          ? "UNCALLED"
+          : `UNCALLED · ${Number(this.pctCounted.toFixed(1))}% counted`;
     }
     return {
       uncalledTag,
-      samePartyNote: this.sameParty ? SAME_PARTY_NOTE : '',
-      roundNote: Object.prototype.hasOwnProperty.call(DECISIVE_ROUND_LABELS, this.round) ? DECISIVE_ROUND_LABELS[this.round] : '',
+      samePartyNote: this.sameParty ? SAME_PARTY_NOTE : "",
+      roundNote: Object.prototype.hasOwnProperty.call(DECISIVE_ROUND_LABELS, this.round)
+        ? DECISIVE_ROUND_LABELS[this.round]
+        : "",
     };
   }
 
@@ -727,17 +758,19 @@ export class Seat {
     // The vote/comparison-based filters (majority, second place, gains) have no data here; only
     // the seat-level region filter also applies.
     if (seat.members) {
-      if (!seat.members.some((member) => Seat.memberMatchesFilters(member, filterState))) return false;
-      if (filterState.region !== 'all' && normalizeRegionKey(seat.region) !== filterState.region) return false;
+      if (!seat.members.some((member) => Seat.memberMatchesFilters(member, filterState)))
+        return false;
+      if (filterState.region !== "all" && normalizeRegionKey(seat.region) !== filterState.region)
+        return false;
       return true;
     }
 
-    if (filterState.party !== 'all') {
-      const winner = seat.winner === 'other' ? 'others' : seat.winner;
+    if (filterState.party !== "all") {
+      const winner = seat.winner === "other" ? "others" : seat.winner;
       if (winner !== filterState.party) return false;
     }
 
-    if (filterState.region !== 'all') {
+    if (filterState.region !== "all") {
       const seatRegion = normalizeRegionKey(seat.region);
       if (seatRegion !== filterState.region) return false;
     }
@@ -745,7 +778,7 @@ export class Seat {
     const majority = seat.majorityStats().pct;
     if (majority < filterState.majorityMin || majority > filterState.majorityMax) return false;
 
-    if (filterState.secondParty !== 'all') {
+    if (filterState.secondParty !== "all") {
       const secondParty = seat.#secondPlaceParty();
       if (secondParty !== filterState.secondParty) return false;
     }
@@ -784,13 +817,17 @@ export class Seat {
    * @returns {boolean}
    */
   static memberMatchesFilters(member, filterState) {
-    if (filterState.party && filterState.party !== 'all') {
+    if (filterState.party && filterState.party !== "all") {
       // An uncalled member has no party yet, so it matches no party filter (not even 'others').
       if (Seat.isUncalledMember(member)) return false;
-      const party = member?.party === 'other' ? 'others' : (member?.party || 'others');
+      const party = member?.party === "other" ? "others" : member?.party || "others";
       if (party !== filterState.party) return false;
     }
-    if (filterState.upcoming && filterState.upcoming !== 'all' && String(member?.up) !== filterState.upcoming) {
+    if (
+      filterState.upcoming &&
+      filterState.upcoming !== "all" &&
+      String(member?.up) !== filterState.upcoming
+    ) {
       return false;
     }
     return true;
@@ -837,13 +874,13 @@ export class ElectionSummary {
    * @param {('all'|'constituency'|'list')} [mode='all'] - Aggregation mode forwarded to {@link ElectionSummary.summarize}; see class jsdoc for the per-mode behaviour.
    * @param {Seat[]} [specials=[]] - Same-day special-election seats tallied alongside `seats`; see {@link ElectionSummary.summarize}.
    */
-  constructor(seats, electionName, mode = 'all', specials = []) {
+  constructor(seats, electionName, mode = "all", specials = []) {
     /** Aggregation mode used to build {@link ElectionSummary#data}. See class jsdoc for per-mode behaviour. */
     this.mode = mode;
 
     /** Structured aggregate: `{parties, totalVotes, totalSeats, uncalled}`. Parties are
      * sorted by seats desc, then votes desc, so `parties[0]` is the leading party. */
-    this.data = ElectionSummary.summarize(seats, mode, { party: 'all', upcoming: 'all' }, specials);
+    this.data = ElectionSummary.summarize(seats, mode, { party: "all", upcoming: "all" }, specials);
 
     /** Pre-rendered subtitle string (e.g. "2024 General Election · Labour majority: 174"),
      * or null when no electionName was provided (comparison/predict-baseline summaries). */
@@ -909,7 +946,12 @@ export class ElectionSummary {
    *   - `uncalled` — number of uncalled seats (electoral votes on EV-tally maps) among those
    *     summarised under the active mode; they appear in no party's `seats`.
    */
-  static summarize(seats, mode = 'all', memberFilter = { party: 'all', upcoming: 'all' }, specials = []) {
+  static summarize(
+    seats,
+    mode = "all",
+    memberFilter = { party: "all", upcoming: "all" },
+    specials = [],
+  ) {
     // Multi-member chambers (each map seat returns more than one member, held in the seat's
     // `members` array): tally the individual members, since the chamber size differs from the
     // seat count. Such views carry no vote tallies, so totalVotes is 0.
@@ -917,23 +959,25 @@ export class ElectionSummary {
       const memberStats = new Map();
       let total = 0;
       let uncalledMembers = 0;
-      seats.forEach((seat) => (seat.members || []).forEach((member) => {
-        // Count only members matching the active member-level filters (party + cycle), via the
-        // same predicate the map uses, so the totals agree with the filtered seats — e.g. a
-        // party filter counts that party's senators even in split states, one per state.
-        if (!Seat.memberMatchesFilters(member, memberFilter)) return;
-        // A member whose race is uncalled belongs to no party (not 'others'): it counts in the
-        // chamber size and in the uncalled tally only.
-        if (Seat.isUncalledMember(member)) {
-          uncalledMembers += 1;
+      seats.forEach((seat) =>
+        (seat.members || []).forEach((member) => {
+          // Count only members matching the active member-level filters (party + cycle), via the
+          // same predicate the map uses, so the totals agree with the filtered seats — e.g. a
+          // party filter counts that party's senators even in split states, one per state.
+          if (!Seat.memberMatchesFilters(member, memberFilter)) return;
+          // A member whose race is uncalled belongs to no party (not 'others'): it counts in the
+          // chamber size and in the uncalled tally only.
+          if (Seat.isUncalledMember(member)) {
+            uncalledMembers += 1;
+            total += 1;
+            return;
+          }
+          const key = member.party === "other" ? "others" : member.party || "others";
+          if (!memberStats.has(key)) memberStats.set(key, { seats: 0, votes: 0 });
+          memberStats.get(key).seats += 1;
           total += 1;
-          return;
-        }
-        const key = member.party === 'other' ? 'others' : (member.party || 'others');
-        if (!memberStats.has(key)) memberStats.set(key, { seats: 0, votes: 0 });
-        memberStats.get(key).seats += 1;
-        total += 1;
-      }));
+        }),
+      );
       const parties = Array.from(memberStats.entries())
         .map(([party, stats]) => ({ party, ...stats }))
         .sort((a, b) => b.seats - a.seats);
@@ -947,7 +991,7 @@ export class ElectionSummary {
     // Electoral-vote tally mode (presidential maps): the leading party's "seats" count
     // and the chamber total are measured in electoral votes, not seat counts. Resolve from
     // the active election's mapMode so it's correct even before state.mapConfig is set.
-    const evTally = activeMapMode().tally === 'electoralVotes';
+    const evTally = activeMapMode().tally === "electoralVotes";
     const weightOf = (seat) => (evTally ? Number(seat.ev || 0) : 1);
     // Tracks `(region, party)` pairs we've already credited with list-mode votes. Each
     // region's list ballot is duplicated across every list seat in that region, so without
@@ -965,8 +1009,8 @@ export class ElectionSummary {
       // Mode filtering: constituency mode hides the regional list ballot, list mode hides
       // the constituency ballot. Skipped seats contribute neither seat counts nor votes.
       // 'all' falls through and counts every seat (with the per-mode vote rules below).
-      if (mode === 'constituency' && isList) return;
-      if (mode === 'list' && !isList) return;
+      if (mode === "constituency" && isList) return;
+      if (mode === "list" && !isList) return;
 
       // Seat-count accumulation: every non-skipped seat adds 1 to its winner's tally.
       // Fold the legacy 'other' key into 'others' (older results files used 'other'),
@@ -977,7 +1021,7 @@ export class ElectionSummary {
       if (seat.called === false) {
         uncalled += weightOf(seat);
       } else {
-        const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
+        const winner = seat.winner === "other" ? "others" : seat.winner || "others";
         if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
         partyStats.get(winner).seats += weightOf(seat);
       }
@@ -987,22 +1031,22 @@ export class ElectionSummary {
       // the full state total — so their EV is counted above but their VOTES are excluded from
       // the national tally. Without this, Maine is counted 2-3x and Nebraska up to 4x. Only
       // the presidential map is EV-tallied and only its ME/NE units use the " CD-N" suffix.
-      const isEvSubunit = evTally && / CD-\d/.test(seat.seat || '');
+      const isEvSubunit = evTally && / CD-\d/.test(seat.seat || "");
 
       // Vote accumulation gate. List seats are excluded from votes in 'all' mode because
       // they're a separate ballot — combining them with constituency votes would
       // double-count the electorate. In 'constituency' and 'list' modes the filter above
       // has already restricted the seat set, so includeVotes is true for every survivor.
-      const includeVotes = (mode !== 'all' || !isList) && !isEvSubunit;
+      const includeVotes = (mode !== "all" || !isList) && !isEvSubunit;
       if (includeVotes) {
         Object.entries(seat.votes || {}).forEach(([party, votes]) => {
           // Same 'other' → 'others' fold as for winners, applied per voter party.
-          const key = party === 'other' ? 'others' : party;
+          const key = party === "other" ? "others" : party;
           if (!partyStats.has(key)) partyStats.set(key, { seats: 0, votes: 0 });
           // List-mode dedupe: skip this party's votes if we've already counted them for
           // this region. The seenKey uses a NUL byte separator so it can't collide with
           // a real party key that contains the region name (or vice versa).
-          if (mode === 'list') {
+          if (mode === "list") {
             const seenKey = `${normalizeRegionKey(seat.region)}\x00${key}`;
             if (listRegionPartyCountSeen.has(seenKey)) return;
             listRegionPartyCountSeen.add(seenKey);
@@ -1081,10 +1125,10 @@ export class ElectionSummary {
     const top = data.parties[0];
     const leadSeats = Number(top?.seats || 0);
     const totalSeats = Number(data.totalSeats || 0);
-    const topLabel = manifest.labelParty(top?.party || 'others');
+    const topLabel = manifest.labelParty(top?.party || "others");
     const mapMode = activeMapMode();
     const uncalled = Number(data.uncalled || 0);
-    const uncalledSuffix = uncalled > 0 ? ` · ${formatInt(uncalled)} uncalled` : '';
+    const uncalledSuffix = uncalled > 0 ? ` · ${formatInt(uncalled)} uncalled` : "";
 
     // Nothing counted yet: no party leads anywhere, so there is nobody to name.
     if (!top && uncalled > 0) return `${electionName}${uncalledSuffix}`;
@@ -1098,7 +1142,7 @@ export class ElectionSummary {
 
     // Electoral-vote tally (presidential): show the winner's margin of victory — the
     // electoral-vote lead over the runner-up — rather than a parliamentary "majority".
-    if (mapMode.tally === 'electoralVotes') {
+    if (mapMode.tally === "electoralVotes") {
       const runnerUp = Number(data.parties[1]?.seats || 0);
       const margin = leadSeats - runnerUp;
       return `${electionName} · ${topLabel} margin of victory: ${formatInt(margin)}${uncalledSuffix}`;
@@ -1113,7 +1157,7 @@ export class ElectionSummary {
     if (hasMajority) return `${electionName} · ${topLabel} majority: ${majority}${uncalledSuffix}`;
     // Uncalled seats that could still carry the leader past the half-line leave the outcome open.
     const undecided = uncalled > 0 && leadSeats + uncalled > majorityThreshold;
-    const outcome = undecided ? 'Majority undecided' : 'Hung parliament';
+    const outcome = undecided ? "Majority undecided" : "Hung parliament";
     return `${electionName} · ${outcome} - largest party ${topLabel} with ${formatInt(leadSeats)} seats${uncalledSuffix}`;
   }
 
@@ -1160,7 +1204,7 @@ export class ElectionSummary {
       // Bucket by region. Falsy/missing region falls back to 'unknown' so the seat is
       // still aggregated rather than silently dropped — matches the synthetic-others
       // fallback used elsewhere for unattributed data.
-      const region = seat.region || 'unknown';
+      const region = seat.region || "unknown";
       // Lazily create the per-region bucket on first encounter. Pre-allocating empty
       // buckets for every known region would require knowing the region list up front,
       // which this static doesn't have access to.
@@ -1174,7 +1218,7 @@ export class ElectionSummary {
       // dropped — same reasoning as the region fallback above.
       // Uncalled seats are credited to no party; only their votes below count.
       if (seat.called !== false) {
-        const winner = seat.winner || 'others';
+        const winner = seat.winner || "others";
         r.seatsByParty[winner] = (r.seatsByParty[winner] || 0) + 1;
       }
 
@@ -1222,7 +1266,12 @@ export class ElectionData {
     /** Aggregated summary of currentSeats (plus any specials): `{data, text}`. Rebuild by
      * reassigning to a new `ElectionSummary` instance whenever currentSeats changes (e.g. after
      * predict-mode projection). */
-    this.summary = new ElectionSummary(this.currentSeats, electionName, 'all', Array.from(this.specials.values()));
+    this.summary = new ElectionSummary(
+      this.currentSeats,
+      electionName,
+      "all",
+      Array.from(this.specials.values()),
+    );
   }
 
   /**
@@ -1313,7 +1362,7 @@ const ELECTION_ID_YEAR = /^(\d{4})-/;
  * @returns {number|null}
  */
 function electionIdYear(electionId) {
-  const match = ELECTION_ID_YEAR.exec(electionId || '');
+  const match = ELECTION_ID_YEAR.exec(electionId || "");
   return match ? Number(match[1]) : null;
 }
 
@@ -1321,7 +1370,7 @@ class AppState {
   constructor() {
     /** Active view name for the current page load ('election' | 'predict' | 'polltracker').
      * Set by initState from the ?view= URL param, defaulting to 'election'. */
-    this.view = 'election';
+    this.view = "election";
 
     /**
      * The currently loaded election, spread from its manifest entry with one computed addition.
@@ -1344,11 +1393,11 @@ class AppState {
 
     /** Parliament key for the currently active parliament tab ('westminster' | 'holyrood').
      * Resolved from the ?parliament= URL param on load, falling back to the manifest defaultElection's parliament. */
-    this.currentParliament = '';
+    this.currentParliament = "";
 
     /** Latest poll snippet text for the current parliament, used in subtitle rendering.
      * Empty string until fetched or if the fetch failed. */
-    this.predictionSnippet = '';
+    this.predictionSnippet = "";
 
     /** Parsed poll tracker data: a dense daily timeline plus per-party seats/votePct series.
      * Populated by assigning to state.pollTrackerData when poll tracker mode activates; empty until then. */
@@ -1387,31 +1436,31 @@ class AppState {
      */
     this.voteTotals = {
       columns: { votes: true, votePct: true },
-      mode: 'all',
+      mode: "all",
       expanded: false,
-      sort: { key: 'seats', direction: 'desc' },
+      sort: { key: "seats", direction: "desc" },
     };
 
     /** Active map filter selections. Mutated by syncMapControlStateFromInputs (DOM → state) on
      * every filter change, by the gains-button click handler, and by resetPrimaryFilters. Read by
      * Seat.matchesPrimaryFilters when computing the visible seat set. */
     this.mapFilters = {
-      party: 'all',
-      region: 'all',
-      secondParty: 'all',
+      party: "all",
+      region: "all",
+      secondParty: "all",
       majorityMin: 0,
       majorityMax: 100,
       gainsOnly: false,
       // Cycle year for the "next up for election" filter (multi-member chambers whose election
       // carries `upcomingElections`, e.g. the Current Senate). 'all' = no cycle filtering.
-      upcoming: 'all',
+      upcoming: "all",
     };
 
     /** Active choropleth selection. Mutated by syncMapControlStateFromInputs and resetChoropleths.
      * Read by this.buildChoroplethConfig and the choropleth render path. */
     this.mapChoropleths = {
-      type: 'none',
-      party: 'all',
+      type: "none",
+      party: "all",
     };
 
     /** Derived visible-seat slice produced by applying mapFilters to electionData.currentSeats.
@@ -1448,7 +1497,6 @@ class AppState {
      * (regions, voteTotalsViews, hiddenVoteTotalsParties). Null until
      * setupMapData runs. */
     this.mapConfig = null;
-
 
     /** Whether the current chamber includes regional list seats (Holyrood). False until
      * setupMapData runs. Drives the list-seat specialisation (region-table overlay and
@@ -1537,14 +1585,16 @@ class AppState {
       const visibleElections = parliamentElections.filter((e) => !hidden.has(e.id));
       const anchorId = this.getPredictAnchorElectionId();
       currentElection =
-        (anchorId && !hidden.has(anchorId) ? parliamentElections.find((e) => e.id === anchorId) : null)
-        || visibleElections.find((e) => e.id === manifest.defaultElection)
-        || visibleElections[0]
-        || parliamentElections[0];
+        (anchorId && !hidden.has(anchorId)
+          ? parliamentElections.find((e) => e.id === anchorId)
+          : null) ||
+        visibleElections.find((e) => e.id === manifest.defaultElection) ||
+        visibleElections[0] ||
+        parliamentElections[0];
     }
 
     if (!currentElection) {
-      throw new Error('No elections configured in data/map-modes.json');
+      throw new Error("No elections configured in data/map-modes.json");
     }
 
     this.currentElection = { ...currentElection };
@@ -1553,16 +1603,17 @@ class AppState {
       : null;
     this.currentRegionLabelsByKey = manifest.buildRegionLabelLookup(this.currentElection.mapId);
     this.isReferendumType = !!this.currentElection.referendum;
-    this.referendumConfig = (this.currentElection.referendum && typeof this.currentElection.referendum === 'object')
-      ? this.currentElection.referendum
-      : null;
+    this.referendumConfig =
+      this.currentElection.referendum && typeof this.currentElection.referendum === "object"
+        ? this.currentElection.referendum
+        : null;
 
     const mapConfig = manifest.mapModes[String(this.currentElection.mapId)];
     this.voteTotals.mode = mapConfig.voteTotalsViews[0].id;
 
     // Fetch prediction snippet for model elections and poll tracker, where subtitle text references it.
-    if (this.view === 'polltracker' || this.currentElection.model) {
-      this.predictionSnippet = (await manifest.fetchPredictionMeta(this.currentParliament)) ?? '';
+    if (this.view === "polltracker" || this.currentElection.model) {
+      this.predictionSnippet = (await manifest.fetchPredictionMeta(this.currentParliament)) ?? "";
     }
   }
 
@@ -1615,9 +1666,8 @@ class AppState {
    * @returns {string} Query string URL (e.g. '?view=election&election=2024&parliament=westminster').
    */
   viewUrl(view, electionId) {
-    const electionPart = view === 'election' && electionId
-      ? `&election=${encodeURIComponent(electionId)}`
-      : '';
+    const electionPart =
+      view === "election" && electionId ? `&election=${encodeURIComponent(electionId)}` : "";
     return `?view=${view}${electionPart}&parliament=${this.currentParliament}`;
   }
 
@@ -1637,10 +1687,10 @@ class AppState {
    * @returns {boolean}
    */
   shouldShowCountdown() {
-    if (this.view === 'polltracker') return false;
+    if (this.view === "polltracker") return false;
     const cfg = manifest.parliamentConfig(this.currentParliament);
     if (!cfg.nextElectionDate) return false;
-    return this.view === 'predict' || Boolean(this.currentElection?.model);
+    return this.view === "predict" || Boolean(this.currentElection?.model);
   }
 
   /**
@@ -1672,24 +1722,28 @@ class AppState {
     const nextYear = Number(manifest.parliamentConfig(this.currentParliament)?.nextElectionYear);
     const overrideLastBySeat = new Map();
     overrides.forEach((override) => {
-      const seatKey = seatLookupKey(override?.seat || '');
+      const seatKey = seatLookupKey(override?.seat || "");
       const lastYear = electionIdYear(override?.baselineElectionId);
-      if (seatKey && lastYear != null) overrideLastBySeat.set(`${seatKey}|${Number(override?.class)}`, lastYear);
+      if (seatKey && lastYear != null)
+        overrideLastBySeat.set(`${seatKey}|${Number(override?.class)}`, lastYear);
     });
     const specialBySeatClass = new Map();
     specials.forEach((special) => {
-      const seatKey = seatLookupKey(special?.seat || '');
+      const seatKey = seatLookupKey(special?.seat || "");
       if (!seatKey || special?.year == null) return;
       specialBySeatClass.set(`${seatKey}|${Number(special?.class)}`, special);
     });
     this.electionData?.currentSeats?.forEach((seat) => {
-      const seatKey = seatLookupKey(seat?.seat || '');
+      const seatKey = seatLookupKey(seat?.seat || "");
       (seat.members || []).forEach((member) => {
         const special = specialBySeatClass.get(`${seatKey}|${Number(member?.class)}`);
         const year = special?.year ?? cycleMap?.[member?.class];
         if (year != null) member.up = year;
-        const lastYear = electionIdYear(special?.baselineElectionId)
-          ?? (year === nextYear ? overrideLastBySeat.get(`${seatKey}|${Number(member?.class)}`) : undefined);
+        const lastYear =
+          electionIdYear(special?.baselineElectionId) ??
+          (year === nextYear
+            ? overrideLastBySeat.get(`${seatKey}|${Number(member?.class)}`)
+            : undefined);
         if (lastYear != null) member.last = lastYear;
       });
     });
@@ -1749,7 +1803,7 @@ class AppState {
     this.currentSeatNameByKey = new Map();
     const seatNames = [];
     this.listFilteredSeats.forEach((seat) => {
-      const seatName = String(seat?.seat || '').trim();
+      const seatName = String(seat?.seat || "").trim();
       if (!seatName) return;
       const key = seatLookupKey(seatName);
       if (this.currentSeatNameByKey.has(key)) return;
@@ -1779,21 +1833,37 @@ class AppState {
   recomputeVoteTotalsForMode() {
     // A multi-member chamber view has no vote tallies, so both vote columns hide.
     const multiMember = !!this.currentElection.multiMember;
-    const electionAllowsVoteCounts = !(this.currentElection.model || this.isReferendumType || this.view === 'predict' || multiMember);
-    const tabAllowsVotes = (!this.hasListSeats || this.voteTotals.mode !== 'all') && !multiMember;
+    const electionAllowsVoteCounts = !(
+      this.currentElection.model ||
+      this.isReferendumType ||
+      this.view === "predict" ||
+      multiMember
+    );
+    const tabAllowsVotes = (!this.hasListSeats || this.voteTotals.mode !== "all") && !multiMember;
     this.voteTotals.columns.votePct = tabAllowsVotes;
     this.voteTotals.columns.votes = tabAllowsVotes && electionAllowsVoteCounts;
 
     const memberFilter = { party: this.mapFilters.party, upcoming: this.mapFilters.upcoming };
     const visibleSpecials = this.visibleSpecials();
-    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode, memberFilter, visibleSpecials);
+    this.filteredSeatsSummary = ElectionSummary.summarize(
+      this.mapSeatsVisible.seats,
+      this.voteTotals.mode,
+      memberFilter,
+      visibleSpecials,
+    );
     const hasComparison = !!this.comparisonElectionData?.currentSeats.length;
     this.filteredSeatsComparisonSummary = hasComparison
       ? this.#comparisonSummary(visibleSpecials, memberFilter)
       : null;
-    this.filteredSeatsDeltaSummary = hasComparison && this.comparesMatchingSeatsOnly
-      ? ElectionSummary.summarize(this.#matchedSeats().current, this.voteTotals.mode, memberFilter, [])
-      : null;
+    this.filteredSeatsDeltaSummary =
+      hasComparison && this.comparesMatchingSeatsOnly
+        ? ElectionSummary.summarize(
+            this.#matchedSeats().current,
+            this.voteTotals.mode,
+            memberFilter,
+            [],
+          )
+        : null;
   }
 
   /**
@@ -1807,7 +1877,7 @@ class AppState {
    * @returns {boolean}
    */
   get comparesMatchingSeatsOnly() {
-    return this.currentElection?.type === 'us_senate';
+    return this.currentElection?.type === "us_senate";
   }
 
   /**
@@ -1845,7 +1915,10 @@ class AppState {
   #comparisonSummary(visibleSpecials, memberFilter) {
     const inputs = this.comparisonTotalsInputs(visibleSpecials, memberFilter);
     const summary = ElectionSummary.summarize(...inputs);
-    const uncalledKeys = (seats) => new Set(seats.filter((seat) => seat.called === false).map((seat) => seatLookupKey(seat.seat)));
+    const uncalledKeys = (seats) =>
+      new Set(
+        seats.filter((seat) => seat.called === false).map((seat) => seatLookupKey(seat.seat)),
+      );
     const skipSeats = uncalledKeys(this.mapSeatsVisible.seats);
     const skipSpecials = uncalledKeys(visibleSpecials);
     if (!skipSeats.size && !skipSpecials.size) return summary;
@@ -1857,7 +1930,9 @@ class AppState {
       specials.filter((special) => !skipSpecials.has(seatLookupKey(special.seat))),
     );
     const calledSeats = new Map(calledOnly.parties.map((row) => [row.party, row.seats]));
-    summary.parties.forEach((row) => { row.seats = calledSeats.get(row.party) ?? 0; });
+    summary.parties.forEach((row) => {
+      row.seats = calledSeats.get(row.party) ?? 0;
+    });
     return summary;
   }
 
@@ -1868,8 +1943,15 @@ class AppState {
    */
   hasActiveFilters() {
     const f = this.mapFilters;
-    return f.party !== 'all' || f.region !== 'all' || f.secondParty !== 'all'
-      || f.majorityMin !== 0 || f.majorityMax !== 100 || f.gainsOnly || f.upcoming !== 'all';
+    return (
+      f.party !== "all" ||
+      f.region !== "all" ||
+      f.secondParty !== "all" ||
+      f.majorityMin !== 0 ||
+      f.majorityMax !== 100 ||
+      f.gainsOnly ||
+      f.upcoming !== "all"
+    );
   }
 
   /**
@@ -1883,7 +1965,13 @@ class AppState {
     const specials = Array.from(this.electionData?.specials?.values() ?? []);
     if (!specials.length || !this.hasActiveFilters()) return specials;
     return specials.filter((special) =>
-      Seat.matchesPrimaryFilters(special, null, this.mapFilters, this.currentElection.byElectionSeats));
+      Seat.matchesPrimaryFilters(
+        special,
+        null,
+        this.mapFilters,
+        this.currentElection.byElectionSeats,
+      ),
+    );
   }
 
   /**
@@ -1909,12 +1997,22 @@ class AppState {
       return [this.#matchedSeats().comparison, this.voteTotals.mode, memberFilter, []];
     }
     if (!this.hasActiveFilters()) {
-      return [comparison.currentSeats, this.voteTotals.mode, memberFilter, Array.from(comparison.specials?.values() ?? [])];
+      return [
+        comparison.currentSeats,
+        this.voteTotals.mode,
+        memberFilter,
+        Array.from(comparison.specials?.values() ?? []),
+      ];
     }
     const comparisonSpecials = visibleSpecials
       .map((special) => comparison.specials?.get(seatLookupKey(special.seat)))
       .filter(Boolean);
-    return [this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode, memberFilter, comparisonSpecials];
+    return [
+      this.mapSeatsVisible.comparisonSeats,
+      this.voteTotals.mode,
+      memberFilter,
+      comparisonSpecials,
+    ];
   }
 
   /**
@@ -1923,17 +2021,26 @@ class AppState {
    * @returns {void}
    */
   applyMapFilters() {
-    const comparisonSeatsByKey = this.comparisonElectionData?.seatsByKey  || new Map();
+    const comparisonSeatsByKey = this.comparisonElectionData?.seatsByKey || new Map();
     const seatKeys = new Set();
     this.electionData.currentSeats.forEach((seat) => {
       const seatKey = seatLookupKey(seat.seat);
       const comparisonSeat = comparisonSeatsByKey.get(seatKey) || null;
-      if (Seat.matchesPrimaryFilters(seat, comparisonSeat, this.mapFilters, this.currentElection.byElectionSeats)) {
+      if (
+        Seat.matchesPrimaryFilters(
+          seat,
+          comparisonSeat,
+          this.mapFilters,
+          this.currentElection.byElectionSeats,
+        )
+      ) {
         seatKeys.add(seatKey);
       }
     });
     this.mapSeatsVisible.seatKeys = seatKeys;
-    this.mapSeatsVisible.seats = this.electionData.currentSeats.filter((seat) => seatKeys.has(seatLookupKey(seat.seat)));
+    this.mapSeatsVisible.seats = this.electionData.currentSeats.filter((seat) =>
+      seatKeys.has(seatLookupKey(seat.seat)),
+    );
     this.mapSeatsVisible.comparisonSeats = Array.from(seatKeys)
       .map((seatKey) => comparisonSeatsByKey.get(seatKey))
       .filter(Boolean);
@@ -1960,7 +2067,7 @@ class AppState {
    * @returns {Array<{value: string, label: string}>} Option rows for <option> rendering.
    */
   mapControlParties() {
-    const mergeKey = (key) => (key === 'other' ? 'others' : key);
+    const mergeKey = (key) => (key === "other" ? "others" : key);
     const keys = new Set();
     // Walks one seat array, adding the winner key and every voter key into the shared
     // `keys` set. Run twice (current + comparison) to avoid duplicating the scan body.
@@ -1968,7 +2075,7 @@ class AppState {
     const addFromSeats = (seats) => {
       seats?.forEach((seat) => {
         // An uncalled seat with no leader has no winner key; don't invent an 'others' entry.
-        if (seat.winner || seat.called !== false) keys.add(mergeKey(seat.winner || 'others'));
+        if (seat.winner || seat.called !== false) keys.add(mergeKey(seat.winner || "others"));
         Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(mergeKey(partyKey)));
       });
     };
@@ -1977,11 +2084,12 @@ class AppState {
     // Specials can carry a party the regular races don't, and the party filter applies to them.
     addFromSeats(Array.from(this.electionData?.specials?.values() ?? []));
 
-    const sorted = Array.from(keys)
-      .sort((a, b) => manifest.labelParty(a).localeCompare(manifest.labelParty(b)));
+    const sorted = Array.from(keys).sort((a, b) =>
+      manifest.labelParty(a).localeCompare(manifest.labelParty(b)),
+    );
 
     return [
-      { value: 'all', label: 'all parties...' },
+      { value: "all", label: "all parties..." },
       ...sorted.map((key) => ({ value: key, label: manifest.labelParty(key) })),
     ];
   }
@@ -2012,7 +2120,7 @@ class AppState {
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
 
-    return [{ value: 'all', label: 'all regions...' }, ...rows];
+    return [{ value: "all", label: "all regions..." }, ...rows];
   }
 
   /**
@@ -2035,7 +2143,7 @@ class AppState {
       .sort((a, b) => a - b)
       .map((year) => ({ value: String(year), label: String(year) }));
 
-    return [{ value: 'all', label: 'all cycles...' }, ...rows];
+    return [{ value: "all", label: "all cycles..." }, ...rows];
   }
 
   /**
@@ -2044,7 +2152,7 @@ class AppState {
    * @returns {boolean}
    */
   choroplethOptionsSelected() {
-    return this.mapChoropleths.type !== 'none' && this.mapChoropleths.party !== 'all';
+    return this.mapChoropleths.type !== "none" && this.mapChoropleths.party !== "all";
   }
 
   /**
@@ -2089,16 +2197,16 @@ class AppState {
     // pick choropleth dropdown options to override that. Only treat this as the
     // referendum special case when the dropdowns are at their defaults.
     const isReferendumTypeWithDefaults = this.isReferendumType && !this.choroplethOptionsSelected();
-    const isDelta = this.mapChoropleths.type === 'voteShareChange';
+    const isDelta = this.mapChoropleths.type === "voteShareChange";
 
     // Referendum choropleth params, manifest-driven via the election's `referendum` block.
     // Defaults preserve the legacy EU-referendum behaviour when the block is absent/partial
     // (e.g. an election that still sets `referendum: true`).
     const refCfg = this.referendumConfig || {};
-    const refHighParty = refCfg.highParty || 'leave';
-    const refLowParty = refCfg.lowParty || 'remain';
+    const refHighParty = refCfg.highParty || "leave";
+    const refLowParty = refCfg.lowParty || "remain";
     const refThreshold = Number.isFinite(refCfg.threshold) ? refCfg.threshold : 50;
-    const refMetricLabel = refCfg.metricLabel || 'Leave vote share';
+    const refMetricLabel = refCfg.metricLabel || "Leave vote share";
 
     // Walk all seats to compute the choropleth metric value for each visible seat.
     // Seats outside visibleSeatKeys are skipped (they are filtered out on the map).
@@ -2133,20 +2241,24 @@ class AppState {
     // Referendum-with-defaults uses a fixed Leave/Remain colour scale with no party association,
     // so partyLabel and partyColour are unused in that branch. Set to empty string to avoid
     // passing them into legend text that doesn't need them.
-    const partyLabel = isReferendumTypeWithDefaults ? '' : manifest.labelParty(this.mapChoropleths.party);
-    const partyColour = isReferendumTypeWithDefaults ? '' : manifest.colourParty(this.mapChoropleths.party);
+    const partyLabel = isReferendumTypeWithDefaults
+      ? ""
+      : manifest.labelParty(this.mapChoropleths.party);
+    const partyColour = isReferendumTypeWithDefaults
+      ? ""
+      : manifest.colourParty(this.mapChoropleths.party);
 
     // Near-white used as the neutral/zero anchor across all colour scales.
-    const neutralColour = '#f8fbff';
+    const neutralColour = "#f8fbff";
 
     let kind;
-    if (isReferendumTypeWithDefaults) kind = 'referendum';
-    else if (isDelta) kind = 'delta';
-    else if (Math.abs(maxValue - minValue) < 1e-9) kind = 'uniform';
-    else kind = 'absolute';
+    if (isReferendumTypeWithDefaults) kind = "referendum";
+    else if (isDelta) kind = "delta";
+    else if (Math.abs(maxValue - minValue) < 1e-9) kind = "uniform";
+    else kind = "absolute";
 
     switch (kind) {
-      case 'referendum': {
+      case "referendum": {
         // Three-point scale anchored at the configured threshold (50% for EU). Low high-party
         // share maps to the low-party colour, high share to the high-party colour. Both colours
         // come from the manifest so they stay in sync with the party list. Party pair, threshold,
@@ -2160,7 +2272,8 @@ class AppState {
         // threshold anchor into [minValue, maxValue] so the domain is always non-decreasing; the
         // degenerate one-sided case collapses to a clean two-stop scale.
         const midPoint = clampNumber(refThreshold, minValue, maxValue);
-        const scale = d3.scaleLinear()
+        const scale = d3
+          .scaleLinear()
           .domain([minValue, midPoint, maxValue])
           .range([lowColour, neutralColour, highColour]);
         config.toColour = (value) => scale(value);
@@ -2176,38 +2289,44 @@ class AppState {
         };
         break;
       }
-      case 'delta': {
+      case "delta": {
         // Symmetric diverging scale centred on zero. maxAbs is the largest absolute swing
         // across visible seats, so both ends are equidistant and colour distance correctly
         // encodes magnitude. The tiny floor prevents a degenerate single-point domain when
         // all swings happen to be exactly zero.
         const maxAbs = Math.max(...values.map((value) => Math.abs(value)), 0.000001);
-        const scale = d3.scaleLinear().domain([-maxAbs, 0, maxAbs]).range(['#991b1b', neutralColour, '#1d4ed8']);
+        const scale = d3
+          .scaleLinear()
+          .domain([-maxAbs, 0, maxAbs])
+          .range(["#991b1b", neutralColour, "#1d4ed8"]);
         config.toColour = (value) => scale(value);
         config.legendText = `${partyLabel} vote share change (${formatSigned(maxAbs, 2)} max abs)`;
         config.legend = {
           isDelta: true,
           title: `${partyLabel} vote share change`,
-          startColour: '#991b1b',
+          startColour: "#991b1b",
           midColour: neutralColour,
-          endColour: '#1d4ed8',
+          endColour: "#1d4ed8",
           minLabel: formatSigned(-maxAbs, 2),
-          midLabel: '0',
+          midLabel: "0",
           maxLabel: formatSigned(maxAbs, 2),
         };
         break;
       }
-      case 'uniform': {
+      case "uniform": {
         // Every visible seat has an identical value — there is no range to interpolate.
         // Paint flat in the party colour to signal presence without implying a gradient.
         config.toColour = () => partyColour;
         config.legendText = `${partyLabel} vote share (uniform)`;
         break;
       }
-      case 'absolute': {
+      case "absolute": {
         // Linear near-white → party-colour scale across the actual value range.
         // Darker seats have a stronger showing for the selected party.
-        const scale = d3.scaleLinear().domain([minValue, maxValue]).range([neutralColour, partyColour]);
+        const scale = d3
+          .scaleLinear()
+          .domain([minValue, maxValue])
+          .range([neutralColour, partyColour]);
         config.toColour = (value) => scale(value);
         config.legendText = `${partyLabel} vote share (${formatPct(minValue)} to ${formatPct(maxValue)})`;
         config.legend = {
@@ -2242,11 +2361,11 @@ class AppState {
    */
   setSortDirection(sortKey) {
     if (this.voteTotals.sort.key === sortKey) {
-      this.voteTotals.sort.direction = this.voteTotals.sort.direction === 'asc' ? 'desc' : 'asc';
+      this.voteTotals.sort.direction = this.voteTotals.sort.direction === "asc" ? "desc" : "asc";
       return;
     }
     this.voteTotals.sort.key = sortKey;
-    this.voteTotals.sort.direction = sortKey === 'party' ? 'asc' : 'desc';
+    this.voteTotals.sort.direction = sortKey === "party" ? "asc" : "desc";
   }
 
   /**
@@ -2255,13 +2374,13 @@ class AppState {
    * @returns {void}
    */
   resetFilters() {
-    this.mapFilters.party = 'all';
-    this.mapFilters.region = 'all';
-    this.mapFilters.secondParty = 'all';
+    this.mapFilters.party = "all";
+    this.mapFilters.region = "all";
+    this.mapFilters.secondParty = "all";
     this.mapFilters.majorityMin = 0;
     this.mapFilters.majorityMax = 100;
     this.mapFilters.gainsOnly = false;
-    this.mapFilters.upcoming = 'all';
+    this.mapFilters.upcoming = "all";
   }
 
   /**
@@ -2270,8 +2389,8 @@ class AppState {
    * @returns {void}
    */
   resetChoropleths() {
-    this.mapChoropleths.type = 'none';
-    this.mapChoropleths.party = 'all';
+    this.mapChoropleths.type = "none";
+    this.mapChoropleths.party = "all";
   }
 }
 
@@ -2288,25 +2407,25 @@ export const state = new AppState();
  */
 export function buildRouteSearchParams(view) {
   const params = new URLSearchParams(window.location.search);
-  params.set('view', view);
-  if (view !== 'predict') params.delete('predict');
+  params.set("view", view);
+  if (view !== "predict") params.delete("predict");
 
-  if (view === 'polltracker') {
-    params.delete('election');
+  if (view === "polltracker") {
+    params.delete("election");
     return params;
   }
 
-  if (view === 'predict' && state.predictModel) {
+  if (view === "predict" && state.predictModel) {
     // Reflect the model's current state in the URL. When the model hasn't been built
     // yet (activateElection runs first and calls this before activatePredictView), leave
     // any incoming `?predict=` payload alone so the shared scenario can be deserialised.
     const payload = state.predictModel.serialize();
-    if (payload) params.set('predict', payload);
-    else params.delete('predict');
+    if (payload) params.set("predict", payload);
+    else params.delete("predict");
   }
 
   if (state.currentElection.id) {
-    params.set('election', state.currentElection.id);
+    params.set("election", state.currentElection.id);
   }
   return params;
 }
@@ -2323,6 +2442,5 @@ export function buildRouteSearchParams(view) {
 export async function initState(manifestData, view) {
   manifest.init(manifestData);
   const params = new URLSearchParams(window.location.search);
-  await state.init(view, params.get('parliament'), params.get('election'));
+  await state.init(view, params.get("parliament"), params.get("election"));
 }
-

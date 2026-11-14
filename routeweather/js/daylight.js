@@ -109,13 +109,16 @@ export function startDaySun(state) {
   const { year, month, day } = zonedParts(startMs, timeZone);
   const next = new Date(Date.UTC(year, month - 1, day + 1));
   const dayStartMs = zonedTimeToMs({ year, month, day, hour: 0, minute: 0 }, timeZone);
-  const dayEndMs = zonedTimeToMs({
-    year: next.getUTCFullYear(),
-    month: next.getUTCMonth() + 1,
-    day: next.getUTCDate(),
-    hour: 0,
-    minute: 0,
-  }, timeZone);
+  const dayEndMs = zonedTimeToMs(
+    {
+      year: next.getUTCFullYear(),
+      month: next.getUTCMonth() + 1,
+      day: next.getUTCDate(),
+      hour: 0,
+      minute: 0,
+    },
+    timeZone,
+  );
   const { lat, lon } = route.points[0];
   return { dayStartMs, ...sunTimes(dayStartMs, dayEndMs, lat, lon) };
 }

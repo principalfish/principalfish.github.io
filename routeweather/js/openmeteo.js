@@ -138,10 +138,9 @@ function abortedError(what, cause) {
 function throwIfAbortedOrTimeout(err, what, signal) {
   if (signal?.aborted) throw abortedError(what, err);
   if (err?.name === "TimeoutError" || err?.name === "AbortError") {
-    throw new Error(
-      `Open-Meteo ${what} request timed out after ${REQUEST_TIMEOUT_MS / 1000} s`,
-      { cause: err },
-    );
+    throw new Error(`Open-Meteo ${what} request timed out after ${REQUEST_TIMEOUT_MS / 1000} s`, {
+      cause: err,
+    });
   }
 }
 
@@ -406,9 +405,9 @@ function hourlyValues(hourly, name, timesMs) {
 // failed), are NaN, which the page shows as a gap. New location objects; the
 // originals are not touched.
 export function withProbability(locations, owners, series) {
-  const byTime = (series ?? []).map(({ timesMs, values }) => (
-    new Map(Array.from(timesMs, (t, k) => [t, values[k]]))
-  ));
+  const byTime = (series ?? []).map(
+    ({ timesMs, values }) => new Map(Array.from(timesMs, (t, k) => [t, values[k]])),
+  );
   return locations.map((loc, i) => {
     const lookup = byTime[owners[i]];
     const values = Float64Array.from(loc.timesMs, (t) => lookup?.get(t) ?? NaN);

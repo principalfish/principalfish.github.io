@@ -1,7 +1,6 @@
 // Bootstrap: load assets, wire the mode toggle, daily dropdown, auto-solve and
 // scrub controls. All solving happens client-side (no server).
 
-
 import { createManualUI, createClueGridUI } from "../manual.js";
 import { createWorkerClient } from "./worker-client.js";
 import { initDailyMode } from "./daily-mode.js";
@@ -24,7 +23,9 @@ boot();
 async function boot() {
   try {
     compute = createWorkerClient({
-      onProgress: (msg) => { $("loading").textContent = msg; },
+      onProgress: (msg) => {
+        $("loading").textContent = msg;
+      },
       onCompatibility: (msg) => {
         const note = document.createElement("p");
         note.id = "compute-compatibility";
@@ -157,7 +158,10 @@ function populateDailyDropdown() {
   const sel = $("daily-select");
   const fmt = (iso) =>
     new Date(iso + "T00:00:00").toLocaleDateString("en-GB", {
-      weekday: "short", day: "numeric", month: "short", year: "numeric",
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     });
   const opts = ['<option value="">Load daily…</option>'];
   for (const d of days) {
@@ -174,4 +178,6 @@ function isoForDay(day) {
   return `${dt.getFullYear()}-${mo}-${da}`;
 }
 
-addEventListener("pagehide", (event) => { if (!event.persisted) compute?.dispose(); });
+addEventListener("pagehide", (event) => {
+  if (!event.persisted) compute?.dispose();
+});

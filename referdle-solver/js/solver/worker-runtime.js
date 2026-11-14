@@ -2,18 +2,33 @@
 import { loadAssets, testableDays } from "./data.js";
 import { createComputeService } from "./compute-service.js";
 
-export function createWorkerRuntime(send, { load = loadAssets, createService = createComputeService,
-  listDays = testableDays, now = () => performance.now() } = {}) {
+export function createWorkerRuntime(
+  send,
+  {
+    load = loadAssets,
+    createService = createComputeService,
+    listDays = testableDays,
+    now = () => performance.now(),
+  } = {},
+) {
   let service = null;
   let active = false;
   let initialized = false;
 
   async function receive(envelope) {
     const { id, generation, message } = envelope || {};
-    if (envelope?.type !== "request" || !Number.isSafeInteger(id) || !Number.isSafeInteger(generation)
-        || typeof message?.type !== "string") return;
+    if (
+      envelope?.type !== "request" ||
+      !Number.isSafeInteger(id) ||
+      !Number.isSafeInteger(generation) ||
+      typeof message?.type !== "string"
+    )
+      return;
     const reply = (fields) => send({ id, generation, ...fields });
-    if (active) { reply({ type: "failure", kind: "compute", error: "Computation already active" }); return; }
+    if (active) {
+      reply({ type: "failure", kind: "compute", error: "Computation already active" });
+      return;
+    }
     active = true;
     try {
       if (!service) {

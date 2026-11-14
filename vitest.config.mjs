@@ -1,8 +1,13 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    include: ['electionmapslogic/tests/**/*.test.js', 'referdle-solver/benchmarks/tests/**/*.test.mjs', 'routeweather/tests/**/*.test.js', 'data/console/static-tests/**/*.test.js'],
+    include: [
+      "electionmapslogic/tests/**/*.test.js",
+      "referdle-solver/benchmarks/tests/**/*.test.mjs",
+      "routeweather/tests/**/*.test.js",
+      "data/console/static-tests/**/*.test.js",
+    ],
     passWithNoTests: true,
   },
 });

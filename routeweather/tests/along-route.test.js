@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  clampDistance, nearestSpan, nearestSpanTimes, routeRain, sampleBracket, timeAtDistance,
+  clampDistance,
+  nearestSpan,
+  nearestSpanTimes,
+  routeRain,
+  sampleBracket,
+  timeAtDistance,
   weatherAtDistance,
 } from "../js/along-route.js";
 
@@ -35,8 +40,15 @@ function makeState(overrides = {}) {
   const results = [
     result({ tempC: 10, windKmh: 20, windFromDeg: 350, precipMm: 0, code: 1, cellElev: 300 }),
     result({
-      tempC: 20, windKmh: 40, windFromDeg: 10, precipMm: 2, code: 61, cellElev: 320,
-      eleUsed: 200, headKmh: 15, crossKmh: 7,
+      tempC: 20,
+      windKmh: 40,
+      windFromDeg: 10,
+      precipMm: 2,
+      code: 61,
+      cellElev: 320,
+      eleUsed: 200,
+      headKmh: 15,
+      crossKmh: 7,
     }),
     result({ tempC: NaN, eleUsed: 330, cellElev: 330, outsideForecast: true }),
   ];
@@ -265,10 +277,11 @@ describe("routeRain", () => {
 
   it("counts an hour once however many samples it is split between", () => {
     // The same 20 km at 1 mm/h: 4 h, so 4 mm, with 3 samples or 21.
-    const flat = (n) => makeState({
-      samples: Array.from({ length: n }, (_, i) => ({ cumDistKm: (20 * i) / (n - 1) })),
-      results: Array.from({ length: n }, () => result({ precipMm: 1 })),
-    });
+    const flat = (n) =>
+      makeState({
+        samples: Array.from({ length: n }, (_, i) => ({ cumDistKm: (20 * i) / (n - 1) })),
+        results: Array.from({ length: n }, () => result({ precipMm: 1 })),
+      });
     expect(routeRain(flat(3))).toBeCloseTo(4, 9);
     expect(routeRain(flat(21))).toBeCloseTo(4, 9);
   });

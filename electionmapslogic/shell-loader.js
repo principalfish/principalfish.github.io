@@ -53,29 +53,31 @@ async function fetchHtml(url) {
  *   target selector the shell doesn't contain.
  */
 export async function loadShell(fragments = []) {
-  const base = new URL('.', import.meta.url);
+  const base = new URL(".", import.meta.url);
   const [shellHtml, ...fragmentHtmls] = await Promise.all([
-    fetchHtml(new URL('shell.html', base)),
+    fetchHtml(new URL("shell.html", base)),
     ...fragments.map((name) => fetchHtml(new URL(`fragments/${name}.html`, base))),
   ]);
 
-  const mount = document.getElementById('mapsShellMount');
+  const mount = document.getElementById("mapsShellMount");
   if (!mount) {
-    throw new Error('Shell mount point #mapsShellMount not found in page');
+    throw new Error("Shell mount point #mapsShellMount not found in page");
   }
   mount.outerHTML = shellHtml;
 
   fragmentHtmls.forEach((html, i) => {
-    const template = document.createElement('template');
+    const template = document.createElement("template");
     template.innerHTML = html;
     // Copy the child list first — appending moves nodes out of the template content.
     for (const element of [...template.content.children]) {
-      const selector = element.getAttribute('data-shell-target');
+      const selector = element.getAttribute("data-shell-target");
       const target = selector ? document.querySelector(selector) : null;
       if (!target) {
-        throw new Error(`Shell fragment '${fragments[i]}' targets '${selector}', not found in shell`);
+        throw new Error(
+          `Shell fragment '${fragments[i]}' targets '${selector}', not found in shell`,
+        );
       }
-      element.removeAttribute('data-shell-target');
+      element.removeAttribute("data-shell-target");
       target.appendChild(element);
     }
   });

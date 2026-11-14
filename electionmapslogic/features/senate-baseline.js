@@ -25,8 +25,11 @@ export async function loadSenateSpecialBaseline(specials) {
     try {
       const { dataFile } = manifest.resolveElectionFiles(baselineElection);
       const baselineData = await fetchJson(`${page.dataBase || "data"}/${dataFile}`);
-      seats.push(...ElectionData.normalizeSeats(baselineData)
-        .filter((seat) => wanted.has(seatLookupKey(seat.seat))));
+      seats.push(
+        ...ElectionData.normalizeSeats(baselineData).filter((seat) =>
+          wanted.has(seatLookupKey(seat.seat)),
+        ),
+      );
     } catch (error) {
       console.error("Senate special baseline load failed", error);
     }

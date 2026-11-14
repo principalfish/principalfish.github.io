@@ -101,14 +101,11 @@ const isImperial = (units) => asUnits(units).system === "imperial";
 
 // --- formatting ---
 
-function format(value, imperial, {
-  factor = 1,
-  toImperial,
-  decimals,
-  imperialDecimals = decimals,
-  metricUnit,
-  imperialUnit,
-}) {
+function format(
+  value,
+  imperial,
+  { factor = 1, toImperial, decimals, imperialDecimals = decimals, metricUnit, imperialUnit },
+) {
   if (!isValidNumber(value)) return MISSING;
   if (imperial) {
     const converted = toImperial ? toImperial(value) : value * factor;
@@ -148,7 +145,7 @@ export function formatWind(kmh, units) {
 
 export function formatTemp(celsius, units) {
   return format(celsius, asUnits(units).temp === "f", {
-    toImperial: (c) => c * 9 / 5 + 32,
+    toImperial: (c) => (c * 9) / 5 + 32,
     decimals: 0,
     metricUnit: "°C",
     imperialUnit: "°F",

@@ -16,8 +16,7 @@
   };
   const INTERVAL_MS = 1000;
 
-  const query = () =>
-    `?step=${state.step}&stdout=${state.stdout}&stderr=${state.stderr}`;
+  const query = () => `?step=${state.step}&stdout=${state.stdout}&stderr=${state.stderr}`;
 
   const clearOutput = () => {
     stdoutBlock.textContent = "";

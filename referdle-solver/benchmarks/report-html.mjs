@@ -5,44 +5,81 @@ import { assertSafePaths, DEFAULT_BASELINE_DIR } from "./references.mjs";
 
 const CASE_STATUSES = new Set(["matched", "recorded", "error", "mismatch", "incomplete"]);
 const SUCCESS_STATUSES = new Set(["matched", "recorded"]);
-const HELP = "Usage: npm run report:referdle -- INPUT.json --output OUTPUT.html\nPostprocess a saved benchmark JSON report without running the solver. Output must be outside the repository and baseline.";
+const HELP =
+  "Usage: npm run report:referdle -- INPUT.json --output OUTPUT.html\nPostprocess a saved benchmark JSON report without running the solver. Output must be outside the repository and baseline.";
 
 function optionalNumber(value, label, { integer = false, max = Infinity } = {}) {
   if (value === null || value === undefined) return;
-  if (!Number.isFinite(value) || value < 0 || value > max || (integer && !Number.isInteger(value))) throw new Error(`Invalid ${label}`);
+  if (!Number.isFinite(value) || value < 0 || value > max || (integer && !Number.isInteger(value)))
+    throw new Error(`Invalid ${label}`);
 }
 
 function validateReport(report) {
-  if (!report || report.schemaVersion !== 1 || !["record", "verify"].includes(report.action)
-      || typeof report.valid !== "boolean" || !Array.isArray(report.cases) || report.cases.length > 200) throw new Error("Invalid benchmark report schema");
+  if (
+    !report ||
+    report.schemaVersion !== 1 ||
+    !["record", "verify"].includes(report.action) ||
+    typeof report.valid !== "boolean" ||
+    !Array.isArray(report.cases) ||
+    report.cases.length > 200
+  )
+    throw new Error("Invalid benchmark report schema");
   for (const field of ["notes", "errors"]) {
-    if (!Array.isArray(report[field]) || report[field].some((value) => typeof value !== "string")) throw new Error(`Invalid report ${field}`);
+    if (!Array.isArray(report[field]) || report[field].some((value) => typeof value !== "string"))
+      throw new Error(`Invalid report ${field}`);
   }
   for (const field of ["timingBoundaries", "order"]) {
-    if (report[field] !== undefined && typeof report[field] !== "string") throw new Error(`Invalid report ${field}`);
+    if (report[field] !== undefined && typeof report[field] !== "string")
+      throw new Error(`Invalid report ${field}`);
   }
-  for (const field of ["setupMs", "elapsedMs", "referenceBytes"]) optionalNumber(report[field], field);
+  for (const field of ["setupMs", "elapsedMs", "referenceBytes"])
+    optionalNumber(report[field], field);
   if (report.selection !== null && report.selection !== undefined) {
     const selection = report.selection;
-    if (!Array.isArray(selection.days) || typeof selection.fullSample !== "boolean"
-        || !Number.isInteger(selection.games) || selection.games !== selection.days.length
-        || selection.games < 1 || selection.games > 100 || selection.cases !== selection.games * 2
-        || new Set(selection.days).size !== selection.days.length
-        || selection.days.some((day) => !Number.isInteger(day) || day < 1000 || day > 1414)) throw new Error("Invalid report selection");
+    if (
+      !Array.isArray(selection.days) ||
+      typeof selection.fullSample !== "boolean" ||
+      !Number.isInteger(selection.games) ||
+      selection.games !== selection.days.length ||
+      selection.games < 1 ||
+      selection.games > 100 ||
+      selection.cases !== selection.games * 2 ||
+      new Set(selection.days).size !== selection.days.length ||
+      selection.days.some((day) => !Number.isInteger(day) || day < 1000 || day > 1414)
+    )
+      throw new Error("Invalid report selection");
   }
-  if (report.backend !== undefined && !["worker", "direct"].includes(report.backend)) throw new Error("Invalid report backend");
+  if (report.backend !== undefined && !["worker", "direct"].includes(report.backend))
+    throw new Error("Invalid report backend");
   const footprint = report.provenance?.runtimeFootprint;
   if (footprint != null) {
-    if (typeof footprint !== "object" || typeof footprint.scope !== "string") throw new Error("Invalid runtime footprint");
-    for (const key of ["dataBytes", "javascriptBytes", "htmlCssBytes", "totalBytes", "matrixGzipBytes", "decodedMatrixBytes"]) optionalNumber(footprint[key], key, { integer: true });
+    if (typeof footprint !== "object" || typeof footprint.scope !== "string")
+      throw new Error("Invalid runtime footprint");
+    for (const key of [
+      "dataBytes",
+      "javascriptBytes",
+      "htmlCssBytes",
+      "totalBytes",
+      "matrixGzipBytes",
+      "decodedMatrixBytes",
+    ])
+      optionalNumber(footprint[key], key, { integer: true });
   }
   const seen = new Set();
   for (const row of report.cases) {
-    if (!row || !Number.isInteger(row.day) || row.day < 1000 || row.day > 1414
-        || typeof row.expanded !== "boolean" || !CASE_STATUSES.has(row.status)
-        || (row.mode !== undefined && row.mode !== (row.expanded ? "expanded" : "pool"))
-        || (row.error !== undefined && typeof row.error !== "string")) throw new Error("Invalid benchmark case row");
-    if (report.selection && !report.selection.days.includes(row.day)) throw new Error("Case is outside the report selection");
+    if (
+      !row ||
+      !Number.isInteger(row.day) ||
+      row.day < 1000 ||
+      row.day > 1414 ||
+      typeof row.expanded !== "boolean" ||
+      !CASE_STATUSES.has(row.status) ||
+      (row.mode !== undefined && row.mode !== (row.expanded ? "expanded" : "pool")) ||
+      (row.error !== undefined && typeof row.error !== "string")
+    )
+      throw new Error("Invalid benchmark case row");
+    if (report.selection && !report.selection.days.includes(row.day))
+      throw new Error("Case is outside the report selection");
     const key = `${row.day}/${row.expanded}`;
     if (seen.has(key)) throw new Error(`Duplicate benchmark case ${key}`);
     seen.add(key);
@@ -52,10 +89,11 @@ function validateReport(report) {
     optionalNumber(row.transportOverheadMs, "case transport overhead");
     if (row.turnRoundtripMs !== undefined) {
       if (!Array.isArray(row.turnRoundtripMs)) throw new Error("Invalid turn roundtrip times");
-      row.turnRoundtripMs.forEach(time => optionalNumber(time, "turn roundtrip time"));
+      row.turnRoundtripMs.forEach((time) => optionalNumber(time, "turn roundtrip time"));
     }
     optionalNumber(row.moves, "played moves", { integer: true, max: 80 });
-    if (report.action === "record" && row.baselineComputeMs != null) throw new Error("Record reports must not contain baseline timings");
+    if (report.action === "record" && row.baselineComputeMs != null)
+      throw new Error("Record reports must not contain baseline timings");
   }
 }
 
@@ -80,7 +118,8 @@ export function createDurationBins(values) {
   }
   const count = Math.max(1, Math.ceil(maximum / width - 1e-10));
   return Array.from({ length: count }, (_, i) => ({
-    lower: Number((i * width).toPrecision(12)), upper: Number(((i + 1) * width).toPrecision(12)),
+    lower: Number((i * width).toPrecision(12)),
+    upper: Number(((i + 1) * width).toPrecision(12)),
     label: `${readable(i * width)}–${readable((i + 1) * width)}`,
     inclusiveUpper: i === count - 1,
   }));
@@ -89,7 +128,12 @@ export function createDurationBins(values) {
 export function histogramCounts(values, bins) {
   const counts = bins.map(() => 0);
   for (const value of values) {
-    const i = bins.findIndex((bin) => value >= bin.lower && (value < bin.upper || (bin.inclusiveUpper && value <= bin.upper + Number.EPSILON * Math.max(1, bin.upper))));
+    const i = bins.findIndex(
+      (bin) =>
+        value >= bin.lower &&
+        (value < bin.upper ||
+          (bin.inclusiveUpper && value <= bin.upper + Number.EPSILON * Math.max(1, bin.upper))),
+    );
     if (i < 0) throw new Error("Value is outside histogram bands");
     counts[i]++;
   }
@@ -97,67 +141,141 @@ export function histogramCounts(values, bins) {
 }
 
 function series(rows, durationBins, moveBins, roundtripBins) {
-  const current = rows.filter((row) => row.currentComputeMs != null).map((row) => row.currentComputeMs / 1000);
-  const baseline = rows.filter((row) => row.baselineComputeMs != null).map((row) => row.baselineComputeMs / 1000);
-  const paired = rows.filter((row) => row.currentComputeMs != null && row.baselineComputeMs != null);
-  const roundtrips = rows.filter(row => row.roundtripMs != null).map(row => row.roundtripMs / 1000);
-  const transportPaired = rows.filter(row => row.roundtripMs != null && row.currentComputeMs != null);
-  const overheads = transportPaired.map(row => (row.roundtripMs - row.currentComputeMs) / 1000);
+  const current = rows
+    .filter((row) => row.currentComputeMs != null)
+    .map((row) => row.currentComputeMs / 1000);
+  const baseline = rows
+    .filter((row) => row.baselineComputeMs != null)
+    .map((row) => row.baselineComputeMs / 1000);
+  const paired = rows.filter(
+    (row) => row.currentComputeMs != null && row.baselineComputeMs != null,
+  );
+  const roundtrips = rows
+    .filter((row) => row.roundtripMs != null)
+    .map((row) => row.roundtripMs / 1000);
+  const transportPaired = rows.filter(
+    (row) => row.roundtripMs != null && row.currentComputeMs != null,
+  );
+  const overheads = transportPaired.map((row) => (row.roundtripMs - row.currentComputeMs) / 1000);
   const moves = rows.filter((row) => row.moves != null).map((row) => row.moves);
   const pairedCurrentMean = mean(paired.map((row) => row.currentComputeMs / 1000));
   const pairedBaselineMean = mean(paired.map((row) => row.baselineComputeMs / 1000));
   const deltaSeconds = paired.length ? pairedCurrentMean - pairedBaselineMean : null;
   return {
-    roundtripCount: roundtrips.length, roundtripMean: mean(roundtrips),
-    roundtripCounts: histogramCounts(roundtrips, roundtripBins), missingRoundtrip: rows.length - roundtrips.length,
-    overheadCount: overheads.length, overheadMean: mean(overheads),
+    roundtripCount: roundtrips.length,
+    roundtripMean: mean(roundtrips),
+    roundtripCounts: histogramCounts(roundtrips, roundtripBins),
+    missingRoundtrip: rows.length - roundtrips.length,
+    overheadCount: overheads.length,
+    overheadMean: mean(overheads),
     overheadTotal: overheads.length ? overheads.reduce((sum, value) => sum + value, 0) : null,
-    cases: rows.length, currentCount: current.length, baselineCount: baseline.length, pairedCount: paired.length,
-    currentMean: mean(current), baselineMean: mean(baseline),
-    pairedCurrentMean, pairedBaselineMean, deltaSeconds,
-    deltaPercent: deltaSeconds !== null && pairedBaselineMean !== 0 ? deltaSeconds / pairedBaselineMean * 100 : null,
-    movesCount: moves.length, movesMean: mean(moves),
-    currentCounts: histogramCounts(current, durationBins), baselineCounts: histogramCounts(baseline, durationBins),
+    cases: rows.length,
+    currentCount: current.length,
+    baselineCount: baseline.length,
+    pairedCount: paired.length,
+    currentMean: mean(current),
+    baselineMean: mean(baseline),
+    pairedCurrentMean,
+    pairedBaselineMean,
+    deltaSeconds,
+    deltaPercent:
+      deltaSeconds !== null && pairedBaselineMean !== 0
+        ? (deltaSeconds / pairedBaselineMean) * 100
+        : null,
+    movesCount: moves.length,
+    movesMean: mean(moves),
+    currentCounts: histogramCounts(current, durationBins),
+    baselineCounts: histogramCounts(baseline, durationBins),
     moveCounts: moveBins.map((value) => moves.filter((moves) => moves === value).length),
-    missingCurrent: rows.length - current.length, missingBaseline: rows.length - baseline.length, missingMoves: rows.length - moves.length,
+    missingCurrent: rows.length - current.length,
+    missingBaseline: rows.length - baseline.length,
+    missingMoves: rows.length - moves.length,
   };
 }
 
 export function buildReportModel(report) {
   validateReport(report);
-  const times = report.cases.flatMap((row) => [row.currentComputeMs, row.baselineComputeMs])
-    .filter((value) => value != null).map((value) => value / 1000);
+  const times = report.cases
+    .flatMap((row) => [row.currentComputeMs, row.baselineComputeMs])
+    .filter((value) => value != null)
+    .map((value) => value / 1000);
   const durationBins = createDurationBins(times);
-  const roundtripBins = createDurationBins(report.cases.filter(row => row.roundtripMs != null).map(row => row.roundtripMs / 1000));
+  const roundtripBins = createDurationBins(
+    report.cases.filter((row) => row.roundtripMs != null).map((row) => row.roundtripMs / 1000),
+  );
   const moves = report.cases.filter((row) => row.moves != null).map((row) => row.moves);
-  const moveBins = moves.length ? Array.from({ length: Math.max(...moves) - Math.min(...moves) + 1 }, (_, i) => Math.min(...moves) + i) : [];
+  const moveBins = moves.length
+    ? Array.from(
+        { length: Math.max(...moves) - Math.min(...moves) + 1 },
+        (_, i) => Math.min(...moves) + i,
+      )
+    : [];
   const modes = {
-    pool: series(report.cases.filter((row) => !row.expanded), durationBins, moveBins, roundtripBins),
-    expanded: series(report.cases.filter((row) => row.expanded), durationBins, moveBins, roundtripBins),
+    pool: series(
+      report.cases.filter((row) => !row.expanded),
+      durationBins,
+      moveBins,
+      roundtripBins,
+    ),
+    expanded: series(
+      report.cases.filter((row) => row.expanded),
+      durationBins,
+      moveBins,
+      roundtripBins,
+    ),
   };
   const aggregate = series(report.cases, durationBins, moveBins, roundtripBins);
   const selectionComplete = report.selection && report.cases.length === report.selection.cases;
-  const successful = report.valid && Boolean(selectionComplete) && report.cases.every((row) => SUCCESS_STATUSES.has(row.status)) && !report.errors.length;
+  const successful =
+    report.valid &&
+    Boolean(selectionComplete) &&
+    report.cases.every((row) => SUCCESS_STATUSES.has(row.status)) &&
+    !report.errors.length;
   return {
-    action: report.action, successful, fullSample: Boolean(report.selection?.fullSample && report.selection.games === 100),
-    requestedCases: report.selection?.cases ?? null, aggregate, modes, durationBins, moveBins, roundtripBins,
-    backend: report.backend ?? null, runtimeFootprint: report.provenance?.runtimeFootprint ?? null,
+    action: report.action,
+    successful,
+    fullSample: Boolean(report.selection?.fullSample && report.selection.games === 100),
+    requestedCases: report.selection?.cases ?? null,
+    aggregate,
+    modes,
+    durationBins,
+    moveBins,
+    roundtripBins,
+    backend: report.backend ?? null,
+    runtimeFootprint: report.provenance?.runtimeFootprint ?? null,
     hasRoundtrip: aggregate.roundtripCount > 0,
-    roundtripCountMax: Math.max(1, ...Object.values(modes).flatMap(mode => mode.roundtripCounts)),
-    durationCountMax: Math.max(1, ...Object.values(modes).flatMap((mode) => [...mode.currentCounts, ...mode.baselineCounts])),
+    roundtripCountMax: Math.max(1, ...Object.values(modes).flatMap((mode) => mode.roundtripCounts)),
+    durationCountMax: Math.max(
+      1,
+      ...Object.values(modes).flatMap((mode) => [...mode.currentCounts, ...mode.baselineCounts]),
+    ),
     moveCountMax: Math.max(1, ...Object.values(modes).flatMap((mode) => mode.moveCounts)),
     hasBaseline: report.action === "verify" && aggregate.baselineCount > 0,
-    setupMs: report.setupMs ?? null, elapsedMs: report.elapsedMs ?? null, referenceBytes: report.referenceBytes ?? null,
-    timingBoundaries: report.timingBoundaries ?? "Computation timing only; consult the benchmark documentation for timing boundaries.",
+    setupMs: report.setupMs ?? null,
+    elapsedMs: report.elapsedMs ?? null,
+    referenceBytes: report.referenceBytes ?? null,
+    timingBoundaries:
+      report.timingBoundaries ??
+      "Computation timing only; consult the benchmark documentation for timing boundaries.",
     order: report.order ?? "Fixed sequential benchmark selection.",
     notes: report.notes,
-    diagnostics: [...report.errors, ...report.cases.filter((row) => !SUCCESS_STATUSES.has(row.status)).map((row) =>
-      `Daily #${row.day}, ${row.expanded ? "expanded" : "pool"}: ${row.status}${row.error ? ` — ${row.error}` : ""}${typeof row.difference?.path === "string" ? ` — first difference ${row.difference.path}` : ""}`)],
+    diagnostics: [
+      ...report.errors,
+      ...report.cases
+        .filter((row) => !SUCCESS_STATUSES.has(row.status))
+        .map(
+          (row) =>
+            `Daily #${row.day}, ${row.expanded ? "expanded" : "pool"}: ${row.status}${row.error ? ` — ${row.error}` : ""}${typeof row.difference?.path === "string" ? ` — first difference ${row.difference.path}` : ""}`,
+        ),
+    ],
   };
 }
 
 export function escapeHTML(value) {
-  return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
+  return String(value).replace(
+    /[&<>"']/g,
+    (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char],
+  );
 }
 
 function metric(value, suffix = "") {
@@ -165,52 +283,76 @@ function metric(value, suffix = "") {
 }
 
 function chart({ title, labels, current, baseline, scaleMax, unit }) {
-  if (!labels.length || !current.some((value) => value) && !(baseline?.some((value) => value))) return `<p class="empty">No measured ${escapeHTML(unit)} values available.</p>`;
-  const width = 720, height = 300, left = 40, right = 12, top = 26, bottom = 60;
+  if (!labels.length || (!current.some((value) => value) && !baseline?.some((value) => value)))
+    return `<p class="empty">No measured ${escapeHTML(unit)} values available.</p>`;
+  const width = 720,
+    height = 300,
+    left = 40,
+    right = 12,
+    top = 26,
+    bottom = 60;
   const plotHeight = height - top - bottom;
   const columnWidth = (width - left - right) / labels.length;
   const barWidth = Math.min(36, columnWidth * (baseline ? 0.32 : 0.58));
   const ticks = [...new Set([0, Math.ceil(scaleMax / 2), scaleMax])];
-  const grid = ticks.map((value) => {
-    const y = top + plotHeight * (1 - value / scaleMax);
-    return `<line x1="${left}" x2="${width - right}" y1="${y}" y2="${y}" class="grid"/><text x="${left - 9}" y="${y + 4}" text-anchor="end" class="tick">${value}</text>`;
-  }).join("");
-  const bars = labels.map((label, i) => {
-    const center = left + (i + 0.5) * columnWidth;
-    function bar(count, isBaseline) {
-      const x = baseline ? center + (isBaseline ? 2 : -barWidth - 2) : center - barWidth / 2;
-      const barHeight = count / scaleMax * plotHeight;
-      return `<rect x="${x}" y="${top + plotHeight - barHeight}" width="${barWidth}" height="${barHeight}" rx="3" class="${isBaseline ? "baseline-bar" : "current-bar"}"><title>${escapeHTML(`${label} ${unit}: ${count} ${isBaseline ? "baseline" : "current"} cases`)}</title></rect>`;
-    }
-    return `${bar(current[i], false)}${baseline ? bar(baseline[i], true) : ""}<text x="${center}" y="${height - bottom + 20}" text-anchor="middle" class="band">${escapeHTML(label)}</text>`;
-  }).join("");
+  const grid = ticks
+    .map((value) => {
+      const y = top + plotHeight * (1 - value / scaleMax);
+      return `<line x1="${left}" x2="${width - right}" y1="${y}" y2="${y}" class="grid"/><text x="${left - 9}" y="${y + 4}" text-anchor="end" class="tick">${value}</text>`;
+    })
+    .join("");
+  const bars = labels
+    .map((label, i) => {
+      const center = left + (i + 0.5) * columnWidth;
+      function bar(count, isBaseline) {
+        const x = baseline ? center + (isBaseline ? 2 : -barWidth - 2) : center - barWidth / 2;
+        const barHeight = (count / scaleMax) * plotHeight;
+        return `<rect x="${x}" y="${top + plotHeight - barHeight}" width="${barWidth}" height="${barHeight}" rx="3" class="${isBaseline ? "baseline-bar" : "current-bar"}"><title>${escapeHTML(`${label} ${unit}: ${count} ${isBaseline ? "baseline" : "current"} cases`)}</title></rect>`;
+      }
+      return `${bar(current[i], false)}${baseline ? bar(baseline[i], true) : ""}<text x="${center}" y="${height - bottom + 20}" text-anchor="middle" class="band">${escapeHTML(label)}</text>`;
+    })
+    .join("");
   return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHTML(title)}"><title>${escapeHTML(title)}</title><desc>Vertical axis: number of game cases. Horizontal axis: ${escapeHTML(unit)}. Counts use a shared scale across probe modes.</desc>${grid}${bars}<text x="${width / 2}" y="${height - 5}" text-anchor="middle" class="axis">${escapeHTML(unit)}</text></svg>`;
 }
 
 function comparison(mode) {
-  if (!mode.pairedCount) return `<p class="comparison">No paired baseline/current timings are available.</p>`;
-  const delta = mode.deltaPercent === null ? "unavailable (zero baseline mean)" : `${mode.deltaPercent >= 0 ? "+" : ""}${metric(mode.deltaPercent, "%")}`;
+  if (!mode.pairedCount)
+    return `<p class="comparison">No paired baseline/current timings are available.</p>`;
+  const delta =
+    mode.deltaPercent === null
+      ? "unavailable (zero baseline mean)"
+      : `${mode.deltaPercent >= 0 ? "+" : ""}${metric(mode.deltaPercent, "%")}`;
   return `<p class="comparison"><strong>Paired means (${mode.pairedCount} cases):</strong> baseline ${metric(mode.pairedBaselineMean, "s")} · current ${metric(mode.pairedCurrentMean, "s")} · change ${delta}.</p>`;
 }
 
 export function renderReportHTML(model) {
   const scope = `${model.fullSample ? "Full fixed sample" : "Partial sample"} · ${model.aggregate.cases}/${model.requestedCases ?? "unknown"} cases`;
-  const outcome = model.successful ? model.action === "record" ? "Reference recording completed" : "Exact trace verification passed" : "Failed or incomplete run — diagnostic timings only";
-  const panels = Object.entries(model.modes).map(([key, mode]) => {
-    const name = key === "pool" ? "Pool probes" : "Expanded probes";
-    return `<section class="panel"><h2>${name}</h2><div class="panel-stats"><strong>${metric(mode.currentMean, "s")}</strong> mean per measured game <span>${mode.currentCount}/${mode.cases} current timings</span></div>
+  const outcome = model.successful
+    ? model.action === "record"
+      ? "Reference recording completed"
+      : "Exact trace verification passed"
+    : "Failed or incomplete run — diagnostic timings only";
+  const panels = Object.entries(model.modes)
+    .map(([key, mode]) => {
+      const name = key === "pool" ? "Pool probes" : "Expanded probes";
+      return `<section class="panel"><h2>${name}</h2><div class="panel-stats"><strong>${metric(mode.currentMean, "s")}</strong> mean per measured game <span>${mode.currentCount}/${mode.cases} current timings</span></div>
 <div class="legend"><span class="current-key">Current (${mode.currentCount})</span>${model.hasBaseline ? `<span class="baseline-key">Baseline (${mode.baselineCount})</span>` : ""}</div>
 ${chart({ title: `${name}: computation time per game`, labels: model.durationBins.map((bin) => bin.label), current: mode.currentCounts, baseline: model.hasBaseline ? mode.baselineCounts : null, scaleMax: model.durationCountMax, unit: "Compute seconds per game" })}
 ${model.hasBaseline ? comparison(mode) : ""}<p class="coverage">Missing current timings: ${mode.missingCurrent}${model.hasBaseline ? ` · missing baseline timings: ${mode.missingBaseline}` : ""}. Missing values are excluded.</p>
-<details class="details"><summary>Duration band counts</summary><table class="table"><thead><tr><th scope="col">Seconds</th><th scope="col">Current cases</th>${model.hasBaseline ? "<th scope=\"col\">Baseline cases</th>" : ""}</tr></thead><tbody>${model.durationBins.map((bin, i) => `<tr><td>${escapeHTML(bin.label)}</td><td>${mode.currentCounts[i]}</td>${model.hasBaseline ? `<td>${mode.baselineCounts[i]}</td>` : ""}</tr>`).join("")}</tbody></table></details>
-${model.hasRoundtrip ? `<h3>Worker job roundtrip time</h3><p><strong>${metric(mode.roundtripMean, "s")}</strong> mean per game · ${mode.roundtripCount}/${mode.cases} measured cases</p>
-${chart({ title: `${name}: Worker job roundtrip time per game`, labels: model.roundtripBins.map(bin => bin.label), current: mode.roundtripCounts, scaleMax: model.roundtripCountMax, unit: "Advance job roundtrip seconds per game" })}
+<details class="details"><summary>Duration band counts</summary><table class="table"><thead><tr><th scope="col">Seconds</th><th scope="col">Current cases</th>${model.hasBaseline ? '<th scope="col">Baseline cases</th>' : ""}</tr></thead><tbody>${model.durationBins.map((bin, i) => `<tr><td>${escapeHTML(bin.label)}</td><td>${mode.currentCounts[i]}</td>${model.hasBaseline ? `<td>${mode.baselineCounts[i]}</td>` : ""}</tr>`).join("")}</tbody></table></details>
+${
+  model.hasRoundtrip
+    ? `<h3>Worker job roundtrip time</h3><p><strong>${metric(mode.roundtripMean, "s")}</strong> mean per game · ${mode.roundtripCount}/${mode.cases} measured cases</p>
+${chart({ title: `${name}: Worker job roundtrip time per game`, labels: model.roundtripBins.map((bin) => bin.label), current: mode.roundtripCounts, scaleMax: model.roundtripCountMax, unit: "Advance job roundtrip seconds per game" })}
 <p class="coverage">Roundtrip minus compute: ${metric(mode.overheadMean === null ? null : mode.overheadMean * 1000, " ms")} mean per game across ${mode.overheadCount} paired cases. Missing roundtrip values: ${mode.missingRoundtrip}; excluded, never counted as zero. Includes benchmark evidence cloning and transfer; no historical roundtrip baseline.</p>
-<details class="details"><summary>Roundtrip band counts</summary><table class="table"><thead><tr><th scope="col">Seconds</th><th scope="col">Cases</th></tr></thead><tbody>${model.roundtripBins.map((bin, i) => `<tr><td>${escapeHTML(bin.label)}</td><td>${mode.roundtripCounts[i]}</td></tr>`).join("")}</tbody></table></details>` : ""}
+<details class="details"><summary>Roundtrip band counts</summary><table class="table"><thead><tr><th scope="col">Seconds</th><th scope="col">Cases</th></tr></thead><tbody>${model.roundtripBins.map((bin, i) => `<tr><td>${escapeHTML(bin.label)}</td><td>${mode.roundtripCounts[i]}</td></tr>`).join("")}</tbody></table></details>`
+    : ""
+}
 <h3>Total played moves</h3><p class="moves-mean"><strong>${metric(mode.movesMean)}</strong> mean moves · ${mode.movesCount}/${mode.cases} cases with move counts</p>
 ${chart({ title: `${name}: total played moves`, labels: model.moveBins.map(String), current: mode.moveCounts, scaleMax: model.moveCountMax, unit: "Played moves, including closing moves" })}
 <p class="coverage">Current move counts only; saved timing rows contain no baseline move counts. Missing move counts: ${mode.missingMoves}.</p></section>`;
-  }).join("");
+    })
+    .join("");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Referdle benchmark report</title><style>
 :root {
   --text: #17283b;
@@ -489,28 +631,57 @@ export async function writeHTMLReport(inputFile, outputFile) {
   await assertSafePaths(DEFAULT_BASELINE_DIR, outputFile);
   const input = await realpath(inputFile);
   let output;
-  try { output = await realpath(outputFile); } catch (error) {
+  try {
+    output = await realpath(outputFile);
+  } catch (error) {
     if (error.code !== "ENOENT") throw error;
-    output = path.join(await realpath(path.dirname(path.resolve(outputFile))), path.basename(outputFile));
+    output = path.join(
+      await realpath(path.dirname(path.resolve(outputFile))),
+      path.basename(outputFile),
+    );
   }
   if (input === output) throw new Error("Input and output must be different files");
   try {
     const [inputStat, outputStat] = await Promise.all([stat(input), stat(output)]);
-    if (inputStat.dev === outputStat.dev && inputStat.ino === outputStat.ino) throw new Error("Input and output must be different files");
-  } catch (error) { if (error.code !== "ENOENT") throw error; }
+    if (inputStat.dev === outputStat.dev && inputStat.ino === outputStat.ino)
+      throw new Error("Input and output must be different files");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
   const model = buildReportModel(JSON.parse(await readFile(input, "utf8")));
   await writeFile(output, renderReportHTML(model), "utf8");
   return model;
 }
 
-export async function main(args = process.argv.slice(2), { stdout = (text) => process.stdout.write(text), stderr = (text) => process.stderr.write(text) } = {}) {
+export async function main(
+  args = process.argv.slice(2),
+  {
+    stdout = (text) => process.stdout.write(text),
+    stderr = (text) => process.stderr.write(text),
+  } = {},
+) {
   try {
-    if (args.length === 1 && args[0] === "--help") { stdout(`${HELP}\n`); return 0; }
-    if (args.length !== 3 || args[1] !== "--output" || !args[0] || args[0].startsWith("--") || !args[2] || args[2].startsWith("--")) throw new Error(HELP);
+    if (args.length === 1 && args[0] === "--help") {
+      stdout(`${HELP}\n`);
+      return 0;
+    }
+    if (
+      args.length !== 3 ||
+      args[1] !== "--output" ||
+      !args[0] ||
+      args[0].startsWith("--") ||
+      !args[2] ||
+      args[2].startsWith("--")
+    )
+      throw new Error(HELP);
     await writeHTMLReport(args[0], args[2]);
     stdout(`Saved HTML report: ${path.resolve(args[2])}\n`);
     return 0;
-  } catch (error) { stderr(`${error.message}\n`); return 1; }
+  } catch (error) {
+    stderr(`${error.message}\n`);
+    return 1;
+  }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) process.exitCode = await main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  process.exitCode = await main();

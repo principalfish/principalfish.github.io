@@ -57,9 +57,8 @@ export function createClock({
   // clock drives both. A frame's step is capped at MAX_FRAME_MS: a background
   // tab gets no frames, and coming back to it should carry on from where it
   // was rather than jump ahead by the minutes it was hidden.
-  const advance = (t) => clamp01(
-    fraction + (Math.min(t - lastMs, MAX_FRAME_MS) * speed) / durationMs,
-  );
+  const advance = (t) =>
+    clamp01(fraction + (Math.min(t - lastMs, MAX_FRAME_MS) * speed) / durationMs);
 
   // onTick may pause (or pause and play again, which schedules its own
   // frame), so the loop only continues if it is still the one playing. If
@@ -162,14 +161,17 @@ const PAUSE_ICON = "❚❚";
 // The play button changes its visible label ("Play" / "Pause") rather than
 // carrying aria-pressed: a toggle button's name must stay fixed when it uses
 // aria-pressed, and "Pause, pressed" reads worse than the label alone.
-export function createPlaybackUI(container, {
-  onSeek = () => {},
-  onToggle = () => {},
-  onSpeed = () => {},
-  onScrubStart = () => {},
-  onScrubEnd = () => {},
-  now = () => performance.now(),
-} = {}) {
+export function createPlaybackUI(
+  container,
+  {
+    onSeek = () => {},
+    onToggle = () => {},
+    onSpeed = () => {},
+    onScrubStart = () => {},
+    onScrubEnd = () => {},
+    now = () => performance.now(),
+  } = {},
+) {
   const doc = container.ownerDocument;
 
   function el(tag, className, text) {

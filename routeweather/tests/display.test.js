@@ -1,8 +1,18 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  compassPoint, formatArrival, formatCell, formatClock, formatCloud, formatCrossWind,
-  formatDateTime, formatDaylight, formatDuration, formatHeadWind, formatHours, formatRainRate,
+  compassPoint,
+  formatArrival,
+  formatCell,
+  formatClock,
+  formatCloud,
+  formatCrossWind,
+  formatDateTime,
+  formatDaylight,
+  formatDuration,
+  formatHeadWind,
+  formatHours,
+  formatRainRate,
   formatSun,
 } from "../js/display.js";
 import { MISSING, resolveUnits } from "../js/units.js";
@@ -63,8 +73,9 @@ describe("sky", () => {
   it("describes daylight at a position", () => {
     const t = Date.UTC(2026, 9, 26, 20, 0);
     const next = { kind: "sunrise", tMs: Date.UTC(2026, 9, 27, 6, 44) };
-    expect(formatDaylight({ up: false, next }, t, "UTC"))
-      .toBe("Dark · sunrise 06:44 (in 10 h 44 min)");
+    expect(formatDaylight({ up: false, next }, t, "UTC")).toBe(
+      "Dark · sunrise 06:44 (in 10 h 44 min)",
+    );
     expect(formatDaylight({ up: true, next: null }, t, "UTC")).toBe("Daylight (sun up all day)");
     expect(formatDaylight({ up: false, next: null }, t, "UTC")).toBe("Dark (sun down all day)");
     expect(formatDaylight(null, t)).toBe(MISSING);
@@ -100,8 +111,9 @@ describe("relative wind", () => {
   it("follows the wind setting, not the preset", () => {
     const units = resolveUnits("metric", { wind: "mph" });
     expect(formatHeadWind(16.0934, units)).toBe("10 mph headwind");
-    expect(formatCrossWind(-16.0934, resolveUnits("imperial", { wind: "kmh" })))
-      .toBe("16 km/h from left");
+    expect(formatCrossWind(-16.0934, resolveUnits("imperial", { wind: "kmh" }))).toBe(
+      "16 km/h from left",
+    );
   });
 });
 

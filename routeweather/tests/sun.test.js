@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  daylightMinutes, isDaylight, nextSunEvent, solarElevationDeg, sunEvents, sunTimes,
+  daylightMinutes,
+  isDaylight,
+  nextSunEvent,
+  solarElevationDeg,
+  sunEvents,
+  sunTimes,
 } from "../js/sun.js";
 
 const MINUTE = 60 * 1000;
@@ -31,10 +36,16 @@ describe("sunTimes", () => {
   });
 
   it("reports polar night and midnight sun", () => {
-    expect(sunTimes(...utcDay(2026, 12, 21), ...TROMSO))
-      .toEqual({ sunriseMs: null, sunsetMs: null, allDay: "down" });
-    expect(sunTimes(...utcDay(2026, 6, 21), ...TROMSO))
-      .toEqual({ sunriseMs: null, sunsetMs: null, allDay: "up" });
+    expect(sunTimes(...utcDay(2026, 12, 21), ...TROMSO)).toEqual({
+      sunriseMs: null,
+      sunsetMs: null,
+      allDay: "down",
+    });
+    expect(sunTimes(...utcDay(2026, 6, 21), ...TROMSO)).toEqual({
+      sunriseMs: null,
+      sunsetMs: null,
+      allDay: "up",
+    });
   });
 });
 

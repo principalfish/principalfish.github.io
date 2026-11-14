@@ -3,9 +3,22 @@ import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 
 import {
-  toUV, fromUV, interpHourly, bucketHourly, profileAt, temperatureAt, windAt, headCross,
-  weatherForSample, describeWeather, WMO_DESCRIPTIONS, LAPSE_RATE_K_PER_M, isAboveProfile,
-  sunshineAt, apparentTemperatureC, precipStepAt,
+  toUV,
+  fromUV,
+  interpHourly,
+  bucketHourly,
+  profileAt,
+  temperatureAt,
+  windAt,
+  headCross,
+  weatherForSample,
+  describeWeather,
+  WMO_DESCRIPTIONS,
+  LAPSE_RATE_K_PER_M,
+  isAboveProfile,
+  sunshineAt,
+  apparentTemperatureC,
+  precipStepAt,
 } from "../js/weather.js";
 import { daylightMinutes } from "../js/sun.js";
 import { normaliseLocation, normaliseSeries, withProbability } from "../js/openmeteo.js";
@@ -277,14 +290,17 @@ describe("windAt", () => {
   });
 
   it("interpolates speed linearly through a 90° turn, a quarter of the way up", () => {
-    const turning = profileAt(makeLoc({
-      cellElev: 100,
-      wind_speed_10m: 20,
-      wind_direction_10m: 0,
-      geopotential_height_925hPa: 710,
-      wind_speed_925hPa: 60,
-      wind_direction_925hPa: 90,
-    }), T0);
+    const turning = profileAt(
+      makeLoc({
+        cellElev: 100,
+        wind_speed_10m: 20,
+        wind_direction_10m: 0,
+        geopotential_height_925hPa: 710,
+        wind_speed_925hPa: 60,
+        wind_direction_925hPa: 90,
+      }),
+      T0,
+    );
     // 260 m is a quarter of the way from 110 m to 710 m; u/v a quarter of the
     // way from (0, -20) to (-60, 0) is (-15, -15).
     const wind = windAt(turning, 250);
@@ -458,7 +474,10 @@ describe("weatherForSample", () => {
       ];
       for (const [loc, sample, bearing] of cases) {
         const { outsideForecast, aboveProfile, sunEstimated, ...numbers } = weatherForSample(
-          loc, sample, t, bearing,
+          loc,
+          sample,
+          t,
+          bearing,
         );
         expect(outsideForecast).toBe(false);
         expect(aboveProfile).toBe(false);
@@ -494,8 +513,7 @@ describe("weatherForSample", () => {
     it("lands a summit between the surface and the levels above it", () => {
       const profile = profileAt(upland, t);
       const w = weatherForSample(upland, { ele: 950 }, t, 90);
-      const [low, high] = [profile.temps[1].tempC, profile.temps[2].tempC]
-        .sort((a, b) => a - b);
+      const [low, high] = [profile.temps[1].tempC, profile.temps[2].tempC].sort((a, b) => a - b);
       // 952 m sits between the 925 hPa (~636 m) and 850 hPa (~1333 m) levels.
       expect(w.tempC).toBeGreaterThanOrEqual(low);
       expect(w.tempC).toBeLessThanOrEqual(high);

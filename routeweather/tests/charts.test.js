@@ -2,7 +2,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import {
-  createChartsUI, extremeLabels, outsideSpans, profilePoints, rainBars, stepPoints,
+  createChartsUI,
+  extremeLabels,
+  outsideSpans,
+  profilePoints,
+  rainBars,
+  stepPoints,
 } from "../js/charts.js";
 import { weatherAtDistance } from "../js/along-route.js";
 import { buildRoute } from "../js/route.js";
@@ -24,15 +29,33 @@ const IMPERIAL = resolveUnits("imperial");
 
 function makeState(route = buildRoute(POINTS), overrides = {}) {
   const samples = route.points.map((p, i) => ({
-    index: i, lat: p.lat, lon: p.lon, ele: p.ele, cumDistKm: p.cumDistKm,
-    bearingDeg: p.bearingDeg, kind: KINDS[i] ?? "filler",
+    index: i,
+    lat: p.lat,
+    lon: p.lon,
+    ele: p.ele,
+    cumDistKm: p.cumDistKm,
+    bearingDeg: p.bearingDeg,
+    kind: KINDS[i] ?? "filler",
   }));
   const results = samples.map((s, i) => ({
-    tempC: 8 - i, model2mTempC: 9 - i, windKmh: 20, windFromDeg: 270, gustKmh: 35,
-    headKmh: [5, -10, 15, 0][i], crossKmh: [3, 4, -6, 2][i], precipMm: [0, 0.4, 1.2, 0][i],
-    precipProb: [10, 40, 80, 20][i], code: 61, model10mWindKmh: 15, model10mGustKmh: 30,
-    cellElev: 300, eleUsed: s.ele, outsideForecast: i === 3,
-    cloudPct: [90, 60, 30, 0][i], sunMin: [0, 20, 45, NaN][i], sunEstimated: i === 2,
+    tempC: 8 - i,
+    model2mTempC: 9 - i,
+    windKmh: 20,
+    windFromDeg: 270,
+    gustKmh: 35,
+    headKmh: [5, -10, 15, 0][i],
+    crossKmh: [3, 4, -6, 2][i],
+    precipMm: [0, 0.4, 1.2, 0][i],
+    precipProb: [10, 40, 80, 20][i],
+    code: 61,
+    model10mWindKmh: 15,
+    model10mGustKmh: 30,
+    cellElev: 300,
+    eleUsed: s.ele,
+    outsideForecast: i === 3,
+    cloudPct: [90, 60, 30, 0][i],
+    sunMin: [0, 20, 45, NaN][i],
+    sunEstimated: i === 2,
     feelsLikeC: 4 - i,
   }));
   return { route, samples, results, units: METRIC, ...overrides };
@@ -40,7 +63,7 @@ function makeState(route = buildRoute(POINTS), overrides = {}) {
 
 // Fixed-width container: jsdom has no layout, so clientWidth is stubbed.
 function mount(width = 600) {
-  document.body.innerHTML = "<section id=\"chartsPanel\"></section>";
+  document.body.innerHTML = '<section id="chartsPanel"></section>';
   const container = document.getElementById("chartsPanel");
   setWidth(container, width);
   return container;
@@ -62,8 +85,8 @@ function pointer(type, { clientX = 0, clientY = 0, button = 0, pointerType = "mo
 const svgOf = (container) => container.querySelector("svg");
 const hitOf = (container) => container.querySelector(".chart-hit");
 const cursorX = (container) => Number(container.querySelector(".chart-cursor").getAttribute("x1"));
-const titles = (container) => [...container.querySelectorAll(".strip-title")]
-  .map((t) => t.textContent);
+const titles = (container) =>
+  [...container.querySelectorAll(".strip-title")].map((t) => t.textContent);
 
 // The x axis maps [0, total] (display units) to [left, right]; read those
 // ends back off the drawn hit area.
@@ -83,7 +106,9 @@ describe("profilePoints", () => {
 
   it("thins a long route by distance bins, keeping each bin's extremes", () => {
     const points = Array.from({ length: 5000 }, (_, i) => ({
-      lat: 54 + i * 0.0001, lon: -3, ele: i === 2500 ? 999 : 100 + (i % 7),
+      lat: 54 + i * 0.0001,
+      lon: -3,
+      ele: i === 2500 ? 999 : 100 + (i % 7),
     }));
     const profile = profilePoints(buildRoute(points), null);
     expect(profile.length).toBeLessThanOrEqual(800);
@@ -94,9 +119,18 @@ describe("profilePoints", () => {
 
   it("falls back to the samples' elevation, and to nothing", () => {
     const route = buildRoute(POINTS.map(({ lat, lon }) => ({ lat, lon })));
-    const samples = [{ cumDistKm: 0, ele: 10 }, { cumDistKm: 2, ele: 20 }];
-    expect(profilePoints(route, samples)).toEqual([{ km: 0, ele: 10 }, { km: 2, ele: 20 }]);
-    const none = [{ cumDistKm: 0, ele: null }, { cumDistKm: 1, ele: null }];
+    const samples = [
+      { cumDistKm: 0, ele: 10 },
+      { cumDistKm: 2, ele: 20 },
+    ];
+    expect(profilePoints(route, samples)).toEqual([
+      { km: 0, ele: 10 },
+      { km: 2, ele: 20 },
+    ]);
+    const none = [
+      { cumDistKm: 0, ele: null },
+      { cumDistKm: 1, ele: null },
+    ];
     expect(profilePoints(route, none)).toEqual([]);
   });
 });
@@ -111,8 +145,10 @@ describe("outsideSpans", () => {
   });
 
   it("runs to the route's ends at the first and last sample", () => {
-    expect(outsideSpans(samples, flags(true, false, false, false, true), 8))
-      .toEqual([[0, 2], [6, 8]]);
+    expect(outsideSpans(samples, flags(true, false, false, false, true), 8)).toEqual([
+      [0, 2],
+      [6, 8],
+    ]);
     expect(outsideSpans(samples, flags(false, false, false, false, false), 8)).toEqual([]);
   });
 
@@ -143,18 +179,28 @@ describe("stepPoints", () => {
 
   it("holds each value from halfway before its sample to halfway after", () => {
     expect(stepPoints(samples, [10, 20, 30, 40], 7)).toEqual([
-      { km: 0, v: 10 }, { km: 1, v: 10 },
-      { km: 1, v: 20 }, { km: 3, v: 20 },
-      { km: 3, v: 30 }, { km: 5, v: 30 },
-      { km: 5, v: 40 }, { km: 7, v: 40 },
+      { km: 0, v: 10 },
+      { km: 1, v: 10 },
+      { km: 1, v: 20 },
+      { km: 3, v: 20 },
+      { km: 3, v: 30 },
+      { km: 5, v: 30 },
+      { km: 5, v: 40 },
+      { km: 7, v: 40 },
     ]);
   });
 
   it("leaves a gap over exactly a missing value's own span", () => {
     const points = stepPoints(samples, [10, NaN, 30, null], 6);
-    expect(points.slice(0, 2)).toEqual([{ km: 0, v: 10 }, { km: 1, v: 10 }]);
+    expect(points.slice(0, 2)).toEqual([
+      { km: 0, v: 10 },
+      { km: 1, v: 10 },
+    ]);
     expect(points.slice(2, 4).every((p) => Number.isNaN(p.v))).toBe(true);
-    expect(points.slice(4, 6)).toEqual([{ km: 3, v: 30 }, { km: 5, v: 30 }]);
+    expect(points.slice(4, 6)).toEqual([
+      { km: 3, v: 30 },
+      { km: 5, v: 30 },
+    ]);
     expect(Number.isNaN(points[6].v)).toBe(true);
   });
 
@@ -164,7 +210,8 @@ describe("stepPoints", () => {
     const container = mount();
     const charts = createChartsUI(container, { raf: () => {} });
     charts.update({
-      ...state, results: state.results.map((r, i) => ({ ...r, precipProb: probs[i] })),
+      ...state,
+      results: state.results.map((r, i) => ({ ...r, precipProb: probs[i] })),
     });
     const d = container.querySelector(".prob-line").getAttribute("d");
     // Two separate runs (the gap splits the path).
@@ -172,7 +219,10 @@ describe("stepPoints", () => {
     const { left, right } = plotRange(container);
     const midKm = state.samples[1].cumDistKm / 2;
     const midX = left + ((right - left) * midKm) / state.route.totalDistKm;
-    const firstRunXs = d.split("M")[1].split("L").map((p) => Number(p.split(",")[0]));
+    const firstRunXs = d
+      .split("M")[1]
+      .split("L")
+      .map((p) => Number(p.split(",")[0]));
     expect(Math.max(...firstRunXs)).toBeCloseTo(midX, 2);
     charts.destroy();
   });
@@ -183,8 +233,13 @@ describe("rainBars", () => {
   const rain = (mm, stepH, endMs) => ({ precipMm: mm, precipStepH: stepH, precipStepEndMs: endMs });
 
   it("merges neighbours reading the same step and amount into one bar", () => {
-    const results = [rain(0.3, 3, 12), rain(0.3, 3, 12), rain(0.3, 3, 12), rain(0.2, 1, 13),
-      rain(0.2, 1, 13)];
+    const results = [
+      rain(0.3, 3, 12),
+      rain(0.3, 3, 12),
+      rain(0.3, 3, 12),
+      rain(0.2, 1, 13),
+      rain(0.2, 1, 13),
+    ];
     expect(rainBars(samples, results, 9)).toEqual([
       { fromKm: 0, toKm: 5, mm: 0.3, stepH: 3 },
       { fromKm: 5, toKm: 9, mm: 0.2, stepH: 1 },
@@ -192,16 +247,29 @@ describe("rainBars", () => {
   });
 
   it("splits the same amount in a different step, and a different amount in the same step", () => {
-    const results = [rain(0.3, 3, 12), rain(0.3, 3, 15), rain(0.4, 3, 15), rain(0, 3, 15),
-      rain(0.4, 3, 15)];
+    const results = [
+      rain(0.3, 3, 12),
+      rain(0.3, 3, 15),
+      rain(0.4, 3, 15),
+      rain(0, 3, 15),
+      rain(0.4, 3, 15),
+    ];
     expect(rainBars(samples, results, 9).map((b) => [b.fromKm, b.toKm, b.mm])).toEqual([
-      [0, 1, 0.3], [1, 3, 0.3], [3, 5, 0.4], [7, 9, 0.4],
+      [0, 1, 0.3],
+      [1, 3, 0.3],
+      [3, 5, 0.4],
+      [7, 9, 0.4],
     ]);
   });
 
   it("does not merge across a dry or missing sample", () => {
-    const results = [rain(0.3, 3, 12), rain(NaN, 3, 12), rain(0.3, 3, 12), rain(0, 1, 13),
-      rain(0, 1, 13)];
+    const results = [
+      rain(0.3, 3, 12),
+      rain(NaN, 3, 12),
+      rain(0.3, 3, 12),
+      rain(0, 1, 13),
+      rain(0, 1, 13),
+    ];
     expect(rainBars(samples, results, 9)).toHaveLength(2);
   });
 });
@@ -222,7 +290,10 @@ describe("extremeLabels", () => {
   it("skips a label that would overlap the previous one kept", () => {
     // "978 m" is ~30 px wide: from x 6 to 36, so the next must start at 40+.
     const labels = extremeLabels(
-      [extreme(0, 978), extreme(2, 900, "valley"), extreme(3.4, 950)], at, "metric", 500,
+      [extreme(0, 978), extreme(2, 900, "valley"), extreme(3.4, 950)],
+      at,
+      "metric",
+      500,
     );
     expect(labels.map((l) => l.text)).toEqual(["978 m", "950 m"]);
   });
@@ -274,13 +345,14 @@ describe("createChartsUI", () => {
     charts.update(makeState());
     expect(container.querySelectorAll("svg")).toHaveLength(1);
     expect(titles(container)).toEqual([
-      "Elevation (m)", "Temperature (°C)", "Wind (km/h)", "Rain (mm/h)",
+      "Elevation (m)",
+      "Temperature (°C)",
+      "Wind (km/h)",
+      "Rain (mm/h)",
       "Sky (cloud %, sunshine)",
     ]);
     expect(container.querySelectorAll(".strip")).toHaveLength(5);
-    const classes = [
-      "elev-area", "s-temp", "s-feels", "s-wind", "s-gust", "prob-line",
-    ];
+    const classes = ["elev-area", "s-temp", "s-feels", "s-wind", "s-gust", "prob-line"];
     for (const cls of classes) {
       expect(container.querySelector(`.${cls}`), cls).not.toBeNull();
     }
@@ -293,10 +365,12 @@ describe("createChartsUI", () => {
   });
 
   it("names the strips in the SVG's accessible name", () => {
-    expect(svgOf(container).getAttribute("aria-label")).toMatch(new RegExp(
-      "^Elevation, temperature, wind, rain \\(amount and chance\\) "
-      + "and sky \\(cloud and sunshine\\) along the route\\.",
-    ));
+    expect(svgOf(container).getAttribute("aria-label")).toMatch(
+      new RegExp(
+        "^Elevation, temperature, wind, rain \\(amount and chance\\) " +
+          "and sky \\(cloud and sunshine\\) along the route\\.",
+      ),
+    );
   });
 
   it("draws cloud and sunshine in the sky strip, estimates fainter", () => {
@@ -324,10 +398,13 @@ describe("createChartsUI", () => {
     charts.update({ ...state, daylight });
     expect(container.querySelectorAll(".night-bands rect")).toHaveLength(1);
     expect(container.querySelectorAll(".sun-event-line")).toHaveLength(2);
-    expect([...container.querySelectorAll(".sun-event-label")].map((t) => t.textContent))
-      .toEqual(["☀↓", "☀↑"]);
-    const names = [...container.querySelectorAll(".chart-legend .legend-strip")]
-      .map((n) => n.textContent);
+    expect([...container.querySelectorAll(".sun-event-label")].map((t) => t.textContent)).toEqual([
+      "☀↓",
+      "☀↑",
+    ]);
+    const names = [...container.querySelectorAll(".chart-legend .legend-strip")].map(
+      (n) => n.textContent,
+    );
     expect(names).toContain("Dark");
   });
 
@@ -340,9 +417,15 @@ describe("createChartsUI", () => {
   it("labels summits and valleys with their elevation in the active units", () => {
     const state = makeState();
     charts.update(state);
-    const labels = () => [...container.querySelectorAll(".extreme-label")]
-      .map((t) => [t.getAttribute("class"), t.textContent]);
-    expect(labels()).toEqual([["extreme-label peak", "400 m"], ["extreme-label valley", "200 m"]]);
+    const labels = () =>
+      [...container.querySelectorAll(".extreme-label")].map((t) => [
+        t.getAttribute("class"),
+        t.textContent,
+      ]);
+    expect(labels()).toEqual([
+      ["extreme-label peak", "400 m"],
+      ["extreme-label valley", "200 m"],
+    ]);
     charts.update({ ...state, units: IMPERIAL });
     expect(labels().map(([, text]) => text)).toEqual(["1312 ft", "656 ft"]);
   });
@@ -365,7 +448,10 @@ describe("createChartsUI", () => {
     const state = makeState();
     charts.update(state);
     const d = container.querySelector(".prob-line").getAttribute("d");
-    const coords = d.replace(/^M/, "").replace(/Z$/, "").split("L")
+    const coords = d
+      .replace(/^M/, "")
+      .replace(/Z$/, "")
+      .split("L")
       .map((p) => p.split(",").map(Number));
     // Horizontal and vertical segments only.
     for (let i = 1; i < coords.length; i++) {
@@ -383,11 +469,15 @@ describe("createChartsUI", () => {
   it("draws no bar where the rain is 0 or missing", () => {
     const state = makeState();
     const precip = [0, NaN, null, 0];
-    charts.update({ ...state, results: state.results.map((r, i) => ({ ...r, precipMm: precip[i] })) });
+    charts.update({
+      ...state,
+      results: state.results.map((r, i) => ({ ...r, precipMm: precip[i] })),
+    });
     expect(container.querySelectorAll(".rain-bars rect")).toHaveLength(0);
     // A dry forecast still gets clean axis ticks: a few, all distinct.
-    const ticks = [...container.querySelectorAll(".strip")[3].querySelectorAll(".axis-y .tick text")]
-      .map((t) => t.textContent);
+    const ticks = [
+      ...container.querySelectorAll(".strip")[3].querySelectorAll(".axis-y .tick text"),
+    ].map((t) => t.textContent);
     expect(ticks.length).toBeGreaterThanOrEqual(2);
     expect(ticks.length).toBeLessThanOrEqual(4);
     expect(new Set(ticks).size).toBe(ticks.length);
@@ -433,7 +523,8 @@ describe("createChartsUI", () => {
     expect(container.querySelector(".chart-legend").textContent).toContain("outside the forecast");
     const state = makeState();
     charts.update({
-      ...state, results: state.results.map((r) => ({ ...r, outsideForecast: false })),
+      ...state,
+      results: state.results.map((r) => ({ ...r, outsideForecast: false })),
     });
     expect(container.querySelectorAll(".outside-bands rect")).toHaveLength(0);
     expect(container.querySelector(".chart-legend").textContent).not.toContain("outside");
@@ -448,14 +539,19 @@ describe("createChartsUI", () => {
     expect(items(groups[0])).toEqual(["summit", "valley"]);
     expect(items(groups[2])).toEqual(["wind speed", "gust"]);
     expect(items(groups[3])).toEqual([
-      "rain per hour", "3-hour average", "chance of rain (full height = 100%)",
+      "rain per hour",
+      "3-hour average",
+      "chance of rain (full height = 100%)",
     ]);
   });
 
   it("leaves headroom above the profile for a peak marker", () => {
     charts.update(makeState());
-    const [, y] = container.querySelector(".extreme.peak").getAttribute("transform")
-      .match(/translate\([^,]+,([^)]+)\)/).map(Number);
+    const [, y] = container
+      .querySelector(".extreme.peak")
+      .getAttribute("transform")
+      .match(/translate\([^,]+,([^)]+)\)/)
+      .map(Number);
     // The ▲ is drawn 3–10 px above the point; it must stay inside the plot.
     expect(y - 10).toBeGreaterThanOrEqual(0);
   });
@@ -522,16 +618,21 @@ describe("createChartsUI", () => {
     charts.update({ ...state, units: IMPERIAL });
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (mi)");
     expect(titles(container)).toEqual([
-      "Elevation (ft)", "Temperature (°F)", "Wind (mph)", "Rain (in/h)",
+      "Elevation (ft)",
+      "Temperature (°F)",
+      "Wind (mph)",
+      "Rain (in/h)",
       "Sky (cloud %, sunshine)",
     ]);
     // Ticks are in miles: the last tick can't exceed the route length in miles.
-    const ticks = [...container.querySelectorAll(".axis-x .tick text")]
-      .map((t) => Number(t.textContent));
+    const ticks = [...container.querySelectorAll(".axis-x .tick text")].map((t) =>
+      Number(t.textContent),
+    );
     expect(Math.max(...ticks)).toBeLessThanOrEqual(state.route.totalDistKm * KM_TO_MI);
     // Rain in inches: 1.2 mm is ~0.05 in, so the top tick is well under 1.
-    const rainTicks = [...container.querySelectorAll(".strip")[3].querySelectorAll(".tick text")]
-      .map((t) => Number(t.textContent));
+    const rainTicks = [
+      ...container.querySelectorAll(".strip")[3].querySelectorAll(".tick text"),
+    ].map((t) => Number(t.textContent));
     expect(Math.max(...rainTicks)).toBeGreaterThan(0);
     expect(Math.max(...rainTicks)).toBeLessThan(0.1);
   });
@@ -541,13 +642,19 @@ describe("createChartsUI", () => {
     charts.update({ ...state, units: resolveUnits("metric", { wind: "mph", temp: "f" }) });
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (km)");
     expect(titles(container)).toEqual([
-      "Elevation (m)", "Temperature (°F)", "Wind (mph)", "Rain (mm/h)",
+      "Elevation (m)",
+      "Temperature (°F)",
+      "Wind (mph)",
+      "Rain (mm/h)",
       "Sky (cloud %, sunshine)",
     ]);
     charts.update({ ...state, units: resolveUnits("imperial", { rain: "mm", temp: "c" }) });
     expect(container.querySelector(".axis-label").textContent).toBe("Distance (mi)");
     expect(titles(container)).toEqual([
-      "Elevation (ft)", "Temperature (°C)", "Wind (mph)", "Rain (mm/h)",
+      "Elevation (ft)",
+      "Temperature (°C)",
+      "Wind (mph)",
+      "Rain (mm/h)",
       "Sky (cloud %, sunshine)",
     ]);
   });
@@ -555,8 +662,10 @@ describe("createChartsUI", () => {
   it("converts each strip by its own unit", () => {
     const state = makeState();
     // Each strip's y tick labels, top to bottom.
-    const stripTicks = () => [...container.querySelectorAll(".strip")]
-      .map((strip) => [...strip.querySelectorAll(".axis-y .tick text")].map((t) => t.textContent));
+    const stripTicks = () =>
+      [...container.querySelectorAll(".strip")].map((strip) =>
+        [...strip.querySelectorAll(".axis-y .tick text")].map((t) => t.textContent),
+      );
     charts.update(state);
     const metric = stripTicks();
     charts.update({ ...state, units: IMPERIAL });
@@ -611,7 +720,9 @@ describe("createChartsUI", () => {
     charts.update(state);
     const svg = svgOf(container);
     const touch = { pointerType: "touch" };
-    hitOf(container).dispatchEvent(pointer("pointerdown", { ...touch, clientX: 200, clientY: 100 }));
+    hitOf(container).dispatchEvent(
+      pointer("pointerdown", { ...touch, clientX: 200, clientY: 100 }),
+    );
     expect(calls).toEqual([]);
     // Under the slop: still undecided.
     svg.dispatchEvent(pointer("pointermove", { ...touch, clientX: 204, clientY: 101 }));
@@ -627,7 +738,9 @@ describe("createChartsUI", () => {
     charts.update(makeState());
     const svg = svgOf(container);
     const touch = { pointerType: "touch" };
-    hitOf(container).dispatchEvent(pointer("pointerdown", { ...touch, clientX: 200, clientY: 100 }));
+    hitOf(container).dispatchEvent(
+      pointer("pointerdown", { ...touch, clientX: 200, clientY: 100 }),
+    );
     svg.dispatchEvent(pointer("pointermove", { ...touch, clientX: 203, clientY: 140 }));
     svg.dispatchEvent(pointer("pointermove", { ...touch, clientX: 260, clientY: 150 }));
     svg.dispatchEvent(pointer("pointerup", { ...touch, clientX: 260, clientY: 150 }));
@@ -659,7 +772,9 @@ describe("createChartsUI", () => {
 
   it("treats a missing value as a gap in imperial units too, not as 0", () => {
     const state = makeState(undefined, { units: IMPERIAL });
-    const results = state.results.map((r, i) => (i === 1 ? { ...r, tempC: null, windKmh: null } : r));
+    const results = state.results.map((r, i) =>
+      i === 1 ? { ...r, tempC: null, windKmh: null } : r,
+    );
     charts.update({ ...state, results });
     expect(container.querySelector(".s-temp").getAttribute("d").match(/M/g)).toHaveLength(2);
     expect(container.querySelector(".s-wind").getAttribute("d").match(/M/g)).toHaveLength(2);
@@ -667,8 +782,7 @@ describe("createChartsUI", () => {
 
   it("starts a seek only from the plot area, not titles or axes", () => {
     charts.update(makeState());
-    container.querySelector(".strip-title")
-      .dispatchEvent(pointer("pointerdown", { clientX: 200 }));
+    container.querySelector(".strip-title").dispatchEvent(pointer("pointerdown", { clientX: 200 }));
     container.querySelector(".axis-x").dispatchEvent(pointer("pointerdown", { clientX: 200 }));
     svgOf(container).dispatchEvent(pointer("pointerdown", { clientX: 200 }));
     expect(calls).toEqual([]);

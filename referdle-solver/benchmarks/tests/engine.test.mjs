@@ -28,8 +28,14 @@ export function buildSuggestions(res, PM, N, index, guesses) {
 }`,
 };
 const fresh = () => WORDS.map(() => ({ guesses: [] }));
-const state = () => ({ POOL: WORDS.slice(), ALL_GUESSES: [...WORDS, "ZZZZZ"],
-  PM: new Uint8Array(), N: 5, poolIndex: new Map(WORDS.map((w, i) => [w, i])), PLURALS: new Set() });
+const state = () => ({
+  POOL: WORDS.slice(),
+  ALL_GUESSES: [...WORDS, "ZZZZZ"],
+  PM: new Uint8Array(),
+  N: 5,
+  poolIndex: new Map(WORDS.map((w, i) => [w, i])),
+  PLURALS: new Set(),
+});
 async function setup() {
   const module = await createControllerBundle({ replacements });
   return { module, compute: module.createComputeService(state()) };
@@ -38,7 +44,10 @@ async function setup() {
 describe("DOM-free direct computation", () => {
   it("distinguishes unavailable days and invalid requests from game results", async () => {
     const { compute } = await setup();
-    expect(await compute.request({ type: "load-day", day: 999 })).toEqual({ status: "unavailable-day", day: 999 });
+    expect(await compute.request({ type: "load-day", day: 999 })).toEqual({
+      status: "unavailable-day",
+      day: 999,
+    });
     expect(() => compute.request({ type: "advance-daily" })).toThrow("No daily puzzle");
     expect(() => compute.request({ type: "unknown" })).toThrow("Unknown computation");
     expect(compute.request({ type: "initialize" })).toEqual(compute.request({ type: "catalogue" }));
@@ -88,7 +97,10 @@ describe("DOM-free direct computation", () => {
   });
 
   it("restores closing queues and done positions without guessing or replaying", async () => {
-    const pinned = { ...replacements, "solver.js": `export function solve() { const cands = ${JSON.stringify(WORDS)}.map(w => [w]); return { solvable: true, cands, perSlotFeasible: cands }; } export const solveRelaxed = solve;` };
+    const pinned = {
+      ...replacements,
+      "solver.js": `export function solve() { const cands = ${JSON.stringify(WORDS)}.map(w => [w]); return { solvable: true, cands, perSlotFeasible: cands }; } export const solveRelaxed = solve;`,
+    };
     const module = await createControllerBundle({ replacements: pinned });
     const compute = module.createComputeService(state());
     await compute.request({ type: "load-day", day: 1000 });
@@ -120,7 +132,10 @@ describe("DOM-free direct computation", () => {
 });
 
 describe("manual computation and controller", () => {
-  afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
   async function controllerSetup() {
     const { module, compute } = await setup();
     const ui = createUIDoubles(false);
@@ -165,7 +180,9 @@ describe("manual computation and controller", () => {
     manual.addGuess(1, WORDS[1], "22222");
     await controller.onEdit();
     expect(module.capture.calls).toHaveLength(2);
-    expect(module.capture.calls.map(c => c.slots.reduce((n, s) => n + s.guesses.length, 0))).toEqual([2, 1]);
+    expect(
+      module.capture.calls.map((c) => c.slots.reduce((n, s) => n + s.guesses.length, 0)),
+    ).toEqual([2, 1]);
     const beforeVisit = module.capture.calls.length;
     await controller.scrubTo(0);
     expect(module.capture.calls.length).toBe(beforeVisit + 2);
@@ -200,7 +217,7 @@ describe("manual computation and controller", () => {
     const changed = compute.request({ type: "analyse-manual", slots, clueGrid, expanded: false });
     expect(changed.steps[0].after).toBeUndefined();
     expect(changed.steps[0].suggest).toBeUndefined();
-    expect(module.capture.calls.every(c => c.relaxed)).toBe(true);
+    expect(module.capture.calls.every((c) => c.relaxed)).toBe(true);
   });
 
   it("retains daily re-click-to-skip pacing and scrub cancellation", async () => {
@@ -232,18 +249,31 @@ describe("manual computation and controller", () => {
     const { compute } = await setup();
     const slots = fresh();
     slots[0].guesses.push({ word: WORDS[0], colors: "22222" });
-    const analysed = compute.request({ type: "analyse-manual", slots, clueGrid: null, expanded: false });
+    const analysed = compute.request({
+      type: "analyse-manual",
+      slots,
+      clueGrid: null,
+      expanded: false,
+    });
     expect(Object.hasOwn(analysed.steps[0], "suggest")).toBe(true);
     expect(analysed.steps[0].suggest).toBeUndefined();
     expect(analysed.moves[0].setSize).toBeUndefined();
     analysed.steps[0].after.perSlotFeasible[0].pop();
     analysed.moves[0].word = "ZZZZZ";
     slots[0].guesses.length = 0;
-    const replay = compute.request({ type: "replay-manual", index: 0, clueGrid: null, expanded: false });
+    const replay = compute.request({
+      type: "replay-manual",
+      index: 0,
+      clueGrid: null,
+      expanded: false,
+    });
     expect(replay.move.word).toBe(WORDS[0]);
     expect(replay.step.after.perSlotFeasible[0]).toEqual([WORDS[0]]);
     replay.step.suggest.ranked[0].word = "ZZZZZ";
-    expect(compute.request({ type: "replay-manual", index: 0, clueGrid: null, expanded: false }).step.suggest.ranked[0].word).toBe(WORDS[1]);
+    expect(
+      compute.request({ type: "replay-manual", index: 0, clueGrid: null, expanded: false }).step
+        .suggest.ranked[0].word,
+    ).toBe(WORDS[1]);
     compute.request({ type: "reset-manual" });
     expect(() => compute.request({ type: "replay-manual", index: 0 })).toThrow("No manual replay");
   });

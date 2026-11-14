@@ -14,11 +14,18 @@ const ROUTE = buildRoute(
 );
 // London, 26 Oct 2026: sunrise 06:43, sunset 16:44 UTC (sun.test.js).
 const { sunriseMs, sunsetMs } = sunTimes(
-  Date.UTC(2026, 9, 26), Date.UTC(2026, 9, 27), 51.5074, -0.1278,
+  Date.UTC(2026, 9, 26),
+  Date.UTC(2026, 9, 27),
+  51.5074,
+  -0.1278,
 );
 
 const plan = (startMs, overrides = {}) => ({
-  route: ROUTE, startMs, speedKmh: 5, timeZone: null, ...overrides,
+  route: ROUTE,
+  startMs,
+  speedKmh: 5,
+  timeZone: null,
+  ...overrides,
 });
 
 describe("routeDaylight", () => {

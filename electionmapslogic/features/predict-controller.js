@@ -14,11 +14,14 @@
 // Apply / Reset clicks call runPredictProjection, which re-projects from the model and
 // re-renders.
 
-import { state, manifest, ElectionData, activeMapMode, buildRouteSearchParams } from '../state.js';
-import { predictModelClassFor } from './predict.js';
-import { fetchJson } from '../files.js';
+import { state, manifest, ElectionData, activeMapMode, buildRouteSearchParams } from "../state.js";
+import { predictModelClassFor } from "./predict.js";
+import { fetchJson } from "../files.js";
 import { loadSenateSpecialBaseline } from "./senate-baseline.js";
-import { renderSenateForecastComparison, renderSenateForecastTabs } from "./senate-forecast-view.js";
+import {
+  renderSenateForecastComparison,
+  renderSenateForecastTabs,
+} from "./senate-forecast-view.js";
 import {
   renderHeader,
   renderMap,
@@ -26,13 +29,13 @@ import {
   syncRightPanelHeight,
   initRegionTable,
   refreshOpenSeatPopup,
-} from '../dom.js';
+} from "../dom.js";
 import {
   renderPredict,
   setApplyActionVisible,
   setPredictActionHandlers,
   setPredictWindowVisible,
-} from './predict-view.js';
+} from "./predict-view.js";
 
 // Cached current-model simulation seats (for the "Use current forecast" button), one entry
 // per parliament. Prefetched in the background from activatePredictView so the first Apply
@@ -56,8 +59,8 @@ export function getPredictBaseElection() {
   const parliament = state.currentParliament;
   const config = manifest.parliamentConfig(parliament);
   const features = config.features ?? [];
-  if (!features.includes('predict')) {
-    state.view = 'election';
+  if (!features.includes("predict")) {
+    state.view = "election";
     return state.currentElection;
   }
   const baselineId = config.predictBaselineElectionId;
@@ -98,12 +101,15 @@ export async function activatePredictView() {
   if (!PredictModelClass) {
     throw new Error(`No predict model configured for parliament '${parliament}'`);
   }
-  state.predictModel = new PredictModelClass(parliamentConfig.nextElectionYear, parliamentConfig.predict);
+  state.predictModel = new PredictModelClass(
+    parliamentConfig.nextElectionYear,
+    parliamentConfig.predict,
+  );
 
   // Senate's full-chamber view merges the projected seats-up winners into the 100-member
   // snapshot (carried-over senators). Load it once, before the first projection, and hand it to
   // the model — the engine stays I/O-free. No-op for models without a chamber snapshot.
-  if (typeof state.predictModel.setChamberSeats === 'function') {
+  if (typeof state.predictModel.setChamberSeats === "function") {
     await loadPredictChamberSeats(parliamentConfig, state.predictModel);
   }
 
@@ -111,7 +117,7 @@ export async function activatePredictView() {
   // election than the regular class, so their baseline rows live in a different election file
   // than the one activateElection fetched. Load them once, before the first projection, for
   // the same reason: the engine does no I/O.
-  if (typeof state.predictModel.setSpecialSeats === 'function') {
+  if (typeof state.predictModel.setSpecialSeats === "function") {
     await loadPredictSpecialSeats(state.predictModel);
   }
 
@@ -138,7 +144,7 @@ export async function activatePredictView() {
 
   // If a shared scenario URL is present, hydrate the model and repaint the grid so the
   // deserialised inputs show up in the cells before the projection runs.
-  const sharedPayload = new URLSearchParams(window.location.search).get('predict');
+  const sharedPayload = new URLSearchParams(window.location.search).get("predict");
   if (sharedPayload) {
     state.predictModel.deserialize(sharedPayload);
     renderPredict();
@@ -161,13 +167,13 @@ function runPredictProjection() {
   if (!model) return;
 
   const nextYear = model.nextElectionYear;
-  const predictLabel = `Predict ${nextYear ?? ''}`.trim();
+  const predictLabel = `Predict ${nextYear ?? ""}`.trim();
 
   // Senate: the full-chamber view renders as a multi-member composition (member tally +
   // split-state colours), the seats-up view as a normal single-winner map. Flip the flag the
   // summary/subtitle read *before* rebuilding the election data, so the tally counts the right
   // thing (members vs seats). No-op for models that don't expose the view distinction.
-  if (typeof model.isMultiMemberView === 'function' && state.currentElection) {
+  if (typeof model.isMultiMemberView === "function" && state.currentElection) {
     state.currentElection.multiMember = model.isMultiMemberView();
   }
 
@@ -182,8 +188,11 @@ function runPredictProjection() {
   // net change from today's chamber rather than a nonsensical delta against the single-winner
   // baseline seats; the seats-up view keeps its baseline gains. Models without this method leave
   // comparisonElectionData as activateElection set it.
-  if (typeof model.comparisonSeatsForView === 'function') {
-    state.comparisonElectionData = ElectionData.fromSeats(model.comparisonSeatsForView(), predictLabel);
+  if (typeof model.comparisonSeatsForView === "function") {
+    state.comparisonElectionData = ElectionData.fromSeats(
+      model.comparisonSeatsForView(),
+      predictLabel,
+    );
   }
 
   state.setupMapData();
@@ -198,8 +207,8 @@ function runPredictProjection() {
   // and swing column update in place (map stays put — no re-zoom).
   refreshOpenSeatPopup();
 
-  const params = buildRouteSearchParams('predict');
-  window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+  const params = buildRouteSearchParams("predict");
+  window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
 }
 
 /**
@@ -229,8 +238,13 @@ function handlePredictSubmit() {
   if (!model) return;
   const invalid = model.validate();
   if (invalid.length) {
-    const summary = invalid.slice(0, 4).map((r) => `${r.regionLabel} (${r.total}%)`).join(', ');
-    window.alert(`Entered percentages exceed 100% for: ${summary}${invalid.length > 4 ? ', ...' : ''}. Please reduce inputs before submitting.`);
+    const summary = invalid
+      .slice(0, 4)
+      .map((r) => `${r.regionLabel} (${r.total}%)`)
+      .join(", ");
+    window.alert(
+      `Entered percentages exceed 100% for: ${summary}${invalid.length > 4 ? ", ..." : ""}. Please reduce inputs before submitting.`,
+    );
     return;
   }
   runPredictProjection();
@@ -292,7 +306,7 @@ async function handlePredictApply() {
   if (!model) return;
   const simulationSeats = await ensurePredictSimulation(state.currentParliament);
   if (!simulationSeats) {
-    window.alert('Current prediction data is not available.');
+    window.alert("Current prediction data is not available.");
     return;
   }
   // Expand the aggregate to per-region rows before loading so each region carries its own
@@ -330,7 +344,7 @@ export async function ensurePredictSimulation(parliament) {
       if (!electionData.baseSeats.length) return null;
       return electionData.baseSeats;
     } catch (error) {
-      console.error('Predict simulation load failed', error);
+      console.error("Predict simulation load failed", error);
       return null;
     }
   })();
@@ -359,7 +373,7 @@ async function loadPredictChamberSeats(parliamentConfig, model) {
     const chamberData = await fetchJson(`data/${dataFile}`);
     model.setChamberSeats(new ElectionData(chamberData).currentSeats);
   } catch (error) {
-    console.error('Senate chamber snapshot load failed', error);
+    console.error("Senate chamber snapshot load failed", error);
   }
 }
 
@@ -387,12 +401,13 @@ async function loadPredictChamberSeats(parliamentConfig, model) {
 async function loadPredictSpecialSeats(model) {
   const mapMode = activeMapMode();
   const specials = mapMode.senateSpecialElections || [];
-  const overrides = (mapMode.senateBaselineOverrides || [])
-    .filter((override) => model.regularClass != null && Number(override?.class) === model.regularClass);
+  const overrides = (mapMode.senateBaselineOverrides || []).filter(
+    (override) => model.regularClass != null && Number(override?.class) === model.regularClass,
+  );
   if (specials.length) {
     model.setSpecialSeats(await loadSenateSpecialBaseline(specials), specials);
   }
-  if (overrides.length && typeof model.setBaselineOverrides === 'function') {
+  if (overrides.length && typeof model.setBaselineOverrides === "function") {
     model.setBaselineOverrides(await loadSenateSpecialBaseline(overrides));
   }
 }
@@ -425,21 +440,28 @@ async function handlePredictShare() {
   // gesture and a secure context; this fn is invoked from a click so the gesture is
   // satisfied. Errors from either path are swallowed because the next fallback handles
   // the user-visible delivery.
-  const params = buildRouteSearchParams('predict');
+  const params = buildRouteSearchParams("predict");
   const query = params.toString();
-  const shareUrl = `${window.location.origin}${window.location.pathname}${query ? `?${query}` : ''}`;
+  const shareUrl = `${window.location.origin}${window.location.pathname}${query ? `?${query}` : ""}`;
   try {
     if (navigator.share) {
-      await navigator.share({ title: `${manifest.misc?.title ?? 'Election maps'} prediction`, url: shareUrl });
+      await navigator.share({
+        title: `${manifest.misc?.title ?? "Election maps"} prediction`,
+        url: shareUrl,
+      });
       return;
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   if (navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      window.alert('Prediction link copied to clipboard.');
+      window.alert("Prediction link copied to clipboard.");
       return;
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
   }
-  window.prompt('Copy your prediction link:', shareUrl);
+  window.prompt("Copy your prediction link:", shareUrl);
 }

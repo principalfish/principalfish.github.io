@@ -13,9 +13,15 @@
 // unchanged. The original baseline ElectionData becomes state.comparisonElectionData so
 // gains-from-baseline and the comparison column work without further wiring.
 
-import { state, manifest, Seat } from '../state.js';
-import { normalizeRegionKey, roundShare, base64urlEncode, base64urlDecode, seatLookupKey } from '../utils.js';
-import { buildSenateChamber, regularSenateClass } from './senate-chamber.js';
+import { state, manifest, Seat } from "../state.js";
+import {
+  normalizeRegionKey,
+  roundShare,
+  base64urlEncode,
+  base64urlDecode,
+  seatLookupKey,
+} from "../utils.js";
+import { buildSenateChamber, regularSenateClass } from "./senate-chamber.js";
 
 /**
  * Computes baseline regional vote share percentages from a seat array. For each party in
@@ -35,7 +41,8 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
   // ensureRegion lazily creates a zeroed accumulator the first time a region is seen.
   const byRegion = new Map();
   const ensureRegion = (regionKey) => {
-    if (!byRegion.has(regionKey)) byRegion.set(regionKey, { totalVotes: 0, votesByParty: new Map() });
+    if (!byRegion.has(regionKey))
+      byRegion.set(regionKey, { totalVotes: 0, votesByParty: new Map() });
     return byRegion.get(regionKey);
   };
 
@@ -52,7 +59,10 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
     region.totalVotes += turnout;
     modelledPartyKeys.forEach((partyKey) => {
       const partyVotes = Number(seat.votes?.[partyKey] || 0);
-      region.votesByParty.set(partyKey, Number(region.votesByParty.get(partyKey) || 0) + partyVotes);
+      region.votesByParty.set(
+        partyKey,
+        Number(region.votesByParty.get(partyKey) || 0) + partyVotes,
+      );
     });
 
     // If this region feeds a synthetic aggregate (e.g. an English region → 'england'), credit the
@@ -85,7 +95,9 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
     // never touches a zero party (which would otherwise go negative). Under-100 totals are left
     // alone: the shortfall is the implicit "other" share.
     let sum = 0;
-    partyMap.forEach((v) => { sum += v; });
+    partyMap.forEach((v) => {
+      sum += v;
+    });
     // Trim the overshoot off the smallest non-zero party first; if that party can't absorb it
     // all (the overshoot exceeds its share), zero it and continue onto the next-smallest, so
     // the corrected total always lands at 100 even when many small parties each rounded up.
@@ -93,7 +105,12 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
     while (overshoot > 0) {
       let minKey = null;
       let minVal = Infinity;
-      partyMap.forEach((v, k) => { if (v > 0 && v < minVal) { minVal = v; minKey = k; } });
+      partyMap.forEach((v, k) => {
+        if (v > 0 && v < minVal) {
+          minVal = v;
+          minKey = k;
+        }
+      });
       if (!minKey) break;
       const reduced = Math.max(0, minVal - overshoot);
       partyMap.set(minKey, reduced);
@@ -114,7 +131,13 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
  * @returns {Seat}
  */
 export function cloneBaselineSeat(baseSeat, overrides = {}) {
-  return new Seat({ ...baseSeat, ...projectedStatus(baseSeat), ...overrides, candidates: {}, candidateRows: null });
+  return new Seat({
+    ...baseSeat,
+    ...projectedStatus(baseSeat),
+    ...overrides,
+    candidates: {},
+    candidateRows: null,
+  });
 }
 
 /**
@@ -133,8 +156,11 @@ function projectedStatus(baseSeat) {
   if (baseSeat.called !== false || baseSeat.turnout <= 0) return {};
   // An uncalled seat carries its leader as `winner`; a tie for the lead leaves it null, so
   // fall back to the largest vote row rather than letting a called seat default to 'others'.
-  const leader = baseSeat.winner
-    || Object.entries(baseSeat.votes || {}).sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))[0]?.[0];
+  const leader =
+    baseSeat.winner ||
+    Object.entries(baseSeat.votes || {}).sort(
+      (a, b) => Number(b[1] || 0) - Number(a[1] || 0),
+    )[0]?.[0];
   return { called: true, pctCounted: null, winner: leader };
 }
 
@@ -152,7 +178,12 @@ function projectedStatus(baseSeat) {
  *   When set, sub-regions whose own swing is unset *or zero* fall back to the aggregate's swing.
  * @returns {Seat}
  */
-export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelledPartyKeys, aggregateConfig = null) {
+export function projectSeatUniformSwing(
+  baseSeat,
+  swingsByRegionByParty,
+  modelledPartyKeys,
+  aggregateConfig = null,
+) {
   const totalVotes = baseSeat.turnout;
   if (totalVotes <= 0) return cloneBaselineSeat(baseSeat);
 
@@ -206,11 +237,15 @@ export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelle
   const projectedSum = Object.values(projected).reduce((s, v) => s + Number(v || 0), 0);
   if (projectedSum > 0 && Math.abs(projectedSum - totalVotes) > 1e-6) {
     const scale = totalVotes / projectedSum;
-    Object.keys(projected).forEach((k) => { projected[k] = projected[k] * scale; });
+    Object.keys(projected).forEach((k) => {
+      projected[k] = projected[k] * scale;
+    });
   }
 
-  const winner = Object.entries(projected)
-    .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))[0]?.[0] || baseSeat.winner || 'others';
+  const winner =
+    Object.entries(projected).sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))[0]?.[0] ||
+    baseSeat.winner ||
+    "others";
 
   return cloneBaselineSeat(baseSeat, { votes: projected, turnout: totalVotes, winner });
 }
@@ -235,7 +270,10 @@ export function dhondtAllocate(votesByParty, nSeats, constWinsByParty = new Map(
       if (votes <= 0) continue;
       const total = (listSeatsWon.get(party) || 0) + (constWinsByParty.get(party) || 0);
       const quotient = votes / (total + 1);
-      if (quotient > bestQuotient) { bestQuotient = quotient; bestParty = party; }
+      if (quotient > bestQuotient) {
+        bestQuotient = quotient;
+        bestParty = party;
+      }
     }
     if (bestParty !== null) {
       listSeatsWon.set(bestParty, (listSeatsWon.get(bestParty) || 0) + 1);
@@ -285,7 +323,13 @@ function dedupeListSeatsByRegion(seats) {
  *   deduped-list seats.
  */
 class Ballot {
-  constructor({ key = null, input, baseline, serializePrefix = null, filterSeats = (seats) => seats } = {}) {
+  constructor({
+    key = null,
+    input,
+    baseline,
+    serializePrefix = null,
+    filterSeats = (seats) => seats,
+  } = {}) {
     this.key = key;
     this.input = input;
     this.baseline = baseline;
@@ -356,7 +400,7 @@ class PredictModel {
     this.nextElectionYear = nextElectionYear;
     this.config = config || {};
     this.modelledPartyKeys = this.config.modelledPartyKeys || [];
-    this.title = this.config.title || 'User Input';
+    this.title = this.config.title || "User Input";
     this.aggregateConfig = PredictModel.#buildAggregateConfig(this.config.aggregate);
     this.virtualColumns = this.config.virtualColumns || {};
     this.virtualColumnMeta = this.config.virtualColumnMeta || {};
@@ -368,13 +412,19 @@ class PredictModel {
   }
 
   /** @returns {ElectionData} Baseline election the projection runs against. */
-  get baselineElectionData() { return state.comparisonElectionData; }
+  get baselineElectionData() {
+    return state.comparisonElectionData;
+  }
 
   /** @returns {object} Topology JSON for the baseline map. */
-  get baselineMapData() { return state.mapData; }
+  get baselineMapData() {
+    return state.mapData;
+  }
 
   /** @returns {Map<string, string>} regionKey → display label for the baseline map. */
-  get regionLabelsByKey() { return state.currentRegionLabelsByKey; }
+  get regionLabelsByKey() {
+    return state.currentRegionLabelsByKey;
+  }
 
   /**
    * Builds the aggregate-row configuration from the manifest's `predict.aggregate` block.
@@ -415,7 +465,9 @@ class PredictModel {
   }
 
   /** @returns {Seat[]} Baseline seats (read-only reference). */
-  get baseSeats() { return this.baselineElectionData.currentSeats; }
+  get baseSeats() {
+    return this.baselineElectionData.currentSeats;
+  }
 
   /**
    * Computes baseline shares for a seat array using this model's modelled parties +
@@ -441,7 +493,8 @@ class PredictModel {
    * @returns {Array<object>}
    */
   regions() {
-    if (this.#regionsCache && this.#regionsCacheKey === this.aggregateExpanded) return this.#regionsCache;
+    if (this.#regionsCache && this.#regionsCacheKey === this.aggregateExpanded)
+      return this.#regionsCache;
     const labels = this.regionLabelsByKey;
     const allByNorm = new Map();
     Array.from(labels.entries()).forEach(([rk, label]) => {
@@ -540,11 +593,20 @@ class PredictModel {
     let found = null;
     for (const section of this.gridSectionsConfig) {
       if (section.containsAggregate && this.aggregateConfig) {
-        if (rk === this.aggregateConfig.key) { found = section; break; }
-        if (this.aggregateConfig.isMember(rk)) { found = section; break; }
+        if (rk === this.aggregateConfig.key) {
+          found = section;
+          break;
+        }
+        if (this.aggregateConfig.isMember(rk)) {
+          found = section;
+          break;
+        }
       }
       const explicits = [...(section.extraRegionKeys || []), ...(section.regionKeys || [])];
-      if (explicits.some((k) => normalizeRegionKey(k) === rk)) { found = section; break; }
+      if (explicits.some((k) => normalizeRegionKey(k) === rk)) {
+        found = section;
+        break;
+      }
     }
     this.#sectionCache.set(rk, found);
     return found;
@@ -555,13 +617,19 @@ class PredictModel {
    * `this.ballots[0]` is correct; AMS overrides to pick by `activeTab`.
    * @returns {Ballot}
    */
-  activeBallot() { return this.ballots[0]; }
+  activeBallot() {
+    return this.ballots[0];
+  }
 
   /** Returns the active ballot's user-input map. */
-  currentInputMap() { return this.activeBallot().input; }
+  currentInputMap() {
+    return this.activeBallot().input;
+  }
 
   /** Returns the active ballot's baseline map. */
-  currentBaselineMap() { return this.activeBallot().baseline; }
+  currentBaselineMap() {
+    return this.activeBallot().baseline;
+  }
 
   /** Writes a single share input into the active ballot's input map. */
   setShare(regionKey, partyKey, value) {
@@ -613,7 +681,9 @@ class PredictModel {
   }
 
   /** Human-readable label for a ballot, used in validation messages. Default is the ballot key. */
-  ballotLabel(ballot) { return ballot.key || ''; }
+  ballotLabel(ballot) {
+    return ballot.key || "";
+  }
 
   /**
    * Returns rows whose entered shares sum > 100, checked across EVERY ballot — not just the
@@ -627,10 +697,14 @@ class PredictModel {
     const rows = this.regions();
     this.ballots.forEach((ballot) => {
       rows.forEach((row) => {
-        const sum = this.parties(row.regionKey)
-          .reduce((s, p) => s + this.shareForBallot(ballot, row.regionKey, p), 0);
+        const sum = this.parties(row.regionKey).reduce(
+          (s, p) => s + this.shareForBallot(ballot, row.regionKey, p),
+          0,
+        );
         if (sum <= 100) return;
-        const regionLabel = multiBallot ? `${row.regionLabel} (${this.ballotLabel(ballot)})` : row.regionLabel;
+        const regionLabel = multiBallot
+          ? `${row.regionLabel} (${this.ballotLabel(ballot)})`
+          : row.regionLabel;
         invalid.push({ ...row, regionLabel, total: roundShare(sum) });
       });
     });
@@ -675,7 +749,9 @@ class PredictModel {
     // returning a shallow slice would let state.electionData and state.comparisonElectionData
     // share Seat instances. Cloning keeps the projected and comparison elections independent.
     if (swings.size === 0) return this.baseSeats.map((seat) => cloneBaselineSeat(seat));
-    return this.baseSeats.map((seat) => projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig));
+    return this.baseSeats.map((seat) =>
+      projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig),
+    );
   }
 
   /**
@@ -699,12 +775,14 @@ class PredictModel {
    * @returns {string}
    */
   buildSerializedPayload(overrides, extra = {}) {
-    if (overrides.length === 0 && !this.aggregateExpanded) return '';
-    return base64urlEncode(JSON.stringify({
-      e: this.aggregateExpanded ? 1 : 0,
-      r: overrides,
-      ...extra,
-    }));
+    if (overrides.length === 0 && !this.aggregateExpanded) return "";
+    return base64urlEncode(
+      JSON.stringify({
+        e: this.aggregateExpanded ? 1 : 0,
+        r: overrides,
+        ...extra,
+      }),
+    );
   }
 
   /**
@@ -715,12 +793,16 @@ class PredictModel {
    * @returns {string}
    */
   serialize() {
-    const overrides = this.ballots.flatMap((b) => this.collectOverrides(b.input, b.baseline, b.serializePrefix));
+    const overrides = this.ballots.flatMap((b) =>
+      this.collectOverrides(b.input, b.baseline, b.serializePrefix),
+    );
     return this.buildSerializedPayload(overrides, this.serializeExtra());
   }
 
   /** Override: extra envelope keys for `serialize()`. Default is empty. */
-  serializeExtra() { return {}; }
+  serializeExtra() {
+    return {};
+  }
 
   /**
    * Loads a serialized payload into the ballot inputs. Subclasses override
@@ -742,7 +824,9 @@ class PredictModel {
     const entries = Array.isArray(decoded.r) ? decoded.r : [];
     entries.forEach((entry) => {
       let prefix = null;
-      let regionKey; let partyKey; let value;
+      let regionKey;
+      let partyKey;
+      let value;
       if (usesPrefixes) {
         [prefix, regionKey, partyKey, value] = entry;
       } else {
@@ -758,7 +842,9 @@ class PredictModel {
   }
 
   /** Override: returns true if the decoded payload is meant for this model. */
-  acceptsPayload(_decoded) { return true; }
+  acceptsPayload(_decoded) {
+    return true;
+  }
 
   /**
    * Picks the ballot a serialized entry routes to. Single-ballot models always pick
@@ -787,7 +873,9 @@ class PredictModel {
 
   /** Returns every ballot's input map — a convenience accessor for callers that need to
    * inspect all ballots' entries at once (e.g. asserting every input is empty after reset). */
-  inputMaps() { return this.ballots.map((b) => b.input); }
+  inputMaps() {
+    return this.ballots.map((b) => b.input);
+  }
 
   /**
    * Toggles the predict grid between collapsed (single aggregate row) and expanded
@@ -876,11 +964,13 @@ class PredictModel {
   loadSharesFromSeats(seats, target) {
     const aggKey = this.aggregateConfig?.key;
     const isMember = this.aggregateConfig?.isMember;
-    buildBaselineShares(seats, this.modelledPartyKeys, this.aggregateConfig).forEach((partyMap, regionKey) => {
-      if (this.aggregateExpanded && regionKey === aggKey) return;
-      if (!this.aggregateExpanded && isMember?.(regionKey)) return;
-      target.set(regionKey, new Map(partyMap));
-    });
+    buildBaselineShares(seats, this.modelledPartyKeys, this.aggregateConfig).forEach(
+      (partyMap, regionKey) => {
+        if (this.aggregateExpanded && regionKey === aggKey) return;
+        if (!this.aggregateExpanded && isMember?.(regionKey)) return;
+        target.set(regionKey, new Map(partyMap));
+      },
+    );
   }
 
   /**
@@ -909,7 +999,9 @@ class PredictModel {
       partyMap.forEach((value, partyKey) => {
         const baseline = roundShare(baselineMap.get(regionKey)?.get(partyKey) ?? 0);
         if (value === baseline) return;
-        overrides.push(prefix !== null ? [prefix, regionKey, partyKey, value] : [regionKey, partyKey, value]);
+        overrides.push(
+          prefix !== null ? [prefix, regionKey, partyKey, value] : [regionKey, partyKey, value],
+        );
       });
     });
     return overrides;
@@ -939,12 +1031,14 @@ class PredictModel {
    */
   buildRowsWithAggregate(subRows, sectionKey) {
     if (!this.aggregateConfig) return subRows;
-    const rows = [{
-      regionKey: this.aggregateConfig.key,
-      regionLabel: this.aggregateConfig.label,
-      isAggregate: true,
-      section: sectionKey,
-    }];
+    const rows = [
+      {
+        regionKey: this.aggregateConfig.key,
+        regionLabel: this.aggregateConfig.label,
+        isAggregate: true,
+        section: sectionKey,
+      },
+    ];
     if (this.aggregateExpanded) {
       subRows.forEach((r) => rows.push({ ...r, isAggregateChild: true, section: sectionKey }));
     }
@@ -964,10 +1058,12 @@ class PredictModel {
 export class FPTPPredict extends PredictModel {
   constructor(nextElectionYear, config) {
     super(nextElectionYear, config);
-    this.ballots = [new Ballot({
-      input: new Map(),
-      baseline: this.baselineFor(this.baseSeats),
-    })];
+    this.ballots = [
+      new Ballot({
+        input: new Map(),
+        baseline: this.baselineFor(this.baseSeats),
+      }),
+    ];
   }
 }
 
@@ -985,18 +1081,18 @@ export class AMSPredict extends PredictModel {
   constructor(nextElectionYear, config) {
     super(nextElectionYear, config);
     this.tabs = this.config.tabs || [];
-    this.activeTab = this.tabs[0]?.key || 'constituency';
+    this.activeTab = this.tabs[0]?.key || "constituency";
     this.ballots = [
       new Ballot({
-        key: 'constituency',
-        serializePrefix: 'c',
+        key: "constituency",
+        serializePrefix: "c",
         input: new Map(),
         baseline: this.baselineFor(this.baseSeats.filter((s) => !Seat.isList(s))),
         filterSeats: (seats) => seats.filter((s) => !Seat.isList(s)),
       }),
       new Ballot({
-        key: 'list',
-        serializePrefix: 'l',
+        key: "list",
+        serializePrefix: "l",
         // List baselines: each list seat in a region carries the full regional list total
         // duplicated, so dedupe by region before computing shares.
         input: new Map(),
@@ -1029,14 +1125,18 @@ export class AMSPredict extends PredictModel {
 
   reset() {
     super.reset();
-    this.activeTab = this.tabs[0]?.key || 'constituency';
+    this.activeTab = this.tabs[0]?.key || "constituency";
   }
 
-  acceptsPayload(decoded) { return decoded.h === 1; }
-  serializeExtra() { return { h: 1 }; }
+  acceptsPayload(decoded) {
+    return decoded.h === 1;
+  }
+  serializeExtra() {
+    return { h: 1 };
+  }
 
   ballotLabel(ballot) {
-    return this.tabs.find((t) => t.key === ballot.key)?.label || ballot.key || '';
+    return this.tabs.find((t) => t.key === ballot.key)?.label || ballot.key || "";
   }
 
   project() {
@@ -1048,7 +1148,8 @@ export class AMSPredict extends PredictModel {
     // valid but different allocation when the source data wasn't itself a clean D'Hondt
     // recomputation (e.g. the "2021 Election (2026 boundaries)" file preserves the historical
     // 2021 list winners rather than re-allocating under the new region structure).
-    if (constSwings.size === 0 && listSwings.size === 0) return this.baseSeats.map((seat) => cloneBaselineSeat(seat));
+    if (constSwings.size === 0 && listSwings.size === 0)
+      return this.baseSeats.map((seat) => cloneBaselineSeat(seat));
     // List votes only move when the user edits the list ballot. Editing only the constituency
     // ballot still changes the list allocation — but indirectly, via the updated constituency
     // wins that seed each region's D'Hondt divisors (constWinsByRegion below) — not by applying
@@ -1060,7 +1161,9 @@ export class AMSPredict extends PredictModel {
     const listBase = this.baseSeats.filter((s) => Seat.isList(s));
 
     // Pass 1: project constituency seats with FPTP swing.
-    const projectedConst = constBase.map((s) => projectSeatUniformSwing(s, constSwings, this.modelledPartyKeys, this.aggregateConfig));
+    const projectedConst = constBase.map((s) =>
+      projectSeatUniformSwing(s, constSwings, this.modelledPartyKeys, this.aggregateConfig),
+    );
 
     // Group constituency wins by region to seed the D'Hondt divisors.
     const constWinsByRegion = new Map();
@@ -1101,7 +1204,9 @@ export class AMSPredict extends PredictModel {
 
     const projectedList = [];
     listByRegion.forEach((regionListSeats, rk) => {
-      const projectedRegionList = regionListSeats.map((s) => projectSeatUniformSwing(s, listSwings, this.modelledPartyKeys, this.aggregateConfig));
+      const projectedRegionList = regionListSeats.map((s) =>
+        projectSeatUniformSwing(s, listSwings, this.modelledPartyKeys, this.aggregateConfig),
+      );
       // List seats in a region share identical totals (each seat duplicates the regional vote);
       // accumulate from the first seat only.
       const voteSumByParty = new Map();
@@ -1109,7 +1214,11 @@ export class AMSPredict extends PredictModel {
       Object.entries(firstProj?.votes || {}).forEach(([partyKey, voteCount]) => {
         voteSumByParty.set(partyKey, Number(voteCount || 0));
       });
-      const winners = dhondtAllocate(voteSumByParty, regionListSeats.length, constWinsByRegion.get(rk) || new Map());
+      const winners = dhondtAllocate(
+        voteSumByParty,
+        regionListSeats.length,
+        constWinsByRegion.get(rk) || new Map(),
+      );
       projectedRegionList.forEach((proj, idx) => {
         projectedList.push(new Seat({ ...proj, winner: winners[idx] || null }));
       });
@@ -1144,8 +1253,8 @@ export class SenatePredict extends FPTPPredict {
   constructor(nextElectionYear, config) {
     super(nextElectionYear, config);
     this.tabs = config.tabs || [
-      { key: 'seatsup', label: 'Seats up' },
-      { key: 'chamber', label: 'Full Senate' },
+      { key: "seatsup", label: "Seats up" },
+      { key: "chamber", label: "Full Senate" },
     ];
     this.activeTab = this.tabs[0].key;
     this.reprojectOnTabChange = true;
@@ -1191,19 +1300,21 @@ export class SenatePredict extends FPTPPredict {
    */
   setSpecialSeats(seats, specials) {
     (Array.isArray(specials) ? specials : []).forEach((special) => {
-      const seatKey = seatLookupKey(special?.seat || '');
+      const seatKey = seatLookupKey(special?.seat || "");
       if (seatKey) this.specialClassBySeat.set(seatKey, Number(special?.class) || 2);
     });
     const known = new Set(this.projectionBase.map((seat) => seatLookupKey(seat.seat)));
     const added = (Array.isArray(seats) ? seats : []).filter((seat) => {
-      const seatKey = seatLookupKey(seat?.seat || '');
+      const seatKey = seatLookupKey(seat?.seat || "");
       if (!seatKey || known.has(seatKey)) return false;
       known.add(seatKey);
       return true;
     });
     if (!added.length) return;
     this.projectionBase = [...this.projectionBase, ...added];
-    this.ballots.forEach((ballot) => { ballot.baseline = this.baselineFor(this.projectionBase); });
+    this.ballots.forEach((ballot) => {
+      ballot.baseline = this.baselineFor(this.projectionBase);
+    });
   }
 
   /**
@@ -1219,18 +1330,22 @@ export class SenatePredict extends FPTPPredict {
   setBaselineOverrides(seats) {
     const replacementByKey = new Map();
     (Array.isArray(seats) ? seats : []).forEach((seat) => {
-      const seatKey = seatLookupKey(seat?.seat || '');
+      const seatKey = seatLookupKey(seat?.seat || "");
       if (seatKey && !replacementByKey.has(seatKey)) replacementByKey.set(seatKey, seat);
     });
     if (!this.projectionBase.some((seat) => replacementByKey.has(seatLookupKey(seat.seat)))) return;
     this.projectionBase = this.projectionBase.map(
       (seat) => replacementByKey.get(seatLookupKey(seat.seat)) ?? seat,
     );
-    this.ballots.forEach((ballot) => { ballot.baseline = this.baselineFor(this.projectionBase); });
+    this.ballots.forEach((ballot) => {
+      ballot.baseline = this.baselineFor(this.projectionBase);
+    });
   }
 
   /** True when the active view is the full-chamber composition (rendered multi-member). */
-  isMultiMemberView() { return this.activeTab === 'chamber'; }
+  isMultiMemberView() {
+    return this.activeTab === "chamber";
+  }
 
   /** Records the active output view. Unknown keys no-op (guards a stray URL fragment). */
   setActiveTab(tab) {
@@ -1251,7 +1366,9 @@ export class SenatePredict extends FPTPPredict {
    * @returns {Seat[]}
    */
   comparisonSeatsForView() {
-    return this.activeTab === 'chamber' && this.chamberSeats.length ? this.chamberSeats : this.projectionBase;
+    return this.activeTab === "chamber" && this.chamberSeats.length
+      ? this.chamberSeats
+      : this.projectionBase;
   }
 
   /**
@@ -1264,20 +1381,32 @@ export class SenatePredict extends FPTPPredict {
   project() {
     const swings = this.buildSwings(this.currentInputMap(), this.currentBaselineMap());
     const base = this.projectionBase.length ? this.projectionBase : this.baseSeats;
-    const projectedContested = swings.size === 0
-      ? base.map((seat) => cloneBaselineSeat(seat))
-      : base.map((seat) => projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig));
-    if (this.activeTab !== 'chamber') return projectedContested;
-    return buildSenateChamber(this.chamberSeats, projectedContested, this.specialClassBySeat, this.regularClass);
+    const projectedContested =
+      swings.size === 0
+        ? base.map((seat) => cloneBaselineSeat(seat))
+        : base.map((seat) =>
+            projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig),
+          );
+    if (this.activeTab !== "chamber") return projectedContested;
+    return buildSenateChamber(
+      this.chamberSeats,
+      projectedContested,
+      this.specialClassBySeat,
+      this.regularClass,
+    );
   }
 }
 
 function decodePredictPayload(payload) {
-  const raw = String(payload || '').trim();
+  const raw = String(payload || "").trim();
   if (!raw) return null;
   const json = base64urlDecode(raw);
   if (!json) return null;
-  try { return JSON.parse(json); } catch { return null; }
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -1289,8 +1418,8 @@ function decodePredictPayload(payload) {
 export function predictModelClassFor(parliament) {
   const config = manifest.parliamentConfig(parliament).predict;
   if (!config?.model) return null;
-  if (config.model === 'fptp') return FPTPPredict;
-  if (config.model === 'ams') return AMSPredict;
-  if (config.model === 'senate') return SenatePredict;
+  if (config.model === "fptp") return FPTPPredict;
+  if (config.model === "ams") return AMSPredict;
+  if (config.model === "senate") return SenatePredict;
   return null;
 }

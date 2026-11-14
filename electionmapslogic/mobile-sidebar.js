@@ -1,10 +1,10 @@
 const MOBILE_BREAKPOINT = 980;
 
-const pageRoot = document.querySelector('.maps-page');
-const toggleButton = document.getElementById('mapsSidebarToggle');
-const sidebarPanel = document.getElementById('mapsLeftPanel');
-const overlayButton = document.getElementById('mapsSidebarOverlay');
-const electionList = document.getElementById('mapsElectionList');
+const pageRoot = document.querySelector(".maps-page");
+const toggleButton = document.getElementById("mapsSidebarToggle");
+const sidebarPanel = document.getElementById("mapsLeftPanel");
+const overlayButton = document.getElementById("mapsSidebarOverlay");
+const electionList = document.getElementById("mapsElectionList");
 
 if (pageRoot && toggleButton && sidebarPanel && overlayButton && electionList) {
   const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
@@ -28,8 +28,8 @@ if (pageRoot && toggleButton && sidebarPanel && overlayButton && electionList) {
    * @param {boolean} expanded - `true` to open the sidebar, `false` to close it.
    */
   function setExpanded(expanded) {
-    pageRoot.classList.toggle('maps-mobile-sidebar-open', expanded && isMobileView());
-    toggleButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    pageRoot.classList.toggle("maps-mobile-sidebar-open", expanded && isMobileView());
+    toggleButton.setAttribute("aria-expanded", expanded ? "true" : "false");
     overlayButton.hidden = !expanded;
   }
 
@@ -62,8 +62,8 @@ if (pageRoot && toggleButton && sidebarPanel && overlayButton && electionList) {
    *   current state.
    * Side effects: calls `closeSidebar()` or `openSidebar()` depending on state.
    */
-  toggleButton.addEventListener('click', () => {
-    const isOpen = pageRoot.classList.contains('maps-mobile-sidebar-open');
+  toggleButton.addEventListener("click", () => {
+    const isOpen = pageRoot.classList.contains("maps-mobile-sidebar-open");
     if (isOpen) {
       closeSidebar();
       return;
@@ -77,7 +77,7 @@ if (pageRoot && toggleButton && sidebarPanel && overlayButton && electionList) {
    * Event: `click` on `#mapsSidebarOverlay`.
    * Side effects: closes the sidebar (same as pressing the toggle button when open).
    */
-  overlayButton.addEventListener('click', closeSidebar);
+  overlayButton.addEventListener("click", closeSidebar);
 
   /**
    * Election-list click handler.
@@ -88,8 +88,8 @@ if (pageRoot && toggleButton && sidebarPanel && overlayButton && electionList) {
    * Side effects: closes the sidebar when an election button or link is activated,
    *   so the map is visible immediately after selection on mobile.
    */
-  electionList.addEventListener('click', (event) => {
-    const clickedElection = event.target.closest('button, a');
+  electionList.addEventListener("click", (event) => {
+    const clickedElection = event.target.closest("button, a");
     if (!clickedElection) return;
     closeSidebar();
   });
@@ -102,8 +102,8 @@ if (pageRoot && toggleButton && sidebarPanel && overlayButton && electionList) {
    * Side effects: closes the sidebar when Escape is pressed, providing keyboard
    *   accessibility for dismissing the mobile overlay.
    */
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeSidebar();
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeSidebar();
   });
 
   /**
@@ -114,7 +114,7 @@ if (pageRoot && toggleButton && sidebarPanel && overlayButton && electionList) {
    * Side effects: closes the sidebar automatically when the user resizes out of the
    *   mobile breakpoint, preventing the open-sidebar state from persisting on desktop.
    */
-  mediaQuery.addEventListener('change', () => {
+  mediaQuery.addEventListener("change", () => {
     if (!isMobileView()) closeSidebar();
   });
 }

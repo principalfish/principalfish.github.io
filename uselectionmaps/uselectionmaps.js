@@ -12,13 +12,13 @@
 // uselectionmaps.min.js alone. Predict switches on per parliament via the manifest's
 // parliamentFeatures (only parliaments listing `predict` in `features` get the model).
 
-import { startApp } from '../electionmapslogic/app.js';
+import { startApp } from "../electionmapslogic/app.js";
 import {
   activatePredictView,
   getPredictBaseElection,
-} from '../electionmapslogic/features/predict-controller.js';
-import { wirePredictControls } from '../electionmapslogic/features/predict-view.js';
-import { activateSenateForecastView } from '../electionmapslogic/features/senate-forecast-controller.js';
+} from "../electionmapslogic/features/predict-controller.js";
+import { wirePredictControls } from "../electionmapslogic/features/predict-view.js";
+import { activateSenateForecastView } from "../electionmapslogic/features/senate-forecast-controller.js";
 
 startApp({
   predict: {

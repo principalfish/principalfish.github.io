@@ -1,5 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { Seat, ElectionSummary, manifest, state, buildRouteSearchParams, seatComparisonHidden } from '../state.js';
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import {
+  Seat,
+  ElectionSummary,
+  manifest,
+  state,
+  buildRouteSearchParams,
+  seatComparisonHidden,
+} from "../state.js";
 
 // Restores the manifest singleton to a fully-zeroed, hydrated baseline so a configuring
 // block can't leak party/region/file/feature lookups into a later block. init() does
@@ -7,8 +14,14 @@ import { Seat, ElectionSummary, manifest, state, buildRouteSearchParams, seatCom
 // cleared. Run before AND after every test for order-independence.
 function resetManifest() {
   manifest.init({
-    parties: [], mapModes: {}, elections: [], defaultElection: null, files: {},
-    parliamentFeatures: {}, partyKeyAliases: {}, misc: {},
+    parties: [],
+    mapModes: {},
+    elections: [],
+    defaultElection: null,
+    files: {},
+    parliamentFeatures: {},
+    partyKeyAliases: {},
+    misc: {},
   });
 }
 
@@ -16,433 +29,596 @@ beforeEach(resetManifest);
 afterEach(resetManifest);
 
 // ─── Seat.matchesPrimaryFilters ──────────────────────────────────────────────
-describe('Seat.matchesPrimaryFilters', () => {
-  const openFilter = { party: 'all', region: 'all', secondParty: 'all', majorityMin: 0, majorityMax: 100, gainsOnly: false, upcoming: 'all' };
+describe("Seat.matchesPrimaryFilters", () => {
+  const openFilter = {
+    party: "all",
+    region: "all",
+    secondParty: "all",
+    majorityMin: 0,
+    majorityMax: 100,
+    gainsOnly: false,
+    upcoming: "all",
+  };
   // 30% majority (margin 300 / turnout 1000); second place is conservative.
-  const makeSeat = () => new Seat({ seat: 'A', region: 'london', winner: 'labour', votes: { labour: 600, conservative: 300, libdems: 100 } });
+  const makeSeat = () =>
+    new Seat({
+      seat: "A",
+      region: "london",
+      winner: "labour",
+      votes: { labour: 600, conservative: 300, libdems: 100 },
+    });
 
-  it('passes a seat when no filters are active', () => {
+  it("passes a seat when no filters are active", () => {
     expect(Seat.matchesPrimaryFilters(makeSeat(), null, openFilter, null)).toBe(true);
   });
 
-  it('filters by winning party', () => {
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, party: 'labour' }, null)).toBe(true);
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, party: 'conservative' }, null)).toBe(false);
+  it("filters by winning party", () => {
+    expect(
+      Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, party: "labour" }, null),
+    ).toBe(true);
+    expect(
+      Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, party: "conservative" }, null),
+    ).toBe(false);
   });
 
   it('normalises a legacy "other" winner to "others" for the party filter', () => {
     const seat = makeSeat();
-    seat.winner = 'other';
-    expect(Seat.matchesPrimaryFilters(seat, null, { ...openFilter, party: 'others' }, null)).toBe(true);
+    seat.winner = "other";
+    expect(Seat.matchesPrimaryFilters(seat, null, { ...openFilter, party: "others" }, null)).toBe(
+      true,
+    );
   });
 
-  it('filters by region', () => {
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, region: 'london' }, null)).toBe(true);
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, region: 'scotland' }, null)).toBe(false);
+  it("filters by region", () => {
+    expect(
+      Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, region: "london" }, null),
+    ).toBe(true);
+    expect(
+      Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, region: "scotland" }, null),
+    ).toBe(false);
   });
 
-  it('filters by majority range', () => {
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, majorityMin: 40 }, null)).toBe(false);
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, majorityMax: 20 }, null)).toBe(false);
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, majorityMin: 10, majorityMax: 50 }, null)).toBe(true);
+  it("filters by majority range", () => {
+    expect(
+      Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, majorityMin: 40 }, null),
+    ).toBe(false);
+    expect(
+      Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, majorityMax: 20 }, null),
+    ).toBe(false);
+    expect(
+      Seat.matchesPrimaryFilters(
+        makeSeat(),
+        null,
+        { ...openFilter, majorityMin: 10, majorityMax: 50 },
+        null,
+      ),
+    ).toBe(true);
   });
 
-  it('filters by second-place party', () => {
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, secondParty: 'conservative' }, null)).toBe(true);
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, secondParty: 'libdems' }, null)).toBe(false);
+  it("filters by second-place party", () => {
+    expect(
+      Seat.matchesPrimaryFilters(
+        makeSeat(),
+        null,
+        { ...openFilter, secondParty: "conservative" },
+        null,
+      ),
+    ).toBe(true);
+    expect(
+      Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, secondParty: "libdems" }, null),
+    ).toBe(false);
   });
 
-  it('gainsOnly with a by-election set matches on seat name membership', () => {
+  it("gainsOnly with a by-election set matches on seat name membership", () => {
     const filter = { ...openFilter, gainsOnly: true };
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, filter, new Set(['A']))).toBe(true);
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, filter, new Set(['B']))).toBe(false);
+    expect(Seat.matchesPrimaryFilters(makeSeat(), null, filter, new Set(["A"]))).toBe(true);
+    expect(Seat.matchesPrimaryFilters(makeSeat(), null, filter, new Set(["B"]))).toBe(false);
   });
 
-  it('gainsOnly without a by-election set falls back to gainFromParty (comparison winner)', () => {
+  it("gainsOnly without a by-election set falls back to gainFromParty (comparison winner)", () => {
     const filter = { ...openFilter, gainsOnly: true };
-    expect(Seat.matchesPrimaryFilters(makeSeat(), { winner: 'conservative' }, filter, null)).toBe(true);
-    expect(Seat.matchesPrimaryFilters(makeSeat(), { winner: 'labour' }, filter, null)).toBe(false);
+    expect(Seat.matchesPrimaryFilters(makeSeat(), { winner: "conservative" }, filter, null)).toBe(
+      true,
+    );
+    expect(Seat.matchesPrimaryFilters(makeSeat(), { winner: "labour" }, filter, null)).toBe(false);
     expect(Seat.matchesPrimaryFilters(makeSeat(), null, filter, null)).toBe(false);
   });
 
-  it('multi-member: party and cycle filters match per member, including split seats', () => {
+  it("multi-member: party and cycle filters match per member, including split seats", () => {
     const bothR = new Seat({
-      seat: 'Alabama', region: 'eastsouthcentral', winner: 'republican',
-      members: [{ party: 'republican', up: 2026 }, { party: 'republican', up: 2028 }],
+      seat: "Alabama",
+      region: "eastsouthcentral",
+      winner: "republican",
+      members: [
+        { party: "republican", up: 2026 },
+        { party: "republican", up: 2028 },
+      ],
     });
     const split = new Seat({
-      seat: 'Maine', region: 'newengland', winner: 'split',
-      members: [{ party: 'independent', up: 2026 }, { party: 'republican', up: 2030 }],
+      seat: "Maine",
+      region: "newengland",
+      winner: "split",
+      members: [
+        { party: "independent", up: 2026 },
+        { party: "republican", up: 2030 },
+      ],
     });
     // Cycle filter: the seat is visible when any member is up that year.
-    expect(Seat.matchesPrimaryFilters(bothR, null, { ...openFilter, upcoming: '2026' }, null)).toBe(true);
-    expect(Seat.matchesPrimaryFilters(bothR, null, { ...openFilter, upcoming: '2030' }, null)).toBe(false);
-    expect(Seat.matchesPrimaryFilters(bothR, null, { ...openFilter, upcoming: 'all' }, null)).toBe(true);
+    expect(Seat.matchesPrimaryFilters(bothR, null, { ...openFilter, upcoming: "2026" }, null)).toBe(
+      true,
+    );
+    expect(Seat.matchesPrimaryFilters(bothR, null, { ...openFilter, upcoming: "2030" }, null)).toBe(
+      false,
+    );
+    expect(Seat.matchesPrimaryFilters(bothR, null, { ...openFilter, upcoming: "all" }, null)).toBe(
+      true,
+    );
     // Party filter matches per member, so the split seat passes the 'independent' filter (it
     // holds one) — a combined-winner test would wrongly exclude it.
-    expect(Seat.matchesPrimaryFilters(split, null, { ...openFilter, party: 'independent' }, null)).toBe(true);
-    expect(Seat.matchesPrimaryFilters(split, null, { ...openFilter, party: 'republican' }, null)).toBe(true);
-    expect(Seat.matchesPrimaryFilters(split, null, { ...openFilter, party: 'democrat' }, null)).toBe(false);
+    expect(
+      Seat.matchesPrimaryFilters(split, null, { ...openFilter, party: "independent" }, null),
+    ).toBe(true);
+    expect(
+      Seat.matchesPrimaryFilters(split, null, { ...openFilter, party: "republican" }, null),
+    ).toBe(true);
+    expect(
+      Seat.matchesPrimaryFilters(split, null, { ...openFilter, party: "democrat" }, null),
+    ).toBe(false);
     // The cycle filter only applies to multi-member chambers; single-member seats ignore it.
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, upcoming: '2026' }, null)).toBe(true);
+    expect(
+      Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, upcoming: "2026" }, null),
+    ).toBe(true);
   });
 });
 
 // ─── Seat.choroplethValue ────────────────────────────────────────────────────
-describe('Seat.choroplethValue', () => {
+describe("Seat.choroplethValue", () => {
   const seat = { turnout: 1000, votes: { labour: 500, conservative: 500 } };
   const comparison = { turnout: 1000, votes: { labour: 400, conservative: 600 } };
 
-  it('returns null for a delta metric when no comparison seat is available', () => {
-    expect(Seat.choroplethValue(seat, null, true, 'labour')).toBe(null);
+  it("returns null for a delta metric when no comparison seat is available", () => {
+    expect(Seat.choroplethValue(seat, null, true, "labour")).toBe(null);
   });
 
-  it('returns the vote-share delta against the comparison seat', () => {
-    expect(Seat.choroplethValue(seat, comparison, true, 'labour')).toBe(10);
+  it("returns the vote-share delta against the comparison seat", () => {
+    expect(Seat.choroplethValue(seat, comparison, true, "labour")).toBe(10);
   });
 
-  it('returns the absolute vote share when not a delta metric', () => {
-    expect(Seat.choroplethValue(seat, null, false, 'labour')).toBe(50);
+  it("returns the absolute vote share when not a delta metric", () => {
+    expect(Seat.choroplethValue(seat, null, false, "labour")).toBe(50);
   });
 });
 
 // ─── Seat.fromRaw numeric-id ingest (the pf-results-v4 path) ──────────────────
-describe('Seat.fromRaw with numeric manifest refs', () => {
+describe("Seat.fromRaw with numeric manifest refs", () => {
   beforeEach(() => {
     manifest.init({
       parties: [
-        { id: 1, key: 'snp', name: 'SNP' },
-        { id: 2, key: 'labour', name: 'Labour' },
+        { id: 1, key: "snp", name: "SNP" },
+        { id: 2, key: "labour", name: "Labour" },
       ],
-      mapModes: { 1: { regions: [{ id: 10, name: 'Glasgow' }] } },
+      mapModes: { 1: { regions: [{ id: 10, name: "Glasgow" }] } },
     });
   });
   afterEach(resetManifest);
 
-  it('resolves integer region, winner, and party-vote refs through the manifest', () => {
-    const seat = Seat.fromRaw({ n: 'X', r: 10, w: 1, p: [[1, 600], [2, 400]] });
-    expect(seat.region).toBe('glasgow');
-    expect(seat.winner).toBe('snp');
+  it("resolves integer region, winner, and party-vote refs through the manifest", () => {
+    const seat = Seat.fromRaw({
+      n: "X",
+      r: 10,
+      w: 1,
+      p: [
+        [1, 600],
+        [2, 400],
+      ],
+    });
+    expect(seat.region).toBe("glasgow");
+    expect(seat.winner).toBe("snp");
     expect(seat.votes).toEqual({ snp: 600, labour: 400 });
   });
 
   it('falls back to "unknown" for an unmapped numeric region id (incl. r=0)', () => {
-    expect(Seat.fromRaw({ n: 'X', r: 0, w: 1, p: [[1, 10]] }).region).toBe('unknown');
-    expect(Seat.fromRaw({ n: 'X', r: 99, w: 1, p: [[1, 10]] }).region).toBe('unknown');
+    expect(Seat.fromRaw({ n: "X", r: 0, w: 1, p: [[1, 10]] }).region).toBe("unknown");
+    expect(Seat.fromRaw({ n: "X", r: 99, w: 1, p: [[1, 10]] }).region).toBe("unknown");
   });
 
-  it('stringifies an unknown numeric party id rather than dropping it', () => {
-    expect(Seat.fromRaw({ n: 'X', r: 10, w: 99, p: [[1, 10]] }).winner).toBe('99');
+  it("stringifies an unknown numeric party id rather than dropping it", () => {
+    expect(Seat.fromRaw({ n: "X", r: 10, w: 99, p: [[1, 10]] }).winner).toBe("99");
   });
 });
 
 // ─── Manifest.resolvePartyRef ────────────────────────────────────────────────
-describe('manifest.resolvePartyRef', () => {
-  beforeEach(() => { manifest.init({ parties: [{ id: 1, key: 'snp', name: 'SNP' }], partyKeyAliases: { uup: 'uu', reformuk: 'reform', liberaldemocrats: 'libdems' } }); });
+describe("manifest.resolvePartyRef", () => {
+  beforeEach(() => {
+    manifest.init({
+      parties: [{ id: 1, key: "snp", name: "SNP" }],
+      partyKeyAliases: { uup: "uu", reformuk: "reform", liberaldemocrats: "libdems" },
+    });
+  });
   afterEach(resetManifest);
 
-  it('resolves a numeric id to the party key', () => {
-    expect(manifest.resolvePartyRef(1)).toBe('snp');
+  it("resolves a numeric id to the party key", () => {
+    expect(manifest.resolvePartyRef(1)).toBe("snp");
   });
 
-  it('stringifies an unknown numeric id', () => {
-    expect(manifest.resolvePartyRef(42)).toBe('42');
+  it("stringifies an unknown numeric id", () => {
+    expect(manifest.resolvePartyRef(42)).toBe("42");
   });
 
-  it('folds known string aliases onto canonical keys', () => {
-    expect(manifest.resolvePartyRef('uup')).toBe('uu');
-    expect(manifest.resolvePartyRef('Reform UK')).toBe('reform');
-    expect(manifest.resolvePartyRef('Liberal Democrats')).toBe('libdems');
+  it("folds known string aliases onto canonical keys", () => {
+    expect(manifest.resolvePartyRef("uup")).toBe("uu");
+    expect(manifest.resolvePartyRef("Reform UK")).toBe("reform");
+    expect(manifest.resolvePartyRef("Liberal Democrats")).toBe("libdems");
   });
 
   it('passes through an unknown string key and maps empty input to "others"', () => {
-    expect(manifest.resolvePartyRef('labour')).toBe('labour');
-    expect(manifest.resolvePartyRef('')).toBe('others');
-    expect(manifest.resolvePartyRef(null)).toBe('others');
+    expect(manifest.resolvePartyRef("labour")).toBe("labour");
+    expect(manifest.resolvePartyRef("")).toBe("others");
+    expect(manifest.resolvePartyRef(null)).toBe("others");
   });
 });
 
 // ─── Manifest.resolveElectionFiles ───────────────────────────────────────────
-describe('manifest.resolveElectionFiles', () => {
+describe("manifest.resolveElectionFiles", () => {
   beforeEach(() => {
     manifest.init({
-      files: { elections: {
-        mapsById: { 5: 'maps/x.topo.json' },
-        electionsById: { e1: 'results/e1.json', e0: 'results/e0.json' },
-      } },
+      files: {
+        elections: {
+          mapsById: { 5: "maps/x.topo.json" },
+          electionsById: { e1: "results/e1.json", e0: "results/e0.json" },
+        },
+      },
     });
   });
   afterEach(resetManifest);
 
-  it('resolves map and data files, with no comparison by default', () => {
-    expect(manifest.resolveElectionFiles({ id: 'e1', mapId: 5 })).toEqual({
-      mapFile: 'maps/x.topo.json', dataFile: 'results/e1.json', comparisonDataFile: null,
+  it("resolves map and data files, with no comparison by default", () => {
+    expect(manifest.resolveElectionFiles({ id: "e1", mapId: 5 })).toEqual({
+      mapFile: "maps/x.topo.json",
+      dataFile: "results/e1.json",
+      comparisonDataFile: null,
     });
   });
 
-  it('resolves the comparison data file when configured', () => {
-    expect(manifest.resolveElectionFiles({ id: 'e1', mapId: 5, comparisonElectionId: 'e0' }).comparisonDataFile)
-      .toBe('results/e0.json');
+  it("resolves the comparison data file when configured", () => {
+    expect(
+      manifest.resolveElectionFiles({ id: "e1", mapId: 5, comparisonElectionId: "e0" })
+        .comparisonDataFile,
+    ).toBe("results/e0.json");
   });
 
-  it('throws when the map file is missing', () => {
-    expect(() => manifest.resolveElectionFiles({ id: 'e1', mapId: 99 })).toThrow(/Missing file configuration/);
+  it("throws when the map file is missing", () => {
+    expect(() => manifest.resolveElectionFiles({ id: "e1", mapId: 99 })).toThrow(
+      /Missing file configuration/,
+    );
   });
 
-  it('throws when the data file is missing', () => {
-    expect(() => manifest.resolveElectionFiles({ id: 'eX', mapId: 5 })).toThrow(/Missing file configuration/);
+  it("throws when the data file is missing", () => {
+    expect(() => manifest.resolveElectionFiles({ id: "eX", mapId: 5 })).toThrow(
+      /Missing file configuration/,
+    );
   });
 });
 
 // ─── Manifest.buildRegionLabelLookup ─────────────────────────────────────────
-describe('manifest.buildRegionLabelLookup', () => {
+describe("manifest.buildRegionLabelLookup", () => {
   beforeEach(() => {
-    manifest.init({ mapModes: { 1: { regions: [
-      { id: 1, name: 'Glasgow' }, { id: 2, name: 'North East' }, { id: 3, name: '' },
-    ] } } });
+    manifest.init({
+      mapModes: {
+        1: {
+          regions: [
+            { id: 1, name: "Glasgow" },
+            { id: 2, name: "North East" },
+            { id: 3, name: "" },
+          ],
+        },
+      },
+    });
   });
   afterEach(resetManifest);
 
-  it('maps normalised region keys to display labels, skipping empty names', () => {
-    const lookup = manifest.buildRegionLabelLookup('1');
-    expect(lookup.get('glasgow')).toBe('Glasgow');
-    expect(lookup.get('northeast')).toBe('North East');
+  it("maps normalised region keys to display labels, skipping empty names", () => {
+    const lookup = manifest.buildRegionLabelLookup("1");
+    expect(lookup.get("glasgow")).toBe("Glasgow");
+    expect(lookup.get("northeast")).toBe("North East");
     expect(lookup.size).toBe(2);
   });
 
-  it('returns an empty map for an unknown mapId', () => {
-    expect(manifest.buildRegionLabelLookup('99').size).toBe(0);
+  it("returns an empty map for an unknown mapId", () => {
+    expect(manifest.buildRegionLabelLookup("99").size).toBe(0);
   });
 });
 
-describe('manifest.hiddenElectionIds', () => {
+describe("manifest.hiddenElectionIds", () => {
   beforeEach(() => {
     manifest.init({
       parliamentFeatures: {
-        holyrood: { hiddenElectionIds: ['current-holyrood-prediction'] },
+        holyrood: { hiddenElectionIds: ["current-holyrood-prediction"] },
         westminster: {},
       },
     });
   });
   afterEach(resetManifest);
 
-  it('returns the hidden ids configured for a parliament', () => {
-    expect(manifest.hiddenElectionIds('holyrood')).toEqual(['current-holyrood-prediction']);
+  it("returns the hidden ids configured for a parliament", () => {
+    expect(manifest.hiddenElectionIds("holyrood")).toEqual(["current-holyrood-prediction"]);
   });
 
-  it('returns an empty array when a parliament configures none', () => {
-    expect(manifest.hiddenElectionIds('westminster')).toEqual([]);
+  it("returns an empty array when a parliament configures none", () => {
+    expect(manifest.hiddenElectionIds("westminster")).toEqual([]);
   });
 
-  it('returns an empty array for an unknown parliament', () => {
-    expect(manifest.hiddenElectionIds('nowhere')).toEqual([]);
+  it("returns an empty array for an unknown parliament", () => {
+    expect(manifest.hiddenElectionIds("nowhere")).toEqual([]);
   });
 });
 
-describe('manifest.parliamentTabs', () => {
-  it('returns misc.parliamentTabs in order, unfiltered', () => {
+describe("manifest.parliamentTabs", () => {
+  it("returns misc.parliamentTabs in order, unfiltered", () => {
     const tabs = [
-      { parliament: 'us_senate', label: 'Senate' },
-      { parliament: 'us_house', label: 'House' },
-      { parliament: 'us_presidential', label: 'President' },
+      { parliament: "us_senate", label: "Senate" },
+      { parliament: "us_house", label: "House" },
+      { parliament: "us_presidential", label: "President" },
     ];
     manifest.init({ misc: { parliamentTabs: tabs } });
     expect(manifest.parliamentTabs()).toEqual(tabs);
   });
 
-  it('returns an empty array when misc has no parliamentTabs', () => {
+  it("returns an empty array when misc has no parliamentTabs", () => {
     expect(manifest.parliamentTabs()).toEqual([]);
   });
 });
 
-describe('manifest.defaultParliament', () => {
+describe("manifest.defaultParliament", () => {
   it("returns the default election's parliament", () => {
     manifest.init({
-      elections: [{ id: 'h1', parliament: 'us_house' }, { id: 's1', parliament: 'us_senate' }],
-      defaultElection: 's1',
+      elections: [
+        { id: "h1", parliament: "us_house" },
+        { id: "s1", parliament: "us_senate" },
+      ],
+      defaultElection: "s1",
     });
-    expect(manifest.defaultParliament()).toBe('us_senate');
+    expect(manifest.defaultParliament()).toBe("us_senate");
   });
 
-  it('returns an empty string when there is no default election', () => {
-    manifest.init({ elections: [{ id: 'h1', parliament: 'us_house' }] });
-    expect(manifest.defaultParliament()).toBe('');
+  it("returns an empty string when there is no default election", () => {
+    manifest.init({ elections: [{ id: "h1", parliament: "us_house" }] });
+    expect(manifest.defaultParliament()).toBe("");
   });
 });
 
 // ─── ElectionSummary.summarize (modes / dedupe / other-fold) ──────────────────
-describe('ElectionSummary.summarize', () => {
+describe("ElectionSummary.summarize", () => {
   const findParty = (data, key) => data.parties.find((p) => p.party === key);
   // The multi-member branch reads state.currentElection.multiMember; clear it after each test.
-  afterEach(() => { state.currentElection = null; });
+  afterEach(() => {
+    state.currentElection = null;
+  });
 
-  it('all mode: counts list seats but excludes their votes (separate ballot)', () => {
+  it("all mode: counts list seats but excludes their votes (separate ballot)", () => {
     const seats = [
-      { seat: 'Glasgow Central', region: 'glasgow', winner: 'labour', votes: { labour: 600, conservative: 400 } },
-      { seat: 'Glasgow List 1', region: 'glasgow', winner: 'snp', votes: { snp: 1000 } },
+      {
+        seat: "Glasgow Central",
+        region: "glasgow",
+        winner: "labour",
+        votes: { labour: 600, conservative: 400 },
+      },
+      { seat: "Glasgow List 1", region: "glasgow", winner: "snp", votes: { snp: 1000 } },
     ];
-    const data = ElectionSummary.summarize(seats, 'all');
-    expect(findParty(data, 'snp')).toMatchObject({ seats: 1, votes: 0 });
-    expect(findParty(data, 'labour')).toMatchObject({ seats: 1, votes: 600 });
+    const data = ElectionSummary.summarize(seats, "all");
+    expect(findParty(data, "snp")).toMatchObject({ seats: 1, votes: 0 });
+    expect(findParty(data, "labour")).toMatchObject({ seats: 1, votes: 600 });
     expect(data.totalVotes).toBe(1000);
   });
 
-  it('constituency mode: skips list seats entirely but totalSeats stays the chamber size', () => {
+  it("constituency mode: skips list seats entirely but totalSeats stays the chamber size", () => {
     const seats = [
-      { seat: 'Glasgow Central', region: 'glasgow', winner: 'labour', votes: { labour: 600, conservative: 400 } },
-      { seat: 'Glasgow List 1', region: 'glasgow', winner: 'snp', votes: { snp: 1000 } },
+      {
+        seat: "Glasgow Central",
+        region: "glasgow",
+        winner: "labour",
+        votes: { labour: 600, conservative: 400 },
+      },
+      { seat: "Glasgow List 1", region: "glasgow", winner: "snp", votes: { snp: 1000 } },
     ];
-    const data = ElectionSummary.summarize(seats, 'constituency');
-    expect(findParty(data, 'snp')).toBeUndefined();
+    const data = ElectionSummary.summarize(seats, "constituency");
+    expect(findParty(data, "snp")).toBeUndefined();
     expect(data.totalSeats).toBe(2);
   });
 
-  it('list mode: counts each (region, party) vote total once despite duplicated list seats', () => {
+  it("list mode: counts each (region, party) vote total once despite duplicated list seats", () => {
     const seats = [
-      { seat: 'Glasgow List 1', region: 'glasgow', winner: 'snp', votes: { snp: 1000 } },
-      { seat: 'Glasgow List 2', region: 'glasgow', winner: 'snp', votes: { snp: 1000 } },
+      { seat: "Glasgow List 1", region: "glasgow", winner: "snp", votes: { snp: 1000 } },
+      { seat: "Glasgow List 2", region: "glasgow", winner: "snp", votes: { snp: 1000 } },
     ];
-    const data = ElectionSummary.summarize(seats, 'list');
-    expect(findParty(data, 'snp')).toMatchObject({ seats: 2, votes: 1000 });
+    const data = ElectionSummary.summarize(seats, "list");
+    expect(findParty(data, "snp")).toMatchObject({ seats: 2, votes: 1000 });
     expect(data.totalVotes).toBe(1000);
   });
 
   it('folds the legacy "other" key into "others" for both seats and votes', () => {
-    const seats = [{ seat: 'A', region: 'r', winner: 'other', votes: { other: 500, labour: 500 } }];
-    const data = ElectionSummary.summarize(seats, 'all');
-    expect(findParty(data, 'others')).toMatchObject({ seats: 1, votes: 500 });
-    expect(findParty(data, 'other')).toBeUndefined();
+    const seats = [{ seat: "A", region: "r", winner: "other", votes: { other: 500, labour: 500 } }];
+    const data = ElectionSummary.summarize(seats, "all");
+    expect(findParty(data, "others")).toMatchObject({ seats: 1, votes: 500 });
+    expect(findParty(data, "other")).toBeUndefined();
   });
 
-  it('multi-member: tallies all members by default but only matching ones when filtering', () => {
+  it("multi-member: tallies all members by default but only matching ones when filtering", () => {
     state.currentElection = { multiMember: true };
     const seats = [
-      { seat: 'Alabama', members: [{ party: 'republican', up: 2026 }, { party: 'republican', up: 2028 }] },
-      { seat: 'Arizona', members: [{ party: 'democrat', up: 2026 }, { party: 'republican', up: 2030 }] },
+      {
+        seat: "Alabama",
+        members: [
+          { party: "republican", up: 2026 },
+          { party: "republican", up: 2028 },
+        ],
+      },
+      {
+        seat: "Arizona",
+        members: [
+          { party: "democrat", up: 2026 },
+          { party: "republican", up: 2030 },
+        ],
+      },
     ];
     // No filter: every member counts (4 senators across the two states).
-    expect(ElectionSummary.summarize(seats, 'all').totalSeats).toBe(4);
+    expect(ElectionSummary.summarize(seats, "all").totalSeats).toBe(4);
     // 2026 cycle: only the member up that year in each state (one R, one D).
-    const cycle = ElectionSummary.summarize(seats, 'all', { upcoming: '2026' });
+    const cycle = ElectionSummary.summarize(seats, "all", { upcoming: "2026" });
     expect(cycle.totalSeats).toBe(2);
-    expect(findParty(cycle, 'republican')).toMatchObject({ seats: 1 });
-    expect(findParty(cycle, 'democrat')).toMatchObject({ seats: 1 });
+    expect(findParty(cycle, "republican")).toMatchObject({ seats: 1 });
+    expect(findParty(cycle, "democrat")).toMatchObject({ seats: 1 });
     // Party filter: counts that party's senators wherever they sit, incl. the split Arizona
     // seat (1 D) — not just states the party fully holds. Republicans: 2 (Alabama) + 1 (AZ) = 3.
-    const dem = ElectionSummary.summarize(seats, 'all', { party: 'democrat' });
+    const dem = ElectionSummary.summarize(seats, "all", { party: "democrat" });
     expect(dem.totalSeats).toBe(1);
-    expect(findParty(dem, 'democrat')).toMatchObject({ seats: 1 });
-    expect(ElectionSummary.summarize(seats, 'all', { party: 'republican' }).totalSeats).toBe(3);
+    expect(findParty(dem, "democrat")).toMatchObject({ seats: 1 });
+    expect(ElectionSummary.summarize(seats, "all", { party: "republican" }).totalSeats).toBe(3);
   });
 
-  it('multi-member: a mixed state shows under the called member\'s party filter, not as the uncalled one', () => {
+  it("multi-member: a mixed state shows under the called member's party filter, not as the uncalled one", () => {
     state.currentElection = { multiMember: true };
-    const filters = (party) => ({ party, region: 'all', upcoming: 'all' });
+    const filters = (party) => ({ party, region: "all", upcoming: "all" });
     const mixed = new Seat({
-      seat: 'Texas',
-      region: 'westsouthcentral',
-      winner: 'republican',
-      members: [{ party: 'republican', name: 'Cruz', class: 1 }, { party: null, name: null, class: 2, c: false }],
+      seat: "Texas",
+      region: "westsouthcentral",
+      winner: "republican",
+      members: [
+        { party: "republican", name: "Cruz", class: 1 },
+        { party: null, name: null, class: 2, c: false },
+      ],
       votes: {},
     });
-    expect(Seat.matchesPrimaryFilters(mixed, null, filters('republican'), null)).toBe(true);
-    expect(Seat.matchesPrimaryFilters(mixed, null, filters('democrat'), null)).toBe(false);
-    expect(Seat.matchesPrimaryFilters(mixed, null, filters('others'), null)).toBe(false);
+    expect(Seat.matchesPrimaryFilters(mixed, null, filters("republican"), null)).toBe(true);
+    expect(Seat.matchesPrimaryFilters(mixed, null, filters("democrat"), null)).toBe(false);
+    expect(Seat.matchesPrimaryFilters(mixed, null, filters("others"), null)).toBe(false);
     // Under the Republican filter only the called senator is counted.
-    const tally = ElectionSummary.summarize([mixed], 'all', { party: 'republican' });
+    const tally = ElectionSummary.summarize([mixed], "all", { party: "republican" });
     expect(tally.totalSeats).toBe(1);
     expect(tally.uncalled).toBe(0);
     // The state is called and solid, so it is drawn in the called member's party colour.
-    expect(mixed.fillKind()).toBe('called');
+    expect(mixed.fillKind()).toBe("called");
   });
 
   it('multi-member: an uncalled member is tallied as uncalled, never for a party or "others"', () => {
     state.currentElection = { multiMember: true };
     const seats = [
-      { seat: 'Alabama', members: [{ party: 'republican', up: 2026 }, { party: 'republican', up: 2028 }] },
-      { seat: 'Texas', members: [{ party: 'republican', up: 2028 }, { party: null, name: null, c: false, up: 2026 }] },
+      {
+        seat: "Alabama",
+        members: [
+          { party: "republican", up: 2026 },
+          { party: "republican", up: 2028 },
+        ],
+      },
+      {
+        seat: "Texas",
+        members: [
+          { party: "republican", up: 2028 },
+          { party: null, name: null, c: false, up: 2026 },
+        ],
+      },
     ];
-    const data = ElectionSummary.summarize(seats, 'all');
+    const data = ElectionSummary.summarize(seats, "all");
     expect(data.totalSeats).toBe(4);
     expect(data.uncalled).toBe(1);
-    expect(findParty(data, 'republican')).toMatchObject({ seats: 3 });
-    expect(findParty(data, 'others')).toBeUndefined();
+    expect(findParty(data, "republican")).toMatchObject({ seats: 3 });
+    expect(findParty(data, "others")).toBeUndefined();
     // The cycle filter applies as usual and counts the uncalled member in its tally.
-    const cycle = ElectionSummary.summarize(seats, 'all', { upcoming: '2026' });
+    const cycle = ElectionSummary.summarize(seats, "all", { upcoming: "2026" });
     expect(cycle.totalSeats).toBe(2);
     expect(cycle.uncalled).toBe(1);
     // A party filter matches no uncalled member, 'others' included.
-    expect(ElectionSummary.summarize(seats, 'all', { party: 'others' }).totalSeats).toBe(0);
-    const rep = ElectionSummary.summarize(seats, 'all', { party: 'republican' });
+    expect(ElectionSummary.summarize(seats, "all", { party: "others" }).totalSeats).toBe(0);
+    const rep = ElectionSummary.summarize(seats, "all", { party: "republican" });
     expect(rep.totalSeats).toBe(3);
     expect(rep.uncalled).toBe(0);
-    expect(new ElectionSummary(seats, 'Current Senate', 'all').text).toContain('1 uncalled');
+    expect(new ElectionSummary(seats, "Current Senate", "all").text).toContain("1 uncalled");
     // The same tally when the mixed state is recorded as called (w = the called member's party),
     // as the derived file does: it comes from the members, not from the state's flag.
-    const mixed = [{ ...seats[1], called: true, winner: 'republican' }];
-    expect(ElectionSummary.summarize(mixed, 'all')).toMatchObject({ uncalled: 1, totalSeats: 2 });
-    expect(findParty(ElectionSummary.summarize(mixed, 'all'), 'republican')).toMatchObject({ seats: 1 });
+    const mixed = [{ ...seats[1], called: true, winner: "republican" }];
+    expect(ElectionSummary.summarize(mixed, "all")).toMatchObject({ uncalled: 1, totalSeats: 2 });
+    expect(findParty(ElectionSummary.summarize(mixed, "all"), "republican")).toMatchObject({
+      seats: 1,
+    });
   });
 });
 
 // ─── ElectionSummary subtitle (majority vs hung) ──────────────────────────────
-describe('ElectionSummary subtitle text', () => {
+describe("ElectionSummary subtitle text", () => {
   // The file-level resetManifest hooks already zero the manifest, so labelParty returns
   // the raw party key here.
 
-  const seatsWon = (party, n) => Array.from({ length: n }, (_, i) => ({ seat: `${party}-${i}`, region: 'r', winner: party, votes: { [party]: 1 } }));
+  const seatsWon = (party, n) =>
+    Array.from({ length: n }, (_, i) => ({
+      seat: `${party}-${i}`,
+      region: "r",
+      winner: party,
+      votes: { [party]: 1 },
+    }));
 
   it('reports an overall majority with the standard "majority of N" figure', () => {
-    const summary = new ElectionSummary([...seatsWon('labour', 2), ...seatsWon('conservative', 1)], 'Test', 'all');
-    expect(summary.text).toBe('Test · labour majority: 1');
+    const summary = new ElectionSummary(
+      [...seatsWon("labour", 2), ...seatsWon("conservative", 1)],
+      "Test",
+      "all",
+    );
+    expect(summary.text).toBe("Test · labour majority: 1");
   });
 
-  it('reports a hung parliament when the leader is exactly on the half-line', () => {
-    const summary = new ElectionSummary([...seatsWon('labour', 2), ...seatsWon('conservative', 2)], 'Test', 'all');
-    expect(summary.text).toContain('Hung parliament');
-    expect(summary.text).toContain('with 2 seats');
+  it("reports a hung parliament when the leader is exactly on the half-line", () => {
+    const summary = new ElectionSummary(
+      [...seatsWon("labour", 2), ...seatsWon("conservative", 2)],
+      "Test",
+      "all",
+    );
+    expect(summary.text).toContain("Hung parliament");
+    expect(summary.text).toContain("with 2 seats");
   });
 
-  it('rounds the majority correctly for an odd-sized chamber', () => {
+  it("rounds the majority correctly for an odd-sized chamber", () => {
     // 4 of 5 seats: threshold 2.5, majority = round(2 × (4 − 2.5)) = 3.
-    const summary = new ElectionSummary([...seatsWon('labour', 4), ...seatsWon('conservative', 1)], 'Test', 'all');
-    expect(summary.text).toBe('Test · labour majority: 3');
+    const summary = new ElectionSummary(
+      [...seatsWon("labour", 4), ...seatsWon("conservative", 1)],
+      "Test",
+      "all",
+    );
+    expect(summary.text).toBe("Test · labour majority: 3");
   });
 
-  it('leaves text null when no election name is supplied', () => {
-    expect(new ElectionSummary(seatsWon('labour', 1), null, 'all').text).toBe(null);
+  it("leaves text null when no election name is supplied", () => {
+    expect(new ElectionSummary(seatsWon("labour", 1), null, "all").text).toBe(null);
   });
 });
 
 // ─── ElectionSummary.summarizeByRegion ───────────────────────────────────────
-describe('ElectionSummary.summarizeByRegion', () => {
-  it('aggregates seats and votes per region, falling back for missing region/winner', () => {
+describe("ElectionSummary.summarizeByRegion", () => {
+  it("aggregates seats and votes per region, falling back for missing region/winner", () => {
     const seats = [
-      { region: 'glasgow', winner: 'snp', votes: { snp: 600, labour: 400 } },
-      { region: 'glasgow', winner: 'labour', votes: { snp: 300, labour: 700 } },
-      { region: 'lothian', winner: 'snp', votes: { snp: 500 } },
+      { region: "glasgow", winner: "snp", votes: { snp: 600, labour: 400 } },
+      { region: "glasgow", winner: "labour", votes: { snp: 300, labour: 700 } },
+      { region: "lothian", winner: "snp", votes: { snp: 500 } },
       { region: undefined, winner: undefined, votes: {} },
     ];
     const byRegion = ElectionSummary.summarizeByRegion(seats);
-    expect(byRegion.get('glasgow')).toEqual({
+    expect(byRegion.get("glasgow")).toEqual({
       seatsByParty: { snp: 1, labour: 1 },
       votesByParty: { snp: 900, labour: 1100 },
     });
-    expect(byRegion.get('lothian').seatsByParty).toEqual({ snp: 1 });
-    expect(byRegion.get('unknown').seatsByParty).toEqual({ others: 1 });
+    expect(byRegion.get("lothian").seatsByParty).toEqual({ snp: 1 });
+    expect(byRegion.get("unknown").seatsByParty).toEqual({ others: 1 });
   });
 });
 
 // ─── buildRouteSearchParams ──────────────────────────────────────────────────
-describe('buildRouteSearchParams', () => {
+describe("buildRouteSearchParams", () => {
   let savedElection;
   let savedPredictModel;
 
   beforeEach(() => {
-    globalThis.window = { location: { search: '' } };
+    globalThis.window = { location: { search: "" } };
     savedElection = state.currentElection;
     savedPredictModel = state.predictModel;
-    state.currentElection = { id: 'e1' };
+    state.currentElection = { id: "e1" };
     state.predictModel = null;
   });
 
@@ -452,140 +628,177 @@ describe('buildRouteSearchParams', () => {
     state.predictModel = savedPredictModel;
   });
 
-  it('polltracker view drops the election and predict params', () => {
-    globalThis.window.location.search = '?election=e1&predict=abc';
-    const params = buildRouteSearchParams('polltracker');
-    expect(params.get('view')).toBe('polltracker');
-    expect(params.has('election')).toBe(false);
-    expect(params.has('predict')).toBe(false);
+  it("polltracker view drops the election and predict params", () => {
+    globalThis.window.location.search = "?election=e1&predict=abc";
+    const params = buildRouteSearchParams("polltracker");
+    expect(params.get("view")).toBe("polltracker");
+    expect(params.has("election")).toBe(false);
+    expect(params.has("predict")).toBe(false);
   });
 
-  it('election view sets the election id and removes any predict payload', () => {
-    globalThis.window.location.search = '?predict=stale';
-    const params = buildRouteSearchParams('election');
-    expect(params.get('view')).toBe('election');
-    expect(params.get('election')).toBe('e1');
-    expect(params.has('predict')).toBe(false);
+  it("election view sets the election id and removes any predict payload", () => {
+    globalThis.window.location.search = "?predict=stale";
+    const params = buildRouteSearchParams("election");
+    expect(params.get("view")).toBe("election");
+    expect(params.get("election")).toBe("e1");
+    expect(params.has("predict")).toBe(false);
   });
 
-  it('predict view with an empty serialized payload removes the predict param', () => {
-    state.predictModel = { serialize: () => '' };
-    globalThis.window.location.search = '?predict=old';
-    expect(buildRouteSearchParams('predict').has('predict')).toBe(false);
+  it("predict view with an empty serialized payload removes the predict param", () => {
+    state.predictModel = { serialize: () => "" };
+    globalThis.window.location.search = "?predict=old";
+    expect(buildRouteSearchParams("predict").has("predict")).toBe(false);
   });
 
-  it('predict view embeds the serialized payload when present', () => {
-    state.predictModel = { serialize: () => 'XYZ' };
-    expect(buildRouteSearchParams('predict').get('predict')).toBe('XYZ');
+  it("predict view embeds the serialized payload when present", () => {
+    state.predictModel = { serialize: () => "XYZ" };
+    expect(buildRouteSearchParams("predict").get("predict")).toBe("XYZ");
   });
 
-  it('omits the election param when currentElection has no id', () => {
+  it("omits the election param when currentElection has no id", () => {
     state.currentElection = { id: null };
-    expect(buildRouteSearchParams('election').has('election')).toBe(false);
+    expect(buildRouteSearchParams("election").has("election")).toBe(false);
   });
 });
 
 // ─── ElectionSummary.summarize electoral-vote tally (presidential maps) ───────
-describe('ElectionSummary.summarize electoral-vote tally', () => {
+describe("ElectionSummary.summarize electoral-vote tally", () => {
   const findParty = (data, key) => data.parties.find((p) => p.party === key);
   beforeEach(() => {
     // mapMode.tally === 'electoralVotes' is resolved via activeMapMode() → the current
     // election's mapId. Set both so summarize weights the tally by seat.ev.
-    manifest.init({ mapModes: { 22: { tally: 'electoralVotes' } } });
+    manifest.init({ mapModes: { 22: { tally: "electoralVotes" } } });
     state.currentElection = { mapId: 22 };
   });
-  afterEach(() => { state.currentElection = null; });
+  afterEach(() => {
+    state.currentElection = null;
+  });
 
-  it('weights the winner tally by electoral votes and totals EVs, not seat count', () => {
+  it("weights the winner tally by electoral votes and totals EVs, not seat count", () => {
     const seats = [
-      { seat: 'California', region: 'pacific', winner: 'democrat', votes: { democrat: 1 }, ev: 54 },
-      { seat: 'Texas', region: 'westsouthcentral', winner: 'republican', votes: { republican: 1 }, ev: 40 },
-      { seat: 'Florida', region: 'southatlantic', winner: 'republican', votes: { republican: 1 }, ev: 30 },
+      { seat: "California", region: "pacific", winner: "democrat", votes: { democrat: 1 }, ev: 54 },
+      {
+        seat: "Texas",
+        region: "westsouthcentral",
+        winner: "republican",
+        votes: { republican: 1 },
+        ev: 40,
+      },
+      {
+        seat: "Florida",
+        region: "southatlantic",
+        winner: "republican",
+        votes: { republican: 1 },
+        ev: 30,
+      },
     ];
-    const data = ElectionSummary.summarize(seats, 'all');
-    expect(findParty(data, 'democrat').seats).toBe(54);
-    expect(findParty(data, 'republican').seats).toBe(70); // 40 + 30, summed by EV
+    const data = ElectionSummary.summarize(seats, "all");
+    expect(findParty(data, "democrat").seats).toBe(54);
+    expect(findParty(data, "republican").seats).toBe(70); // 40 + 30, summed by EV
     expect(data.totalSeats).toBe(124); // total electoral votes, not the 3 states
   });
 
-  it('treats a seat with no ev as 0 rather than NaN', () => {
+  it("treats a seat with no ev as 0 rather than NaN", () => {
     const seats = [
-      { seat: 'California', region: 'pacific', winner: 'democrat', votes: { democrat: 1 }, ev: 54 },
-      { seat: 'Statewide', region: 'pacific', winner: 'democrat', votes: { democrat: 1 } }, // no ev
+      { seat: "California", region: "pacific", winner: "democrat", votes: { democrat: 1 }, ev: 54 },
+      { seat: "Statewide", region: "pacific", winner: "democrat", votes: { democrat: 1 } }, // no ev
     ];
-    const data = ElectionSummary.summarize(seats, 'all');
-    expect(findParty(data, 'democrat').seats).toBe(54);
+    const data = ElectionSummary.summarize(seats, "all");
+    expect(findParty(data, "democrat").seats).toBe(54);
     expect(data.totalSeats).toBe(54);
   });
 
-  it('excludes ME/NE congressional-district votes (they repeat the statewide total) but keeps their EV', () => {
+  it("excludes ME/NE congressional-district votes (they repeat the statewide total) but keeps their EV", () => {
     // Maine's statewide unit carries the full state popular vote; CD-1/CD-2 repeat it. All
     // three carry EV (2 + 1 + 1). The national vote must count Maine once, the EV all three.
     const seats = [
-      { seat: 'Maine', region: 'newengland', winner: 'democrat', votes: { democrat: 100, republican: 80 }, ev: 2 },
-      { seat: 'Maine CD-1', region: 'newengland', winner: 'democrat', votes: { democrat: 100, republican: 80 }, ev: 1 },
-      { seat: 'Maine CD-2', region: 'newengland', winner: 'democrat', votes: { democrat: 100, republican: 80 }, ev: 1 },
+      {
+        seat: "Maine",
+        region: "newengland",
+        winner: "democrat",
+        votes: { democrat: 100, republican: 80 },
+        ev: 2,
+      },
+      {
+        seat: "Maine CD-1",
+        region: "newengland",
+        winner: "democrat",
+        votes: { democrat: 100, republican: 80 },
+        ev: 1,
+      },
+      {
+        seat: "Maine CD-2",
+        region: "newengland",
+        winner: "democrat",
+        votes: { democrat: 100, republican: 80 },
+        ev: 1,
+      },
     ];
-    const data = ElectionSummary.summarize(seats, 'all');
+    const data = ElectionSummary.summarize(seats, "all");
     // Votes counted once (statewide only), not 3x.
-    expect(findParty(data, 'democrat').votes).toBe(100);
-    expect(findParty(data, 'republican').votes).toBe(80);
+    expect(findParty(data, "democrat").votes).toBe(100);
+    expect(findParty(data, "republican").votes).toBe(80);
     expect(data.totalVotes).toBe(180);
     // But every unit's EV still tallies to the winner (2 + 1 + 1).
-    expect(findParty(data, 'democrat').seats).toBe(4);
+    expect(findParty(data, "democrat").seats).toBe(4);
     expect(data.totalSeats).toBe(4);
   });
 });
 
 // ─── ElectionSummary subtitle: EV margin + hideMajority ───────────────────────
-describe('ElectionSummary subtitle (EV margin / hideMajority)', () => {
-  afterEach(() => { state.currentElection = null; });
-
-  it('shows the electoral-vote margin of victory in EV-tally mode', () => {
-    manifest.init({ mapModes: { 22: { tally: 'electoralVotes' } } });
-    state.currentElection = { mapId: 22 };
-    const seats = [
-      { seat: 'A', region: 'r', winner: 'republican', votes: { republican: 1 }, ev: 312 },
-      { seat: 'B', region: 'r', winner: 'democrat', votes: { democrat: 1 }, ev: 226 },
-    ];
-    const summary = new ElectionSummary(seats, '2024 Election', 'all');
-    expect(summary.text).toBe('2024 Election · republican margin of victory: 86');
+describe("ElectionSummary subtitle (EV margin / hideMajority)", () => {
+  afterEach(() => {
+    state.currentElection = null;
   });
 
-  it('shows just the election name when hideMajority and not multi-member', () => {
+  it("shows the electoral-vote margin of victory in EV-tally mode", () => {
+    manifest.init({ mapModes: { 22: { tally: "electoralVotes" } } });
+    state.currentElection = { mapId: 22 };
+    const seats = [
+      { seat: "A", region: "r", winner: "republican", votes: { republican: 1 }, ev: 312 },
+      { seat: "B", region: "r", winner: "democrat", votes: { democrat: 1 }, ev: 226 },
+    ];
+    const summary = new ElectionSummary(seats, "2024 Election", "all");
+    expect(summary.text).toBe("2024 Election · republican margin of victory: 86");
+  });
+
+  it("shows just the election name when hideMajority and not multi-member", () => {
     manifest.init({ mapModes: { 23: { hideMajority: true } } });
     state.currentElection = { mapId: 23 };
-    const seats = [{ seat: 'Texas', region: 'r', winner: 'republican', votes: { republican: 1 } }];
-    expect(new ElectionSummary(seats, '2024 Senate', 'all').text).toBe('2024 Senate');
+    const seats = [{ seat: "Texas", region: "r", winner: "republican", votes: { republican: 1 } }];
+    expect(new ElectionSummary(seats, "2024 Senate", "all").text).toBe("2024 Senate");
   });
 });
 
 // ─── seatComparisonHidden: aggregate-only comparison flag (US House) ───────────
-describe('seatComparisonHidden', () => {
-  afterEach(() => { state.currentElection = null; state.isReferendumType = false; });
+describe("seatComparisonHidden", () => {
+  afterEach(() => {
+    state.currentElection = null;
+    state.isReferendumType = false;
+  });
 
-  it('hides per-seat comparison when the mapMode sets seatComparison:false', () => {
+  it("hides per-seat comparison when the mapMode sets seatComparison:false", () => {
     manifest.init({ mapModes: { 21: { seatComparison: false } } });
     state.currentElection = { mapId: 21 };
     state.isReferendumType = false;
     expect(seatComparisonHidden()).toBe(true);
   });
 
-  it('shows per-seat comparison when the flag is absent (default)', () => {
+  it("shows per-seat comparison when the flag is absent (default)", () => {
     manifest.init({ mapModes: { 21: {} } });
     state.currentElection = { mapId: 21 };
     state.isReferendumType = false;
     expect(seatComparisonHidden()).toBe(false);
   });
 
-  it('shows per-seat comparison when the flag is explicitly true', () => {
+  it("shows per-seat comparison when the flag is explicitly true", () => {
     manifest.init({ mapModes: { 21: { seatComparison: true } } });
     state.currentElection = { mapId: 21 };
     state.isReferendumType = false;
     expect(seatComparisonHidden()).toBe(false);
   });
 
-  it('hides per-seat comparison for referendums regardless of the flag', () => {
+  it("hides per-seat comparison for referendums regardless of the flag", () => {
     manifest.init({ mapModes: { 21: { seatComparison: true } } });
     state.currentElection = { mapId: 21 };
     state.isReferendumType = true;
@@ -594,50 +807,86 @@ describe('seatComparisonHidden', () => {
 });
 
 // ─── Seat.fromRaw candidate-name decode (pf-results-v4 optional 3rd element) ───
-describe('Seat.fromRaw candidate-name decode', () => {
+describe("Seat.fromRaw candidate-name decode", () => {
   beforeEach(() => {
-    manifest.init({ parties: [
-      { id: 1, key: 'republican', name: 'Republican' },
-      { id: 2, key: 'democrat', name: 'Democratic' },
-    ] });
+    manifest.init({
+      parties: [
+        { id: 1, key: "republican", name: "Republican" },
+        { id: 2, key: "democrat", name: "Democratic" },
+      ],
+    });
   });
   afterEach(resetManifest);
 
-  it('decodes the optional 3rd element into candidate names by party key', () => {
-    const seat = Seat.fromRaw({ n: 'TX-01', r: 0, w: 1, p: [[1, 200, 'Jane Rep'], [2, 100, 'John Dem']] });
-    expect(seat.candidates).toEqual({ republican: 'Jane Rep', democrat: 'John Dem' });
+  it("decodes the optional 3rd element into candidate names by party key", () => {
+    const seat = Seat.fromRaw({
+      n: "TX-01",
+      r: 0,
+      w: 1,
+      p: [
+        [1, 200, "Jane Rep"],
+        [2, 100, "John Dem"],
+      ],
+    });
+    expect(seat.candidates).toEqual({ republican: "Jane Rep", democrat: "John Dem" });
   });
 
-  it('leaves candidates empty for 2-element legacy rows (no name)', () => {
-    const seat = Seat.fromRaw({ n: 'X', r: 0, w: 1, p: [[1, 200], [2, 100]] });
+  it("leaves candidates empty for 2-element legacy rows (no name)", () => {
+    const seat = Seat.fromRaw({
+      n: "X",
+      r: 0,
+      w: 1,
+      p: [
+        [1, 200],
+        [2, 100],
+      ],
+    });
     expect(seat.candidates).toEqual({});
   });
 
-  it('keeps the first candidate when a party key repeats', () => {
-    const seat = Seat.fromRaw({ n: 'X', r: 0, w: 1, p: [[1, 200, 'First'], [1, 50, 'Second']] });
-    expect(seat.candidates).toEqual({ republican: 'First' });
+  it("keeps the first candidate when a party key repeats", () => {
+    const seat = Seat.fromRaw({
+      n: "X",
+      r: 0,
+      w: 1,
+      p: [
+        [1, 200, "First"],
+        [1, 50, "Second"],
+      ],
+    });
+    expect(seat.candidates).toEqual({ republican: "First" });
   });
 });
 
-describe('AppState.shouldShowCountdown', () => {
+describe("AppState.shouldShowCountdown", () => {
   let saved;
 
   beforeEach(() => {
     manifest.init({
-      parties: [], mapModes: {}, elections: [], files: {},
+      parties: [],
+      mapModes: {},
+      elections: [],
+      files: {},
       parliamentFeatures: {
         // Holyrood has a confirmed upcoming date; Westminster's is not yet set (null).
-        holyrood: { nextElectionDate: '2031-05-01', nextElectionLabel: 'Holyrood election' },
-        westminster: { nextElectionDate: null, nextElectionLabel: 'UK general election' },
+        holyrood: { nextElectionDate: "2031-05-01", nextElectionLabel: "Holyrood election" },
+        westminster: { nextElectionDate: null, nextElectionLabel: "UK general election" },
         // The US chambers use a full timestamp with an offset; the presidency omits the key.
-        us_senate: { nextElectionDate: '2026-11-03T00:00:00-05:00', nextElectionLabel: 'US Senate election' },
-        us_presidential: { nextElectionLabel: 'US presidential election' },
+        us_senate: {
+          nextElectionDate: "2026-11-03T00:00:00-05:00",
+          nextElectionLabel: "US Senate election",
+        },
+        us_presidential: { nextElectionLabel: "US presidential election" },
       },
     });
-    saved = { view: state.view, parliament: state.currentParliament, election: state.currentElection };
-    state.currentParliament = 'holyrood';
-    state.view = 'predict';
-    state.currentElection = { id: 'e1', model: true };
+    saved = {
+      view: state.view,
+      parliament: state.currentParliament,
+      election: state.currentElection,
+    };
+    state.currentParliament = "holyrood";
+    state.view = "predict";
+    state.currentElection = { id: "e1", model: true };
   });
 
   afterEach(() => {
@@ -646,45 +895,45 @@ describe('AppState.shouldShowCountdown', () => {
     state.currentElection = saved.election;
   });
 
-  it('shows on a parliament predict view when an upcoming date is configured', () => {
+  it("shows on a parliament predict view when an upcoming date is configured", () => {
     expect(state.shouldShowCountdown()).toBe(true);
   });
 
-  it('shows when viewing the prediction election (model) outside predict mode', () => {
-    state.view = 'election';
+  it("shows when viewing the prediction election (model) outside predict mode", () => {
+    state.view = "election";
     expect(state.shouldShowCountdown()).toBe(true);
   });
 
-  it('hides on a non-prediction election view', () => {
-    state.view = 'election';
-    state.currentElection = { id: 'e1', model: false };
+  it("hides on a non-prediction election view", () => {
+    state.view = "election";
+    state.currentElection = { id: "e1", model: false };
     expect(state.shouldShowCountdown()).toBe(false);
   });
 
-  it('hides in poll tracker view even for a prediction', () => {
-    state.view = 'polltracker';
+  it("hides in poll tracker view even for a prediction", () => {
+    state.view = "polltracker";
     expect(state.shouldShowCountdown()).toBe(false);
   });
 
-  it('hides when the current parliament has no upcoming date set', () => {
-    state.currentParliament = 'westminster';
+  it("hides when the current parliament has no upcoming date set", () => {
+    state.currentParliament = "westminster";
     expect(state.shouldShowCountdown()).toBe(false);
   });
 
-  it('shows for a US chamber prediction configured with a timestamp date', () => {
-    state.currentParliament = 'us_senate';
-    state.view = 'election';
+  it("shows for a US chamber prediction configured with a timestamp date", () => {
+    state.currentParliament = "us_senate";
+    state.view = "election";
     expect(state.shouldShowCountdown()).toBe(true);
   });
 
-  it('hides when the current parliament has no nextElectionDate key at all', () => {
-    state.currentParliament = 'us_presidential';
+  it("hides when the current parliament has no nextElectionDate key at all", () => {
+    state.currentParliament = "us_presidential";
     expect(state.shouldShowCountdown()).toBe(false);
   });
 });
 
 // ─── AppState.init: parliament resolution ────────────────────────────────────
-describe('AppState.init parliament resolution', () => {
+describe("AppState.init parliament resolution", () => {
   let saved;
 
   beforeEach(() => {
@@ -692,12 +941,12 @@ describe('AppState.init parliament resolution', () => {
     // The default election is deliberately not elections[0], so a fallback that picked the
     // first election instead of the default would fail.
     manifest.init({
-      mapModes: { 1: { voteTotalsViews: [{ id: 'all' }] } },
+      mapModes: { 1: { voteTotalsViews: [{ id: "all" }] } },
       elections: [
-        { id: 'house-2024', parliament: 'us_house', mapId: 1 },
-        { id: 'senate-2024', parliament: 'us_senate', mapId: 1 },
+        { id: "house-2024", parliament: "us_house", mapId: 1 },
+        { id: "senate-2024", parliament: "us_senate", mapId: 1 },
       ],
-      defaultElection: 'senate-2024',
+      defaultElection: "senate-2024",
     });
     saved = {
       view: state.view,
@@ -723,48 +972,60 @@ describe('AppState.init parliament resolution', () => {
   });
 
   it("falls back to the default parliament for another page's parliament", async () => {
-    await state.init('election', 'westminster', null);
-    expect(state.currentParliament).toBe('us_senate');
-    expect(state.currentElection.id).toBe('senate-2024');
+    await state.init("election", "westminster", null);
+    expect(state.currentParliament).toBe("us_senate");
+    expect(state.currentElection.id).toBe("senate-2024");
   });
 
-  it('falls back to the default parliament for an unknown parliament key', async () => {
-    await state.init('election', 'nonexistent', null);
-    expect(state.currentParliament).toBe('us_senate');
-    expect(state.currentElection.id).toBe('senate-2024');
+  it("falls back to the default parliament for an unknown parliament key", async () => {
+    await state.init("election", "nonexistent", null);
+    expect(state.currentParliament).toBe("us_senate");
+    expect(state.currentElection.id).toBe("senate-2024");
   });
 
-  it('keeps a valid non-default parliament', async () => {
-    await state.init('election', 'us_house', null);
-    expect(state.currentParliament).toBe('us_house');
-    expect(state.currentElection.id).toBe('house-2024');
+  it("keeps a valid non-default parliament", async () => {
+    await state.init("election", "us_house", null);
+    expect(state.currentParliament).toBe("us_house");
+    expect(state.currentElection.id).toBe("house-2024");
   });
 });
 
 // ─── AppState.setupMapData: Senate member cycles ─────────────────────────────
-describe('AppState member cycle resolution (senate classes + specials)', () => {
+describe("AppState member cycle resolution (senate classes + specials)", () => {
   let saved;
 
   // Ohio holds a Class-3 special in 2026 (the manifest entry); Alabama is an ordinary state
   // whose Class-3 seat stays on the regular 2028 cycle.
   const buildSeats = () => [
-    new Seat({ seat: 'Ohio', region: 'east north central', winner: 'republican', members: [
-      { party: 'republican', name: 'Husted', class: 3 },
-      { party: 'republican', name: 'Moreno', class: 1 },
-    ] }),
-    new Seat({ seat: 'Alabama', region: 'east south central', winner: 'republican', members: [
-      { party: 'republican', name: 'Britt', class: 3 },
-      { party: 'republican', name: 'Tuberville', class: 2 },
-    ] }),
+    new Seat({
+      seat: "Ohio",
+      region: "east north central",
+      winner: "republican",
+      members: [
+        { party: "republican", name: "Husted", class: 3 },
+        { party: "republican", name: "Moreno", class: 1 },
+      ],
+    }),
+    new Seat({
+      seat: "Alabama",
+      region: "east south central",
+      winner: "republican",
+      members: [
+        { party: "republican", name: "Britt", class: 3 },
+        { party: "republican", name: "Tuberville", class: 2 },
+      ],
+    }),
   ];
 
   function configure(specials, { overrides, nextElectionYear } = {}) {
     manifest.init({
-      parties: [], elections: [], files: {},
+      parties: [],
+      elections: [],
+      files: {},
       parliamentFeatures: nextElectionYear ? { us_senate_test: { nextElectionYear } } : {},
       mapModes: {
         23: {
-          name: 'us-senate-2024',
+          name: "us-senate-2024",
           regions: [],
           senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 },
           ...(specials ? { senateSpecialElections: specials } : {}),
@@ -772,8 +1033,8 @@ describe('AppState member cycle resolution (senate classes + specials)', () => {
         },
       },
     });
-    state.currentParliament = 'us_senate_test';
-    state.currentElection = { id: 'current-senate', mapId: 23, multiMember: true };
+    state.currentParliament = "us_senate_test";
+    state.currentElection = { id: "current-senate", mapId: 23, multiMember: true };
     state.electionData = { currentSeats: buildSeats() };
     state.comparisonElectionData = null;
     state.setupMapData();
@@ -786,8 +1047,10 @@ describe('AppState member cycle resolution (senate classes + specials)', () => {
 
   beforeEach(() => {
     saved = {
-      election: state.currentElection, data: state.electionData,
-      comparison: state.comparisonElectionData, parliament: state.currentParliament,
+      election: state.currentElection,
+      data: state.electionData,
+      comparison: state.comparisonElectionData,
+      parliament: state.currentParliament,
     };
   });
 
@@ -798,102 +1061,108 @@ describe('AppState member cycle resolution (senate classes + specials)', () => {
     state.comparisonElectionData = saved.comparison;
   });
 
-  it('stamps each member with its class cycle year when there are no specials', () => {
+  it("stamps each member with its class cycle year when there are no specials", () => {
     const seats = configure(null);
-    expect(upYear(seats, 'Ohio', 'Husted')).toBe(2028);
-    expect(upYear(seats, 'Ohio', 'Moreno')).toBe(2030);
-    expect(upYear(seats, 'Alabama', 'Tuberville')).toBe(2026);
+    expect(upYear(seats, "Ohio", "Husted")).toBe(2028);
+    expect(upYear(seats, "Ohio", "Moreno")).toBe(2030);
+    expect(upYear(seats, "Alabama", "Tuberville")).toBe(2026);
   });
 
   it("a special overrides only that seat's matching class — Husted is up in 2026", () => {
     const seats = configure([
-      { seat: 'Ohio', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
+      { seat: "Ohio", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
     ]);
-    expect(upYear(seats, 'Ohio', 'Husted')).toBe(2026);
+    expect(upYear(seats, "Ohio", "Husted")).toBe(2026);
     // The state's other class, and the same class elsewhere, keep the regular cycle.
-    expect(upYear(seats, 'Ohio', 'Moreno')).toBe(2030);
-    expect(upYear(seats, 'Alabama', 'Britt')).toBe(2028);
+    expect(upYear(seats, "Ohio", "Moreno")).toBe(2030);
+    expect(upYear(seats, "Alabama", "Britt")).toBe(2028);
   });
 
-  it('ignores a special naming a seat or class that is not in the chamber', () => {
+  it("ignores a special naming a seat or class that is not in the chamber", () => {
     const seats = configure([
-      { seat: 'Ohio', class: 2, year: 2026, baselineElectionId: '2022-us-senate' },
-      { seat: 'Narnia', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
+      { seat: "Ohio", class: 2, year: 2026, baselineElectionId: "2022-us-senate" },
+      { seat: "Narnia", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
     ]);
-    expect(upYear(seats, 'Ohio', 'Husted')).toBe(2028);
-    expect(upYear(seats, 'Ohio', 'Moreno')).toBe(2030);
+    expect(upYear(seats, "Ohio", "Husted")).toBe(2028);
+    expect(upYear(seats, "Ohio", "Moreno")).toBe(2030);
   });
 
   /** The seat popup's "last · up" years for a member, by state + senator name. */
   const termYears = (seats, seatName, memberName) =>
-    Seat.memberTermYears(seats.find((s) => s.seat === seatName).members.find((m) => m.name === memberName));
+    Seat.memberTermYears(
+      seats.find((s) => s.seat === seatName).members.find((m) => m.name === memberName),
+    );
 
   it("a special's member was last contested at its baseline election — Husted shows 2022", () => {
     const seats = configure([
-      { seat: 'Ohio', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
+      { seat: "Ohio", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
     ]);
-    const husted = seats.find((s) => s.seat === 'Ohio').members.find((m) => m.name === 'Husted');
+    const husted = seats.find((s) => s.seat === "Ohio").members.find((m) => m.name === "Husted");
     expect(husted.last).toBe(2022);
     // Not the six-year-term guess (2026 − 6 = 2020) the popup applies to a regular member.
-    expect(termYears(seats, 'Ohio', 'Husted')).toEqual({ last: 2022, up: 2026 });
+    expect(termYears(seats, "Ohio", "Husted")).toEqual({ last: 2022, up: 2026 });
   });
 
-  it('a regular class member still shows last = up − 6, with no `last` stamped', () => {
+  it("a regular class member still shows last = up − 6, with no `last` stamped", () => {
     const seats = configure([
-      { seat: 'Ohio', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
+      { seat: "Ohio", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
     ]);
-    const moreno = seats.find((s) => s.seat === 'Ohio').members.find((m) => m.name === 'Moreno');
+    const moreno = seats.find((s) => s.seat === "Ohio").members.find((m) => m.name === "Moreno");
     expect(moreno.last).toBeUndefined();
-    expect(termYears(seats, 'Ohio', 'Moreno')).toEqual({ last: 2024, up: 2030 });
-    expect(termYears(seats, 'Alabama', 'Britt')).toEqual({ last: 2022, up: 2028 });
+    expect(termYears(seats, "Ohio", "Moreno")).toEqual({ last: 2024, up: 2030 });
+    expect(termYears(seats, "Alabama", "Britt")).toEqual({ last: 2022, up: 2028 });
   });
 
   it("a baseline override stamps `last` on the member up next, leaving `up` on the class cycle", () => {
     const seats = configure(null, {
-      overrides: [{ seat: 'Ohio', class: 3, baselineElectionId: '2026-us-senate' }],
+      overrides: [{ seat: "Ohio", class: 3, baselineElectionId: "2026-us-senate" }],
       nextElectionYear: 2028,
     });
     // Husted (Class 3) was filled at the 2026 special: next up 2028, last contested 2026.
-    expect(upYear(seats, 'Ohio', 'Husted')).toBe(2028);
-    expect(termYears(seats, 'Ohio', 'Husted')).toEqual({ last: 2026, up: 2028 });
+    expect(upYear(seats, "Ohio", "Husted")).toBe(2028);
+    expect(termYears(seats, "Ohio", "Husted")).toEqual({ last: 2026, up: 2028 });
     // Ohio's other member and other states keep the six-year-term rule.
-    expect(termYears(seats, 'Ohio', 'Moreno')).toEqual({ last: 2024, up: 2030 });
-    expect(termYears(seats, 'Alabama', 'Britt')).toEqual({ last: 2022, up: 2028 });
+    expect(termYears(seats, "Ohio", "Moreno")).toEqual({ last: 2024, up: 2030 });
+    expect(termYears(seats, "Alabama", "Britt")).toEqual({ last: 2022, up: 2028 });
   });
 
   it("a baseline override does not stamp the same state's member of another class", () => {
     const seats = configure(null, {
-      overrides: [{ seat: 'Ohio', class: 1, baselineElectionId: '2026-us-senate' }],
+      overrides: [{ seat: "Ohio", class: 1, baselineElectionId: "2026-us-senate" }],
       nextElectionYear: 2028,
     });
     // Moreno is Class 1 (next up 2030, not the 2028 cycle) and Husted is Class 3: neither matches.
-    const ohio = seats.find((s) => s.seat === 'Ohio');
-    expect(ohio.members.find((m) => m.name === 'Husted').last).toBeUndefined();
-    expect(ohio.members.find((m) => m.name === 'Moreno').last).toBeUndefined();
+    const ohio = seats.find((s) => s.seat === "Ohio");
+    expect(ohio.members.find((m) => m.name === "Husted").last).toBeUndefined();
+    expect(ohio.members.find((m) => m.name === "Moreno").last).toBeUndefined();
   });
 
-  it('a baseline override does not stamp a member who is not up in the next election year', () => {
+  it("a baseline override does not stamp a member who is not up in the next election year", () => {
     const seats = configure(null, {
-      overrides: [{ seat: 'Ohio', class: 3, baselineElectionId: '2026-us-senate' }],
+      overrides: [{ seat: "Ohio", class: 3, baselineElectionId: "2026-us-senate" }],
       nextElectionYear: 2026,
     });
-    expect(seats.find((s) => s.seat === 'Ohio').members.find((m) => m.name === 'Husted').last).toBeUndefined();
+    expect(
+      seats.find((s) => s.seat === "Ohio").members.find((m) => m.name === "Husted").last,
+    ).toBeUndefined();
   });
 
-  it('a special whose baseline id has no year falls back to up − 6', () => {
-    const seats = configure([{ seat: 'Ohio', class: 3, year: 2026, baselineElectionId: 'current-senate' }]);
-    expect(termYears(seats, 'Ohio', 'Husted')).toEqual({ last: 2020, up: 2026 });
+  it("a special whose baseline id has no year falls back to up − 6", () => {
+    const seats = configure([
+      { seat: "Ohio", class: 3, year: 2026, baselineElectionId: "current-senate" },
+    ]);
+    expect(termYears(seats, "Ohio", "Husted")).toEqual({ last: 2020, up: 2026 });
   });
 });
 
 // ─── Seat.memberTermYears ────────────────────────────────────────────────────
-describe('Seat.memberTermYears', () => {
-  it('is null when no cycle year was resolved, so the popup shows just the name', () => {
-    expect(Seat.memberTermYears({ name: 'X' })).toBeNull();
+describe("Seat.memberTermYears", () => {
+  it("is null when no cycle year was resolved, so the popup shows just the name", () => {
+    expect(Seat.memberTermYears({ name: "X" })).toBeNull();
     expect(Seat.memberTermYears(null)).toBeNull();
   });
 
-  it('prefers a stamped `last` over the six-year-term guess', () => {
+  it("prefers a stamped `last` over the six-year-term guess", () => {
     expect(Seat.memberTermYears({ up: 2026, last: 2022 })).toEqual({ last: 2022, up: 2026 });
     expect(Seat.memberTermYears({ up: 2026 })).toEqual({ last: 2020, up: 2026 });
   });

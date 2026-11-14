@@ -11,7 +11,10 @@ import {
 } from "../dom.js";
 import { buildSenateChamber, regularSenateClass } from "./senate-chamber.js";
 import { loadSenateSpecialBaseline } from "./senate-baseline.js";
-import { renderSenateForecastComparison, renderSenateForecastTabs } from "./senate-forecast-view.js";
+import {
+  renderSenateForecastComparison,
+  renderSenateForecastTabs,
+} from "./senate-forecast-view.js";
 
 /**
  * The election year a saved Senate forecast projects. The export labels each forecast by the
@@ -38,8 +41,12 @@ export async function activateSenateForecastView() {
   renderSenateForecastTabs();
   renderSenateForecastComparison();
   const config = manifest.parliamentConfig(state.currentParliament);
-  if (state.view !== "election" || config.predict?.model !== "senate"
-      || !state.currentElection?.model) return;
+  if (
+    state.view !== "election" ||
+    config.predict?.model !== "senate" ||
+    !state.currentElection?.model
+  )
+    return;
   const forecastYear = forecastCycleYear(state.currentElection, config);
 
   const forecastData = state.electionData;
@@ -47,16 +54,24 @@ export async function activateSenateForecastView() {
   const election = state.currentElection;
   const parliament = state.currentParliament;
   let displayedData = forecastData;
-  const isCurrent = () => state.currentElection === election && state.view === "election"
-    && state.currentParliament === parliament && state.electionData === displayedData;
+  const isCurrent = () =>
+    state.currentElection === election &&
+    state.view === "election" &&
+    state.currentParliament === parliament &&
+    state.electionData === displayedData;
   const forecastKeys = new Set(forecastData.currentSeats.map((seat) => seatLookupKey(seat.seat)));
-  const specials = (activeMapMode().senateSpecialElections || [])
-    .filter((special) => Number(special.year) === forecastYear
-      && forecastKeys.has(seatLookupKey(special.seat)));
+  const specials = (activeMapMode().senateSpecialElections || []).filter(
+    (special) =>
+      Number(special.year) === forecastYear && forecastKeys.has(seatLookupKey(special.seat)),
+  );
 
   // Suppress partial deltas while additional per-seat results are still loading.
   state.comparisonElectionData = null;
-  renderSenateForecastComparison({ activeTab: "seatsup", comparisonAvailable: false, loading: true });
+  renderSenateForecastComparison({
+    activeTab: "seatsup",
+    comparisonAvailable: false,
+    loading: true,
+  });
   refreshForecast();
   if (!regularComparison) {
     const regularElection = manifest.getElectionFromId(election.comparisonElectionId);
@@ -74,7 +89,12 @@ export async function activateSenateForecastView() {
   }
   const specialSeats = await loadSenateSpecialBaseline(specials);
   if (!isCurrent()) return;
-  const comparisonData = completeForecastComparison(forecastKeys, regularComparison, specials, specialSeats);
+  const comparisonData = completeForecastComparison(
+    forecastKeys,
+    regularComparison,
+    specials,
+    specialSeats,
+  );
   state.comparisonElectionData = comparisonData;
   renderSenateForecastComparison({ activeTab: "seatsup", comparisonAvailable: !!comparisonData });
   refreshForecast();
@@ -95,13 +115,13 @@ export async function activateSenateForecastView() {
   if (!chamberSeats.length) return;
 
   const specialClassBySeat = new Map(
-    specials
-      .map((special) => [seatLookupKey(special.seat), Number(special.class) || 2]),
+    specials.map((special) => [seatLookupKey(special.seat), Number(special.class) || 2]),
   );
   // The seats-up tab names the forecast's own cycle, not the parliament's next election.
   const seatsUpTab = { key: "seatsup", label: `Seats up (${forecastYear})` };
-  const tabs = (config.predict.tabs || [seatsUpTab, { key: "chamber", label: "Full Senate" }])
-    .map((tab) => (tab.key === "seatsup" ? { ...tab, label: seatsUpTab.label } : tab));
+  const tabs = (config.predict.tabs || [seatsUpTab, { key: "chamber", label: "Full Senate" }]).map(
+    (tab) => (tab.key === "seatsup" ? { ...tab, label: seatsUpTab.label } : tab),
+  );
   const regularClass = regularSenateClass(forecastYear);
   let activeTab = "seatsup";
 
@@ -115,7 +135,12 @@ export async function activateSenateForecastView() {
     const fullChamber = key === "chamber";
     election.multiMember = fullChamber;
     if (fullChamber) {
-      const seats = buildSenateChamber(chamberSeats, forecastData.currentSeats, specialClassBySeat, regularClass);
+      const seats = buildSenateChamber(
+        chamberSeats,
+        forecastData.currentSeats,
+        specialClassBySeat,
+        regularClass,
+      );
       state.setElectionDataFromSeats(seats, forecastData.electionName);
       state.comparisonElectionData = ElectionData.fromSeats(chamberSeats);
     } else {
@@ -123,7 +148,10 @@ export async function activateSenateForecastView() {
       state.comparisonElectionData = comparisonData;
     }
     displayedData = state.electionData;
-    renderSenateForecastComparison({ activeTab, comparisonAvailable: !!state.comparisonElectionData });
+    renderSenateForecastComparison({
+      activeTab,
+      comparisonAvailable: !!state.comparisonElectionData,
+    });
     refreshForecast();
     renderTabs();
   }
@@ -150,9 +178,14 @@ function completeForecastComparison(forecastKeys, regularComparison, specials, s
     const seat = specialKeys.has(key)
       ? specialByKey.get(key)
       : regularComparison?.seatsByKey.get(key);
-    if (!seat?.winner || !Number.isFinite(seat.turnout) || seat.turnout <= 0
-        || !(seat.votes[seat.winner] > 0)
-        || Object.values(seat.votes).some((votes) => !Number.isFinite(votes))) return null;
+    if (
+      !seat?.winner ||
+      !Number.isFinite(seat.turnout) ||
+      seat.turnout <= 0 ||
+      !(seat.votes[seat.winner] > 0) ||
+      Object.values(seat.votes).some((votes) => !Number.isFinite(votes))
+    )
+      return null;
     seats.push(seat);
   }
   return ElectionData.fromSeats(seats);

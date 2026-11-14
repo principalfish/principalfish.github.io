@@ -8,7 +8,8 @@ import { createLocalFetch as confinedFetch } from "./local-fetch.mjs";
 import { loadSample, validateSample, validateSampleAnswers } from "./sample.mjs";
 export { loadSample, validateSample, validateSampleAnswers } from "./sample.mjs";
 
-export const createLocalFetch = (dataDir = DATA_DIR, fallback = globalThis.fetch) => confinedFetch(dataDir, fallback);
+export const createLocalFetch = (dataDir = DATA_DIR, fallback = globalThis.fetch) =>
+  confinedFetch(dataDir, fallback);
 
 export const COMPONENT_DIR = fileURLToPath(new URL("../", import.meta.url));
 export const DATA_DIR = path.join(COMPONENT_DIR, "data");
@@ -29,21 +30,31 @@ export async function withLocalFetch(callback, dataDir = DATA_DIR) {
 }
 
 function replaceOnce(source, marker, replacement, label) {
-  if (source.split(marker).length !== 2) throw new Error(`Benchmark observer guard failed: ${label}`);
+  if (source.split(marker).length !== 2)
+    throw new Error(`Benchmark observer guard failed: ${label}`);
   return source.replace(marker, replacement);
 }
 
 export function observeDailySource(source) {
-  let result = replaceOnce(source,
-    '      turn.done = reply.continuation.done;',
-    '      benchmarkCapture.lastResult = reply.result;\n      turn.done = reply.continuation.done;', "engine final result");
-  result = replaceOnce(result,
-    '        turn.moves.push(reply.move);',
-    '        reply.suggest.__benchmarkBefore = reply.before;\n        turn.moves.push(reply.move);', "engine before state");
+  let result = replaceOnce(
+    source,
+    "      turn.done = reply.continuation.done;",
+    "      benchmarkCapture.lastResult = reply.result;\n      turn.done = reply.continuation.done;",
+    "engine final result",
+  );
+  result = replaceOnce(
+    result,
+    "        turn.moves.push(reply.move);",
+    "        reply.suggest.__benchmarkBefore = reply.before;\n        turn.moves.push(reply.move);",
+    "engine before state",
+  );
   // The real renderer is called only when a move exists. Observe empty terminals too.
-  result = replaceOnce(result, "setupScrub(turn.moves.length);",
+  result = replaceOnce(
+    result,
+    "setupScrub(turn.moves.length);",
     "if (!turn.moves.length) renderAutoSolveTable(uiEls.moveTableEl, lastAutoSolve, activeIdx, jumpToMove);\n    setupScrub(turn.moves.length);",
-    "empty terminal publication");
+    "empty terminal publication",
+  );
   return `import { capture as benchmarkCapture } from "benchmark:capture";\n${result}`;
 }
 
@@ -71,25 +82,45 @@ export { STRATEGY } from ${JSON.stringify(path.join(SOLVER_DIR, "strategy.js"))}
 export { capture } from "benchmark:capture";`,
       resolveDir: SOLVER_DIR,
     },
-    bundle: true, write: false, format: "esm", platform: "node", logLevel: "silent",
-    define: { "import.meta.url": JSON.stringify(pathToFileURL(path.join(SOLVER_DIR, "data.js")).href) },
-    plugins: [{
-      name: "benchmark-observation",
-      setup(builder) {
-        builder.onResolve({ filter: /^benchmark:/ }, (args) => ({ path: args.path, namespace: "benchmark" }));
-        builder.onLoad({ filter: /.*/, namespace: "benchmark" }, (args) => {
-          if (args.path === "benchmark:capture") return { contents: CAPTURE_SOURCE };
-          throw new Error(`Unknown benchmark module: ${args.path}`);
-        });
-        builder.onLoad({ filter: /[/\\]render\.js$/ }, async () => ({ contents: RENDER_SOURCE, resolveDir: SOLVER_DIR }));
-        builder.onLoad({ filter: /[/\\](daily-mode|manual-mode|engine|analysis|compute-service|data|solver|suggest|strategy)\.js$/ }, async (args) => {
-          const basename = path.basename(args.path);
-          let contents = replacements[basename] ?? await readFile(args.path, "utf8");
-          if (basename === "daily-mode.js" && observe) contents = observeDailySource(contents);
-          return { contents, resolveDir: SOLVER_DIR };
-        });
+    bundle: true,
+    write: false,
+    format: "esm",
+    platform: "node",
+    logLevel: "silent",
+    define: {
+      "import.meta.url": JSON.stringify(pathToFileURL(path.join(SOLVER_DIR, "data.js")).href),
+    },
+    plugins: [
+      {
+        name: "benchmark-observation",
+        setup(builder) {
+          builder.onResolve({ filter: /^benchmark:/ }, (args) => ({
+            path: args.path,
+            namespace: "benchmark",
+          }));
+          builder.onLoad({ filter: /.*/, namespace: "benchmark" }, (args) => {
+            if (args.path === "benchmark:capture") return { contents: CAPTURE_SOURCE };
+            throw new Error(`Unknown benchmark module: ${args.path}`);
+          });
+          builder.onLoad({ filter: /[/\\]render\.js$/ }, async () => ({
+            contents: RENDER_SOURCE,
+            resolveDir: SOLVER_DIR,
+          }));
+          builder.onLoad(
+            {
+              filter:
+                /[/\\](daily-mode|manual-mode|engine|analysis|compute-service|data|solver|suggest|strategy)\.js$/,
+            },
+            async (args) => {
+              const basename = path.basename(args.path);
+              let contents = replacements[basename] ?? (await readFile(args.path, "utf8"));
+              if (basename === "daily-mode.js" && observe) contents = observeDailySource(contents);
+              return { contents, resolveDir: SOLVER_DIR };
+            },
+          );
+        },
       },
-    }],
+    ],
   });
   // A fragment gives each harness independent module state without a filesystem output.
   const url = `data:text/javascript;base64,${Buffer.from(output.outputFiles[0].text).toString("base64")}#${crypto.randomUUID()}`;
@@ -100,25 +131,47 @@ export function createUIDoubles(expanded) {
   let slots = Array.from({ length: 5 }, () => ({ guesses: [] }));
   let clueGrid = null;
   const manual = {
-    reset() { slots = Array.from({ length: 5 }, () => ({ guesses: [] })); },
-    addGuess(board, word, colors) { slots[board].guesses.push({ word, colors }); },
-    getSlots() { return slots; },
+    reset() {
+      slots = Array.from({ length: 5 }, () => ({ guesses: [] }));
+    },
+    addGuess(board, word, colors) {
+      slots[board].guesses.push({ word, colors });
+    },
+    getSlots() {
+      return slots;
+    },
   };
   const clueUI = {
-    setClueGrid(value) { clueGrid = value; },
-    getClueGrid() { return clueGrid; },
+    setClueGrid(value) {
+      clueGrid = value;
+    },
+    getClueGrid() {
+      return clueGrid;
+    },
     setResults() {},
   };
   const uiEls = {
-    slotsEl: { innerHTML: "" }, suggestEl: { innerHTML: "" }, moveTableEl: { innerHTML: "" },
-    statusEl: { textContent: "" }, expandedToggle: { checked: expanded },
-    sliderEl: {}, solveToEndBtn: {}, nextTurnBtn: {}, prevBtn: {}, nextBtn: {},
+    slotsEl: { innerHTML: "" },
+    suggestEl: { innerHTML: "" },
+    moveTableEl: { innerHTML: "" },
+    statusEl: { textContent: "" },
+    expandedToggle: { checked: expanded },
+    sliderEl: {},
+    solveToEndBtn: {},
+    nextTurnBtn: {},
+    prevBtn: {},
+    nextBtn: {},
   };
   return { manual, clueUI, uiEls };
 }
 
-export async function driveController(controller, capture, { maxTurns = 80, context = "game", now = () => performance.now() } = {}) {
-  if (!Number.isInteger(maxTurns) || maxTurns < 1 || maxTurns > 80) throw new Error("Invalid turn bound");
+export async function driveController(
+  controller,
+  capture,
+  { maxTurns = 80, context = "game", now = () => performance.now() } = {},
+) {
+  if (!Number.isInteger(maxTurns) || maxTurns < 1 || maxTurns > 80)
+    throw new Error("Invalid turn bound");
   const turnMs = [];
   const turnRoundtripMs = [];
   let previousMoves = 0;
@@ -137,15 +190,24 @@ export async function driveController(controller, capture, { maxTurns = 80, cont
     turnMs.push(timing?.computeMs ?? elapsed);
     turnRoundtripMs.push(timing?.roundtripMs ?? null);
     const publication = capture.publication;
-    if (!publication?.game || !Array.isArray(publication.moves)) throw new Error(`${context}: missing game publication at turn ${i}`);
+    if (!publication?.game || !Array.isArray(publication.moves))
+      throw new Error(`${context}: missing game publication at turn ${i}`);
     if (capture.lastResult !== null) finalResult = capture.lastResult;
     const count = publication.moves.length;
-    if (count < previousMoves || count > previousMoves + 1) throw new Error(`${context}: inconsistent move progression at turn ${i}`);
+    if (count < previousMoves || count > previousMoves + 1)
+      throw new Error(`${context}: inconsistent move progression at turn ${i}`);
     if (!publication.game.inProgress) {
       if (!finalResult) throw new Error(`${context}: missing final solver result`);
-      return { publication, finalResult, turnMs, turnRoundtripMs,
+      return {
+        publication,
+        finalResult,
+        turnMs,
+        turnRoundtripMs,
         computeMs: turnMs.reduce((sum, ms) => sum + ms, 0),
-        roundtripMs: turnRoundtripMs.every(ms => ms !== null) ? turnRoundtripMs.reduce((sum, ms) => sum + ms, 0) : null };
+        roundtripMs: turnRoundtripMs.every((ms) => ms !== null)
+          ? turnRoundtripMs.reduce((sum, ms) => sum + ms, 0)
+          : null,
+      };
     }
     if (count === previousMoves) throw new Error(`${context}: no progress at turn ${i}`);
     previousMoves = count;
@@ -154,7 +216,12 @@ export async function driveController(controller, capture, { maxTurns = 80, cont
 }
 
 // The CLI selects Worker explicitly; direct remains useful for bounded fixtures.
-export async function createHarness({ sample, onProgress, backend = "direct", workerOptions } = {}) {
+export async function createHarness({
+  sample,
+  onProgress,
+  backend = "direct",
+  workerOptions,
+} = {}) {
   if (!["direct", "worker"].includes(backend)) throw new Error("Invalid benchmark backend");
   sample ??= await loadSample();
   validateSample(sample);
@@ -168,17 +235,23 @@ export async function createHarness({ sample, onProgress, backend = "direct", wo
     if (backend === "worker") {
       const { createNativeWorkerFactory } = await import("./worker-bridge.mjs");
       bridge = await createNativeWorkerFactory(workerOptions);
-      client = module.createWorkerClient({ workerFactory: bridge.factory, onProgress,
-        directFactory: async () => { throw new Error("Worker benchmark cannot use direct compatibility mode"); } });
+      client = module.createWorkerClient({
+        workerFactory: bridge.factory,
+        onProgress,
+        directFactory: async () => {
+          throw new Error("Worker benchmark cannot use direct compatibility mode");
+        },
+      });
       const catalogue = await client.request({ type: "initialize" });
       ({ contract, ownership } = await bridge.contract(bridge.workers[0], sample));
       state = { POOL: catalogue.pool, ALL_GUESSES: catalogue.expanded };
     } else {
       state = await withLocalFetch(async () => {
         const loaded = await module.loadAssets(onProgress);
-        await validateSampleAnswers(sample, day => module.dailyGame(loaded, day));
+        await validateSampleAnswers(sample, (day) => module.dailyGame(loaded, day));
         for (const game of sample.games) {
-          if (!game.answers.every(word => loaded.poolIndex.has(word))) throw new Error(`Daily #${game.day} has an answer outside the pool`);
+          if (!game.answers.every((word) => loaded.poolIndex.has(word)))
+            throw new Error(`Daily #${game.day} has an answer outside the pool`);
         }
         return loaded;
       });
@@ -191,7 +264,12 @@ export async function createHarness({ sample, onProgress, backend = "direct", wo
   let running = false;
   let disposed = false;
   return {
-    sample, state, strategy: module.STRATEGY, contract, ownership, backend,
+    sample,
+    state,
+    strategy: module.STRATEGY,
+    contract,
+    ownership,
+    backend,
     async dispose() {
       disposed = true;
       client?.dispose();
@@ -199,9 +277,10 @@ export async function createHarness({ sample, onProgress, backend = "direct", wo
     },
     async runGame(day, expanded, options = {}) {
       if (disposed) throw new Error("Benchmark harness is disposed");
-      const game = sample.games.find(entry => entry.day === day);
+      const game = sample.games.find((entry) => entry.day === day);
       if (!game) throw new Error(`Day ${day} is outside the frozen sample`);
-      if (typeof expanded !== "boolean") throw new Error("Probe mode must be explicitly true or false");
+      if (typeof expanded !== "boolean")
+        throw new Error("Probe mode must be explicitly true or false");
       if (running) throw new Error("Benchmark cases must run sequentially");
       running = true;
       try {
@@ -210,12 +289,28 @@ export async function createHarness({ sample, onProgress, backend = "direct", wo
         if (client) await controller.loadDay(day);
         else await withLocalFetch(() => controller.loadDay(day));
         const answers = controller.getWords();
-        if (!answers || answers.some((word, i) => word !== game.answers[i])) throw new Error(`Loaded answers changed for daily #${day}`);
+        if (!answers || answers.some((word, i) => word !== game.answers[i]))
+          throw new Error(`Loaded answers changed for daily #${day}`);
         const clueGrid = clueUI.getClueGrid();
-        const result = await driveController(controller, module.capture, { ...options, context: `Daily #${day} (${expanded ? "expanded" : "pool"})` });
-        const trace = normalizeTrace({ day, answers, expanded, clueGrid, ...result, finalSlots: manual.getSlots() });
-        return { trace, computeMs: result.computeMs, turnMs: result.turnMs,
-          roundtripMs: result.roundtripMs, turnRoundtripMs: result.turnRoundtripMs };
+        const result = await driveController(controller, module.capture, {
+          ...options,
+          context: `Daily #${day} (${expanded ? "expanded" : "pool"})`,
+        });
+        const trace = normalizeTrace({
+          day,
+          answers,
+          expanded,
+          clueGrid,
+          ...result,
+          finalSlots: manual.getSlots(),
+        });
+        return {
+          trace,
+          computeMs: result.computeMs,
+          turnMs: result.turnMs,
+          roundtripMs: result.roundtripMs,
+          turnRoundtripMs: result.turnRoundtripMs,
+        };
       } finally {
         running = false;
       }

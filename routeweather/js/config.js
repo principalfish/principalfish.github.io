@@ -50,20 +50,13 @@ const SURFACE_VARS = [
   "relative_humidity_2m",
 ];
 
-const PRESSURE_LEVEL_VARS = [
-  "temperature",
-  "wind_speed",
-  "wind_direction",
-  "geopotential_height",
-];
+const PRESSURE_LEVEL_VARS = ["temperature", "wind_speed", "wind_direction", "geopotential_height"];
 
 // Every Open-Meteo hourly variable this page requests: surface variables, then
 // each pressure-level variable for each level (e.g. `temperature_850hPa`).
 export const HOURLY_VARS = [
   ...SURFACE_VARS,
-  ...PRESSURE_LEVELS.flatMap((level) =>
-    PRESSURE_LEVEL_VARS.map((name) => `${name}_${level}hPa`),
-  ),
+  ...PRESSURE_LEVELS.flatMap((level) => PRESSURE_LEVEL_VARS.map((name) => `${name}_${level}hPa`)),
 ];
 
 // The chance of rain comes from its own small request. ukmo_seamless's
@@ -93,11 +86,11 @@ export const TILE_URL = "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png";
 export const TILE_SUBDOMAINS = ["a", "b", "c"];
 export const TILE_MAX_ZOOM = 17;
 export const TILE_ATTRIBUTION =
-  `Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM`
-  + ` | Map style &copy; <a href="https://opentopomap.org">OpenTopoMap</a>`
-  + ` (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)`;
+  `Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM` +
+  ` | Map style &copy; <a href="https://opentopomap.org">OpenTopoMap</a>` +
+  ` (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)`;
 
 // Weather data credit (Open-Meteo data is CC-BY 4.0).
 export const OPEN_METEO_ATTRIBUTION =
-  `Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a>`
-  + ` (<a href="https://creativecommons.org/licenses/by/4.0/">CC-BY 4.0</a>)`;
+  `Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a>` +
+  ` (<a href="https://creativecommons.org/licenses/by/4.0/">CC-BY 4.0</a>)`;

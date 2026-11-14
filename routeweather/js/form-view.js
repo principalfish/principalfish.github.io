@@ -95,7 +95,10 @@ export function createFormUI(doc, onChange) {
       el.addEventListener("change", () => emit({ type: "unit", quantity, value: el.value }));
     });
   }
-  for (const [id, type] of [["speedInput", "speed"], ["startInput", "start"]]) {
+  for (const [id, type] of [
+    ["speedInput", "speed"],
+    ["startInput", "start"],
+  ]) {
     $(id).addEventListener("input", (e) => emit({ type, value: e.target.value }));
     $(id).addEventListener("change", () => emit({ type: "commit" }));
   }
@@ -133,8 +136,9 @@ export function createFormUI(doc, onChange) {
     const { units } = state;
     radios("units").forEach((el) => setProp(el, "checked", el.value === units.system));
     for (const quantity of UNIT_QUANTITIES) {
-      radios(UNIT_TOGGLE_NAME[quantity])
-        .forEach((el) => setProp(el, "checked", el.value === units[quantity]));
+      radios(UNIT_TOGGLE_NAME[quantity]).forEach((el) =>
+        setProp(el, "checked", el.value === units[quantity]),
+      );
     }
     setProp($("speedUnit"), "textContent", SPEED_UNIT[units.system]);
 

@@ -16,24 +16,36 @@ beforeAll(async () => {
 export { compareCode } from ${JSON.stringify(path.join(solverDir, "compare.js"))};`,
       resolveDir: solverDir,
     },
-    bundle: true, write: false, format: "esm", platform: "node", logLevel: "silent",
-    define: { "import.meta.url": JSON.stringify(pathToFileURL(path.join(solverDir, "data.js")).href) },
-    plugins: [{
-      name: "solver-test-access",
-      setup(builder) {
-        builder.onLoad({ filter: /[/\\]solver\.js$/ }, async (args) => ({
-          contents: `${await readFile(args.path, "utf8")}\nexport { poolBlock, chainArcConsistency };`,
-          resolveDir: solverDir,
-        }));
+    bundle: true,
+    write: false,
+    format: "esm",
+    platform: "node",
+    logLevel: "silent",
+    define: {
+      "import.meta.url": JSON.stringify(pathToFileURL(path.join(solverDir, "data.js")).href),
+    },
+    plugins: [
+      {
+        name: "solver-test-access",
+        setup(builder) {
+          builder.onLoad({ filter: /[/\\]solver\.js$/ }, async (args) => ({
+            contents: `${await readFile(args.path, "utf8")}\nexport { poolBlock, chainArcConsistency };`,
+            resolveDir: solverDir,
+          }));
+        },
       },
-    }],
+    ],
   });
-  solver = await import(`data:text/javascript;base64,${Buffer.from(output.outputFiles[0].text).toString("base64")}`);
+  solver = await import(
+    `data:text/javascript;base64,${Buffer.from(output.outputFiles[0].text).toString("base64")}`
+  );
 });
 
 function assets(pool) {
   const poolIndex = new Map(pool.map((word, i) => [word, i]));
-  const PM = new Int16Array(pool.flatMap((guess) => pool.map((answer) => solver.compareCode(guess, answer))));
+  const PM = new Int16Array(
+    pool.flatMap((guess) => pool.map((answer) => solver.compareCode(guess, answer))),
+  );
   return { PM, N: pool.length, poolIndex };
 }
 
@@ -51,12 +63,18 @@ describe("pattern blocks", () => {
   it("preserves directional repeated-letter patterns and the all-green byte", () => {
     const rows = block(["LEVEL", "EERIE"], ["EERIE", "LEVEL"], ["EERIE", "LEVEL"]);
     expect(rows.every((row) => row instanceof Uint8Array)).toBe(true);
-    expect(rows.map((row) => [...row])).toEqual([[33, 242], [242, 7]]);
+    expect(rows.map((row) => [...row])).toEqual([
+      [33, 242],
+      [242, 7],
+    ]);
   });
 
   it("computes patterns when either or both words are outside the matrix pool", () => {
     const rows = block(["LEVEL", "APPLE"], ["APPLE", "ALLEY", "LEVEL"], ["ALLEY", "LEVEL"]);
-    expect(rows.map((row) => [...row])).toEqual([[4, 136, 242], [242, 110, 108]]);
+    expect(rows.map((row) => [...row])).toEqual([
+      [4, 136, 242],
+      [242, 110, 108],
+    ]);
   });
 
   it("handles empty row and column sets", () => {

@@ -12,10 +12,18 @@ function createElement() {
     children: [],
     attributes: {},
     listeners: {},
-    replaceChildren() { this.children = []; },
-    appendChild(child) { this.children.push(child); },
-    setAttribute(name, value) { this.attributes[name] = value; },
-    addEventListener(name, callback) { this.listeners[name] = callback; },
+    replaceChildren() {
+      this.children = [];
+    },
+    appendChild(child) {
+      this.children.push(child);
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+    addEventListener(name, callback) {
+      this.listeners[name] = callback;
+    },
   };
 }
 
@@ -36,7 +44,10 @@ describe("saved Senate forecast view", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it.each([
-    [{ activeTab: "seatsup", comparisonAvailable: true }, "Changes vs previous election for each seat"],
+    [
+      { activeTab: "seatsup", comparisonAvailable: true },
+      "Changes vs previous election for each seat",
+    ],
     [{ activeTab: "chamber", comparisonAvailable: true }, "Changes vs Current Senate"],
     [{ activeTab: "seatsup", comparisonAvailable: false }, "Comparison unavailable"],
     [{ activeTab: "seatsup", comparisonAvailable: false, loading: true }, "Loading comparison…"],
@@ -65,24 +76,38 @@ describe("saved Senate forecast view", () => {
 
   it("renders labelled tab buttons with selection and callbacks, replacing stale buttons", () => {
     const onTabChange = vi.fn();
-    const tabs = [{ key: "seatsup", label: "Seats up (2026)" }, { key: "chamber", label: "Full Senate" }];
+    const tabs = [
+      { key: "seatsup", label: "Seats up (2026)" },
+      { key: "chamber", label: "Full Senate" },
+    ];
     renderSenateForecastTabs({ tabs, activeTab: "seatsup", onTabChange });
     const nav = elements.mapsSenateForecastTabNav;
     expect(nav.hidden).toBe(false);
-    expect(nav.children.map((button) => button.textContent)).toEqual(["Seats up (2026)", "Full Senate"]);
+    expect(nav.children.map((button) => button.textContent)).toEqual([
+      "Seats up (2026)",
+      "Full Senate",
+    ]);
     expect(nav.children.map((button) => button.type)).toEqual(["button", "button"]);
-    expect(nav.children.map((button) => button.attributes["aria-pressed"])).toEqual(["true", "false"]);
+    expect(nav.children.map((button) => button.attributes["aria-pressed"])).toEqual([
+      "true",
+      "false",
+    ]);
     expect(nav.children[0].className).toBe("maps-predict-tab-btn active");
     nav.children[1].listeners.click();
     expect(onTabChange).toHaveBeenCalledExactlyOnceWith("chamber");
     renderSenateForecastTabs({ tabs, activeTab: "chamber", onTabChange });
     expect(nav.children).toHaveLength(2);
-    expect(nav.children.map((button) => button.attributes["aria-pressed"])).toEqual(["false", "true"]);
+    expect(nav.children.map((button) => button.attributes["aria-pressed"])).toEqual([
+      "false",
+      "true",
+    ]);
   });
 
   it("tolerates a shell without the forecast elements", () => {
     elements = {};
-    expect(() => renderSenateForecastComparison({ activeTab: "seatsup", comparisonAvailable: true })).not.toThrow();
+    expect(() =>
+      renderSenateForecastComparison({ activeTab: "seatsup", comparisonAvailable: true }),
+    ).not.toThrow();
     expect(() => renderSenateForecastTabs()).not.toThrow();
   });
 
@@ -91,9 +116,13 @@ describe("saved Senate forecast view", () => {
     const css = readFileSync(new URL("../maps.css", import.meta.url), "utf8");
     expect(shell).toMatch(/<p\b[^>]*id="mapsSenateForecastComparison"[^>]*\bhidden[^>]*><\/p>/);
     expect(shell).toMatch(/<nav\b[^>]*id="mapsSenateForecastTabNav"[^>]*\bhidden/);
-    const descriptionIds = shell.match(/<table\b[^>]*id="mapsVoteTotalsTable"[^>]*aria-describedby="([^"]+)"/)?.[1].split(/\s+/);
+    const descriptionIds = shell
+      .match(/<table\b[^>]*id="mapsVoteTotalsTable"[^>]*aria-describedby="([^"]+)"/)?.[1]
+      .split(/\s+/);
     expect(descriptionIds).toContain("mapsSenateForecastComparison");
-    const collapsedRule = css.match(/#mapsVoteTotalsCard\.maps-vote-totals--collapsed[^{}]+\{[^}]+\}/)?.[0];
+    const collapsedRule = css.match(
+      /#mapsVoteTotalsCard\.maps-vote-totals--collapsed[^{}]+\{[^}]+\}/,
+    )?.[0];
     expect(collapsedRule).toContain(".maps-senate-forecast-comparison");
     expect(collapsedRule).toContain(".maps-predict-tabs");
     expect(collapsedRule).toContain("display: none;");

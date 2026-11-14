@@ -93,7 +93,9 @@ describe("readoutValues", () => {
   it("marks a model-only elevation when the route has none", () => {
     const route = buildRoute(POINTS.map(({ lat, lon }) => ({ lat, lon })));
     const state = makeState({ route });
-    expect(readoutValues(state, { ...WEATHER, eleFromModel: true }, 1).elevation).toBe("180 m (model)");
+    expect(readoutValues(state, { ...WEATHER, eleFromModel: true }, 1).elevation).toBe(
+      "180 m (model)",
+    );
     expect(readoutValues(state, WEATHER, 1).elevation).toBe("180 m");
     expect(readoutValues(state, null, 1).elevation).toBe(MISSING);
   });
@@ -125,9 +127,17 @@ describe("readoutValues", () => {
     for (const key of ["weather", "temp", "wind", "relative", "rain", "model"]) {
       expect(v[key], key).toBe(MISSING);
     }
-    const gaps = readoutValues(makeState(), {
-      ...WEATHER, windKmh: NaN, precipProb: NaN, headKmh: null, crossKmh: null,
-    }, 5);
+    const gaps = readoutValues(
+      makeState(),
+      {
+        ...WEATHER,
+        windKmh: NaN,
+        precipProb: NaN,
+        headKmh: null,
+        crossKmh: null,
+      },
+      5,
+    );
     expect(gaps.wind).toBe(`${MISSING} · gusts 41 km/h`);
     expect(gaps.rain).toBe(`0.4 mm/h · ${MISSING}`);
     expect(gaps.relative).toBe(`${MISSING} · ${MISSING}`);
@@ -152,7 +162,7 @@ describe("createReadoutUI", () => {
   let container;
 
   beforeEach(() => {
-    document.body.innerHTML = "<div id=\"readout\"></div>";
+    document.body.innerHTML = '<div id="readout"></div>';
     container = document.getElementById("readout");
   });
 
@@ -162,8 +172,19 @@ describe("createReadoutUI", () => {
     createReadoutUI(container);
     const labels = [...container.querySelectorAll("dt")].map((dt) => dt.textContent);
     expect(labels).toEqual([
-      "Time", "Elapsed", "Light", "Distance", "Elevation", "Weather", "Temperature",
-      "Feels like", "Wind", "Head / cross", "Rain", "Sky", "Model",
+      "Time",
+      "Elapsed",
+      "Light",
+      "Distance",
+      "Elevation",
+      "Weather",
+      "Temperature",
+      "Feels like",
+      "Wind",
+      "Head / cross",
+      "Rain",
+      "Sky",
+      "Model",
     ]);
     expect(valueOf("temp")).toBe(MISSING);
   });

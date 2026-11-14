@@ -16,13 +16,17 @@ vi.mock("../features/senate-forecast-view.js", () => ({
 }));
 
 import { activateSenateForecastView } from "../features/senate-forecast-controller.js";
-import { renderSenateForecastComparison, renderSenateForecastTabs } from "../features/senate-forecast-view.js";
+import {
+  renderSenateForecastComparison,
+  renderSenateForecastTabs,
+} from "../features/senate-forecast-view.js";
 import { renderMap, refreshOpenSeatPopup } from "../dom.js";
 import { fetchJson } from "../files.js";
 import { activeMapMode, ElectionData, manifest, page, Seat, state } from "../state.js";
 import { seatLookupKey } from "../utils.js";
 
-const readData = (file) => JSON.parse(readFileSync(new URL(`../../uselectionmaps/data/${file}`, import.meta.url), "utf8"));
+const readData = (file) =>
+  JSON.parse(readFileSync(new URL(`../../uselectionmaps/data/${file}`, import.meta.url), "utf8"));
 // These tests exercise the dormant saved-forecast view, which describes a forecast made in the
 // 2026 cycle. The exported manifest has moved on (Predict rolled to 2028, and the House/Senate
 // forecast elections are not exported while the export flag is off), so the 2026-cycle
@@ -30,8 +34,24 @@ const readData = (file) => JSON.parse(readFileSync(new URL(`../../uselectionmaps
 function cycle2026Manifest(exported) {
   const cycle = structuredClone(exported);
   for (const entry of [
-    { id: "current-us-house", name: "2026 Prediction", type: "us_house_model", mapId: 21, parliament: "us_house", model: true, comparisonElectionId: "2024-us-house" },
-    { id: "current-us-senate", name: "2026 Prediction", type: "us_senate_model", mapId: 23, parliament: "us_senate", model: true, comparisonElectionId: "2020-us-senate" },
+    {
+      id: "current-us-house",
+      name: "2026 Prediction",
+      type: "us_house_model",
+      mapId: 21,
+      parliament: "us_house",
+      model: true,
+      comparisonElectionId: "2024-us-house",
+    },
+    {
+      id: "current-us-senate",
+      name: "2026 Prediction",
+      type: "us_senate_model",
+      mapId: 23,
+      parliament: "us_senate",
+      model: true,
+      comparisonElectionId: "2020-us-senate",
+    },
   ]) {
     if (!cycle.elections.some((election) => election.id === entry.id)) cycle.elections.push(entry);
   }
@@ -55,7 +75,9 @@ function cycle2026Manifest(exported) {
 }
 const manifestData = cycle2026Manifest(readData("map-modes.json"));
 const chamberData = readData("results/senate-current.json");
-const forecastData = JSON.parse(readFileSync(new URL("./fixtures/us-senate-forecast.json", import.meta.url), "utf8"));
+const forecastData = JSON.parse(
+  readFileSync(new URL("./fixtures/us-senate-forecast.json", import.meta.url), "utf8"),
+);
 const baselineData = readData("results/us-senate-2020.json");
 const specialBaselineData = readData("results/us-senate-2022.json");
 function fetchResults(url) {
@@ -70,23 +92,33 @@ function fetchResults(url) {
 }
 const latestTabs = () => renderSenateForecastTabs.mock.calls.at(-1)[0];
 const latestComparison = () => renderSenateForecastComparison.mock.calls.at(-1)[0];
-const tallies = (summary) => Object.fromEntries(summary.parties.filter((party) => party.seats).map((party) => [party.party, party.seats]));
+const tallies = (summary) =>
+  Object.fromEntries(
+    summary.parties.filter((party) => party.seats).map((party) => [party.party, party.seats]),
+  );
 // Full-chamber tallies expected from the published data, so poll exports that flip a seat
 // don't break the test: each contested seat swaps its outgoing member's party (Class 2,
 // or the special election's class) for the forecast winner.
 function expectedChamberTallies() {
   const year = Number(manifest.parliamentConfig("us_senate").nextElectionYear);
-  const specialClass = new Map((activeMapMode().senateSpecialElections || [])
-    .filter((special) => Number(special.year) === year)
-    .map((special) => [seatLookupKey(special.seat), Number(special.class)]));
+  const specialClass = new Map(
+    (activeMapMode().senateSpecialElections || [])
+      .filter((special) => Number(special.year) === year)
+      .map((special) => [seatLookupKey(special.seat), Number(special.class)]),
+  );
   const chamber = ElectionData.buildSeatIndex(new ElectionData(chamberData).currentSeats);
   const counts = {};
-  const add = (party, change) => { counts[party] = (counts[party] || 0) + change; };
+  const add = (party, change) => {
+    counts[party] = (counts[party] || 0) + change;
+  };
   chamber.forEach((seat) => seat.members.forEach((member) => add(member.party, 1)));
   new ElectionData(forecastData).currentSeats.forEach((seat) => {
     const key = seatLookupKey(seat.seat);
     const contestedClass = specialClass.get(key) ?? 2;
-    add(chamber.get(key).members.find((member) => Number(member.class) === contestedClass).party, -1);
+    add(
+      chamber.get(key).members.find((member) => Number(member.class) === contestedClass).party,
+      -1,
+    );
     add(seat.winner, 1);
   });
   return Object.fromEntries(Object.entries(counts).filter(([, seats]) => seats));
@@ -107,8 +139,13 @@ describe("activateSenateForecastView", () => {
     state.predictionSnippet = "";
     state.voteTotals.mode = "all";
     state.mapFilters = {
-      party: "all", region: "all", secondParty: "all", majorityMin: 0,
-      majorityMax: 100, gainsOnly: false, upcoming: "all",
+      party: "all",
+      region: "all",
+      secondParty: "all",
+      majorityMin: 0,
+      majorityMax: 100,
+      gainsOnly: false,
+      upcoming: "all",
     };
     state.mapChoropleths = { type: "none", party: "all" };
     state.electionData = new ElectionData(forecastData, "2026 Prediction");
@@ -136,9 +173,11 @@ describe("activateSenateForecastView", () => {
     expect(tallies(state.filteredSeatsSummary)).toEqual(expectedTallies);
     // The comparison side is the current chamber itself, so its tallies are the snapshot's members.
     const snapshotMembers = {};
-    new ElectionData(chamberData).currentSeats.forEach((seat) => seat.members.forEach((member) => {
-      if (member.party) snapshotMembers[member.party] = (snapshotMembers[member.party] || 0) + 1;
-    }));
+    new ElectionData(chamberData).currentSeats.forEach((seat) =>
+      seat.members.forEach((member) => {
+        if (member.party) snapshotMembers[member.party] = (snapshotMembers[member.party] || 0) + 1;
+      }),
+    );
     expect(tallies(state.filteredSeatsComparisonSummary)).toEqual(snapshotMembers);
     expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(100);
     expect(state.filteredSeatsSummary.totalVotes).toBe(0);
@@ -147,10 +186,18 @@ describe("activateSenateForecastView", () => {
     expect(refreshOpenSeatPopup).toHaveBeenCalledOnce();
 
     const ohio = state.electionData.currentSeats.find((seat) => seat.seat === "Ohio");
-    expect(ohio.members.find((member) => member.class === 3)).toMatchObject({ party: "democrat", name: "Democratic (projected)" });
-    expect(ohio.members.find((member) => member.class === 1)).toMatchObject({ party: "republican", name: "Bernie Moreno" });
+    expect(ohio.members.find((member) => member.class === 3)).toMatchObject({
+      party: "democrat",
+      name: "Democratic (projected)",
+    });
+    expect(ohio.members.find((member) => member.class === 1)).toMatchObject({
+      party: "republican",
+      name: "Bernie Moreno",
+    });
     const florida = state.electionData.currentSeats.find((seat) => seat.seat === "Florida");
-    expect(florida.members.find((member) => member.class === 3).name).toBe("Republican (projected)");
+    expect(florida.members.find((member) => member.class === 3).name).toBe(
+      "Republican (projected)",
+    );
     expect(florida.members.find((member) => member.class === 1).name).toBe("Rick Scott");
     expect(manifest.getElectionFromId("current-us-senate").multiMember).toBeUndefined();
   });
@@ -183,7 +230,8 @@ describe("activateSenateForecastView", () => {
     expect(JSON.stringify(comparison.currentSeats)).toBe(originalComparison);
     expect(fetchJson).toHaveBeenCalledTimes(2);
     expect(fetchJson.mock.calls.map(([url]) => url).sort()).toEqual([
-      "data/results/senate-current.json", "data/results/us-senate-2022.json",
+      "data/results/senate-current.json",
+      "data/results/us-senate-2022.json",
     ]);
     expect(renderMap).toHaveBeenCalledTimes(6);
     latestTabs().onTabChange("seatsup");
@@ -201,7 +249,13 @@ describe("activateSenateForecastView", () => {
       senate.predictBaselineElectionId = "2022-us-senate";
       senate.predict.tabs[0].label = "Seats up (2028)";
       if (!keepSpecials) rolled.mapModes["23"].senateSpecialElections = [];
-      rolled.elections.push({ id: "2026-us-senate", name: "2026 Election", type: "us_senate", mapId: 23, parliament: "us_senate" });
+      rolled.elections.push({
+        id: "2026-us-senate",
+        name: "2026 Election",
+        type: "us_senate",
+        mapId: 23,
+        parliament: "us_senate",
+      });
       manifest.init(rolled);
       state.currentElection = { ...manifest.getElectionFromId("current-us-senate") };
       state.setupMapData();
@@ -209,7 +263,9 @@ describe("activateSenateForecastView", () => {
 
     it("still gets its tabs, labelled with its own cycle, though it is no longer the predict anchor", async () => {
       rollOver({ keepSpecials: false });
-      expect(state.currentElection.id).not.toBe(manifest.parliamentConfig("us_senate").predictAnchorElectionId);
+      expect(state.currentElection.id).not.toBe(
+        manifest.parliamentConfig("us_senate").predictAnchorElectionId,
+      );
       await activateSenateForecastView();
       expect(latestTabs().tabs).toEqual([
         { key: "seatsup", label: "Seats up (2026)" },
@@ -223,14 +279,18 @@ describe("activateSenateForecastView", () => {
       latestTabs().onTabChange("chamber");
       const alabama = state.electionData.currentSeats.find((seat) => seat.seat === "Alabama");
       expect(alabama.members.find((member) => member.class === 2).name).toMatch(/\(projected\)$/);
-      expect(alabama.members.find((member) => member.class === 3).name).not.toMatch(/\(projected\)$/);
+      expect(alabama.members.find((member) => member.class === 3).name).not.toMatch(
+        /\(projected\)$/,
+      );
     });
 
     it("completes the Florida and Ohio comparison from 2026 specials declared for its own year", async () => {
       rollOver({ keepSpecials: true });
       await activateSenateForecastView();
       expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: true });
-      expect(fetchJson.mock.calls.map(([url]) => url)).toContain("data/results/us-senate-2022.json");
+      expect(fetchJson.mock.calls.map(([url]) => url)).toContain(
+        "data/results/us-senate-2022.json",
+      );
     });
 
     it("leaves a non-forecast election alone", async () => {
@@ -270,88 +330,121 @@ describe("activateSenateForecastView", () => {
     ["Current Senate", "us_senate", "current-senate", "election"],
     ["House forecast", "us_house", "current-us-house", "election"],
     ["interactive prediction", "us_senate", "current-us-senate", "predict"],
-  ])("hides the switch on %s without loading or replacing election data", async (_, parliament, electionId, view) => {
-    state.currentParliament = parliament;
-    state.currentElection = { ...manifest.getElectionFromId(electionId) };
-    state.view = view;
-    const forecast = state.electionData;
-    await activateSenateForecastView();
-    expect(renderSenateForecastTabs).toHaveBeenCalledExactlyOnceWith();
-    expect(renderSenateForecastComparison).toHaveBeenCalledExactlyOnceWith();
-    expect(fetchJson).not.toHaveBeenCalled();
-    expect(state.electionData).toBe(forecast);
-    expect(renderMap).not.toHaveBeenCalled();
-  });
+  ])(
+    "hides the switch on %s without loading or replacing election data",
+    async (_, parliament, electionId, view) => {
+      state.currentParliament = parliament;
+      state.currentElection = { ...manifest.getElectionFromId(electionId) };
+      state.view = view;
+      const forecast = state.electionData;
+      await activateSenateForecastView();
+      expect(renderSenateForecastTabs).toHaveBeenCalledExactlyOnceWith();
+      expect(renderSenateForecastComparison).toHaveBeenCalledExactlyOnceWith();
+      expect(fetchJson).not.toHaveBeenCalled();
+      expect(state.electionData).toBe(forecast);
+      expect(renderMap).not.toHaveBeenCalled();
+    },
+  );
 
-  it.each(["missing", "empty", "failed"])("keeps the forecast usable and the switch hidden for a %s chamber snapshot", async (failure) => {
-    if (failure === "missing") {
-      manifest.elections = manifest.elections.filter((election) => election.id !== "current-senate");
-    } else if (failure === "empty") {
-      fetchJson.mockImplementation((url) => url.endsWith("senate-current.json")
-        ? Promise.resolve({ seats: [] }) : fetchResults(url));
-    } else {
-      fetchJson.mockImplementation((url) => url.endsWith("senate-current.json")
-        ? Promise.reject(new Error("Snapshot unavailable")) : fetchResults(url));
-      vi.spyOn(console, "error").mockImplementation(() => {});
-    }
-    const forecast = state.electionData;
-    await activateSenateForecastView();
-    expect(renderSenateForecastTabs).toHaveBeenCalledExactlyOnceWith();
-    expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: true });
-    expect(state.electionData).toBe(forecast);
-    expect(state.comparisonElectionData.currentSeats).toHaveLength(35);
-    expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(35);
-    expect(state.filteredSeatsSummary.totalSeats).toBe(35);
-    expect(state.currentElection.multiMember).toBeFalsy();
-    expect(renderMap).toHaveBeenCalledTimes(2);
-  });
+  it.each(["missing", "empty", "failed"])(
+    "keeps the forecast usable and the switch hidden for a %s chamber snapshot",
+    async (failure) => {
+      if (failure === "missing") {
+        manifest.elections = manifest.elections.filter(
+          (election) => election.id !== "current-senate",
+        );
+      } else if (failure === "empty") {
+        fetchJson.mockImplementation((url) =>
+          url.endsWith("senate-current.json") ? Promise.resolve({ seats: [] }) : fetchResults(url),
+        );
+      } else {
+        fetchJson.mockImplementation((url) =>
+          url.endsWith("senate-current.json")
+            ? Promise.reject(new Error("Snapshot unavailable"))
+            : fetchResults(url),
+        );
+        vi.spyOn(console, "error").mockImplementation(() => {});
+      }
+      const forecast = state.electionData;
+      await activateSenateForecastView();
+      expect(renderSenateForecastTabs).toHaveBeenCalledExactlyOnceWith();
+      expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: true });
+      expect(state.electionData).toBe(forecast);
+      expect(state.comparisonElectionData.currentSeats).toHaveLength(35);
+      expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(35);
+      expect(state.filteredSeatsSummary.totalSeats).toBe(35);
+      expect(state.currentElection.multiMember).toBeFalsy();
+      expect(renderMap).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it.each([
     ["historical Senate", "us_senate", "2022-us-senate", "election"],
     ["House forecast", "us_house", "current-us-house", "election"],
     ["interactive prediction", "us_senate", "current-us-senate", "predict"],
-  ])("clears saved chamber controls when activating %s", async (_, parliament, electionId, view) => {
-    await activateSenateForecastView();
-    latestTabs().onTabChange("chamber");
-    state.currentParliament = parliament;
-    state.currentElection = { ...manifest.getElectionFromId(electionId) };
-    state.view = view;
-    const destination = state.electionData;
-    await activateSenateForecastView();
-    expect(latestTabs()).toBeUndefined();
-    expect(latestComparison()).toBeUndefined();
-    expect(state.electionData).toBe(destination);
-  });
+  ])(
+    "clears saved chamber controls when activating %s",
+    async (_, parliament, electionId, view) => {
+      await activateSenateForecastView();
+      latestTabs().onTabChange("chamber");
+      state.currentParliament = parliament;
+      state.currentElection = { ...manifest.getElectionFromId(electionId) };
+      state.view = view;
+      const destination = state.electionData;
+      await activateSenateForecastView();
+      expect(latestTabs()).toBeUndefined();
+      expect(latestComparison()).toBeUndefined();
+      expect(state.electionData).toBe(destination);
+    },
+  );
 
-  it.each(["missing", "empty", "failed"])("explains unavailable baselines without a %s chamber snapshot", async (failure) => {
-    const mode = manifest.mapModes[String(state.currentElection.mapId)];
-    delete mode.senateSpecialElections[0].baselineElectionId;
-    if (failure === "missing") {
-      manifest.elections = manifest.elections.filter((election) => election.id !== "current-senate");
-    } else {
-      fetchJson.mockImplementation((url) => {
-        if (!url.endsWith("senate-current.json")) return fetchResults(url);
-        return failure === "empty" ? Promise.resolve({ seats: [] }) : Promise.reject(new Error("Snapshot unavailable"));
-      });
-    }
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    const forecast = state.electionData;
-    await activateSenateForecastView();
-    expect(latestTabs()).toBeUndefined();
-    expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: false });
-    expect(state.comparisonElectionData).toBeNull();
-    expect(state.electionData).toBe(forecast);
-  });
+  it.each(["missing", "empty", "failed"])(
+    "explains unavailable baselines without a %s chamber snapshot",
+    async (failure) => {
+      const mode = manifest.mapModes[String(state.currentElection.mapId)];
+      delete mode.senateSpecialElections[0].baselineElectionId;
+      if (failure === "missing") {
+        manifest.elections = manifest.elections.filter(
+          (election) => election.id !== "current-senate",
+        );
+      } else {
+        fetchJson.mockImplementation((url) => {
+          if (!url.endsWith("senate-current.json")) return fetchResults(url);
+          return failure === "empty"
+            ? Promise.resolve({ seats: [] })
+            : Promise.reject(new Error("Snapshot unavailable"));
+        });
+      }
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const forecast = state.electionData;
+      await activateSenateForecastView();
+      expect(latestTabs()).toBeUndefined();
+      expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: false });
+      expect(state.comparisonElectionData).toBeNull();
+      expect(state.electionData).toBe(forecast);
+    },
+  );
 
   describe("per-seat comparison", () => {
     const result = (name, winner, democrat = winner === "democrat" ? 600 : 400) => ({
-      n: name, r: "test", w: winner, p: [["democrat", democrat], ["republican", 1000 - democrat]],
+      n: name,
+      r: "test",
+      w: winner,
+      p: [
+        ["democrat", democrat],
+        ["republican", 1000 - democrat],
+      ],
     });
     const regularRows = Array.from({ length: 33 }, (_, index) =>
-      result(`Regular ${index}`, index < 13 ? "democrat" : "republican"));
+      result(`Regular ${index}`, index < 13 ? "democrat" : "republican"),
+    );
     const savedRows = Array.from({ length: 33 }, (_, index) =>
-      result(`Regular ${index}`, index < 18 ? "democrat" : "republican"));
-    const specialRows = [result("Special A", "republican", 300), result("Special B", "republican", 450)];
+      result(`Regular ${index}`, index < 18 ? "democrat" : "republican"),
+    );
+    const specialRows = [
+      result("Special A", "republican", 300),
+      result("Special B", "republican", 450),
+    ];
     const specials = [
       { seat: " special a ", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
       { seat: "SPECIAL B", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
@@ -360,16 +453,23 @@ describe("activateSenateForecastView", () => {
     let specialResults;
 
     beforeEach(() => {
-      regularResults = { seats: [...regularRows, regularRows[0], result("Unrelated regular", "democrat")] };
-      specialResults = { seats: [...specialRows, specialRows[0], result("Unrelated special", "democrat")] };
+      regularResults = {
+        seats: [...regularRows, regularRows[0], result("Unrelated regular", "democrat")],
+      };
+      specialResults = {
+        seats: [...specialRows, specialRows[0], result("Unrelated special", "democrat")],
+      };
       manifest.mapModes[String(state.currentElection.mapId)].senateSpecialElections = [
         ...structuredClone(specials),
         { seat: "Regular 0", year: 2028, baselineElectionId: "missing" },
         { seat: "Absent forecast seat", year: 2026, baselineElectionId: "missing" },
       ];
-      state.electionData = new ElectionData({ seats: [
-        ...savedRows, result("Special A", "democrat"), result("Special B", "republican"),
-      ] }, "Synthetic forecast");
+      state.electionData = new ElectionData(
+        {
+          seats: [...savedRows, result("Special A", "democrat"), result("Special B", "republican")],
+        },
+        "Synthetic forecast",
+      );
       state.comparisonElectionData = new ElectionData(regularResults);
       state.setupMapData();
       fetchJson.mockImplementation((url) => {
@@ -387,36 +487,73 @@ describe("activateSenateForecastView", () => {
       const comparison = state.comparisonElectionData;
       expect(state.electionData).toBe(forecast);
       expect(JSON.stringify(forecast.currentSeats)).toBe(savedOutput);
-      expect([...comparison.seatsByKey.keys()].sort()).toEqual([...forecast.seatsByKey.keys()].sort());
+      expect([...comparison.seatsByKey.keys()].sort()).toEqual(
+        [...forecast.seatsByKey.keys()].sort(),
+      );
       expect(comparison.currentSeats).toHaveLength(35);
       expect(tallies(state.filteredSeatsSummary)).toEqual({ democrat: 19, republican: 16 });
-      expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({ democrat: 13, republican: 22 });
-      const changes = Object.fromEntries(state.filteredSeatsSummary.parties.map((party) => [
-        party.party, party.seats - state.filteredSeatsComparisonSummary.parties.find((row) => row.party === party.party).seats,
-      ]));
+      expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({
+        democrat: 13,
+        republican: 22,
+      });
+      const changes = Object.fromEntries(
+        state.filteredSeatsSummary.parties.map((party) => [
+          party.party,
+          party.seats -
+            state.filteredSeatsComparisonSummary.parties.find((row) => row.party === party.party)
+              .seats,
+        ]),
+      );
       expect(changes).toEqual({ democrat: 6, republican: -6 });
       for (const row of regularRows) {
-        expect(comparison.seatsByKey.get(seatLookupKey(row.n))).toBe(regular.seatsByKey.get(seatLookupKey(row.n)));
+        expect(comparison.seatsByKey.get(seatLookupKey(row.n))).toBe(
+          regular.seatsByKey.get(seatLookupKey(row.n)),
+        );
       }
       const specialA = forecast.seatsByKey.get("special a");
       const baselineA = comparison.seatsByKey.get("special a");
       expect(baselineA.votes).toEqual({ democrat: 300, republican: 700 });
       expect(specialA.gainFromParty(baselineA.winner)).toBe("republican");
       expect(Seat.choroplethValue(specialA, baselineA, true, "democrat")).toBe(30);
-      expect(forecast.seatsByKey.get("special b").gainFromParty(comparison.seatsByKey.get("special b").winner)).toBeNull();
-      expect(comparison.seatsByKey.get("special b").votes).toEqual({ democrat: 450, republican: 550 });
-      expect(fetchJson.mock.calls.filter(([url]) => url.endsWith("us-senate-2022.json"))).toHaveLength(1);
+      expect(
+        forecast.seatsByKey
+          .get("special b")
+          .gainFromParty(comparison.seatsByKey.get("special b").winner),
+      ).toBeNull();
+      expect(comparison.seatsByKey.get("special b").votes).toEqual({
+        democrat: 450,
+        republican: 550,
+      });
+      expect(
+        fetchJson.mock.calls.filter(([url]) => url.endsWith("us-senate-2022.json")),
+      ).toHaveLength(1);
     });
 
     it("gives special baselines priority over regular rows with the same key", async () => {
       regularResults.seats.push(result("Special A", "democrat"), result("Special B", "democrat"));
       state.comparisonElectionData = new ElectionData(regularResults);
       await activateSenateForecastView();
-      expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({ democrat: 13, republican: 22 });
-      expect(state.comparisonElectionData.seatsByKey.get("special a").votes).toEqual({ democrat: 300, republican: 700 });
+      expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({
+        democrat: 13,
+        republican: 22,
+      });
+      expect(state.comparisonElectionData.seatsByKey.get("special a").votes).toEqual({
+        democrat: 300,
+        republican: 700,
+      });
     });
 
-    it.each(["absent id", "unresolved id", "missing file", "failed", "empty", "missing seat", "no votes", "no winner", "invalid votes"])(
+    it.each([
+      "absent id",
+      "unresolved id",
+      "missing file",
+      "failed",
+      "empty",
+      "missing seat",
+      "no votes",
+      "no winner",
+      "invalid votes",
+    ])(
       "suppresses comparison for a %s special baseline, preserves output and retries on activation",
       async (failure) => {
         const forecast = state.electionData;
@@ -425,15 +562,19 @@ describe("activateSenateForecastView", () => {
         state.comparisonElectionData = new ElectionData(regularResults);
         vi.spyOn(console, "error").mockImplementation(() => {});
         if (failure === "absent id") {
-          delete manifest.mapModes[String(state.currentElection.mapId)].senateSpecialElections[0].baselineElectionId;
+          delete manifest.mapModes[String(state.currentElection.mapId)].senateSpecialElections[0]
+            .baselineElectionId;
         } else if (failure === "unresolved id") {
           manifest.elections = manifest.elections.filter((entry) => entry.id !== "2022-us-senate");
         } else if (failure === "missing file") {
           delete manifest.files.elections.electionsById["2022-us-senate"];
         } else if (failure === "failed") {
           const successfulFetch = fetchJson.getMockImplementation();
-          fetchJson.mockImplementation((url) => url.endsWith("us-senate-2022.json")
-            ? Promise.reject(new Error("Unavailable baseline")) : successfulFetch(url));
+          fetchJson.mockImplementation((url) =>
+            url.endsWith("us-senate-2022.json")
+              ? Promise.reject(new Error("Unavailable baseline"))
+              : successfulFetch(url),
+          );
         } else if (failure === "empty") {
           specialResults = { seats: [] };
         } else if (failure === "missing seat") {
@@ -443,7 +584,9 @@ describe("activateSenateForecastView", () => {
         } else if (failure === "no winner") {
           specialResults = { seats: [{ ...specialRows[0], w: undefined }, specialRows[1]] };
         } else {
-          specialResults = { seats: [{ ...specialRows[0], p: [["republican", "bad"]] }, specialRows[1]] };
+          specialResults = {
+            seats: [{ ...specialRows[0], p: [["republican", "bad"]] }, specialRows[1]],
+          };
         }
         await activateSenateForecastView();
         expect(state.comparisonElectionData).toBeNull();
@@ -460,7 +603,8 @@ describe("activateSenateForecastView", () => {
         expect(state.electionData).toBe(forecast);
 
         manifest.init(structuredClone(manifestData));
-        manifest.mapModes[String(state.currentElection.mapId)].senateSpecialElections = structuredClone(specials);
+        manifest.mapModes[String(state.currentElection.mapId)].senateSpecialElections =
+          structuredClone(specials);
         fetchJson.mockImplementation((url) => {
           if (url.endsWith("us-senate-2022.json")) return Promise.resolve({ seats: specialRows });
           if (url.endsWith("us-senate-2020.json")) return Promise.resolve(regularResults);
@@ -469,21 +613,31 @@ describe("activateSenateForecastView", () => {
         await activateSenateForecastView();
         expect(state.comparisonElectionData.currentSeats).toHaveLength(35);
         expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: true });
-        expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({ democrat: 13, republican: 22 });
+        expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({
+          democrat: 13,
+          republican: 22,
+        });
         expect(state.electionData).toBe(forecast);
         expect(JSON.stringify(forecast.currentSeats)).toBe(output);
       },
     );
 
-    it.each(["missing seat", "no votes", "no winner"])("suppresses a %s regular baseline", async (failure) => {
-      const rows = regularRows.slice(1);
-      if (failure !== "missing seat") rows.push({ ...regularRows[0], ...(failure === "no votes" ? { p: [] } : { w: undefined }) });
-      state.comparisonElectionData = new ElectionData({ seats: rows });
-      const output = JSON.stringify(state.electionData.currentSeats);
-      await activateSenateForecastView();
-      expect(state.comparisonElectionData).toBeNull();
-      expect(JSON.stringify(state.electionData.currentSeats)).toBe(output);
-    });
+    it.each(["missing seat", "no votes", "no winner"])(
+      "suppresses a %s regular baseline",
+      async (failure) => {
+        const rows = regularRows.slice(1);
+        if (failure !== "missing seat")
+          rows.push({
+            ...regularRows[0],
+            ...(failure === "no votes" ? { p: [] } : { w: undefined }),
+          });
+        state.comparisonElectionData = new ElectionData({ seats: rows });
+        const output = JSON.stringify(state.electionData.currentSeats);
+        await activateSenateForecastView();
+        expect(state.comparisonElectionData).toBeNull();
+        expect(JSON.stringify(state.electionData.currentSeats)).toBe(output);
+      },
+    );
 
     it("uses only regular forecast rows when no specials are configured", async () => {
       manifest.mapModes[String(state.currentElection.mapId)].senateSpecialElections = [];
@@ -491,20 +645,32 @@ describe("activateSenateForecastView", () => {
       state.setupMapData();
       await activateSenateForecastView();
       expect(state.comparisonElectionData.currentSeats).toHaveLength(33);
-      expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({ democrat: 13, republican: 20 });
+      expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({
+        democrat: 13,
+        republican: 20,
+      });
       expect(fetchJson).toHaveBeenCalledExactlyOnceWith("data/results/senate-current.json");
     });
 
     it("clears the incomplete comparison and refreshes before awaiting special results", async () => {
       let resolveBaseline;
-      fetchJson.mockImplementation((url) => url.endsWith("us-senate-2022.json")
-        ? new Promise((resolve) => { resolveBaseline = resolve; }) : fetchResults(url));
+      fetchJson.mockImplementation((url) =>
+        url.endsWith("us-senate-2022.json")
+          ? new Promise((resolve) => {
+              resolveBaseline = resolve;
+            })
+          : fetchResults(url),
+      );
       const activation = activateSenateForecastView();
       expect(state.comparisonElectionData).toBeNull();
       expect(state.filteredSeatsComparisonSummary).toBeNull();
       expect(renderMap).toHaveBeenCalledExactlyOnceWith(true);
       expect(latestTabs()).toBeUndefined();
-      expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: false, loading: true });
+      expect(latestComparison()).toEqual({
+        activeTab: "seatsup",
+        comparisonAvailable: false,
+        loading: true,
+      });
       resolveBaseline(specialResults);
       await activation;
       expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(35);
@@ -512,16 +678,28 @@ describe("activateSenateForecastView", () => {
     });
 
     it.each([
-      ["special", "election object"], ["special", "view"],
-      ["chamber", "election object"], ["chamber", "view"],
-      ["regular", "election object"], ["regular", "view"],
+      ["special", "election object"],
+      ["special", "view"],
+      ["chamber", "election object"],
+      ["chamber", "view"],
+      ["regular", "election object"],
+      ["regular", "view"],
     ])("ignores an awaited %s response after the %s changes", async (load, destination) => {
       let resolveLoad;
-      const deferredFile = { special: "us-senate-2022.json", chamber: "senate-current.json", regular: "us-senate-2020.json" }[load];
+      const deferredFile = {
+        special: "us-senate-2022.json",
+        chamber: "senate-current.json",
+        regular: "us-senate-2020.json",
+      }[load];
       if (load === "regular") state.comparisonElectionData = null;
       const successfulFetch = fetchJson.getMockImplementation();
-      fetchJson.mockImplementation((url) => url.endsWith(deferredFile)
-        ? new Promise((resolve) => { resolveLoad = resolve; }) : successfulFetch(url));
+      fetchJson.mockImplementation((url) =>
+        url.endsWith(deferredFile)
+          ? new Promise((resolve) => {
+              resolveLoad = resolve;
+            })
+          : successfulFetch(url),
+      );
       const activation = activateSenateForecastView();
       await vi.waitFor(() => expect(resolveLoad).toBeTypeOf("function"));
       if (destination === "election object") state.currentElection = { ...state.currentElection };
@@ -531,7 +709,9 @@ describe("activateSenateForecastView", () => {
       state.comparisonElectionData = destinationData;
       const renderCount = renderMap.mock.calls.length;
       const noteRenderCount = renderSenateForecastComparison.mock.calls.length;
-      resolveLoad(load === "chamber" ? chamberData : load === "regular" ? regularResults : specialResults);
+      resolveLoad(
+        load === "chamber" ? chamberData : load === "regular" ? regularResults : specialResults,
+      );
       await activation;
       expect(state.electionData).toBe(destinationData);
       expect(state.comparisonElectionData).toBe(destinationData);
@@ -542,8 +722,13 @@ describe("activateSenateForecastView", () => {
 
     it("keeps cleared destination controls hidden after a pending baseline resolves", async () => {
       let resolveBaseline;
-      fetchJson.mockImplementation((url) => url.endsWith("us-senate-2022.json")
-        ? new Promise((resolve) => { resolveBaseline = resolve; }) : fetchResults(url));
+      fetchJson.mockImplementation((url) =>
+        url.endsWith("us-senate-2022.json")
+          ? new Promise((resolve) => {
+              resolveBaseline = resolve;
+            })
+          : fetchResults(url),
+      );
       const activation = activateSenateForecastView();
       expect(latestComparison().loading).toBe(true);
       state.currentElection = { ...manifest.getElectionFromId("2022-us-senate") };
@@ -562,21 +747,24 @@ describe("activateSenateForecastView", () => {
       expect(state.comparisonElectionData).toBe(destinationData);
     });
 
-    it.each(["election object", "view"])("ignores a retained tab callback after the %s changes", async (destination) => {
-      await activateSenateForecastView();
-      const callback = latestTabs().onTabChange;
-      const forecast = state.electionData;
-      const comparison = state.comparisonElectionData;
-      const renderCount = renderMap.mock.calls.length;
-      const noteRenderCount = renderSenateForecastComparison.mock.calls.length;
-      if (destination === "election object") state.currentElection = { ...state.currentElection };
-      else state.view = "predict";
-      callback("chamber");
-      expect(state.electionData).toBe(forecast);
-      expect(state.comparisonElectionData).toBe(comparison);
-      expect(state.currentElection.multiMember).toBeFalsy();
-      expect(renderMap).toHaveBeenCalledTimes(renderCount);
-      expect(renderSenateForecastComparison).toHaveBeenCalledTimes(noteRenderCount);
-    });
+    it.each(["election object", "view"])(
+      "ignores a retained tab callback after the %s changes",
+      async (destination) => {
+        await activateSenateForecastView();
+        const callback = latestTabs().onTabChange;
+        const forecast = state.electionData;
+        const comparison = state.comparisonElectionData;
+        const renderCount = renderMap.mock.calls.length;
+        const noteRenderCount = renderSenateForecastComparison.mock.calls.length;
+        if (destination === "election object") state.currentElection = { ...state.currentElection };
+        else state.view = "predict";
+        callback("chamber");
+        expect(state.electionData).toBe(forecast);
+        expect(state.comparisonElectionData).toBe(comparison);
+        expect(state.currentElection.multiMember).toBeFalsy();
+        expect(renderMap).toHaveBeenCalledTimes(renderCount);
+        expect(renderSenateForecastComparison).toHaveBeenCalledTimes(noteRenderCount);
+      },
+    );
   });
 });

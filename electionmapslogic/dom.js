@@ -1,18 +1,37 @@
-import * as d3 from '../site/vendor/d3.v7.esm.js';
+import * as d3 from "../site/vendor/d3.v7.esm.js";
 import {
   feature as topojsonFeature,
   mesh as topojsonMesh,
   merge as topojsonMerge,
-} from '../site/vendor/topojson-client.v3.esm.js';
-import { manifest, state, page, seatComparisonHidden, Seat } from './state.js';
-import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR, buildStateTrendSeries } from './utils.js';
-import { fetchJson } from './files.js';
+} from "../site/vendor/topojson-client.v3.esm.js";
+import { manifest, state, page, seatComparisonHidden, Seat } from "./state.js";
 import {
-  seatsWithRange, seatUncertaintyText, shownUncertainty, simulatedSubtitle, uncertaintyForTotals,
+  escapeHtml,
+  formatInt,
+  formatPct,
+  formatSigned,
+  deltaClass,
+  getRegionLabel,
+  seatLookupKey,
+  normalizeRegionKey,
+  clampNumber,
+  DEFAULT_PARTY_COLOUR,
+  buildStateTrendSeries,
+} from "./utils.js";
+import { fetchJson } from "./files.js";
+import {
+  seatsWithRange,
+  seatUncertaintyText,
+  shownUncertainty,
+  simulatedSubtitle,
+  uncertaintyForTotals,
   uncertaintyRange,
 } from "./uncertainty.js";
 import {
-  renderModelledUncertaintyToggle, renderUncertaintyBasis, renderUncertaintyBeta, renderUncertaintyHeader,
+  renderModelledUncertaintyToggle,
+  renderUncertaintyBasis,
+  renderUncertaintyBeta,
+  renderUncertaintyHeader,
   wireModelledUncertaintyToggle,
 } from "./uncertainty-view.js";
 
@@ -26,7 +45,7 @@ import {
  * @returns {string}
  */
 function pageBrand() {
-  return manifest.misc?.title || 'Election Maps';
+  return manifest.misc?.title || "Election Maps";
 }
 
 /**
@@ -35,11 +54,11 @@ function pageBrand() {
  */
 export function renderPageTitle() {
   let label;
-  if (state.view === 'polltracker') {
-    label = 'Poll tracker';
-  } else if (state.view === 'predict') {
+  if (state.view === "polltracker") {
+    label = "Poll tracker";
+  } else if (state.view === "predict") {
     const nextYear = manifest.parliamentFeatures[state.currentParliament]?.nextElectionYear;
-    label = `Predict ${nextYear ?? ''}`.trim();
+    label = `Predict ${nextYear ?? ""}`.trim();
   } else {
     label = state.currentElection.name;
   }
@@ -55,22 +74,22 @@ export function renderPageTitle() {
 // ─── Header ─────────────────────────────────────────────────────────────────
 
 // Page H1 — set to "UK Election Maps · <Parliament>" by renderTitle.
-const mapsTitle = document.querySelector('.maps-title');
+const mapsTitle = document.querySelector(".maps-title");
 // Subtitle line below the H1 — election name (or "Poll tracker..." in tracker view). With
 // "Show with modelled uncertainty" ticked, a saved run with uncertainty leads with
 // `simulatedSubtitle` (uncertainty.js) and its seats line instead.
-const subtitle = document.getElementById('mapsSubtitle');
+const subtitle = document.getElementById("mapsSubtitle");
 // "Show with modelled uncertainty" checkbox directly below the subtitle, in the page's own
 // header (absent on pages that never have a stored simulation, e.g. the US page).
-const modelledUncertaintyControl = document.getElementById('mapsModelledUncertainty');
-const modelledUncertaintyInput = document.getElementById('mapsModelledUncertaintyInput');
+const modelledUncertaintyControl = document.getElementById("mapsModelledUncertainty");
+const modelledUncertaintyInput = document.getElementById("mapsModelledUncertaintyInput");
 // Small notes below the map (and below the poll tracker chart, which replaces the map in
 // that view): the latest poll used and, when the simulation is shown, its reading note.
-const mapFooter = document.getElementById('mapsMapFooter');
-const pollTrackerFooter = document.getElementById('mapsPollTrackerFooter');
+const mapFooter = document.getElementById("mapsMapFooter");
+const pollTrackerFooter = document.getElementById("mapsPollTrackerFooter");
 // Countdown badge in the header — visible only on a parliament's prediction / predict view
 // when that parliament has an upcoming election date; ticks every second until it passes.
-const electionCountdown = document.getElementById('mapsElectionCountdown');
+const electionCountdown = document.getElementById("mapsElectionCountdown");
 
 /**
  * Updates the title area (the page h1, subtitle, modelled-uncertainty checkbox and election
@@ -82,7 +101,7 @@ const electionCountdown = document.getElementById('mapsElectionCountdown');
  * @param {boolean} [error=false] - When true, subtitle shows a load-failure message.
  * @returns {void}
  */
-export function renderHeader(text = '', error = false) {
+export function renderHeader(text = "", error = false) {
   renderTitle();
   renderSubtitleText(text, error);
   renderModelledUncertaintyToggle(modelledUncertaintyControl, modelledUncertaintyInput, state);
@@ -93,7 +112,7 @@ export function renderHeader(text = '', error = false) {
 }
 
 // Source credit line under the map; visible only for an election that supplies a `sourceNote`.
-const sourceNoteEl = document.getElementById('mapsSourceNote');
+const sourceNoteEl = document.getElementById("mapsSourceNote");
 
 /**
  * Shows the active election's `sourceNote` credit (e.g. "Results: The New York Times / AP.
@@ -105,8 +124,8 @@ const sourceNoteEl = document.getElementById('mapsSourceNote');
  */
 export function renderSourceNote() {
   if (!sourceNoteEl) return;
-  const note = state.view === 'election' ? state.currentElection?.sourceNote : '';
-  const text = typeof note === 'string' ? note.trim() : '';
+  const note = state.view === "election" ? state.currentElection?.sourceNote : "";
+  const text = typeof note === "string" ? note.trim() : "";
   sourceNoteEl.textContent = text;
   sourceNoteEl.hidden = !text;
 }
@@ -120,28 +139,31 @@ export function renderSourceNote() {
  * @param {boolean} [error=false] - When true, displays a load-failure message instead.
  * @returns {void}
  */
-function renderSubtitleText(text = '', error = false) {
+function renderSubtitleText(text = "", error = false) {
   if (!subtitle) return;
 
   let baseText;
   const uncertainty = error ? null : shownUncertainty(state);
   if (error) {
-    baseText = 'Failed to load election data';
-  } else if (state.view === 'polltracker') {
-    baseText = 'Poll tracker · model output trends';
+    baseText = "Failed to load election data";
+  } else if (state.view === "polltracker") {
+    baseText = "Poll tracker · model output trends";
   } else {
     // The shown simulation leads with its odds; otherwise the uniform-swing line built with the
     // election summary.
-    const electionName = state.electionData?.electionName || state.currentElection?.name || '';
-    baseText = simulatedSubtitle(electionName, uncertainty, (party) => manifest.labelParty(party))
-      || text || state.currentElection?.name || '';
+    const electionName = state.electionData?.electionName || state.currentElection?.name || "";
+    baseText =
+      simulatedSubtitle(electionName, uncertainty, (party) => manifest.labelParty(party)) ||
+      text ||
+      state.currentElection?.name ||
+      "";
   }
 
-  subtitle.textContent = '';
+  subtitle.textContent = "";
 
-  const mainSpan = document.createElement('span');
-  mainSpan.className = 'maps-subtitle-main';
-  mainSpan.textContent = String(baseText || '').trim();
+  const mainSpan = document.createElement("span");
+  mainSpan.className = "maps-subtitle-main";
+  mainSpan.textContent = String(baseText || "").trim();
   subtitle.appendChild(mainSpan);
 
   renderUncertaintyHeader(subtitle, uncertainty, (party) => manifest.labelParty(party));
@@ -157,15 +179,15 @@ function renderSubtitleText(text = '', error = false) {
  * @returns {void}
  */
 function renderMapFooter(error = false) {
-  const tracker = state.view === 'polltracker';
+  const tracker = state.view === "polltracker";
   const includeSnippet = !error && (tracker || Boolean(state.currentElection?.model));
-  const latestPollSnippet = includeSnippet ? state.predictionSnippet : '';
+  const latestPollSnippet = includeSnippet ? state.predictionSnippet : "";
   for (const footer of [mapFooter, pollTrackerFooter]) {
     if (!footer) continue;
-    footer.textContent = '';
+    footer.textContent = "";
     if (latestPollSnippet) {
-      const latestSpan = document.createElement('span');
-      latestSpan.className = 'maps-map-footer-latest';
+      const latestSpan = document.createElement("span");
+      latestSpan.className = "maps-map-footer-latest";
       latestSpan.textContent = latestPollSnippet;
       footer.appendChild(latestSpan);
     }
@@ -192,7 +214,7 @@ function renderTitle() {
 
 // Left-rail nav container — populated with one anchor per election plus the
 // Poll tracker link by renderElectionLinks.
-const electionList = document.getElementById('mapsElectionList');
+const electionList = document.getElementById("mapsElectionList");
 
 /**
  * Updates the left panel: highlights the active parliament tab and rebuilds the election list nav.
@@ -205,7 +227,7 @@ export function renderLeftBar() {
 }
 
 // Parliament selector container — rebuilt from manifest.parliamentTabs() each render.
-const parliamentTabsContainer = document.querySelector('.maps-parliament-tabs');
+const parliamentTabsContainer = document.querySelector(".maps-parliament-tabs");
 
 /**
  * Rebuilds the parliament selector from manifest.parliamentTabs(), one anchor per tab, and
@@ -215,10 +237,10 @@ const parliamentTabsContainer = document.querySelector('.maps-parliament-tabs');
  */
 function renderParliamentTabs() {
   if (!parliamentTabsContainer) return;
-  parliamentTabsContainer.innerHTML = '';
+  parliamentTabsContainer.innerHTML = "";
   manifest.parliamentTabs().forEach((tab) => {
-    const link = document.createElement('a');
-    link.className = `maps-parliament-tab${tab.parliament === state.currentParliament ? ' active' : ''}`;
+    const link = document.createElement("a");
+    link.className = `maps-parliament-tab${tab.parliament === state.currentParliament ? " active" : ""}`;
     link.dataset.parliament = tab.parliament;
     link.href = `?parliament=${tab.parliament}`;
     link.textContent = tab.label;
@@ -239,43 +261,44 @@ function renderParliamentTabs() {
  */
 export function renderElectionLinks() {
   if (!electionList) return;
-  const activeId = state.view === 'election' ? state.currentElection.id : null;
+  const activeId = state.view === "election" ? state.currentElection.id : null;
 
   const features = manifest.parliamentFeatures[state.currentParliament]?.features ?? [];
-  const hasPredict = features.includes('predict');
-  const hasPollTracker = features.includes('pollTracker');
+  const hasPredict = features.includes("predict");
+  const hasPollTracker = features.includes("pollTracker");
   const anchorId = state.getPredictAnchorElectionId() ?? null;
 
   const appendPredictLink = () => {
     const nextYear = manifest.parliamentFeatures[state.currentParliament]?.nextElectionYear;
-    const link = document.createElement('a');
-    link.href = state.viewUrl('predict');
-    link.className = `maps-election-item${state.view === 'predict' ? ' active' : ''}`;
-    link.textContent = `Predict ${nextYear ?? ''}`.trim();
+    const link = document.createElement("a");
+    link.href = state.viewUrl("predict");
+    link.className = `maps-election-item${state.view === "predict" ? " active" : ""}`;
+    link.textContent = `Predict ${nextYear ?? ""}`.trim();
     electionList.appendChild(link);
   };
   const appendPollTrackerLink = () => {
-    const link = document.createElement('a');
-    link.href = state.viewUrl('polltracker');
-    link.className = `maps-election-item${state.view === 'polltracker' ? ' active' : ''}`;
-    link.textContent = 'Poll tracker';
+    const link = document.createElement("a");
+    link.href = state.viewUrl("polltracker");
+    link.className = `maps-election-item${state.view === "polltracker" ? " active" : ""}`;
+    link.textContent = "Poll tracker";
     electionList.appendChild(link);
   };
 
-  electionList.innerHTML = '';
+  electionList.innerHTML = "";
   // Elections marked hidden for this parliament are omitted from the nav (kept in the manifest
   // and still reachable by an explicit ?election= id) — e.g. Holyrood's retired forecast.
   const hidden = new Set(manifest.hiddenElectionIds(state.currentParliament));
   const visible = state.parliamentElections.filter((election) => !hidden.has(election.id));
-  const chamberId = manifest.parliamentFeatures[state.currentParliament]?.predict?.chamberElectionId;
+  const chamberId =
+    manifest.parliamentFeatures[state.currentParliament]?.predict?.chamberElectionId;
   const anchorIndex = visible.findIndex((election) => election.id === anchorId);
   const followingId = anchorIndex >= 0 ? visible[anchorIndex + 1]?.id : undefined;
   const extrasAfterId = chamberId && followingId === chamberId ? chamberId : anchorId;
   let extrasInserted = false;
   visible.forEach((election) => {
-    const link = document.createElement('a');
-    link.href = state.viewUrl('election', election.id);
-    link.className = `maps-election-item${election.id === activeId ? ' active' : ''}`;
+    const link = document.createElement("a");
+    link.href = state.viewUrl("election", election.id);
+    link.className = `maps-election-item${election.id === activeId ? " active" : ""}`;
     link.textContent = election.name;
     electionList.appendChild(link);
 
@@ -338,15 +361,15 @@ function renderCountdown() {
 
   const cfg = manifest.parliamentConfig(state.currentParliament);
   const electionDate = new Date(cfg.nextElectionDate);
-  const label = cfg.nextElectionLabel ?? '';
+  const label = cfg.nextElectionLabel ?? "";
   // Format in UTC so every viewer sees the same day: a bare date parses as UTC midnight, and a
   // midnight timestamp west of UTC (e.g. -05:00 for ET) still falls on that day in UTC. A
   // positive-offset midnight would show the day before, so give those a bare date instead.
-  const dateText = electionDate.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
+  const dateText = electionDate.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
   });
 
   const tick = () => {
@@ -373,7 +396,7 @@ function renderCountdown() {
 
 // Info button shown only on referendum elections — opens a data-source / methodology explainer.
 // Lives in the referendum-info shell fragment, so it's null on pages that don't load it (US).
-const dataInfoButton = document.getElementById('mapsDataInfoBtn');
+const dataInfoButton = document.getElementById("mapsDataInfoBtn");
 
 /**
  * Configures election-type-specific UI before election data has loaded.
@@ -386,7 +409,7 @@ export function setElectionPreDataFetch() {
   // (mapMode.seatComparison === false). The referendum-only data-info button stays gated on
   // isReferendumType alone.
   const hideSeatComparison = seatComparisonHidden();
-  filterGainsButton.textContent = state.currentElection.byElectionSeats ? 'By-elections' : 'Gains';
+  filterGainsButton.textContent = state.currentElection.byElectionSeats ? "By-elections" : "Gains";
   filterGainsButton.hidden = hideSeatComparison;
   choroplethVoteShareChangeOption.hidden = hideSeatComparison;
   if (dataInfoButton) dataInfoButton.hidden = !state.isReferendumType;
@@ -399,40 +422,42 @@ export function setElectionPreDataFetch() {
 
 // Gains-only toggle button — labelled "Gains" by default, or "By-elections" when the current
 // election declares byElectionSeats. Hidden for referendum elections.
-const filterGainsButton = document.getElementById('mapsFilterGainsOnly');
+const filterGainsButton = document.getElementById("mapsFilterGainsOnly");
 // The "vote share change" <option> inside the choropleth-type select — hidden for referendums,
 // which only support the simpler vote-share view.
-const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
-const choroplethLegend = document.getElementById('mapsChoroplethLegend');
+const choroplethVoteShareChangeOption = document.getElementById(
+  "mapsChoroplethVoteShareChangeOption",
+);
+const choroplethLegend = document.getElementById("mapsChoroplethLegend");
 
 // Primary party filter — restricts visible seats to those won by the chosen party.
-const filterPartySelect = document.getElementById('mapsFilterParty');
+const filterPartySelect = document.getElementById("mapsFilterParty");
 // Region filter — restricts visible seats to a single region (e.g. London, Scotland).
-const filterRegionSelect = document.getElementById('mapsFilterRegion');
+const filterRegionSelect = document.getElementById("mapsFilterRegion");
 // "Next up for election" cycle filter (multi-member chambers whose election carries
 // `upcomingElections`, e.g. the Current Senate). The wrapping group is shown only then.
-const filterUpcomingSelect = document.getElementById('mapsFilterUpcoming');
-const filterUpcomingGroup = document.getElementById('mapsFilterUpcomingGroup');
+const filterUpcomingSelect = document.getElementById("mapsFilterUpcoming");
+const filterUpcomingGroup = document.getElementById("mapsFilterUpcomingGroup");
 // Second-place filter — paired with filterPartySelect to restrict to seats where the chosen
 // party finished second. The wrapping group is hidden when state.mapFilters.party is 'all'.
-const filterSecondPartySelect = document.getElementById('mapsFilterSecondParty');
+const filterSecondPartySelect = document.getElementById("mapsFilterSecondParty");
 // Wrapping group for the second-party filter — hidden when no primary party is selected.
-const filterSecondPartyGroup = document.getElementById('mapsFilterSecondPartyGroup');
+const filterSecondPartyGroup = document.getElementById("mapsFilterSecondPartyGroup");
 // Majority range filter inputs — restrict visible seats to those within the min/max % range.
 // The wrapping row is hidden for multi-member chambers (no vote margins, e.g. Current Senate).
-const filterMajorityGroup = document.getElementById('mapsFilterMajorityGroup');
-const filterMajorityMinInput = document.getElementById('mapsFilterMajorityMin');
-const filterMajorityMaxInput = document.getElementById('mapsFilterMajorityMax');
+const filterMajorityGroup = document.getElementById("mapsFilterMajorityGroup");
+const filterMajorityMinInput = document.getElementById("mapsFilterMajorityMin");
+const filterMajorityMaxInput = document.getElementById("mapsFilterMajorityMax");
 // Choropleth type select — 'none', 'vote-share', or 'vote-share-change'.
-const choroplethTypeSelect = document.getElementById('mapsChoroplethType');
+const choroplethTypeSelect = document.getElementById("mapsChoroplethType");
 // Choropleth target party — once a choropleth type is selected, this picks which party's
 // vote share / vote share change drives the colour ramp on the map.
-const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
+const choroplethPartySelect = document.getElementById("mapsChoroplethParty");
 // Choropleths toolbar button — opens the choropleths panel; hidden for multi-member chambers.
-const choroplethsButton = document.getElementById('mapsChoroplethsBtn');
+const choroplethsButton = document.getElementById("mapsChoroplethsBtn");
 // Reset buttons — restore all filters or choropleths to defaults.
-const filtersResetButton = document.getElementById('mapsFiltersReset');
-const choroplethsResetButton = document.getElementById('mapsChoroplethsReset');
+const filtersResetButton = document.getElementById("mapsFiltersReset");
+const choroplethsResetButton = document.getElementById("mapsChoroplethsReset");
 
 /**
  * Rebuilds the option lists for the four election filter/choropleth selects from the
@@ -461,25 +486,25 @@ export function renderMapControlOptions() {
    */
   const setOptions = (selectEl, rows) => {
     const previousValue = selectEl.value;
-    selectEl.innerHTML = '';
+    selectEl.innerHTML = "";
     rows.forEach((row) => {
-      const option = document.createElement('option');
+      const option = document.createElement("option");
       option.value = row.value;
       option.textContent = row.label;
       selectEl.appendChild(option);
     });
     const stillAvailable = rows.some((row) => row.value === previousValue);
-    selectEl.value = stillAvailable ? previousValue : 'all';
+    selectEl.value = stillAvailable ? previousValue : "all";
   };
 
   const partyRows = state.mapControlParties();
   const regionRows = state.mapControlRegions();
 
   // The three party-keyed selects share one option list; filterRegion uses its own.
-  setOptions(filterPartySelect, partyRows);       // primary winner filter
+  setOptions(filterPartySelect, partyRows); // primary winner filter
   setOptions(filterSecondPartySelect, partyRows); // second-place finisher filter
-  setOptions(choroplethPartySelect, partyRows);   // choropleth target party
-  setOptions(filterRegionSelect, regionRows);     // region filter
+  setOptions(choroplethPartySelect, partyRows); // choropleth target party
+  setOptions(filterRegionSelect, regionRows); // region filter
 
   // The "next up for election" filter is gated by the election's `upcomingElections` flag.
   // When off, hide the control and force the filter to 'all' so it never narrows other
@@ -489,8 +514,8 @@ export function renderMapControlOptions() {
   if (upcomingEnabled) {
     setOptions(filterUpcomingSelect, state.mapControlUpcomingYears());
   } else {
-    state.mapFilters.upcoming = 'all';
-    if (filterUpcomingSelect) filterUpcomingSelect.innerHTML = '';
+    state.mapFilters.upcoming = "all";
+    if (filterUpcomingSelect) filterUpcomingSelect.innerHTML = "";
   }
 
   // Vote/comparison-based controls are meaningless for multi-member chambers (composition
@@ -510,9 +535,9 @@ export function renderMapControlOptions() {
     state.mapFilters.majorityMin = 0;
     state.mapFilters.majorityMax = 100;
     state.mapFilters.gainsOnly = false;
-    filterMajorityMinInput.value = '0';
-    filterMajorityMaxInput.value = '100';
-    filterGainsButton.classList.remove('is-active');
+    filterMajorityMinInput.value = "0";
+    filterMajorityMaxInput.value = "100";
+    filterGainsButton.classList.remove("is-active");
   }
 }
 
@@ -527,16 +552,17 @@ function syncMapControlInputsFromState() {
   if (filterUpcomingSelect) filterUpcomingSelect.value = state.mapFilters.upcoming;
 
   // Second-place needs vote data, so it's never offered for multi-member chambers (no votes).
-  const showSecondPlaceFilter = state.mapFilters.party !== 'all' && !state.currentElection?.multiMember;
+  const showSecondPlaceFilter =
+    state.mapFilters.party !== "all" && !state.currentElection?.multiMember;
   filterSecondPartyGroup.hidden = !showSecondPlaceFilter;
   if (!showSecondPlaceFilter) {
-    state.mapFilters.secondParty = 'all';
+    state.mapFilters.secondParty = "all";
   }
   filterSecondPartySelect.value = state.mapFilters.secondParty;
 
   filterMajorityMinInput.value = String(state.mapFilters.majorityMin);
   filterMajorityMaxInput.value = String(state.mapFilters.majorityMax);
-  filterGainsButton.classList.toggle('is-active', state.mapFilters.gainsOnly);
+  filterGainsButton.classList.toggle("is-active", state.mapFilters.gainsOnly);
 
   choroplethTypeSelect.value = state.mapChoropleths.type;
   choroplethPartySelect.value = state.mapChoropleths.party;
@@ -548,13 +574,13 @@ function syncMapControlInputsFromState() {
  * @returns {void}
  */
 function syncMapControlStateFromInputs() {
-  state.mapFilters.party = filterPartySelect.value || 'all';
-  state.mapFilters.region = filterRegionSelect.value || 'all';
-  if (filterUpcomingSelect) state.mapFilters.upcoming = filterUpcomingSelect.value || 'all';
-  if (state.mapFilters.party === 'all') {
-    state.mapFilters.secondParty = 'all';
+  state.mapFilters.party = filterPartySelect.value || "all";
+  state.mapFilters.region = filterRegionSelect.value || "all";
+  if (filterUpcomingSelect) state.mapFilters.upcoming = filterUpcomingSelect.value || "all";
+  if (state.mapFilters.party === "all") {
+    state.mapFilters.secondParty = "all";
   } else {
-    state.mapFilters.secondParty = filterSecondPartySelect.value || 'all';
+    state.mapFilters.secondParty = filterSecondPartySelect.value || "all";
   }
   state.mapFilters.majorityMin = clampNumber(filterMajorityMinInput.value, 0, 100);
   state.mapFilters.majorityMax = clampNumber(filterMajorityMaxInput.value, 0, 100);
@@ -564,8 +590,8 @@ function syncMapControlStateFromInputs() {
     state.mapFilters.majorityMax = swap;
   }
 
-  state.mapChoropleths.type = choroplethTypeSelect.value || 'none';
-  state.mapChoropleths.party = choroplethPartySelect.value || 'all';
+  state.mapChoropleths.type = choroplethTypeSelect.value || "none";
+  state.mapChoropleths.party = choroplethPartySelect.value || "all";
 
   syncMapControlInputsFromState();
 }
@@ -577,7 +603,7 @@ function syncMapControlStateFromInputs() {
  * @returns {void}
  */
 function wireMapViewControls() {
-  if (filterPartySelect?.dataset.wired === 'true') return;
+  if (filterPartySelect?.dataset.wired === "true") return;
 
   /** Reads all filter/choropleth input values into state and re-renders the map. */
   const applyFromInputs = () => {
@@ -596,11 +622,11 @@ function wireMapViewControls() {
     choroplethPartySelect,
   ].forEach((input) => {
     if (!input) return;
-    input.addEventListener('change', applyFromInputs);
+    input.addEventListener("change", applyFromInputs);
   });
 
   if (filterGainsButton) {
-    filterGainsButton.addEventListener('click', () => {
+    filterGainsButton.addEventListener("click", () => {
       state.mapFilters.gainsOnly = !state.mapFilters.gainsOnly;
       syncMapControlInputsFromState();
       drawMap(true);
@@ -608,7 +634,7 @@ function wireMapViewControls() {
   }
 
   if (filtersResetButton) {
-    filtersResetButton.addEventListener('click', () => {
+    filtersResetButton.addEventListener("click", () => {
       state.resetFilters();
       syncMapControlInputsFromState();
       closeAllPopups();
@@ -617,7 +643,7 @@ function wireMapViewControls() {
   }
 
   if (choroplethsResetButton) {
-    choroplethsResetButton.addEventListener('click', () => {
+    choroplethsResetButton.addEventListener("click", () => {
       state.resetChoropleths();
       syncMapControlInputsFromState();
       closeAllPopups();
@@ -625,19 +651,19 @@ function wireMapViewControls() {
     });
   }
 
-  if (filterPartySelect) filterPartySelect.dataset.wired = 'true';
+  if (filterPartySelect) filterPartySelect.dataset.wired = "true";
 }
 
 // ─── Vote totals ─────────────────────────────────────────────────────────────
 
-const voteTotalsTabNav = document.getElementById('mapsVoteTotalsTabNav');
-const voteTotalsBody = document.getElementById('mapsVoteTotalsBody');
-const voteTotalsTable = document.getElementById('mapsVoteTotalsTable');
+const voteTotalsTabNav = document.getElementById("mapsVoteTotalsTabNav");
+const voteTotalsBody = document.getElementById("mapsVoteTotalsBody");
+const voteTotalsTable = document.getElementById("mapsVoteTotalsTable");
 // Line under the totals table counting seats not yet called; hidden when there are none.
-const voteTotalsUncalled = document.getElementById('mapsVoteTotalsUncalled');
-const voteTotalsToggle = document.getElementById('mapsVoteTotalsToggle');
+const voteTotalsUncalled = document.getElementById("mapsVoteTotalsUncalled");
+const voteTotalsToggle = document.getElementById("mapsVoteTotalsToggle");
 const mapColourNote = document.getElementById("mapsMapColourNote");
-const voteTotalsCollapse = document.getElementById('mapsVoteTotalsCollapse');
+const voteTotalsCollapse = document.getElementById("mapsVoteTotalsCollapse");
 
 /**
  * Syncs the three column-visibility CSS classes on the vote-totals table to state.voteTotals.columns.
@@ -651,16 +677,16 @@ const voteTotalsCollapse = document.getElementById('mapsVoteTotalsCollapse');
  * @returns {Array<object>} New sorted array of party rows.
  */
 function sortPartyRows(rows, seatTiesByName = false) {
-  const multiplier = state.voteTotals.sort.direction === 'asc' ? 1 : -1;
+  const multiplier = state.voteTotals.sort.direction === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
-    if (state.voteTotals.sort.key === 'party') {
+    if (state.voteTotals.sort.key === "party") {
       return multiplier * manifest.labelParty(a.party).localeCompare(manifest.labelParty(b.party));
     }
 
     const av = Number(a[state.voteTotals.sort.key] || 0);
     const bv = Number(b[state.voteTotals.sort.key] || 0);
     if (av !== bv) return multiplier * (av - bv);
-    if (seatTiesByName && state.voteTotals.sort.key === 'seats') {
+    if (seatTiesByName && state.voteTotals.sort.key === "seats") {
       return manifest.labelParty(a.party).localeCompare(manifest.labelParty(b.party));
     }
     const voteDiff = Number(b.votePct || 0) - Number(a.votePct || 0);
@@ -691,18 +717,19 @@ function sortPartyRows(rows, seatTiesByName = false) {
 export function renderVoteTotals(
   summary = state.filteredSeatsSummary,
   comparisonSummary = state.filteredSeatsComparisonSummary,
-  deltaBasis = summary === state.filteredSeatsSummary ? state.filteredSeatsDeltaSummary : null
+  deltaBasis = summary === state.filteredSeatsSummary ? state.filteredSeatsDeltaSummary : null,
 ) {
-  voteTotalsTabNav.querySelectorAll('[data-vote-tab]').forEach((b) => {
-    b.classList.toggle('active', b.dataset.voteTab === state.voteTotals.mode);
+  voteTotalsTabNav.querySelectorAll("[data-vote-tab]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.voteTab === state.voteTotals.mode);
   });
 
-  voteTotalsBody.innerHTML = '';
+  voteTotalsBody.innerHTML = "";
   // The "Seats" column counts electoral votes on EV-tally maps (presidential), so relabel it.
   const seatsHeader = voteTotalsTable.querySelector('th[data-sort-key="seats"]');
-  if (seatsHeader) seatsHeader.textContent = state.mapConfig?.tally === 'electoralVotes' ? 'EV' : 'Seats';
-  voteTotalsTable.classList.toggle('hide-vote-total-col', !state.voteTotalsColumnVisible('votes'));
-  voteTotalsTable.classList.toggle('hide-vote-pct-col', !state.voteTotalsColumnVisible('votePct'));
+  if (seatsHeader)
+    seatsHeader.textContent = state.mapConfig?.tally === "electoralVotes" ? "EV" : "Seats";
+  voteTotalsTable.classList.toggle("hide-vote-total-col", !state.voteTotalsColumnVisible("votes"));
+  voteTotalsTable.classList.toggle("hide-vote-pct-col", !state.voteTotalsColumnVisible("votePct"));
   // With "Show with modelled uncertainty" ticked, whole-country and single-region views of a
   // saved run show their stored simulations: Seats is then the exported whole seats (the
   // simulated means rounded by largest remainder, so they add up to the view's seat total) with
@@ -712,7 +739,9 @@ export function renderVoteTotals(
   // The simulated seats can disagree with the map, which colours the uniform-swing winners.
   if (mapColourNote) {
     mapColourNote.hidden = !uncertainty;
-    mapColourNote.textContent = uncertainty ? "Map colours show each seat's uniform-swing winner." : "";
+    mapColourNote.textContent = uncertainty
+      ? "Map colours show each seat's uniform-swing winner."
+      : "";
   }
   const descriptions = ["mapsSenateForecastComparison"];
   if (shownUncertainty(state)?.basis) descriptions.push("mapsUncertaintyBasis");
@@ -721,11 +750,14 @@ export function renderVoteTotals(
 
   const hiddenParties = new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []);
   const showComparison = Boolean(comparisonSummary);
-  voteTotalsTable.classList.toggle('hide-comparison-cols', !showComparison);
+  voteTotalsTable.classList.toggle("hide-comparison-cols", !showComparison);
   const comparisonByParty = new Map();
   if (comparisonSummary) {
     comparisonSummary.parties.forEach((partyRow) => {
-      const votePct = comparisonSummary.totalVotes > 0 ? (partyRow.votes / comparisonSummary.totalVotes) * 100 : 0;
+      const votePct =
+        comparisonSummary.totalVotes > 0
+          ? (partyRow.votes / comparisonSummary.totalVotes) * 100
+          : 0;
       comparisonByParty.set(partyRow.party, {
         seats: Number(partyRow.seats || 0),
         votePct,
@@ -740,8 +772,8 @@ export function renderVoteTotals(
     const comparison = comparisonByParty.get(partyRow.party) || { seats: 0, votePct: 0 };
     // The uniform-swing count is replaced, not kept beside the whole seats; a party with no
     // stored row in this view (no simulated seats) gets a dash, not that count.
-    const band = uncertainty ? uncertainty.parties[partyRow.party] ?? null : undefined;
-    const seats = band === undefined ? partyRow.seats : band?.m ?? null;
+    const band = uncertainty ? (uncertainty.parties[partyRow.party] ?? null) : undefined;
+    const seats = band === undefined ? partyRow.seats : (band?.m ?? null);
     const basisRow = basisByParty.get(partyRow.party) || { seats: 0, votes: 0 };
     const basisVotePct = basis.totalVotes > 0 ? (basisRow.votes / basis.totalVotes) * 100 : 0;
     return {
@@ -750,42 +782,46 @@ export function renderVoteTotals(
       seats,
       votePct,
       // The simulated seats stand in for the uniform-swing count; otherwise the delta basis applies.
-      seatsDelta: seats === null
-        ? null
-        : Number((band === undefined ? basisRow.seats : seats) || 0) - comparison.seats,
+      seatsDelta:
+        seats === null
+          ? null
+          : Number((band === undefined ? basisRow.seats : seats) || 0) - comparison.seats,
       votePctDelta: basisVotePct - comparison.votePct,
     };
   });
 
   if (voteTotalsUncalled) {
     const uncalled = Number(summary.uncalled || 0);
-    const unit = state.mapConfig?.tally === 'electoralVotes' ? 'EV' : (uncalled === 1 ? 'seat' : 'seats');
-    voteTotalsUncalled.textContent = uncalled > 0 ? `${formatInt(uncalled)} ${unit} uncalled` : '';
+    const unit =
+      state.mapConfig?.tally === "electoralVotes" ? "EV" : uncalled === 1 ? "seat" : "seats";
+    voteTotalsUncalled.textContent = uncalled > 0 ? `${formatInt(uncalled)} ${unit} uncalled` : "";
     voteTotalsUncalled.hidden = uncalled <= 0;
   }
 
-  const sortedRows = sortPartyRows(rows, Boolean(uncertainty)).filter((r) => !hiddenParties.has(r.party));
+  const sortedRows = sortPartyRows(rows, Boolean(uncertainty)).filter(
+    (r) => !hiddenParties.has(r.party),
+  );
   const visibleRows = state.voteTotals.expanded ? sortedRows : sortedRows.slice(0, 7);
 
   if (voteTotalsToggle) {
     const canExpand = sortedRows.length > 7;
     voteTotalsToggle.hidden = !canExpand;
     if (canExpand) {
-      voteTotalsToggle.textContent = state.voteTotals.expanded ? 'Show fewer' : 'Show all';
+      voteTotalsToggle.textContent = state.voteTotals.expanded ? "Show fewer" : "Show all";
     }
   }
 
   visibleRows.forEach((partyRow) => {
-    const tr = document.createElement('tr');
+    const tr = document.createElement("tr");
     const { band } = partyRow;
     const showSeatsDelta = showComparison && partyRow.seatsDelta !== null;
     tr.innerHTML = `
       <td><span class="maps-party-cell"><span class="maps-party-swatch" style="background:${manifest.colourParty(partyRow.party)}"></span>${escapeHtml(manifest.labelParty(partyRow.party))}</span></td>
       <td>${seatsCellText(partyRow.seats, band)}</td>
-      <td class="comparison-col ${showSeatsDelta ? deltaClass(partyRow.seatsDelta) : ''}">${showSeatsDelta ? formatSigned(partyRow.seatsDelta, 0) : ''}</td>
+      <td class="comparison-col ${showSeatsDelta ? deltaClass(partyRow.seatsDelta) : ""}">${showSeatsDelta ? formatSigned(partyRow.seatsDelta, 0) : ""}</td>
       <td class="vote-total-col">${formatInt(partyRow.votes)}</td>
       <td class="vote-pct-col">${votePctCellText(partyRow.votePct, band)}</td>
-      <td class="comparison-col vote-pct-comparison-col ${showComparison ? deltaClass(partyRow.votePctDelta) : ''}">${showComparison ? formatSigned(partyRow.votePctDelta, 2) : ''}</td>
+      <td class="comparison-col vote-pct-comparison-col ${showComparison ? deltaClass(partyRow.votePctDelta) : ""}">${showComparison ? formatSigned(partyRow.votePctDelta, 2) : ""}</td>
     `;
     voteTotalsBody.appendChild(tr);
   });
@@ -802,7 +838,7 @@ export function renderVoteTotals(
  */
 function seatsCellText(seats, band) {
   if (band === undefined) return formatInt(seats);
-  if (!band) return '—';
+  if (!band) return "—";
   return seatsWithRange(band.m, band.s);
 }
 
@@ -813,7 +849,7 @@ function seatsCellText(seats, band) {
  * @returns {string}
  */
 function votePctCellText(votePct, band) {
-  return band ? `${formatPct(votePct)} (${uncertaintyRange(band.v, '%')})` : formatPct(votePct);
+  return band ? `${formatPct(votePct)} (${uncertaintyRange(band.v, "%")})` : formatPct(votePct);
 }
 
 /**
@@ -825,15 +861,15 @@ function votePctCellText(votePct, band) {
  * @returns {void}
  */
 function initVoteTotalsTabs() {
-  voteTotalsTabNav.innerHTML = '';
+  voteTotalsTabNav.innerHTML = "";
   const views = state.mapConfig.voteTotalsViews;
   voteTotalsTabNav.hidden = views.length <= 1;
   views.forEach((view) => {
-    const btn = document.createElement('button');
-    btn.className = `maps-vote-tab${view.id === state.voteTotals.mode ? ' active' : ''}`;
+    const btn = document.createElement("button");
+    btn.className = `maps-vote-tab${view.id === state.voteTotals.mode ? " active" : ""}`;
     btn.dataset.voteTab = view.id;
     btn.textContent = view.label;
-    btn.addEventListener('click', () => {
+    btn.addEventListener("click", () => {
       state.voteTotals.mode = view.id;
       state.recomputeVoteTotalsForMode();
       renderVoteTotals();
@@ -848,7 +884,7 @@ function initVoteTotalsTabs() {
  * @returns {void}
  */
 function wireVoteTotalsToggle() {
-  voteTotalsToggle.addEventListener('click', () => {
+  voteTotalsToggle.addEventListener("click", () => {
     state.voteTotals.expanded = !state.voteTotals.expanded;
     if (!state.filteredSeatsSummary) return;
     renderVoteTotals();
@@ -863,9 +899,9 @@ function wireVoteTotalsToggle() {
  * @returns {void}
  */
 function wireVoteTotalsCollapse() {
-  voteTotalsCollapse.addEventListener('click', () => {
-    const collapsed = voteTotalsCard.classList.toggle('maps-vote-totals--collapsed');
-    voteTotalsCollapse.textContent = collapsed ? '▼' : '▲';
+  voteTotalsCollapse.addEventListener("click", () => {
+    const collapsed = voteTotalsCard.classList.toggle("maps-vote-totals--collapsed");
+    voteTotalsCollapse.textContent = collapsed ? "▼" : "▲";
   });
 }
 
@@ -875,8 +911,8 @@ function wireVoteTotalsCollapse() {
  * @returns {void}
  */
 function wireVoteTotalsSorting() {
-  document.querySelectorAll('th[data-sort-key]').forEach((header) => {
-    const sortKey = header.getAttribute('data-sort-key');
+  document.querySelectorAll("th[data-sort-key]").forEach((header) => {
+    const sortKey = header.getAttribute("data-sort-key");
     if (!sortKey) return;
 
     const trigger = () => {
@@ -885,9 +921,9 @@ function wireVoteTotalsSorting() {
       syncRightPanelHeight();
     };
 
-    header.addEventListener('click', trigger);
-    header.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
+    header.addEventListener("click", trigger);
+    header.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         trigger();
       }
@@ -906,7 +942,7 @@ function wireVoteTotalsSorting() {
  * @returns {void}
  */
 export function selectSeatBySearchQuery(query) {
-  const rawQuery = String(query || '').trim();
+  const rawQuery = String(query || "").trim();
   if (!rawQuery) return;
 
   // 1. Exact normalised-key match — handles case and punctuation differences.
@@ -916,9 +952,14 @@ export function selectSeatBySearchQuery(query) {
   // 2. Fall back to starts-with then contains, both case-insensitive.
   if (!seatName) {
     const queryLower = rawQuery.toLowerCase();
-    seatName = Array.from(state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().startsWith(queryLower))
-      || Array.from(state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().includes(queryLower))
-      || null;
+    seatName =
+      Array.from(state.currentSeatNameByKey.values()).find((name) =>
+        name.toLowerCase().startsWith(queryLower),
+      ) ||
+      Array.from(state.currentSeatNameByKey.values()).find((name) =>
+        name.toLowerCase().includes(queryLower),
+      ) ||
+      null;
   }
 
   if (!seatName) {
@@ -940,7 +981,7 @@ export function selectSeatBySearchQuery(query) {
 
 // ── Seat name search ──────────────────────────────────────────────────────────
 
-const seatSearchInput = document.getElementById('maps-seat-search');
+const seatSearchInput = document.getElementById("maps-seat-search");
 let seatSearchMenuEl = null;
 let seatSearchSuggestionIndex = -1;
 let seatSearchSuggestions = [];
@@ -956,14 +997,15 @@ function ensureSeatSearchMenu() {
   // Return the cached element if it already exists, or bail if the input isn't in the DOM.
   if (seatSearchMenuEl || !seatSearchInput) return seatSearchMenuEl;
   // Mount inside the toolbar group so CSS can position the dropdown relative to it.
-  const searchGroup = seatSearchInput.closest('.maps-toolbar-group-search') || seatSearchInput.parentElement;
+  const searchGroup =
+    seatSearchInput.closest(".maps-toolbar-group-search") || seatSearchInput.parentElement;
 
-  const menu = document.createElement('div');
-  menu.className = 'maps-seat-search-menu';
+  const menu = document.createElement("div");
+  menu.className = "maps-seat-search-menu";
   menu.hidden = true;
   // ARIA: role=listbox pairs with role=option on each item for keyboard accessibility.
-  menu.setAttribute('role', 'listbox');
-  menu.id = 'mapsSeatSearchMenu';
+  menu.setAttribute("role", "listbox");
+  menu.id = "mapsSeatSearchMenu";
   searchGroup.appendChild(menu);
   seatSearchMenuEl = menu;
   return seatSearchMenuEl;
@@ -979,7 +1021,7 @@ function hideSeatSearchSuggestions() {
   if (!seatSearchMenuEl) return;
   seatSearchMenuEl.hidden = true;
   // Wipe content so a stale list is never shown if the menu is re-opened immediately.
-  seatSearchMenuEl.innerHTML = '';
+  seatSearchMenuEl.innerHTML = "";
 }
 
 /**
@@ -988,12 +1030,14 @@ function hideSeatSearchSuggestions() {
  * @param {string} [query=''] - Search string to match against; empty string shows all names up to the limit.
  * @returns {void}
  */
-function showSeatSearchSuggestions(query = '') {
+function showSeatSearchSuggestions(query = "") {
   const menu = ensureSeatSearchMenu();
   if (!menu) return;
 
   // An empty query shows all names up to the limit — supports the focus-opens-list UX.
-  const queryText = String(query || '').trim().toLowerCase();
+  const queryText = String(query || "")
+    .trim()
+    .toLowerCase();
   const startsWithMatches = [];
   const includesMatches = [];
   // Starts-with matches rank above contains matches for more intuitive ordering.
@@ -1007,9 +1051,12 @@ function showSeatSearchSuggestions(query = '') {
   });
 
   // Merge the two tiers and truncate — starts-with results always appear before contains.
-  seatSearchSuggestions = [...startsWithMatches, ...includesMatches].slice(0, MAX_SEAT_SEARCH_SUGGESTIONS);
+  seatSearchSuggestions = [...startsWithMatches, ...includesMatches].slice(
+    0,
+    MAX_SEAT_SEARCH_SUGGESTIONS,
+  );
   seatSearchSuggestionIndex = -1;
-  menu.innerHTML = '';
+  menu.innerHTML = "";
 
   if (!seatSearchSuggestions.length) {
     menu.hidden = true;
@@ -1017,18 +1064,18 @@ function showSeatSearchSuggestions(query = '') {
   }
 
   seatSearchSuggestions.forEach((name, index) => {
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'maps-seat-search-item';
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "maps-seat-search-item";
     item.textContent = name;
-    item.setAttribute('role', 'option');
+    item.setAttribute("role", "option");
     item.dataset.index = String(index);
     // Prevent mousedown from blurring the input before the click handler fires.
-    item.addEventListener('mousedown', (event) => {
+    item.addEventListener("mousedown", (event) => {
       event.preventDefault();
     });
     // Commit the selection: fill the input, close the menu, and run the search.
-    item.addEventListener('click', () => {
+    item.addEventListener("click", () => {
       seatSearchInput.value = name;
       hideSeatSearchSuggestions();
       selectSeatBySearchQuery(name);
@@ -1047,10 +1094,10 @@ function showSeatSearchSuggestions(query = '') {
 function updateSeatSearchHighlight() {
   if (!seatSearchMenuEl) return;
   // Toggle is-active on each item to reflect the current keyboard cursor position.
-  const options = seatSearchMenuEl.querySelectorAll('.maps-seat-search-item');
+  const options = seatSearchMenuEl.querySelectorAll(".maps-seat-search-item");
   options.forEach((option) => {
     const index = Number(option.dataset.index);
-    option.classList.toggle('is-active', index === seatSearchSuggestionIndex);
+    option.classList.toggle("is-active", index === seatSearchSuggestionIndex);
   });
 }
 
@@ -1061,45 +1108,48 @@ function updateSeatSearchHighlight() {
  * @returns {void}
  */
 function wireSeatSearch() {
-  if (seatSearchInput.dataset.wired === 'true') return;
+  if (seatSearchInput.dataset.wired === "true") return;
 
-  let lastSubmittedQuery = '';
+  let lastSubmittedQuery = "";
   /**
    * Reads the current search input value and calls selectSeatBySearchQuery, deduplicating
    * against the last submitted query.
    * @returns {void}
    */
   const submitSearch = () => {
-    const query = String(seatSearchInput.value || '').trim();
+    const query = String(seatSearchInput.value || "").trim();
     if (!query || query === lastSubmittedQuery) return;
     lastSubmittedQuery = query;
     selectSeatBySearchQuery(query);
   };
 
-  seatSearchInput.addEventListener('focus', () => {
+  seatSearchInput.addEventListener("focus", () => {
     showSeatSearchSuggestions(seatSearchInput.value);
   });
-  seatSearchInput.addEventListener('input', () => {
+  seatSearchInput.addEventListener("input", () => {
     showSeatSearchSuggestions(seatSearchInput.value);
   });
-  seatSearchInput.addEventListener('blur', () => {
+  seatSearchInput.addEventListener("blur", () => {
     window.setTimeout(hideSeatSearchSuggestions, 120);
   });
-  seatSearchInput.addEventListener('keydown', (event) => {
+  seatSearchInput.addEventListener("keydown", (event) => {
     // ArrowDown: open the list if empty, then advance the cursor.
-    if (event.key === 'ArrowDown') {
+    if (event.key === "ArrowDown") {
       if (!seatSearchSuggestions.length) {
         showSeatSearchSuggestions(seatSearchInput.value);
       }
       if (!seatSearchSuggestions.length) return;
       event.preventDefault();
-      seatSearchSuggestionIndex = Math.min(seatSearchSuggestionIndex + 1, seatSearchSuggestions.length - 1);
+      seatSearchSuggestionIndex = Math.min(
+        seatSearchSuggestionIndex + 1,
+        seatSearchSuggestions.length - 1,
+      );
       updateSeatSearchHighlight();
       return;
     }
 
     // ArrowUp: move the cursor back, clamped to 0.
-    if (event.key === 'ArrowUp') {
+    if (event.key === "ArrowUp") {
       if (!seatSearchSuggestions.length) return;
       event.preventDefault();
       seatSearchSuggestionIndex = Math.max(seatSearchSuggestionIndex - 1, 0);
@@ -1108,9 +1158,12 @@ function wireSeatSearch() {
     }
 
     // Enter: commit the highlighted suggestion (if any) then run the search.
-    if (event.key === 'Enter') {
+    if (event.key === "Enter") {
       event.preventDefault();
-      if (seatSearchSuggestionIndex >= 0 && seatSearchSuggestionIndex < seatSearchSuggestions.length) {
+      if (
+        seatSearchSuggestionIndex >= 0 &&
+        seatSearchSuggestionIndex < seatSearchSuggestions.length
+      ) {
         const selectedName = seatSearchSuggestions[seatSearchSuggestionIndex];
         seatSearchInput.value = selectedName;
       }
@@ -1120,29 +1173,31 @@ function wireSeatSearch() {
     }
 
     // Escape: close the list without submitting.
-    if (event.key === 'Escape') {
+    if (event.key === "Escape") {
       hideSeatSearchSuggestions();
     }
   });
   // Dismiss the menu when the user clicks outside both the input and the dropdown.
-  document.addEventListener('click', (event) => {
+  document.addEventListener("click", (event) => {
     if (!(event.target instanceof Node)) return;
     if (seatSearchInput.contains(event.target)) return;
     if (seatSearchMenuEl?.contains(event.target)) return;
     hideSeatSearchSuggestions();
   });
 
-  seatSearchInput.dataset.wired = 'true';
+  seatSearchInput.dataset.wired = "true";
 }
 
 // ─── Map ─────────────────────────────────────────────────────────────────────
 
-const regionCard = document.getElementById('mapsRegionCard');
-const regionTableBody = document.getElementById('mapsRegionTableBody');
+const regionCard = document.getElementById("mapsRegionCard");
+const regionTableBody = document.getElementById("mapsRegionTableBody");
 
 /** Closes all popup panels. */
 function closeAllPopups() {
-  document.querySelectorAll('.maps-control-popup').forEach((p) => { p.hidden = true; });
+  document.querySelectorAll(".maps-control-popup").forEach((p) => {
+    p.hidden = true;
+  });
 }
 
 /**
@@ -1154,28 +1209,28 @@ function closeAllPopups() {
  * @returns {void}
  */
 function wirePopupPanels() {
-  document.querySelectorAll('[data-popup-action]').forEach((button) => {
-    if (button.dataset.wired === 'true') return;
+  document.querySelectorAll("[data-popup-action]").forEach((button) => {
+    if (button.dataset.wired === "true") return;
 
-    button.addEventListener('click', () => {
-      const action = button.getAttribute('data-popup-action');
-      const targetId = button.getAttribute('data-popup-target');
+    button.addEventListener("click", () => {
+      const action = button.getAttribute("data-popup-action");
+      const targetId = button.getAttribute("data-popup-target");
       const panel = targetId ? document.getElementById(targetId) : null;
       if (!panel) return;
 
-      if (action === 'close') {
+      if (action === "close") {
         closeAllPopups();
         return;
       }
 
-      if (action === 'toggle') {
+      if (action === "toggle") {
         const willShow = panel.hidden;
         closeAllPopups();
         panel.hidden = !willShow;
       }
     });
 
-    button.dataset.wired = 'true';
+    button.dataset.wired = "true";
   });
 }
 
@@ -1185,13 +1240,13 @@ function wirePopupPanels() {
  * @returns {void}
  */
 function wireMapInteractions() {
-  document.querySelectorAll('[data-map-action]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const action = button.getAttribute('data-map-action');
-      if (action === 'zoom-in') mapInteraction.zoomBy(1.2);
-      if (action === 'zoom-out') mapInteraction.zoomBy(0.83);
-      if (action === 'reset-zoom') mapInteraction.reset();
-      if (action === 'reset-view') {
+  document.querySelectorAll("[data-map-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.getAttribute("data-map-action");
+      if (action === "zoom-in") mapInteraction.zoomBy(1.2);
+      if (action === "zoom-out") mapInteraction.zoomBy(0.83);
+      if (action === "reset-zoom") mapInteraction.reset();
+      if (action === "reset-view") {
         mapInteraction.reset();
         state.resetFilters();
         state.resetChoropleths();
@@ -1231,7 +1286,7 @@ export function initRegionTable() {
   }
 
   // Clear any previously rendered rows before rebuilding.
-  regionTableBody.innerHTML = '';
+  regionTableBody.innerHTML = "";
 
   regionSummary.forEach((data, regionKey) => {
     // Skip regions with no data (shouldn't happen, but guard against malformed summaries).
@@ -1244,29 +1299,29 @@ export function initRegionTable() {
     const total = entries.reduce((s, [, n]) => s + n, 0);
 
     // Build the row — clicking flashes the region on the map and opens the popup.
-    const tr = document.createElement('tr');
-    tr.className = 'maps-region-table-row';
-    tr.addEventListener('click', () => {
+    const tr = document.createElement("tr");
+    tr.className = "maps-region-table-row";
+    tr.addEventListener("click", () => {
       mapInteraction.flashRegion(regionKey);
       renderRegionPopup(regionKey, data);
     });
 
     // First cell: human-readable region name.
-    const tdName = document.createElement('td');
-    tdName.className = 'maps-region-table-name';
+    const tdName = document.createElement("td");
+    tdName.className = "maps-region-table-name";
     tdName.textContent = getRegionLabel(regionKey, state.currentRegionLabelsByKey);
     tr.appendChild(tdName);
 
     // Second cell: proportional colour bar, one segment per party.
-    const tdSeats = document.createElement('td');
-    tdSeats.className = 'maps-region-table-seats';
+    const tdSeats = document.createElement("td");
+    tdSeats.className = "maps-region-table-seats";
 
     if (total > 0) {
-      const barEl = document.createElement('div');
-      barEl.className = 'maps-region-table-bar';
+      const barEl = document.createElement("div");
+      barEl.className = "maps-region-table-bar";
       entries.forEach(([party, count]) => {
-        const seg = document.createElement('div');
-        seg.className = 'maps-region-table-bar-seg';
+        const seg = document.createElement("div");
+        seg.className = "maps-region-table-bar-seg";
         seg.style.width = `${(count / total) * 100}%`;
         seg.style.background = manifest.colourParty(party);
         // Only label the segment if it's wide enough to fit the number.
@@ -1284,25 +1339,25 @@ export function initRegionTable() {
   regionCard.hidden = false;
 
   // Reset to expanded and wire the header toggle button (mobile-only — toggle and collapsed styles are gated behind max-width: 640px in styles.css).
-  const toggleBtn = document.getElementById('mapsRegionCardToggle');
-  regionCard.classList.remove('maps-region-card--collapsed');
+  const toggleBtn = document.getElementById("mapsRegionCardToggle");
+  regionCard.classList.remove("maps-region-card--collapsed");
   if (toggleBtn) {
-    toggleBtn.textContent = '▼';
+    toggleBtn.textContent = "▼";
     const onToggle = () => {
-      const collapsed = regionCard.classList.toggle('maps-region-card--collapsed');
-      toggleBtn.textContent = collapsed ? '▶' : '▼';
+      const collapsed = regionCard.classList.toggle("maps-region-card--collapsed");
+      toggleBtn.textContent = collapsed ? "▶" : "▼";
     };
-    const thead = regionCard.querySelector('thead');
+    const thead = regionCard.querySelector("thead");
     if (thead) thead.onclick = onToggle;
   }
 }
 
 // ─── Seat popup ──────────────────────────────────────────────────────────────
 
-const seatPopup = document.getElementById('mapsSeatPopup');
-const seatPopupTitle = document.getElementById('mapsSeatPopupTitle');
-const seatPopupMeta = document.getElementById('mapsSeatPopupMeta');
-const seatPopupList = document.getElementById('mapsSeatPopupList');
+const seatPopup = document.getElementById("mapsSeatPopup");
+const seatPopupTitle = document.getElementById("mapsSeatPopupTitle");
+const seatPopupMeta = document.getElementById("mapsSeatPopupMeta");
+const seatPopupList = document.getElementById("mapsSeatPopupList");
 
 // Name of the seat whose detail popup is currently open, or null when nothing is open (or a
 // region list-vote popup is showing instead). Lets refreshOpenSeatPopup re-render it in place
@@ -1329,7 +1384,7 @@ function loadStateTrends(path) {
     stateTrendsPromise = Promise.resolve({});
     return stateTrendsPromise;
   }
-  const base = page.dataBase || 'data';
+  const base = page.dataBase || "data";
   stateTrendsPromise = fetchJson(`${base}/${path}`)
     .then((payload) => payload?.units ?? payload ?? {})
     .catch(() => ({}));
@@ -1349,11 +1404,11 @@ function loadStateTrends(path) {
  * @returns {HTMLDivElement}
  */
 function buildPopupRow(party, barWidth, valuesHtml, label, colour) {
-  const item = document.createElement('div');
-  item.className = 'maps-popup-row';
+  const item = document.createElement("div");
+  item.className = "maps-popup-row";
   const rowColour = colour || manifest.colourParty(party);
-  item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
-  item.style.setProperty('--maps-popup-bar-colour', rowColour);
+  item.style.setProperty("--maps-popup-bar-width", `${barWidth}%`);
+  item.style.setProperty("--maps-popup-bar-colour", rowColour);
   item.innerHTML = `
     <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${rowColour}"></span><span class="maps-popup-name">${escapeHtml(label ?? manifest.labelParty(party))}</span></div>
     <div class="maps-popup-values">${valuesHtml}</div>
@@ -1373,14 +1428,16 @@ function buildPopupRow(party, barWidth, valuesHtml, label, colour) {
 function renderPopupRows(rows, getValuesHtml, barCap = 75) {
   // Scale all bars relative to the leading row so the top party always fills barCap.
   const maxPct = rows.reduce((max, row) => Math.max(max, row.pct), 0);
-  seatPopupList.innerHTML = '';
+  seatPopupList.innerHTML = "";
   rows.forEach((row) => {
     // Bar width is proportional to pct / maxPct, capped to leave room for labels.
     const barWidth = maxPct > 0 ? Math.max(0, Math.min(barCap, (row.pct / maxPct) * barCap)) : 0;
     // getValuesHtml supplies the right-side content (vote share, delta, seat count, etc.)
     // which differs between the region popup and the constituency popup. row.label, when
     // present, overrides the party label (e.g. a candidate name in the seat popup).
-    seatPopupList.appendChild(buildPopupRow(row.party, barWidth, getValuesHtml(row), row.label, row.colour));
+    seatPopupList.appendChild(
+      buildPopupRow(row.party, barWidth, getValuesHtml(row), row.label, row.colour),
+    );
   });
 }
 
@@ -1393,7 +1450,7 @@ function renderPopupRows(rows, getValuesHtml, barCap = 75) {
  * @returns {void}
  */
 function renderStateTrendChart(series) {
-  seatPopupList.querySelector('.maps-state-trend-wrap')?.remove();
+  seatPopupList.querySelector(".maps-state-trend-wrap")?.remove();
   if (!series?.length) return;
 
   const width = 428;
@@ -1402,44 +1459,78 @@ function renderStateTrendChart(series) {
   const innerW = width - margin.left - margin.right;
   const innerH = height - margin.top - margin.bottom;
 
-  const x = d3.scalePoint().domain(series.map((d) => d.year)).range([0, innerW]).padding(0.5);
+  const x = d3
+    .scalePoint()
+    .domain(series.map((d) => d.year))
+    .range([0, innerW])
+    .padding(0.5);
   const y = d3.scaleLinear().domain([0, 100]).range([innerH, 0]);
 
-  const svg = d3.create('svg')
-    .attr('viewBox', `0 0 ${width} ${height}`)
-    .attr('class', 'maps-state-trend-svg');
-  const plot = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+  const svg = d3
+    .create("svg")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("class", "maps-state-trend-svg");
+  const plot = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
   // Reference gridlines + y labels at 0 / 50 (crossover) / 100.
   [0, 50, 100].forEach((tick) => {
-    plot.append('line').attr('class', 'maps-state-trend-grid')
-      .attr('x1', 0).attr('x2', innerW).attr('y1', y(tick)).attr('y2', y(tick));
-    plot.append('text').attr('class', 'maps-state-trend-axis')
-      .attr('x', -6).attr('y', y(tick)).attr('dy', '0.32em').attr('text-anchor', 'end')
+    plot
+      .append("line")
+      .attr("class", "maps-state-trend-grid")
+      .attr("x1", 0)
+      .attr("x2", innerW)
+      .attr("y1", y(tick))
+      .attr("y2", y(tick));
+    plot
+      .append("text")
+      .attr("class", "maps-state-trend-axis")
+      .attr("x", -6)
+      .attr("y", y(tick))
+      .attr("dy", "0.32em")
+      .attr("text-anchor", "end")
       .text(tick);
   });
   // X-axis year labels, abbreviated ('00', '04', … '24').
   series.forEach((d) => {
-    plot.append('text').attr('class', 'maps-state-trend-axis')
-      .attr('x', x(d.year)).attr('y', innerH + 14).attr('text-anchor', 'middle')
+    plot
+      .append("text")
+      .attr("class", "maps-state-trend-axis")
+      .attr("x", x(d.year))
+      .attr("y", innerH + 14)
+      .attr("text-anchor", "middle")
       .text(String(d.year).slice(-2));
   });
 
   const drawLine = (key, colour) => {
-    plot.append('path')
-      .attr('d', d3.line().x((d) => x(d.year)).y((d) => y(d[key]))(series))
-      .attr('fill', 'none').attr('stroke', colour).attr('stroke-width', 2);
-    plot.selectAll(null).data(series).enter().append('circle')
-      .attr('cx', (d) => x(d.year)).attr('cy', (d) => y(d[key]))
-      .attr('r', 2.2).attr('fill', colour);
+    plot
+      .append("path")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x((d) => x(d.year))
+          .y((d) => y(d[key]))(series),
+      )
+      .attr("fill", "none")
+      .attr("stroke", colour)
+      .attr("stroke-width", 2);
+    plot
+      .selectAll(null)
+      .data(series)
+      .enter()
+      .append("circle")
+      .attr("cx", (d) => x(d.year))
+      .attr("cy", (d) => y(d[key]))
+      .attr("r", 2.2)
+      .attr("fill", colour);
   };
   // Colours come from the manifest (single source of truth) — series keys are dem/rep,
   // but the manifest party keys are democrat/republican.
-  drawLine('dem', manifest.colourParty('democrat'));
-  drawLine('rep', manifest.colourParty('republican'));
+  drawLine("dem", manifest.colourParty("democrat"));
+  drawLine("rep", manifest.colourParty("republican"));
 
-  const wrap = document.createElement('div');
-  wrap.className = 'maps-state-trend-wrap';
+  const wrap = document.createElement("div");
+  wrap.className = "maps-state-trend-wrap";
   wrap.innerHTML = '<div class="maps-state-trend-title">Two-party vote share</div>';
   wrap.appendChild(svg.node());
   seatPopupList.appendChild(wrap);
@@ -1480,7 +1571,11 @@ function renderRegionPopup(regionKey, data) {
   // Build a sorted rows array with pre-computed vote share percentages, capped at 8.
   const totalVotes = Object.values(data.votesByParty).reduce((a, b) => a + b, 0);
   const rows = Object.entries(data.votesByParty)
-    .map(([party, votes]) => ({ party, votes, pct: totalVotes > 0 ? (votes / totalVotes) * 100 : 0 }))
+    .map(([party, votes]) => ({
+      party,
+      votes,
+      pct: totalVotes > 0 ? (votes / totalVotes) * 100 : 0,
+    }))
     .sort((a, b) => b.votes - a.votes)
     .slice(0, 8);
 
@@ -1488,7 +1583,7 @@ function renderRegionPopup(regionKey, data) {
   // and the raw seat count for that party in this region (from seatsByParty).
   renderPopupRows(rows, (row) => {
     const seats = data.seatsByParty[row.party] || 0;
-    return `<span>${formatPct(row.pct)}%</span><span style="color:#6b7280">${seats} seat${seats !== 1 ? 's' : ''}</span>`;
+    return `<span>${formatPct(row.pct)}%</span><span style="color:#6b7280">${seats} seat${seats !== 1 ? "s" : ""}</span>`;
   });
 
   seatPopup.hidden = false;
@@ -1545,40 +1640,42 @@ function popupDeltaBasis(seat, comparisonSeat) {
  * @returns {HTMLElement}
  */
 function buildSpecialPopupBlock(special) {
-  const block = document.createElement('section');
-  block.className = 'maps-popup-special';
+  const block = document.createElement("section");
+  block.className = "maps-popup-special";
 
-  const title = document.createElement('h4');
-  title.className = 'maps-popup-special-title';
-  title.textContent = special.senateClass ? `Special election (Class ${special.senateClass})` : 'Special election';
+  const title = document.createElement("h4");
+  title.className = "maps-popup-special-title";
+  title.textContent = special.senateClass
+    ? `Special election (Class ${special.senateClass})`
+    : "Special election";
   block.appendChild(title);
 
   const notes = special.statusNotes();
-  const meta = document.createElement('div');
-  meta.className = 'maps-seat-popup-meta';
-  const addMeta = (text, className = '') => {
+  const meta = document.createElement("div");
+  meta.className = "maps-seat-popup-meta";
+  const addMeta = (text, className = "") => {
     if (!text) return;
-    const item = document.createElement('span');
+    const item = document.createElement("span");
     item.className = `maps-popup-meta-item ${className}`.trim();
     item.textContent = text;
     meta.appendChild(item);
   };
-  addMeta(notes.uncalledTag, 'maps-uncalled-tag');
+  addMeta(notes.uncalledTag, "maps-uncalled-tag");
   if (special.winner) {
     const label = manifest.labelParty(special.winner);
     addMeta(special.called ? `Winner: ${label}` : `Leading: ${label}`);
   }
-  addMeta(notes.samePartyNote, 'maps-popup-status-note');
-  addMeta(notes.roundNote, 'maps-popup-status-note');
+  addMeta(notes.samePartyNote, "maps-popup-status-note");
+  addMeta(notes.roundNote, "maps-popup-status-note");
   // A special's deltas and FROM tag are measured against its own previous result (`pv`). The
   // payload does not carry that election's year, so the popup shows them without a "vs year" label.
   const gainFrom = special.gainFromParty(special.previous?.winner ?? null);
   if (gainFrom) {
-    const item = document.createElement('span');
-    item.className = 'maps-popup-meta-item';
+    const item = document.createElement("span");
+    item.className = "maps-popup-meta-item";
     item.append(`FROM ${manifest.labelParty(gainFrom)} `);
-    const icon = document.createElement('span');
-    icon.className = 'maps-seat-icon';
+    const icon = document.createElement("span");
+    icon.className = "maps-seat-icon";
     icon.style.background = manifest.colourParty(gainFrom);
     item.appendChild(icon);
     meta.appendChild(item);
@@ -1591,8 +1688,16 @@ function buildSpecialPopupBlock(special) {
   rows.forEach((row) => {
     const barWidth = maxPct > 0 ? Math.max(0, Math.min(75, (row.pct / maxPct) * 75)) : 0;
     const delta = previousDeltas.deltaFor(row.party, row.pct);
-    const deltaHtml = delta == null ? '' : `<span class="${deltaClass(delta)}">${formatSigned(delta, 2)}</span>`;
-    block.appendChild(buildPopupRow(row.party, barWidth, `<span>${formatPct(row.pct)}%</span>${deltaHtml}`, row.label));
+    const deltaHtml =
+      delta == null ? "" : `<span class="${deltaClass(delta)}">${formatSigned(delta, 2)}</span>`;
+    block.appendChild(
+      buildPopupRow(
+        row.party,
+        barWidth,
+        `<span>${formatPct(row.pct)}%</span>${deltaHtml}`,
+        row.label,
+      ),
+    );
   });
   return block;
 }
@@ -1619,31 +1724,40 @@ export function renderSeatPopup(seatName) {
   // party colour, name and the years their seat was last and is next contested.
   if (seat.members?.length) {
     seatPopupTitle.textContent = seat.seat;
-    seatPopupMeta.innerHTML =
-      `<span class="maps-popup-meta-item">${escapeHtml(getRegionLabel(seat.region, state.currentRegionLabelsByKey))}</span>`;
+    seatPopupMeta.innerHTML = `<span class="maps-popup-meta-item">${escapeHtml(getRegionLabel(seat.region, state.currentRegionLabelsByKey))}</span>`;
     const rows = seat.members.map((member) => {
       // An uncalled member has no party or name yet: a neutral row saying so, with the count.
       if (Seat.isUncalledMember(member)) {
-        const hasCount = member.pc !== null && member.pc !== undefined && Number.isFinite(Number(member.pc));
+        const hasCount =
+          member.pc !== null && member.pc !== undefined && Number.isFinite(Number(member.pc));
         return {
           party: null,
           colour: neutralSeatFill(),
           pct: 100,
-          label: 'Uncalled',
-          note: hasCount ? `${Number(member.pc)}% counted` : '',
+          label: "Uncalled",
+          note: hasCount ? `${Number(member.pc)}% counted` : "",
           years: Seat.memberTermYears(member),
         };
       }
-      return { party: member.party, pct: 100, label: member.name, years: Seat.memberTermYears(member) };
+      return {
+        party: member.party,
+        pct: 100,
+        label: member.name,
+        years: Seat.memberTermYears(member),
+      };
     });
     // The bar is just a colour accent here, so cap it short to clear the wide "last/up" value.
     // An unresolved cycle year gives null years, so the row shows just the name.
-    renderPopupRows(rows, (row) => {
-      const parts = [];
-      if (row.note) parts.push(row.note);
-      if (row.years) parts.push(`last ${row.years.last} · up ${row.years.up}`);
-      return parts.length ? `<span>${escapeHtml(parts.join(' · '))}</span>` : '';
-    }, 70);
+    renderPopupRows(
+      rows,
+      (row) => {
+        const parts = [];
+        if (row.note) parts.push(row.note);
+        if (row.years) parts.push(`last ${row.years.last} · up ${row.years.up}`);
+        return parts.length ? `<span>${escapeHtml(parts.join(" · "))}</span>` : "";
+      },
+      70,
+    );
     seatPopup.hidden = false;
     return;
   }
@@ -1665,14 +1779,14 @@ export function renderSeatPopup(seatName) {
   // Populate title (with electoral votes for presidential states) and meta line.
   seatPopupTitle.textContent = seat.ev ? `${seat.seat} - ${formatInt(seat.ev)} EV` : seat.seat;
   seatPopupMeta.innerHTML = `
-    ${isByElection ? '<span class="maps-popup-meta-item maps-by-election-tag">BY-ELECTION</span>' : ''}
-    ${statusNotes.uncalledTag ? `<span class="maps-popup-meta-item maps-uncalled-tag">${escapeHtml(statusNotes.uncalledTag)}</span>` : ''}
-    ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${escapeHtml(manifest.labelParty(gainFrom))} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
+    ${isByElection ? '<span class="maps-popup-meta-item maps-by-election-tag">BY-ELECTION</span>' : ""}
+    ${statusNotes.uncalledTag ? `<span class="maps-popup-meta-item maps-uncalled-tag">${escapeHtml(statusNotes.uncalledTag)}</span>` : ""}
+    ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${escapeHtml(manifest.labelParty(gainFrom))} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ""}
     <span class="maps-popup-meta-item">${escapeHtml(getRegionLabel(seat.region, state.currentRegionLabelsByKey))}</span>
-    <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showCounts ? ` = ${formatInt(majority.raw)}` : ''}</span>
-    ${showCounts ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(seat.turnout)}</span>` : ''}
-    ${statusNotes.samePartyNote ? `<span class="maps-popup-meta-item maps-popup-status-note">${escapeHtml(statusNotes.samePartyNote)}</span>` : ''}
-    ${statusNotes.roundNote ? `<span class="maps-popup-meta-item maps-popup-status-note">${escapeHtml(statusNotes.roundNote)}</span>` : ''}
+    <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showCounts ? ` = ${formatInt(majority.raw)}` : ""}</span>
+    ${showCounts ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(seat.turnout)}</span>` : ""}
+    ${statusNotes.samePartyNote ? `<span class="maps-popup-meta-item maps-popup-status-note">${escapeHtml(statusNotes.samePartyNote)}</span>` : ""}
+    ${statusNotes.roundNote ? `<span class="maps-popup-meta-item maps-popup-status-note">${escapeHtml(statusNotes.roundNote)}</span>` : ""}
   `;
 
   // Build vote-share rows with comparison deltas. deltaBasis.deltaFor returns null when
@@ -1681,20 +1795,21 @@ export function renderSeatPopup(seatName) {
 
   // A seat whose data repeats a party (an export override listing the individual candidates)
   // shows one row per candidate with no delta: the comparison is per party, not per candidate.
-  const partyRows = () => Object.entries(seat.votes || {})
-    .map(([party, votes]) => {
+  const partyRows = () =>
+    Object.entries(seat.votes || {}).map(([party, votes]) => {
       const voteTotal = Number(votes || 0);
       const pct = currentTurnout > 0 ? (voteTotal / currentTurnout) * 100 : 0;
       const delta = deltaBasis.deltaFor(party, pct);
       // Label by candidate name where available (name mode); party label otherwise.
       return { party, pct, delta, label: seat.candidates?.[party] };
     });
-  const candidateRows = () => seat.candidateRows.map((row) => ({
-    party: row.party,
-    pct: currentTurnout > 0 ? (row.votes / currentTurnout) * 100 : 0,
-    delta: null,
-    label: row.name || undefined,
-  }));
+  const candidateRows = () =>
+    seat.candidateRows.map((row) => ({
+      party: row.party,
+      pct: currentTurnout > 0 ? (row.votes / currentTurnout) * 100 : 0,
+      delta: null,
+      label: row.name || undefined,
+    }));
   const rows = (seat.candidateRows ? candidateRows() : partyRows())
     .sort((a, b) => b.pct - a.pct)
     .slice(0, 8);
@@ -1703,11 +1818,15 @@ export function renderSeatPopup(seatName) {
   // data is available, the signed delta vs the comparison election. delta is null when
   // the party had no comparison data point, which suppresses the delta span entirely.
   renderPopupRows(rows, (row) => {
-    const deltaHtml = row.delta == null ? '' : `<span class="${deltaClass(row.delta)}">${formatSigned(row.delta, 2)}</span>`;
+    const deltaHtml =
+      row.delta == null
+        ? ""
+        : `<span class="${deltaClass(row.delta)}">${formatSigned(row.delta, 2)}</span>`;
     // The seat's simulated range and win chance only when the modelled uncertainty is shown.
     const band = shownUncertainty(state) ? seat.u[row.party] : null;
     const bandHtml = band
-      ? `<span class="maps-popup-uncertainty">${escapeHtml(seatUncertaintyText(band))}</span>` : "";
+      ? `<span class="maps-popup-uncertainty">${escapeHtml(seatUncertaintyText(band))}</span>`
+      : "";
     return `<span>${formatPct(row.pct)}%</span>${deltaHtml}${bandHtml}`;
   });
 
@@ -1731,14 +1850,14 @@ export function renderSeatPopup(seatName) {
   }
 }
 
-const seatPopupClose = document.getElementById('mapsSeatPopupClose');
+const seatPopupClose = document.getElementById("mapsSeatPopupClose");
 
 /**
  * Closes the seat detail popup and deselects the active map path when the close button is clicked.
  * @returns {void}
  */
 function wireSeatPopup() {
-  seatPopupClose.addEventListener('click', () => {
+  seatPopupClose.addEventListener("click", () => {
     hideSeatPopup();
     mapInteraction.clearSelection?.();
   });
@@ -1747,7 +1866,7 @@ function wireSeatPopup() {
 // ─── Seat list ───────────────────────────────────────────────────────────────
 
 // Light grey for a seat with nothing to colour by when the map configures no `neutralFill`.
-const FALLBACK_NEUTRAL_FILL = '#d1d5db';
+const FALLBACK_NEUTRAL_FILL = "#d1d5db";
 
 /**
  * The neutral no-result colour: the map's configured `neutralFill`, else a light grey.
@@ -1760,8 +1879,8 @@ function neutralSeatFill() {
 }
 
 // Seat list panel elements — populated by renderSeatList.
-const seatList = document.getElementById('mapsSeatList');
-const seatListTitle = document.querySelector('#mapsSeatCard .maps-panel-title');
+const seatList = document.getElementById("mapsSeatList");
+const seatListTitle = document.querySelector("#mapsSeatCard .maps-panel-title");
 
 /**
  * Marks the seat list row for seatKey as selected (is-selected class) and deselects the previously selected row.
@@ -1775,9 +1894,9 @@ function setSelectedSeatRowByKey(seatKey) {
 
   // Deselect the previously highlighted row before selecting the new one.
   if (state.seatList.selected && state.seatList.selected !== nextRow) {
-    state.seatList.selected.classList.remove('is-selected');
+    state.seatList.selected.classList.remove("is-selected");
   }
-  nextRow.classList.add('is-selected');
+  nextRow.classList.add("is-selected");
   state.seatList.selected = nextRow;
 }
 
@@ -1792,7 +1911,7 @@ function renderSeatList() {
   const seats = state.listFilteredSeats;
   seatListTitle.textContent = `Seats (${seats.length})`;
   // Wipe the previous render and clear the stale selection reference before rebuilding.
-  seatList.innerHTML = '';
+  seatList.innerHTML = "";
   state.seatList.selected = null;
 
   const comparisonSeatsByKey = state.comparisonElectionData?.seatsByKey ?? null;
@@ -1804,37 +1923,41 @@ function renderSeatList() {
   const rowByKey = new Map();
 
   const renderSeatRow = (seat) => {
-    const seatName = seat.seat || 'Unknown seat';
+    const seatName = seat.seat || "Unknown seat";
     const seatKey = seatLookupKey(seatName);
-    const winnerKey = seat.winner || 'others';
+    const winnerKey = seat.winner || "others";
     const fillKind = seat.fillKind();
     const comparisonWinnerKey = comparisonSeatsByKey?.get(seatKey)?.winner ?? null;
     // Only show a gain indicator when the winner changed from the comparison election; an
     // uncalled seat has no settled winner, so it shows none.
-    const gainedFrom = seat.called && comparisonWinnerKey && comparisonWinnerKey !== winnerKey ? comparisonWinnerKey : null;
+    const gainedFrom =
+      seat.called && comparisonWinnerKey && comparisonWinnerKey !== winnerKey
+        ? comparisonWinnerKey
+        : null;
     // Swatch: the winner's colour; uncalled seats lead-coloured but faded, or neutral grey when
     // no party leads (never an "Others" swatch).
-    const swatchColour = fillKind === 'neutral' ? neutralSeatFill() : manifest.colourParty(winnerKey);
-    const swatchLabel = fillKind === 'neutral' ? 'No leader' : manifest.labelParty(winnerKey);
-    const swatchClass = fillKind === 'called' ? '' : ' maps-seat-icon--provisional';
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'maps-seat-row';
+    const swatchColour =
+      fillKind === "neutral" ? neutralSeatFill() : manifest.colourParty(winnerKey);
+    const swatchLabel = fillKind === "neutral" ? "No leader" : manifest.labelParty(winnerKey);
+    const swatchClass = fillKind === "called" ? "" : " maps-seat-icon--provisional";
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "maps-seat-row";
     item.dataset.seatKey = seatKey;
-    item.setAttribute('aria-label', `Zoom to ${seatName}`);
+    item.setAttribute("aria-label", `Zoom to ${seatName}`);
     item.innerHTML = `
       <span class="maps-seat-main">
         <span class="maps-seat-icon maps-seat-owner-icon${swatchClass}" style="background:${swatchColour}" title="${escapeHtml(swatchLabel)}"></span>
         <span class="maps-seat-name">${escapeHtml(seatName)}</span>
       </span>
       <span class="maps-seat-meta">
-        ${Seat.isByElectionSeat(seat, byElectionSeats) ? '<span class="maps-seat-gain-label maps-by-election-tag">BY-ELECTION</span>' : ''}
-        ${seat.called ? '' : '<span class="maps-seat-gain-label maps-uncalled-tag">UNCALLED</span>'}
+        ${Seat.isByElectionSeat(seat, byElectionSeats) ? '<span class="maps-seat-gain-label maps-by-election-tag">BY-ELECTION</span>' : ""}
+        ${seat.called ? "" : '<span class="maps-seat-gain-label maps-uncalled-tag">UNCALLED</span>'}
         ${gainedFrom ? `<span class="maps-seat-gain"><span class="maps-seat-gain-label">GAIN FROM</span><span class="maps-seat-icon" style="background:${manifest.colourParty(gainedFrom)}" title="${escapeHtml(manifest.labelParty(gainedFrom))}"></span></span>` : '<span class="maps-seat-gain-placeholder"></span>'}
       </span>
     `;
 
-    item.addEventListener('click', () => {
+    item.addEventListener("click", () => {
       setSelectedSeatRowByKey(seatKey);
       mapInteraction.zoomToSeat(seatName);
       renderSeatPopup(seatName);
@@ -1851,10 +1974,10 @@ function renderSeatList() {
 
 // ─── Right panel ─────────────────────────────────────────────────────────────
 
-const mapsStage = document.querySelector('.maps-stage');
-const mapsPanelRight = document.querySelector('.maps-panel-right');
-const seatCard = document.getElementById('mapsSeatCard');
-const voteTotalsCard = document.getElementById('mapsVoteTotalsCard');
+const mapsStage = document.querySelector(".maps-stage");
+const mapsPanelRight = document.querySelector(".maps-panel-right");
+const seatCard = document.getElementById("mapsSeatCard");
+const voteTotalsCard = document.getElementById("mapsVoteTotalsCard");
 
 /**
  * Syncs the right panel's height to the map stage height so the two columns stay aligned.
@@ -1864,8 +1987,8 @@ const voteTotalsCard = document.getElementById('mapsVoteTotalsCard');
  */
 export function syncRightPanelHeight() {
   if (window.innerWidth <= 980) {
-    mapsPanelRight.style.height = '';
-    mapsPanelRight.style.maxHeight = '';
+    mapsPanelRight.style.height = "";
+    mapsPanelRight.style.maxHeight = "";
     return;
   }
 
@@ -1912,15 +2035,15 @@ seatCardObserver.observe(mapsPanelRight);
 // The predict window is a predict-feature element (predict-view.js owns it) and is absent on
 // pages without the feature. Observe it by id when present so the seat card reflows as the
 // predict window resizes — without coupling core dom.js to the predict module.
-const predictWindowEl = document.getElementById('mapsPredictWindow');
+const predictWindowEl = document.getElementById("mapsPredictWindow");
 if (predictWindowEl) seatCardObserver.observe(predictWindowEl);
 seatCardObserver.observe(voteTotalsCard);
 
 // ─── TopoJSON map ────────────────────────────────────────────────────────────
 
-const mapSvg = document.querySelector('.maps-svg');
-const mapContent = document.getElementById('mapContent');
-const zoomValue = document.getElementById('mapsZoomValue');
+const mapSvg = document.querySelector(".maps-svg");
+const mapContent = document.getElementById("mapContent");
+const zoomValue = document.getElementById("mapsZoomValue");
 
 // Module-level map interaction handle. Replaced on every renderTopoMap call;
 // callers within this module (toolbar buttons, seat list, postcode search) use it to drive
@@ -2005,7 +2128,7 @@ class MapInteraction {
   static formatZoomPct(scaleValue) {
     const baselineScale = Math.max(1, Number(INITIAL_MAP_SCALE) || 1);
     const ratio = Number(scaleValue) / baselineScale;
-    if (!Number.isFinite(ratio) || ratio <= 0) return '100%';
+    if (!Number.isFinite(ratio) || ratio <= 0) return "100%";
     return `${Math.round(ratio * 100)}%`;
   }
 
@@ -2040,8 +2163,16 @@ class MapInteraction {
 
   /** Animates zoom to centre on featureDatum using the seat zoom transform. */
   _zoomToFeature(featureDatum) {
-    const targetTransform = MapInteraction.getSeatZoomTransform(this._path, featureDatum, this._width, this._height);
-    this._svg.transition().duration(CLICK_ZOOM_DURATION_MS).call(this._zoomBehavior.transform, targetTransform);
+    const targetTransform = MapInteraction.getSeatZoomTransform(
+      this._path,
+      featureDatum,
+      this._width,
+      this._height,
+    );
+    this._svg
+      .transition()
+      .duration(CLICK_ZOOM_DURATION_MS)
+      .call(this._zoomBehavior.transform, targetTransform);
   }
 
   /**
@@ -2053,16 +2184,16 @@ class MapInteraction {
   _setActivePath(pathNode) {
     if (!pathNode) return;
     if (this._activeSeatPathNode && this._activeSeatPathNode !== pathNode) {
-      d3.select(this._activeSeatPathNode).classed('maps-region-path-active', false);
+      d3.select(this._activeSeatPathNode).classed("maps-region-path-active", false);
     }
     this._activeSeatPathNode = pathNode;
-    d3.select(pathNode).classed('maps-region-path-active', true).raise();
+    d3.select(pathNode).classed("maps-region-path-active", true).raise();
   }
 
   /** Removes the active highlight and clears the reference. Safe to call when nothing is active. */
   _clearActivePath() {
     if (!this._activeSeatPathNode) return;
-    d3.select(this._activeSeatPathNode).classed('maps-region-path-active', false);
+    d3.select(this._activeSeatPathNode).classed("maps-region-path-active", false);
     this._activeSeatPathNode = null;
   }
 
@@ -2077,7 +2208,10 @@ class MapInteraction {
   reset() {
     hideSeatPopup();
     this._clearActivePath();
-    this._svg.transition().duration(RESET_ZOOM_DURATION_MS).call(this._zoomBehavior.transform, this._initialTransform);
+    this._svg
+      .transition()
+      .duration(RESET_ZOOM_DURATION_MS)
+      .call(this._zoomBehavior.transform, this._initialTransform);
   }
 
   /** Removes the active seat highlight. */
@@ -2120,10 +2254,11 @@ class MapInteraction {
     if (!geoms) return;
     const merged = topojsonMerge(state.mapData, geoms);
     if (!merged) return;
-    const flashPath = this._flashLayer.append('path')
-      .attr('class', 'maps-region-flash-path')
-      .attr('d', this._path(merged));
-    flashPath.node().addEventListener('animationend', () => flashPath.remove(), { once: true });
+    const flashPath = this._flashLayer
+      .append("path")
+      .attr("class", "maps-region-flash-path")
+      .attr("d", this._path(merged));
+    flashPath.node().addEventListener("animationend", () => flashPath.remove(), { once: true });
   }
 
   /**
@@ -2166,15 +2301,15 @@ function renderTopoMap(preserveZoom = false) {
   // across all map files regardless of what they name their object.
 
   const objectName = Object.keys(mapData?.objects || {})[0];
-  if (!objectName) throw new Error('TopoJSON missing objects');
-  
+  if (!objectName) throw new Error("TopoJSON missing objects");
+
   const object = mapData.objects[objectName];
   // Convert the TopoJSON arc topology to a standard GeoJSON FeatureCollection
   // so D3's geo functions can work with it.
   const featureCollection = topojsonFeature(mapData, object);
   const features = featureCollection?.features || [];
 
-  if (!features.length) throw new Error('No map features available');
+  if (!features.length) throw new Error("No map features available");
 
   // ── SVG dimensions ────────────────────────────────────────────────────────
   // Read dimensions from the SVG's declared viewBox rather than its rendered
@@ -2192,7 +2327,7 @@ function renderTopoMap(preserveZoom = false) {
   // geometries to SVG path data strings using that projection.
 
   const projectionFactory =
-    state.mapConfig?.projection === 'albersUsa' ? d3.geoAlbersUsa : d3.geoMercator;
+    state.mapConfig?.projection === "albersUsa" ? d3.geoAlbersUsa : d3.geoMercator;
   const projection = projectionFactory().fitSize([width, height], featureCollection);
   const path = d3.geoPath(projection);
 
@@ -2202,26 +2337,32 @@ function renderTopoMap(preserveZoom = false) {
 
   const svg = d3.select(mapSvg);
   const content = d3.select(mapContent);
-  content.selectAll('*').remove();
+  content.selectAll("*").remove();
 
   // Hatch patterns for uncalled (provisional) seats, one per leading-party colour, created on
   // demand by provisionalFill and rebuilt with the rest of the map on every render.
-  const patternDefs = content.append('defs');
+  const patternDefs = content.append("defs");
   const provisionalPatternIds = new Map();
   const provisionalFill = (colour) => {
     let id = provisionalPatternIds.get(colour);
     if (!id) {
       id = `maps-uncalled-${provisionalPatternIds.size}`;
       provisionalPatternIds.set(colour, id);
-      const pattern = patternDefs.append('pattern')
-        .attr('id', id)
-        .attr('width', 6)
-        .attr('height', 6)
-        .attr('patternUnits', 'userSpaceOnUse')
-        .attr('patternTransform', 'rotate(45)');
+      const pattern = patternDefs
+        .append("pattern")
+        .attr("id", id)
+        .attr("width", 6)
+        .attr("height", 6)
+        .attr("patternUnits", "userSpaceOnUse")
+        .attr("patternTransform", "rotate(45)");
       // Pale base with a solid stripe: reads as the party's colour, visibly not final.
-      pattern.append('rect').attr('width', 6).attr('height', 6).attr('fill', colour).attr('fill-opacity', 0.4);
-      pattern.append('rect').attr('width', 3).attr('height', 6).attr('fill', colour);
+      pattern
+        .append("rect")
+        .attr("width", 6)
+        .attr("height", 6)
+        .attr("fill", colour)
+        .attr("fill-opacity", 0.4);
+      pattern.append("rect").attr("width", 3).attr("height", 6).attr("fill", colour);
     }
     return `url(#${id})`;
   };
@@ -2247,19 +2388,25 @@ function renderTopoMap(preserveZoom = false) {
   //     boundaryLayer — region boundary overlay mesh (drawn above seat fills).
   //     flashLayer    — temporary region-flash paths (added below if needed).
 
-  const zoomRoot = content.append('g').attr('class', 'maps-geo-root');
-  zoomRoot.append('rect').attr('class', 'maps-map-bg').attr('x', 0).attr('y', 0).attr('width', width).attr('height', height);
-  const zoomLayer = zoomRoot.append('g').attr('class', 'maps-geo-layer');
-  const seatLayer = zoomLayer.append('g').attr('class', 'maps-seat-layer');
-  const boundaryLayer = zoomLayer.append('g').attr('class', 'maps-boundary-layer');
+  const zoomRoot = content.append("g").attr("class", "maps-geo-root");
+  zoomRoot
+    .append("rect")
+    .attr("class", "maps-map-bg")
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("width", width)
+    .attr("height", height);
+  const zoomLayer = zoomRoot.append("g").attr("class", "maps-geo-layer");
+  const seatLayer = zoomLayer.append("g").attr("class", "maps-seat-layer");
+  const boundaryLayer = zoomLayer.append("g").attr("class", "maps-boundary-layer");
 
   // Zoom behaviour: pan and pinch-zoom within the scale bounds. On each zoom event, apply
   // the new transform to zoomLayer (which contains all map geometry) and update the readout.
   const zoomBehavior = d3
     .zoom()
     .scaleExtent([ZOOM_MIN_SCALE, ZOOM_MAX_SCALE])
-    .on('zoom', (event) => {
-      zoomLayer.attr('transform', event.transform.toString());
+    .on("zoom", (event) => {
+      zoomLayer.attr("transform", event.transform.toString());
       zoomValue.textContent = MapInteraction.formatZoomPct(event.transform.k);
     });
 
@@ -2268,7 +2415,15 @@ function renderTopoMap(preserveZoom = false) {
 
   // ── Interaction controller ─────────────────────────────────────────────────
 
-  const interaction = new MapInteraction(svg, zoomBehavior, path, initialTransform, width, height, featureBySeat);
+  const interaction = new MapInteraction(
+    svg,
+    zoomBehavior,
+    path,
+    initialTransform,
+    width,
+    height,
+    featureBySeat,
+  );
   mapInteraction = interaction;
 
   // ── Region boundary mesh ──────────────────────────────────────────────────
@@ -2279,36 +2434,38 @@ function renderTopoMap(preserveZoom = false) {
   // drawn as one path element, styled to show region divisions over the seat fills.
 
   const regionBoundaryMesh = topojsonMesh(
-    mapData, object,
-    (a, b) => a && b && a !== b && a.properties?.region !== b.properties?.region
+    mapData,
+    object,
+    (a, b) => a && b && a !== b && a.properties?.region !== b.properties?.region,
   );
   if (regionBoundaryMesh?.coordinates?.length) {
-    boundaryLayer.append('path')
+    boundaryLayer
+      .append("path")
       .datum(regionBoundaryMesh)
-      .attr('class', 'maps-region-boundary')
-      .attr('d', path);
+      .attr("class", "maps-region-boundary")
+      .attr("d", path);
   }
 
   // ── Constituency seat paths ───────────────────────────────────────────────
 
   const seatPaths = seatLayer
-    .selectAll('path')
+    .selectAll("path")
     .data(features)
-    .join('path')
-    .attr('class', 'maps-region-path')
-    .attr('d', path)
-    .attr('fill', (datum) => {
+    .join("path")
+    .attr("class", "maps-region-path")
+    .attr("d", path)
+    .attr("fill", (datum) => {
       const seatKey = seatLookupKey(MapInteraction.seatNameFromFeature(datum));
       const seat = state.electionData.seatsByKey.get(seatKey);
       // Feature has no matching seat in the election data — e.g. an area not contested this
       // cycle. Use the map's neutralFill when configured (so "not contested" reads as
       // neutral, not an Others win), otherwise the Others colour. (An uncalled seat with no
       // leader falls back to light grey instead; see neutralSeatFill.)
-      if (!seat) return state.mapConfig?.neutralFill || manifest.colourParty('others');
+      if (!seat) return state.mapConfig?.neutralFill || manifest.colourParty("others");
 
       // Active filter excludes this seat — render as greyed-out slate rather than hiding,
       // so the map shape remains intact and the filter effect is clear.
-      if (visibleSeatKeys && !visibleSeatKeys.has(seatKey)) return '#cbd5e1';
+      if (visibleSeatKeys && !visibleSeatKeys.has(seatKey)) return "#cbd5e1";
 
       // Choropleth mode overrides winner colouring with a continuous metric scale.
       if (choroplethConfig.enabled && choroplethConfig.valueBySeatKey?.has(seatKey)) {
@@ -2318,15 +2475,15 @@ function renderTopoMap(preserveZoom = false) {
       // Uncalled seats: the leader's colour hatched as provisional, or neutral when no party
       // leads. Never the 'others' colour, which would read as an Others win.
       const fillKind = seat.fillKind();
-      if (fillKind === 'neutral') return neutralSeatFill();
-      if (fillKind === 'provisional') return provisionalFill(manifest.colourParty(seat.winner));
+      if (fillKind === "neutral") return neutralSeatFill();
+      if (fillKind === "provisional") return provisionalFill(manifest.colourParty(seat.winner));
 
       // Default: colour by winning party.
-      return manifest.colourParty(seat.winner || 'others');
+      return manifest.colourParty(seat.winner || "others");
     })
-    .attr('stroke', null)
-    .on('mouseenter', null)
-    .on('click', (event, datum) => {
+    .attr("stroke", null)
+    .on("mouseenter", null)
+    .on("click", (event, datum) => {
       // stopPropagation prevents the svg background click handler from firing and
       // immediately resetting the zoom we are about to trigger.
       event.stopPropagation();
@@ -2364,7 +2521,7 @@ function renderTopoMap(preserveZoom = false) {
       geometriesByRegion.get(regionKey).push(geom);
     });
 
-    const flashLayer = zoomLayer.append('g').attr('class', 'maps-region-flash-layer');
+    const flashLayer = zoomLayer.append("g").attr("class", "maps-region-flash-layer");
     interaction.setFlashLayer(flashLayer, geometriesByRegion);
   }
 
@@ -2372,9 +2529,9 @@ function renderTopoMap(preserveZoom = false) {
   // Clicking the SVG element itself or the background rect resets the map.
   // Clicks on seat paths do not reach here because they call stopPropagation.
 
-  svg.on('click', (event) => {
+  svg.on("click", (event) => {
     const target = event.target;
-    if (target === mapSvg || target?.classList?.contains('maps-map-bg')) {
+    if (target === mapSvg || target?.classList?.contains("maps-map-bg")) {
       interaction.reset();
     }
   });
@@ -2402,7 +2559,7 @@ function renderChoroplethLegend() {
   const choroplethConfig = state.choroplethConfig;
   if (!choroplethConfig?.enabled) {
     choroplethLegend.hidden = true;
-    choroplethLegend.innerHTML = '';
+    choroplethLegend.innerHTML = "";
     return;
   }
 
@@ -2422,7 +2579,7 @@ function renderChoroplethLegend() {
     <div class="maps-choropleth-legend-bar" style="background:${gradient}"></div>
     <div class="maps-choropleth-legend-labels">
       <span>${escapeHtml(legend.minLabel)}</span>
-      ${legend.isDelta ? `<span>${escapeHtml(legend.midLabel)}</span>` : ''}
+      ${legend.isDelta ? `<span>${escapeHtml(legend.midLabel)}</span>` : ""}
       <span>${escapeHtml(legend.maxLabel)}</span>
     </div>
   `;
@@ -2442,7 +2599,7 @@ export function wireInit() {
   wireSeatSearch();
   wireVoteTotalsToggle();
   wireModelledUncertaintyToggle(modelledUncertaintyInput, state, () => {
-    renderHeader(state.electionData?.summary?.text ?? '');
+    renderHeader(state.electionData?.summary?.text ?? "");
     renderVoteTotals();
     refreshOpenSeatPopup();
     syncRightPanelHeight();
@@ -2514,7 +2671,7 @@ function drawMap(preserveZoom = false) {
  * @returns {void}
  */
 function wireWindowResize() {
-  window.addEventListener('resize', () => {
+  window.addEventListener("resize", () => {
     syncRightPanelHeight();
   });
 }

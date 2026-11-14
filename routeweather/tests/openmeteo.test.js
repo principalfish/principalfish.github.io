@@ -3,10 +3,22 @@ import { readFileSync } from "node:fs";
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
 
 import {
-  buildForecastUrl, buildElevationUrl, fetchForecast, fetchElevations, normaliseLocation,
-  buildTimeZoneUrl, fetchTimeZone, buildProbabilityUrl, fetchProbability, normaliseSeries,
+  buildForecastUrl,
+  buildElevationUrl,
+  fetchForecast,
+  fetchElevations,
+  normaliseLocation,
+  buildTimeZoneUrl,
+  fetchTimeZone,
+  buildProbabilityUrl,
+  fetchProbability,
+  normaliseSeries,
   withProbability,
-  CHUNK_SIZE, ELEVATION_CHUNK_SIZE, FORECAST_URL, ELEVATION_URL, REQUEST_TIMEOUT_MS,
+  CHUNK_SIZE,
+  ELEVATION_CHUNK_SIZE,
+  FORECAST_URL,
+  ELEVATION_URL,
+  REQUEST_TIMEOUT_MS,
 } from "../js/openmeteo.js";
 import { HOURLY_VARS, PROBABILITY } from "../js/config.js";
 
@@ -74,7 +86,10 @@ function forecastFetch() {
 const samplesN = (n) => Array.from({ length: n }, (_, i) => ({ lat: 50 + i * 0.01, lon: -3 }));
 
 describe("buildForecastUrl", () => {
-  const samples = [{ lat: 54.454, lon: -3.211 }, { lat: 51.5, lon: -0.12 }];
+  const samples = [
+    { lat: 54.454, lon: -3.211 },
+    { lat: 51.5, lon: -0.12 },
+  ];
   const url = buildForecastUrl(samples, RANGE);
   const params = new URL(url).searchParams;
 
@@ -135,7 +150,10 @@ describe("buildForecastUrl", () => {
 
 describe("buildElevationUrl", () => {
   it("lists coordinates against the elevation endpoint", () => {
-    const url = buildElevationUrl([{ lat: 54.454, lon: -3.211 }, { lat: 51.5, lon: -0.12 }]);
+    const url = buildElevationUrl([
+      { lat: 54.454, lon: -3.211 },
+      { lat: 51.5, lon: -0.12 },
+    ]);
     expect(url).toBe(`${ELEVATION_URL}?latitude=54.454,51.5&longitude=-3.211,-0.12`);
   });
 });
@@ -179,20 +197,25 @@ describe("fetchForecast", () => {
       const impl = async () => {
         throw new DOMException("The operation was aborted", name);
       };
-      await expect(fetchForecast(samplesN(1), RANGE, impl))
-        .rejects.toThrow(`timed out after ${REQUEST_TIMEOUT_MS / 1000} s`);
+      await expect(fetchForecast(samplesN(1), RANGE, impl)).rejects.toThrow(
+        `timed out after ${REQUEST_TIMEOUT_MS / 1000} s`,
+      );
     }
   });
 
   it("throws a timed-out message when the body read times out", async () => {
     // The timeout signal also aborts reading the body after the headers arrive.
-    const impl = async () => new Response(new ReadableStream({
-      start(controller) {
-        controller.error(new DOMException("The operation timed out", "TimeoutError"));
-      },
-    }));
-    await expect(fetchForecast(samplesN(1), RANGE, impl))
-      .rejects.toThrow(`forecast request timed out after ${REQUEST_TIMEOUT_MS / 1000} s`);
+    const impl = async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(new DOMException("The operation timed out", "TimeoutError"));
+          },
+        }),
+      );
+    await expect(fetchForecast(samplesN(1), RANGE, impl)).rejects.toThrow(
+      `forecast request timed out after ${REQUEST_TIMEOUT_MS / 1000} s`,
+    );
   });
 
   it("throws when locations come back out of order", async () => {
@@ -201,11 +224,11 @@ describe("fetchForecast", () => {
   });
 
   it("throws the API's reason on an error response", async () => {
-    const impl = async () => (
-      jsonResponse({ error: true, reason: "Latitude must be in range" }, 400)
+    const impl = async () =>
+      jsonResponse({ error: true, reason: "Latitude must be in range" }, 400);
+    await expect(fetchForecast(samplesN(1), RANGE, impl)).rejects.toThrow(
+      /HTTP 400.*Latitude must be in range/,
     );
-    await expect(fetchForecast(samplesN(1), RANGE, impl))
-      .rejects.toThrow(/HTTP 400.*Latitude must be in range/);
   });
 
   it("throws the API's reason even on an HTTP 200 error body", async () => {
@@ -215,8 +238,9 @@ describe("fetchForecast", () => {
 
   it("throws a rate-limit message on HTTP 429", async () => {
     const impl = async () => new Response("Too many requests", { status: 429 });
-    await expect(fetchForecast(samplesN(1), RANGE, impl))
-      .rejects.toThrow(/rate limited.*try again in a minute/);
+    await expect(fetchForecast(samplesN(1), RANGE, impl)).rejects.toThrow(
+      /rate limited.*try again in a minute/,
+    );
   });
 
   it("throws on a non-JSON error page", async () => {
@@ -228,14 +252,16 @@ describe("fetchForecast", () => {
     const impl = async () => {
       throw new TypeError("fetch failed");
     };
-    await expect(fetchForecast(samplesN(1), RANGE, impl))
-      .rejects.toThrow(/Could not reach Open-Meteo.*fetch failed/);
+    await expect(fetchForecast(samplesN(1), RANGE, impl)).rejects.toThrow(
+      /Could not reach Open-Meteo.*fetch failed/,
+    );
   });
 
   it("throws when the location count does not match the request", async () => {
     const impl = async () => jsonResponse([fakeLocation(50, -3)]);
-    await expect(fetchForecast(samplesN(2), RANGE, impl))
-      .rejects.toThrow(/returned 1 forecast locations, expected 2/);
+    await expect(fetchForecast(samplesN(2), RANGE, impl)).rejects.toThrow(
+      /returned 1 forecast locations, expected 2/,
+    );
   });
 });
 
@@ -252,8 +278,9 @@ describe("fetchForecast options", () => {
   it("still reports a request that then fails", async () => {
     const sent = [];
     const impl = async () => new Response("", { status: 429 });
-    await expect(fetchForecast(samplesN(2), RANGE, impl, { onRequest: (i) => sent.push(i) }))
-      .rejects.toThrow(/rate limited/);
+    await expect(
+      fetchForecast(samplesN(2), RANGE, impl, { onRequest: (i) => sent.push(i) }),
+    ).rejects.toThrow(/rate limited/);
     expect(sent).toEqual([{ locations: 2 }]);
   });
 
@@ -275,10 +302,11 @@ describe("fetchForecast options", () => {
   it("reports a caller abort mid-request as aborted, not timed out", async () => {
     const controller = new AbortController();
     let seen;
-    const impl = (url, { signal }) => new Promise((resolve, reject) => {
-      seen = signal;
-      signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
-    });
+    const impl = (url, { signal }) =>
+      new Promise((resolve, reject) => {
+        seen = signal;
+        signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      });
     const pending = fetchForecast(samplesN(1), RANGE, impl, { signal: controller.signal });
     controller.abort();
     const err = await pending.catch((e) => e);
@@ -311,9 +339,10 @@ describe("without AbortSignal.any and AbortSignal.timeout", () => {
   });
 
   // Fetch that settles only when its signal aborts, with the signal's reason.
-  const hangingFetch = (url, { signal }) => new Promise((resolve, reject) => {
-    signal.addEventListener("abort", () => reject(signal.reason));
-  });
+  const hangingFetch = (url, { signal }) =>
+    new Promise((resolve, reject) => {
+      signal.addEventListener("abort", () => reject(signal.reason));
+    });
 
   it("still loads, with and without a caller signal", async () => {
     const mock = forecastFetch();
@@ -338,8 +367,9 @@ describe("without AbortSignal.any and AbortSignal.timeout", () => {
   it("times out, and clears its timer once a request settles", async () => {
     vi.useFakeTimers();
     const controller = new AbortController();
-    const pending = fetchForecast(samplesN(1), RANGE, hangingFetch, { signal: controller.signal })
-      .catch((e) => e);
+    const pending = fetchForecast(samplesN(1), RANGE, hangingFetch, {
+      signal: controller.signal,
+    }).catch((e) => e);
     await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
     const err = await pending;
     expect(err.message).toMatch(`timed out after ${REQUEST_TIMEOUT_MS / 1000} s`);
@@ -355,8 +385,14 @@ describe("without AbortSignal.any and AbortSignal.timeout", () => {
     let active = 0;
     const add = signal.addEventListener.bind(signal);
     const remove = signal.removeEventListener.bind(signal);
-    signal.addEventListener = (...args) => { active++; add(...args); };
-    signal.removeEventListener = (...args) => { active--; remove(...args); };
+    signal.addEventListener = (...args) => {
+      active++;
+      add(...args);
+    };
+    signal.removeEventListener = (...args) => {
+      active--;
+      remove(...args);
+    };
 
     const mock = forecastFetch();
     await fetchForecast(samplesN(CHUNK_SIZE * 2 + 1), RANGE, mock.impl, { signal });
@@ -391,8 +427,14 @@ describe("normaliseLocation", () => {
     // from local parsing on a UK machine; a July date can (and the file-wide
     // Asia/Kolkata zone covers machines set to UTC).
     const json = structuredClone(FIXTURE[0]);
-    json.hourly.time = ["2026-07-15T12:00", "2026-07-15T13:00", "2026-07-15T14:00",
-      "2026-07-15T15:00", "2026-07-15T16:00", "2026-07-15T17:00"];
+    json.hourly.time = [
+      "2026-07-15T12:00",
+      "2026-07-15T13:00",
+      "2026-07-15T14:00",
+      "2026-07-15T15:00",
+      "2026-07-15T16:00",
+      "2026-07-15T17:00",
+    ];
     const loc = normaliseLocation(json);
     expect(loc.timesMs[0]).toBe(Date.UTC(2026, 6, 15, 12));
     expect(loc.timesMs[5]).toBe(Date.UTC(2026, 6, 15, 17));
@@ -435,7 +477,13 @@ describe("normaliseLocation", () => {
 });
 
 describe("buildProbabilityUrl", () => {
-  const url = buildProbabilityUrl([{ lat: 54.45, lon: -3.2 }, { lat: 54.5, lon: -3.1 }], RANGE);
+  const url = buildProbabilityUrl(
+    [
+      { lat: 54.45, lon: -3.2 },
+      { lat: 54.5, lon: -3.1 },
+    ],
+    RANGE,
+  );
   const params = new URL(url).searchParams;
 
   it("asks the global model for the chance of rain alone, over the same window", () => {
@@ -455,8 +503,9 @@ describe("buildProbabilityUrl", () => {
   });
 
   it("throws on an invalid window", () => {
-    expect(() => buildProbabilityUrl([{ lat: 1, lon: 1 }], { startHour: 2, endHour: 1 }))
-      .toThrow(/startHour/);
+    expect(() => buildProbabilityUrl([{ lat: 1, lon: 1 }], { startHour: 2, endHour: 1 })).toThrow(
+      /startHour/,
+    );
   });
 });
 
@@ -475,14 +524,16 @@ describe("fetchProbability", () => {
 
   it("throws when a point's chance of rain is missing", async () => {
     const impl = async () => jsonResponse(fakeLocation(1, 1, 0, ["temperature_2m"]));
-    await expect(fetchProbability([{ lat: 1, lon: 1 }], RANGE, impl))
-      .rejects.toThrow(/hourly precipitation_probability/);
+    await expect(fetchProbability([{ lat: 1, lon: 1 }], RANGE, impl)).rejects.toThrow(
+      /hourly precipitation_probability/,
+    );
   });
 
   it("names the request in errors", async () => {
     const impl = async () => jsonResponse([fakeLocation(1, 1, 1)]);
-    await expect(fetchProbability([{ lat: 1, lon: 1 }], RANGE, impl))
-      .rejects.toThrow(/chance of rain locations out of order/);
+    await expect(fetchProbability([{ lat: 1, lon: 1 }], RANGE, impl)).rejects.toThrow(
+      /chance of rain locations out of order/,
+    );
   });
 });
 
@@ -517,11 +568,15 @@ describe("withProbability", () => {
 
   it("gives each location its owner's series, matched by time", () => {
     const locations = [loc(1), loc(2), loc(3)];
-    const out = withProbability(locations, [0, 1, 1], [
-      series(T, [10, 20, 30]),
-      // Starts an hour later: the first hour has no value.
-      series(T + HOUR, [50, 60, 70]),
-    ]);
+    const out = withProbability(
+      locations,
+      [0, 1, 1],
+      [
+        series(T, [10, 20, 30]),
+        // Starts an hour later: the first hour has no value.
+        series(T + HOUR, [50, 60, 70]),
+      ],
+    );
     expect(Array.from(out[0].vars.precipitation_probability)).toEqual([10, 20, 30]);
     expect(Array.from(out[1].vars.precipitation_probability)).toEqual([NaN, 50, 60]);
     expect(Array.from(out[2].vars.precipitation_probability)).toEqual([NaN, 50, 60]);
@@ -571,8 +626,9 @@ describe("fetchElevations", () => {
 
   it("throws on a count mismatch", async () => {
     const impl = async () => jsonResponse({ elevation: [12] });
-    await expect(fetchElevations(samplesN(2), impl))
-      .rejects.toThrow(/returned 1 elevations, expected 2/);
+    await expect(fetchElevations(samplesN(2), impl)).rejects.toThrow(
+      /returned 1 elevations, expected 2/,
+    );
   });
 
   it("throws the API's reason and the rate-limit message", async () => {
@@ -584,9 +640,8 @@ describe("fetchElevations", () => {
 
   it("supports onRequest and an abort signal", async () => {
     const sent = [];
-    const impl = async (url) => (
-      jsonResponse({ elevation: listParam(url, "latitude").map(() => 1) })
-    );
+    const impl = async (url) =>
+      jsonResponse({ elevation: listParam(url, "latitude").map(() => 1) });
     await fetchElevations(samplesN(ELEVATION_CHUNK_SIZE + 1), impl, {
       onRequest: (info) => sent.push(info),
     });
@@ -594,8 +649,9 @@ describe("fetchElevations", () => {
 
     const controller = new AbortController();
     controller.abort();
-    await expect(fetchElevations(samplesN(1), impl, { signal: controller.signal }))
-      .rejects.toThrow(/elevation request was aborted/);
+    await expect(fetchElevations(samplesN(1), impl, { signal: controller.signal })).rejects.toThrow(
+      /elevation request was aborted/,
+    );
   });
 });
 
@@ -613,8 +669,9 @@ describe("fetchTimeZone", () => {
   it("returns the zone name and reports the request", async () => {
     const onRequest = vi.fn();
     const impl = async () => jsonResponse({ timezone: "Europe/Zurich", latitude: 46.5 });
-    await expect(fetchTimeZone({ lat: 46.5, lon: 7.9 }, impl, { onRequest }))
-      .resolves.toBe("Europe/Zurich");
+    await expect(fetchTimeZone({ lat: 46.5, lon: 7.9 }, impl, { onRequest })).resolves.toBe(
+      "Europe/Zurich",
+    );
     expect(onRequest).toHaveBeenCalledWith({ locations: 1 });
   });
 

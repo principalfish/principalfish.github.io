@@ -36,12 +36,28 @@ import { HOUR_MS } from "./schedule.js";
 import { isFiniteNumber as isNum } from "./display.js";
 
 const LINEAR_KEYS = [
-  "tempC", "model2mTempC", "gustKmh", "model10mWindKmh", "model10mGustKmh",
-  "headKmh", "crossKmh", "eleUsed", "cloudPct", "feelsLikeC", "rhPct",
+  "tempC",
+  "model2mTempC",
+  "gustKmh",
+  "model10mWindKmh",
+  "model10mGustKmh",
+  "headKmh",
+  "crossKmh",
+  "eleUsed",
+  "cloudPct",
+  "feelsLikeC",
+  "rhPct",
 ];
 const NEAREST_KEYS = [
-  "precipMm", "precipProb", "precipStepH", "precipStepEndMs", "code", "cellElev",
-  "aboveProfile", "sunMin", "sunEstimated",
+  "precipMm",
+  "precipProb",
+  "precipStepH",
+  "precipStepEndMs",
+  "code",
+  "cellElev",
+  "aboveProfile",
+  "sunMin",
+  "sunEstimated",
 ];
 
 // --- position ---
@@ -118,8 +134,8 @@ export function weatherAtDistance(state, distKm) {
   for (const key of NEAREST_KEYS) out[key] = near[key];
   Object.assign(out, mixWind(a, b, frac, nearerIsB));
   out.eleFromModel = !isNum(samples[nearestIndex].ele);
-  out.outsideForecast = frac === 0 ? Boolean(a.outsideForecast)
-    : Boolean(a.outsideForecast || b.outsideForecast);
+  out.outsideForecast =
+    frac === 0 ? Boolean(a.outsideForecast) : Boolean(a.outsideForecast || b.outsideForecast);
   return out;
 }
 

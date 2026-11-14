@@ -1,16 +1,28 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { ElectionData, manifest, Seat, state } from "../state.js";
 import {
-  activeUncertainty, decodeUncertainty, formatProbability, probabilityPercent, seatsWithRange,
-  seatUncertaintyText, shownUncertainty, simulatedSubtitle, uncertaintyForTotals, uncertaintyHeadline,
-  uncertaintyOutcomeLine, uncertaintyRange,
+  activeUncertainty,
+  decodeUncertainty,
+  formatProbability,
+  probabilityPercent,
+  seatsWithRange,
+  seatUncertaintyText,
+  shownUncertainty,
+  simulatedSubtitle,
+  uncertaintyForTotals,
+  uncertaintyHeadline,
+  uncertaintyOutcomeLine,
+  uncertaintyRange,
 } from "../uncertainty.js";
 
 /** Whole seats `m` differ from the median `s[1]`, so a test reading the median fails. */
 export function publicSummary() {
   return {
-    schema: "pf-uncertainty-v1", uncertaintyId: "matching-run", interval: 0.9,
-    simulations: 10000, basis: "90% ranges from 10,000 simulations.",
+    schema: "pf-uncertainty-v1",
+    uncertaintyId: "matching-run",
+    interval: 0.9,
+    simulations: 10000,
+    basis: "90% ranges from 10,000 simulations.",
     national: {
       parties: {
         1: { v: [22.8, 30.6], s: [220, 301, 376], m: 298, pm: 0.306, pl: 0.97 },
@@ -23,12 +35,20 @@ export function publicSummary() {
 }
 
 function decoded(payload = publicSummary()) {
-  return decodeUncertainty(payload, "matching-run", (party) => manifest.resolvePartyRef(party), manifest.regionsById);
+  return decodeUncertainty(
+    payload,
+    "matching-run",
+    (party) => manifest.resolvePartyRef(party),
+    manifest.regionsById,
+  );
 }
 
 beforeEach(() => {
   manifest.init({
-    parties: [{ id: 1, key: "labour", name: "Labour" }, { id: 4, key: "conservative", name: "Conservative" }],
+    parties: [
+      { id: 1, key: "labour", name: "Labour" },
+      { id: 4, key: "conservative", name: "Conservative" },
+    ],
     mapModes: { 1: { regions: [{ id: 12, name: "North East" }] } },
   });
   state.currentElection = { model: true, mapId: 1 };
@@ -37,19 +57,42 @@ beforeEach(() => {
   state.showModelledUncertainty = true;
   state.voteTotals.mode = "all";
   state.mapFilters = {
-    party: "all", secondParty: "all", region: "all", gainsOnly: false,
-    majorityMin: 0, majorityMax: 100, upcoming: "all",
+    party: "all",
+    secondParty: "all",
+    region: "all",
+    gainsOnly: false,
+    majorityMin: 0,
+    majorityMax: 100,
+    upcoming: "all",
   };
   state.electionData = new ElectionData({
     uncertaintyId: "matching-run",
-    seats: [{ n: "Test", r: 12, w: 1, p: [[1, 60], [4, 40]], u: [[1, 50, 70, 0.87654]] }],
+    seats: [
+      {
+        n: "Test",
+        r: 12,
+        w: 1,
+        p: [
+          [1, 60],
+          [4, 40],
+        ],
+        u: [[1, 50, 70, 0.87654]],
+      },
+    ],
   });
   state.electionData.uncertainty = decoded();
 });
 
 describe("seat uncertainty", () => {
   it("keeps party-ID-aligned bands and isolates raw, base and cloned seat arrays", () => {
-    const raw = { n: "Test", p: [[4, 40], [1, 60]], u: [[1, 50, 70, 0.9]] };
+    const raw = {
+      n: "Test",
+      p: [
+        [4, 40],
+        [1, 60],
+      ],
+      u: [[1, 50, 70, 0.9]],
+    };
     const seat = Seat.fromRaw(raw);
     const copy = new Seat(seat);
     raw.u[0][1] = 1;
@@ -57,7 +100,9 @@ describe("seat uncertainty", () => {
     expect(seat.u).toEqual({ labour: [50, 70, 0.9] });
     expect(copy.u.conservative).toBeUndefined();
     expect(state.electionData.baseSeats[0].u).toEqual(state.electionData.currentSeats[0].u);
-    expect(state.electionData.baseSeats[0].u.labour).not.toBe(state.electionData.currentSeats[0].u.labour);
+    expect(state.electionData.baseSeats[0].u.labour).not.toBe(
+      state.electionData.currentSeats[0].u.labour,
+    );
   });
 
   it("rejects malformed ranges and odds and leaves ordinary seats unchanged", () => {
@@ -77,12 +122,21 @@ describe("seat uncertainty", () => {
 
 describe("published probabilities", () => {
   it.each([
-    [0, "<1%"], [0.004, "<1%"], [0.005, "1%"], [0.5, "50%"],
-    [0.994, "99%"], [0.995, ">99%"], [1, ">99%"],
+    [0, "<1%"],
+    [0.004, "<1%"],
+    [0.005, "1%"],
+    [0.5, "50%"],
+    [0.994, "99%"],
+    [0.995, ">99%"],
+    [1, ">99%"],
     // Exact half-percents that value * 100 puts just below the half.
-    [0.145, "15%"], [0.285, "29%"], [0.565, "57%"],
+    [0.145, "15%"],
+    [0.285, "29%"],
+    [0.565, "57%"],
     // Four-place inputs (older published files) round once, not via tenths.
-    [0.0049, "<1%"], [0.9949, "99%"], [0.1449, "14%"],
+    [0.0049, "<1%"],
+    [0.9949, "99%"],
+    [0.1449, "14%"],
   ])("shows %s as %s", (value, text) => {
     expect(formatProbability(value)).toBe(text);
   });
@@ -115,9 +169,14 @@ describe("uncertainty totals and headline", () => {
   });
 
   it.each([
-    ["party", "labour"], ["secondParty", "conservative"], ["gainsOnly", true],
-    ["majorityMin", 1], ["majorityMax", 99], ["upcoming", "2026"],
-    ["region", ["northeast", "london"]], ["region", "northeast,london"],
+    ["party", "labour"],
+    ["secondParty", "conservative"],
+    ["gainsOnly", true],
+    ["majorityMin", 1],
+    ["majorityMax", 99],
+    ["upcoming", "2026"],
+    ["region", ["northeast", "london"]],
+    ["region", "northeast,london"],
   ])("hides ranges for the unsupported %s filter", (filter, value) => {
     state.mapFilters[filter] = value;
     expect(uncertaintyForTotals(state)).toBeNull();
@@ -125,30 +184,36 @@ describe("uncertainty totals and headline", () => {
 
   it("keeps national odds under geographic filters and chooses the most likely largest party", () => {
     state.mapFilters.region = "northeast";
-    expect(uncertaintyHeadline(activeUncertainty(state), (party) => manifest.labelParty(party)))
-      .toBe("Labour 298 seats (220–376) · majority 31%");
-    expect(uncertaintyOutcomeLine(activeUncertainty(state), (party) => manifest.labelParty(party)))
-      .toBe("Hung parliament likely (69%) · Labour largest party (97%)");
+    expect(
+      uncertaintyHeadline(activeUncertainty(state), (party) => manifest.labelParty(party)),
+    ).toBe("Labour 298 seats (220–376) · majority 31%");
+    expect(
+      uncertaintyOutcomeLine(activeUncertainty(state), (party) => manifest.labelParty(party)),
+    ).toBe("Hung parliament likely (69%) · Labour largest party (97%)");
   });
 
   it("bounds the headline odds at <1% and >99%", () => {
     const summary = activeUncertainty(state);
     summary.national.parties.labour = {
-      ...summary.national.parties.labour, s: [199, 282, 359], m: 280, pl: 1, pm: 0.19,
+      ...summary.national.parties.labour,
+      s: [199, 282, 359],
+      m: 280,
+      pl: 1,
+      pm: 0.19,
     };
     summary.national.parties.conservative = { ...summary.national.parties.conservative, pl: 0 };
     summary.national.hung = 0.81;
     const label = (party) => manifest.labelParty(party);
-    expect(uncertaintyOutcomeLine(summary, label)).toBe("Hung parliament likely (81%) · Labour largest party (>99%)");
-    expect(uncertaintyHeadline(summary, label)).toBe(
-      "Labour 280 seats (199–359) · majority 19%",
+    expect(uncertaintyOutcomeLine(summary, label)).toBe(
+      "Hung parliament likely (81%) · Labour largest party (>99%)",
     );
+    expect(uncertaintyHeadline(summary, label)).toBe("Labour 280 seats (199–359) · majority 19%");
     summary.national.parties.labour.pm = 0.004;
     summary.national.hung = 0.996;
-    expect(uncertaintyOutcomeLine(summary, label)).toBe("Hung parliament likely (>99%) · Labour largest party (>99%)");
-    expect(uncertaintyHeadline(summary, label)).toBe(
-      "Labour 280 seats (199–359) · majority <1%",
+    expect(uncertaintyOutcomeLine(summary, label)).toBe(
+      "Hung parliament likely (>99%) · Labour largest party (>99%)",
     );
+    expect(uncertaintyHeadline(summary, label)).toBe("Labour 280 seats (199–359) · majority <1%");
   });
 
   it("shows the stored simulation only while Show with modelled uncertainty is ticked", () => {
@@ -226,11 +291,17 @@ describe("simulated headline lines", () => {
   }
 
   function lines(summary) {
-    return [simulatedSubtitle("Current prediction", summary, label), uncertaintyHeadline(summary, label)];
+    return [
+      simulatedSubtitle("Current prediction", summary, label),
+      uncertaintyHeadline(summary, label),
+    ];
   }
 
   it("leads with a likely hung parliament and drops hung from the second line", () => {
-    const summary = national({ labour: [238, 317, 389, 0.44, 0.99], reform: [100, 150, 200, 0, 0.01] }, 0.56);
+    const summary = national(
+      { labour: [238, 317, 389, 0.44, 0.99], reform: [100, 150, 200, 0, 0.01] },
+      0.56,
+    );
     expect(lines(summary)).toEqual([
       "Current prediction · Hung parliament likely (56%) · Labour largest party (99%)",
       `Labour 317 seats (238–389) · majority 44%`,
@@ -238,9 +309,13 @@ describe("simulated headline lines", () => {
   });
 
   it("calls an outcome below a displayed 50% only most likely", () => {
-    const summary = national({
-      labour: [250, 300, 340, 0.3, 0.7], reform: [200, 250, 300, 0.25, 0.3],
-    }, 0.45);
+    const summary = national(
+      {
+        labour: [250, 300, 340, 0.3, 0.7],
+        reform: [200, 250, 300, 0.25, 0.3],
+      },
+      0.45,
+    );
     expect(lines(summary)).toEqual([
       "Current prediction · Hung parliament most likely (45%) · Labour largest party (70%)",
       `Labour 300 seats (250–340) · majority 30%`,
@@ -248,7 +323,10 @@ describe("simulated headline lines", () => {
   });
 
   it("names a likely majority and adds the hung odds to the second line", () => {
-    const summary = national({ labour: [300, 340, 370, 0.72, 0.99], reform: [80, 120, 160, 0, 0.01] }, 0.28);
+    const summary = national(
+      { labour: [300, 340, 370, 0.72, 0.99], reform: [80, 120, 160, 0, 0.01] },
+      0.28,
+    );
     expect(lines(summary)).toEqual([
       "Current prediction · Labour majority likely (72%) · Labour largest party (99%)",
       `Labour 340 seats (300–370) · majority 72% · hung 28%`,
@@ -256,35 +334,50 @@ describe("simulated headline lines", () => {
   });
 
   it("names every outcome tied on the displayed percentage, hung first then by name", () => {
-    const summary = national({ labour: [280, 326, 360, 0.502, 0.9], reform: [100, 150, 200, 0, 0.1] }, 0.498);
+    const summary = national(
+      { labour: [280, 326, 360, 0.502, 0.9], reform: [100, 150, 200, 0, 0.1] },
+      0.498,
+    );
     expect(lines(summary)).toEqual([
       "Current prediction · Hung parliament or Labour majority equally likely (50%) · Labour largest party (90%)",
       `Labour 326 seats (280–360) · majority 50%`,
     ]);
-    const three = national({
-      reform: [250, 300, 340, 0.333, 0.5], labour: [250, 300, 340, 0.334, 0.5],
-    }, 0.333);
+    const three = national(
+      {
+        reform: [250, 300, 340, 0.333, 0.5],
+        labour: [250, 300, 340, 0.334, 0.5],
+      },
+      0.333,
+    );
     expect(uncertaintyOutcomeLine(three, label)).toBe(
-      "Hung parliament, Labour majority or Reform UK majority equally likely (33%) · "
-      + "Labour and Reform UK level as largest party (50%)",
+      "Hung parliament, Labour majority or Reform UK majority equally likely (33%) · " +
+        "Labour and Reform UK level as largest party (50%)",
     );
   });
 
   it("names a majority tie without hung and keeps hung on the second line", () => {
-    const summary = national({
-      reform: [250, 300, 340, 0.4, 0.5], labour: [250, 300, 340, 0.404, 0.5],
-    }, 0.196);
+    const summary = national(
+      {
+        reform: [250, 300, 340, 0.4, 0.5],
+        labour: [250, 300, 340, 0.404, 0.5],
+      },
+      0.196,
+    );
     expect(lines(summary)[0]).toBe(
-      "Current prediction · Labour majority or Reform UK majority equally likely (40%) · "
-      + "Labour and Reform UK level as largest party (50%)",
+      "Current prediction · Labour majority or Reform UK majority equally likely (40%) · " +
+        "Labour and Reform UK level as largest party (50%)",
     );
     expect(lines(summary)[1]).toMatch(/· hung 20%$/);
   });
 
   it("shows both parties' whole seats when the largest party is tied on the displayed percentage", () => {
-    const summary = national({
-      reform: [240, 288, 330, 0.18, 0.498], labour: [250, 290, 330, 0.2, 0.502],
-    }, 0.62);
+    const summary = national(
+      {
+        reform: [240, 288, 330, 0.18, 0.498],
+        labour: [250, 290, 330, 0.2, 0.502],
+      },
+      0.62,
+    );
     expect(lines(summary)).toEqual([
       "Current prediction · Hung parliament likely (62%) · Labour and Reform UK level as largest party (50%)",
       `Labour 290 seats (250–330) · majority 20% · Reform UK 288 seats (240–330) · majority 18%`,
@@ -306,15 +399,25 @@ describe("simulated headline lines", () => {
   it("judges likely on the displayed percentage, so 49.6% reads as likely (50%)", () => {
     expect(probabilityPercent(0.496)).toBe(50);
     expect(probabilityPercent(0.494)).toBe(49);
-    const summary = national({ labour: [200, 300, 340, 0.3, 0.8], reform: [100, 200, 300, 0.204, 0.2] }, 0.496);
-    expect(uncertaintyOutcomeLine(summary, label)).toBe("Hung parliament likely (50%) · Labour largest party (80%)");
+    const summary = national(
+      { labour: [200, 300, 340, 0.3, 0.8], reform: [100, 200, 300, 0.204, 0.2] },
+      0.496,
+    );
+    expect(uncertaintyOutcomeLine(summary, label)).toBe(
+      "Hung parliament likely (50%) · Labour largest party (80%)",
+    );
     summary.national.hung = 0.494;
     summary.national.parties.reform.pm = 0.206;
-    expect(uncertaintyOutcomeLine(summary, label)).toBe("Hung parliament most likely (49%) · Labour largest party (80%)");
+    expect(uncertaintyOutcomeLine(summary, label)).toBe(
+      "Hung parliament most likely (49%) · Labour largest party (80%)",
+    );
   });
 
   it("bounds both lines at <1% and >99%", () => {
-    const summary = national({ labour: [330, 380, 420, 0.997, 0.999], reform: [50, 80, 110, 0, 0.001] }, 0.003);
+    const summary = national(
+      { labour: [330, 380, 420, 0.997, 0.999], reform: [50, 80, 110, 0, 0.001] },
+      0.003,
+    );
     expect(lines(summary)).toEqual([
       "Current prediction · Labour majority likely (>99%) · Labour largest party (>99%)",
       `Labour 380 seats (330–420) · majority >99% · hung <1%`,
@@ -323,8 +426,20 @@ describe("simulated headline lines", () => {
 
   it("gives no line without national odds, so the uniform-swing line stays", () => {
     expect(simulatedSubtitle("Current prediction", null, label)).toBe("");
-    expect(simulatedSubtitle("Current prediction", national({ labour: [1, 2, 3, 0.1, 0.9] }, null), label)).toBe("");
-    expect(simulatedSubtitle("Current prediction", national({ labour: [1, 2, 3, null, 0.9] }, 0.5), label)).toBe("");
+    expect(
+      simulatedSubtitle(
+        "Current prediction",
+        national({ labour: [1, 2, 3, 0.1, 0.9] }, null),
+        label,
+      ),
+    ).toBe("");
+    expect(
+      simulatedSubtitle(
+        "Current prediction",
+        national({ labour: [1, 2, 3, null, 0.9] }, 0.5),
+        label,
+      ),
+    ).toBe("");
     expect(uncertaintyHeadline(national({}, 0.5), label)).toBe("");
   });
 });

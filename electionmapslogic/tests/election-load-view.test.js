@@ -6,10 +6,27 @@ const fetchJson = vi.hoisted(() => vi.fn());
 vi.mock("../files.js", () => ({ fetchJson }));
 // The vendored topojson build points at a missing source map; one square seat is enough here.
 vi.mock("../../site/vendor/topojson-client.v3.esm.js", () => ({
-  feature: () => ({ type: "FeatureCollection", features: [{
-    type: "Feature", properties: { name: "Testtown", region: "london" },
-    geometry: { type: "Polygon", coordinates: [[[0, 51], [0, 52], [1, 52], [1, 51], [0, 51]]] },
-  }] }),
+  feature: () => ({
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { name: "Testtown", region: "london" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 51],
+              [0, 52],
+              [1, 52],
+              [1, 51],
+              [0, 51],
+            ],
+          ],
+        },
+      },
+    ],
+  }),
   mesh: () => ({ type: "MultiLineString", coordinates: [] }),
   merge: () => null,
 }));
@@ -19,7 +36,9 @@ vi.mock("../../site/vendor/topojson-client.v3.esm.js", () => ({
 let JSDOM;
 try {
   ({ JSDOM } = createRequire(import.meta.url)(process.env.PF_TEST_JSDOM || "jsdom"));
-} catch { /* Without jsdom the browser suites below are skipped. */ }
+} catch {
+  /* Without jsdom the browser suites below are skipped. */
+}
 
 // The page's own header (electionmaps/index.html) holds the title, subtitle, modelled-uncertainty
 // checkbox and countdown the engine renders into; the shell holds the rest.
@@ -30,8 +49,9 @@ const header = `<header class="maps-header"><h1 class="maps-title"></h1>
 const shell = header + readFileSync(new URL("../shell.html", import.meta.url), "utf8");
 
 const HEADLINE = "Labour 280 seats (199–359) · majority 19%";
-const BASIS = "Nowcast: if an election were held today. 90% ranges and probabilities from 10,000 "
-  + "simulations, conditional on current polls and the model's error assumptions.";
+const BASIS =
+  "Nowcast: if an election were held today. 90% ranges and probabilities from 10,000 " +
+  "simulations, conditional on current polls and the model's error assumptions.";
 const BETA = "Beta: this model is new and may change significantly.";
 const LATEST = "Latest poll used: Opinium (2026-10-28 to 2026-10-30)";
 const SIMULATED = "Current prediction · Hung parliament likely (81%) · Labour largest party (94%)";
@@ -47,34 +67,65 @@ function mapModes() {
       { id: 2, key: "reform", name: "Reform UK", colour: "#12b6cf" },
     ],
     elections: [
-      { id: "current-prediction", name: "Current prediction", mapId: 2, parliament: "westminster", model: true },
+      {
+        id: "current-prediction",
+        name: "Current prediction",
+        mapId: 2,
+        parliament: "westminster",
+        model: true,
+      },
       { id: "2024-general", name: "2024 General Election", mapId: 2, parliament: "westminster" },
     ],
     mapModes: { 2: { name: "westminster-2024", regions: [{ id: 17, name: "London" }] } },
     files: {
       elections: {
         mapsById: { 2: "maps/map-2.topo.json" },
-        electionsById: { "current-prediction": "results/prediction.json", "2024-general": "results/2024.json" },
+        electionsById: {
+          "current-prediction": "results/prediction.json",
+          "2024-general": "results/2024.json",
+        },
       },
       meta: { westminster: "results/meta.json" },
     },
-    parliamentFeatures: { westminster: {
-      predictAnchorElectionId: "current-prediction", uncertaintyDataPath: "results/uncertainty.json",
-    } },
+    parliamentFeatures: {
+      westminster: {
+        predictAnchorElectionId: "current-prediction",
+        uncertaintyDataPath: "results/uncertainty.json",
+      },
+    },
   };
 }
 
 /** One seat whose saved run carries a per-party band: Reform's win chance rounds to "<1%". */
-function results(u = [[1, 48.5, 61.25, 0.87], [2, 30, 41, 0]]) {
+function results(
+  u = [
+    [1, 48.5, 61.25, 0.87],
+    [2, 30, 41, 0],
+  ],
+) {
   return {
     uncertaintyId: "saved-run",
-    seats: [{ n: "Testtown", r: 17, w: 1, p: [[1, 600], [2, 400]], u }],
+    seats: [
+      {
+        n: "Testtown",
+        r: 17,
+        w: 1,
+        p: [
+          [1, 600],
+          [2, 400],
+        ],
+        u,
+      },
+    ],
   };
 }
 
 function uncertainty() {
   return {
-    schema: "pf-uncertainty-v1", uncertaintyId: "saved-run", interval: 0.9, simulations: 10000,
+    schema: "pf-uncertainty-v1",
+    uncertaintyId: "saved-run",
+    interval: 0.9,
+    simulations: 10000,
     basis: BASIS,
     national: {
       parties: {
@@ -92,7 +143,11 @@ function serve(overrides = {}) {
   const files = {
     "data/map-modes.json": mapModes(),
     "data/results/meta.json": { latest_poll_snippet: "" },
-    "data/maps/map-2.topo.json": { type: "Topology", objects: { seats: { type: "GeometryCollection", geometries: [] } }, arcs: [] },
+    "data/maps/map-2.topo.json": {
+      type: "Topology",
+      objects: { seats: { type: "GeometryCollection", geometries: [] } },
+      arcs: [],
+    },
     "data/results/prediction.json": results(),
     "data/results/2024.json": results(),
     "data/results/uncertainty.json": uncertainty(),
@@ -108,7 +163,9 @@ function serve(overrides = {}) {
 /** A promise held open until the test resolves it. */
 function pending() {
   let resolve;
-  const promise = new Promise((done) => { resolve = done; });
+  const promise = new Promise((done) => {
+    resolve = done;
+  });
   return { promise, resolve };
 }
 
@@ -138,7 +195,11 @@ describe.skipIf(!JSDOM)("actual election load", () => {
     // startApp reports load failures to the console; any here is a broken harness or a bug.
     consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     // dom.js observes panel sizes at module load; jsdom has no layout to observe.
-    const Observer = class { observe() {} unobserve() {} disconnect() {} };
+    const Observer = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
     vi.stubGlobal("ResizeObserver", Observer);
     vi.stubGlobal("IntersectionObserver", Observer);
     ({ state } = await import("../state.js"));
@@ -169,17 +230,21 @@ describe.skipIf(!JSDOM)("actual election load", () => {
   const headline = () => document.querySelector("#mapsSubtitle .maps-subtitle-uncertainty");
   const mainLine = () => document.querySelector("#mapsSubtitle .maps-subtitle-main");
   const basisNote = () => document.getElementById("mapsUncertaintyBasis");
-  const lines = (id) => [...document.getElementById(id).children]
-    .map((node) => [node.className, node.textContent]);
+  const lines = (id) =>
+    [...document.getElementById(id).children].map((node) => [node.className, node.textContent]);
   const subtitleLines = () => lines("mapsSubtitle");
   const footerLines = () => lines("mapsMapFooter");
   const footer = () => document.getElementById("mapsMapFooter");
   const checkbox = () => document.getElementById("mapsModelledUncertaintyInput");
   const checkboxShown = () => !document.getElementById("mapsModelledUncertainty").hidden;
-  const seatsColumn = () => [...document.querySelectorAll("#mapsVoteTotalsBody tr")].map((tr) => tr.cells[1].textContent);
+  const seatsColumn = () =>
+    [...document.querySelectorAll("#mapsVoteTotalsBody tr")].map((tr) => tr.cells[1].textContent);
   const mapNote = () => document.getElementById("mapsMapColourNote");
-  const describedBy = () => document.getElementById("mapsVoteTotalsTable").getAttribute("aria-describedby");
-  const popupBands = () => [...document.querySelectorAll("#mapsSeatPopupList .maps-popup-uncertainty")];
+  const describedBy = () =>
+    document.getElementById("mapsVoteTotalsTable").getAttribute("aria-describedby");
+  const popupBands = () => [
+    ...document.querySelectorAll("#mapsSeatPopupList .maps-popup-uncertainty"),
+  ];
   const popupRows = () => [...document.querySelectorAll("#mapsSeatPopupList .maps-popup-row")];
   const openSeatPopup = () => document.querySelector("#mapsSeatList .maps-seat-row").click();
   /** Tick or untick "Show with modelled uncertainty" as a reader would. */
@@ -279,7 +344,9 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       serve({ "data/results/prediction.json": () => held.promise });
       await boot();
       const loading = startApp();
-      await vi.waitFor(() => expect(fetchJson).toHaveBeenCalledWith("data/results/prediction.json"));
+      await vi.waitFor(() =>
+        expect(fetchJson).toHaveBeenCalledWith("data/results/prediction.json"),
+      );
       const original = state.currentElection;
       state.currentElection = { ...original, id: "2024-general", model: false };
       held.resolve(results());
@@ -296,7 +363,9 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       await boot();
       state.showModelledUncertainty = true;
       const loading = startApp();
-      await vi.waitFor(() => expect(fetchJson).toHaveBeenCalledWith("data/results/uncertainty.json"));
+      await vi.waitFor(() =>
+        expect(fetchJson).toHaveBeenCalledWith("data/results/uncertainty.json"),
+      );
       const loaded = state.electionData;
       state.currentElection = { ...state.currentElection };
       held.resolve(uncertainty());
@@ -414,17 +483,29 @@ describe.skipIf(!JSDOM)("actual election load", () => {
             { id: 1, key: "democrat", name: "Democratic", colour: "#3333ff" },
             { id: 2, key: "republican", name: "Republican", colour: "#e81b23" },
           ],
-          elections: [{
-            id: "current-us-house", name: "2026 Prediction", mapId: 21, parliament: "us_house", model: true,
-          }],
+          elections: [
+            {
+              id: "current-us-house",
+              name: "2026 Prediction",
+              mapId: 21,
+              parliament: "us_house",
+              model: true,
+            },
+          ],
           mapModes: { 21: { name: "us-house-2024", regions: [{ id: 17, name: "California" }] } },
-          files: { elections: {
-            mapsById: { 21: "maps/map-21.topo.json" },
-            electionsById: { "current-us-house": "results/us-house.json" },
-          } },
+          files: {
+            elections: {
+              mapsById: { 21: "maps/map-21.topo.json" },
+              electionsById: { "current-us-house": "results/us-house.json" },
+            },
+          },
           parliamentFeatures: { us_house: { predictAnchorElectionId: "current-us-house" } },
         },
-        "data/maps/map-21.topo.json": { type: "Topology", objects: { seats: { type: "GeometryCollection", geometries: [] } }, arcs: [] },
+        "data/maps/map-21.topo.json": {
+          type: "Topology",
+          objects: { seats: { type: "GeometryCollection", geometries: [] } },
+          arcs: [],
+        },
         "data/results/us-house.json": results(),
       });
       await boot();
@@ -464,8 +545,10 @@ describe.skipIf(!JSDOM)("actual election load", () => {
       expect(popupBands()).toHaveLength(0);
       // Ticking refreshes the open popup in place.
       tick();
-      expect(popupBands().map((node) => node.textContent))
-        .toEqual(["(48.5–61.25%) · win 87%", "(30–41%) · win <1%"]);
+      expect(popupBands().map((node) => node.textContent)).toEqual([
+        "(48.5–61.25%) · win 87%",
+        "(30–41%) · win <1%",
+      ]);
       tick(false);
       expect(popupRows()).toHaveLength(2);
       expect(popupBands()).toHaveLength(0);

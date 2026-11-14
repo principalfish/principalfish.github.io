@@ -9,10 +9,20 @@ import { createComputeService } from "./compute-service.js";
 import { clueIsSet } from "./analysis.js";
 import { isCancelled } from "./worker-client.js";
 import {
-  buildOverlay, renderWordLists, renderStepSuggest, renderAutoSolveTable, perWordTopHTML,
+  buildOverlay,
+  renderWordLists,
+  renderStepSuggest,
+  renderAutoSolveTable,
+  perWordTopHTML,
 } from "./render.js";
 
-export function initManualMode(state, manual, clueUI, uiEls, compute = createComputeService(state)) {
+export function initManualMode(
+  state,
+  manual,
+  clueUI,
+  uiEls,
+  compute = createComputeService(state),
+) {
   let lastAutoSolve = null;
   let activeIdx = -1;
   let revision = 0;
@@ -25,7 +35,9 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
     busy = null;
     compute.cancel?.();
   };
-  const status = (m) => { if (uiEls.statusEl) uiEls.statusEl.textContent = m; };
+  const status = (m) => {
+    if (uiEls.statusEl) uiEls.statusEl.textContent = m;
+  };
   const expanded = () => !uiEls.expandedToggle || uiEls.expandedToggle.checked;
 
   // Entering manual mode: keep the carried-over board, but clear any leftover
@@ -35,9 +47,11 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
     clearAll();
     const slots = manual.getSlots();
     const hasAny = slots.some((s) => s.guesses.length > 0) || clueIsSet(clueUI.getClueGrid());
-    status(hasAny
-      ? 'Manual mode — press "Suggest next guess" to analyse, or edit the board.'
-      : 'Enter a game state, then "Suggest next guess".');
+    status(
+      hasAny
+        ? 'Manual mode — press "Suggest next guess" to analyse, or edit the board.'
+        : 'Enter a game state, then "Suggest next guess".',
+    );
   }
 
   async function onEdit() {
@@ -49,7 +63,9 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
     if (incomplete.length) {
       const list = incomplete.map((b) => `board ${b}`).join(", ");
       const plural = incomplete.length > 1 ? "words" : "word";
-      status(`Incomplete ${plural} on ${list} — each guess needs all 5 letters. Finish or clear it, then try again.`);
+      status(
+        `Incomplete ${plural} on ${list} — each guess needs all 5 letters. Finish or clear it, then try again.`,
+      );
       return;
     }
     const slots = manual.getSlots();
@@ -65,14 +81,28 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
     const owner = { token };
     busy = owner;
     try {
-      const reply = await compute.request({ type: "analyse-manual", slots, clueGrid: rawGrid,
-        expanded: expanded(), compact: true });
+      const reply = await compute.request({
+        type: "analyse-manual",
+        slots,
+        clueGrid: rawGrid,
+        expanded: expanded(),
+        compact: true,
+      });
       if (token !== revision || busy !== owner) return false;
-      acceptedInput = { slots: structuredClone(slots), clueGrid: structuredClone(rawGrid), expanded: expanded() };
+      acceptedInput = {
+        slots: structuredClone(slots),
+        clueGrid: structuredClone(rawGrid),
+        expanded: expanded(),
+      };
       compute.acceptManual?.(acceptedInput);
       const { result: res, clueGrid, startSlots, moves } = reply;
-      const steps = reply.steps || moves.map((m, i) => i < reply.reuse && lastAutoSolve
-        ? lastAutoSolve.steps[i] : { after: undefined, suggest: undefined });
+      const steps =
+        reply.steps ||
+        moves.map((m, i) =>
+          i < reply.reuse && lastAutoSolve
+            ? lastAutoSolve.steps[i]
+            : { after: undefined, suggest: undefined },
+        );
       if (moves.length && reply.finalStep) steps[steps.length - 1] = reply.finalStep;
       clueUI.setResults(buildOverlay(slots, res));
       if (!res.solvable) {
@@ -90,9 +120,18 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
 
       if (moves.length) {
         lastAutoSolve = {
-          game: { manual: true, solved: false, completedCount: moves.length, guessCount: moves.length, words: null },
-          startSlots, moves, steps,
-          source: "Replaying your entered guesses.", ms: null,
+          game: {
+            manual: true,
+            solved: false,
+            completedCount: moves.length,
+            guessCount: moves.length,
+            words: null,
+          },
+          startSlots,
+          moves,
+          steps,
+          source: "Replaying your entered guesses.",
+          ms: null,
         };
         setupScrub(moves.length);
         busy = null;
@@ -106,7 +145,8 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
       }
       return true;
     } catch (error) {
-      if (token === revision && !isCancelled(error)) status(`Calculation failed: ${error.message} Press "Suggest next guess" to retry.`);
+      if (token === revision && !isCancelled(error))
+        status(`Calculation failed: ${error.message} Press "Suggest next guess" to retry.`);
       return false;
     } finally {
       if (busy === owner) busy = null;
@@ -116,16 +156,17 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
   function renderSuggestStandalone(sug) {
     const ranked = sug.ranked || [];
     if (!ranked.length) {
-      uiEls.suggestEl.innerHTML =
-        `<div class="panel"><span class="good">All words pinned — nothing left to guess.</span></div>`;
+      uiEls.suggestEl.innerHTML = `<div class="panel"><span class="good">All words pinned — nothing left to guess.</span></div>`;
       return;
     }
     const fmtExp = (x) => (x == null ? "opener" : `~${x.toFixed(1)}`);
     const top = ranked[0];
     const rows = ranked
-      .map((r) =>
-        `<tr><td><b>${r.word}</b></td><td>Word ${r.board + 1}</td>` +
-        `<td>${r.setSize}</td><td>${fmtExp(r.expRemaining)}</td></tr>`)
+      .map(
+        (r) =>
+          `<tr><td><b>${r.word}</b></td><td>Word ${r.board + 1}</td>` +
+          `<td>${r.setSize}</td><td>${fmtExp(r.expRemaining)}</td></tr>`,
+      )
       .join("");
     const perWord = perWordTopHTML(sug.perBoard, (b, w) => b === top.board && w === top.word);
     uiEls.suggestEl.innerHTML =
@@ -140,11 +181,18 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
 
   function setupScrub(n) {
     const s = uiEls.sliderEl;
-    if (s) { s.min = 0; s.max = Math.max(0, n - 1); s.value = 0; s.disabled = n === 0; }
+    if (s) {
+      s.min = 0;
+      s.max = Math.max(0, n - 1);
+      s.value = 0;
+      s.disabled = n === 0;
+    }
     if (uiEls.prevBtn) uiEls.prevBtn.disabled = n === 0;
     if (uiEls.nextBtn) uiEls.nextBtn.disabled = n === 0;
   }
-  function disableScrub() { setupScrub(0); }
+  function disableScrub() {
+    setupScrub(0);
+  }
 
   async function jumpToMove(K) {
     if (!lastAutoSolve || !Number.isInteger(K) || K < 0 || K >= lastAutoSolve.moves.length) return;
@@ -157,8 +205,12 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
     activeIdx = K;
     status(`Calculating move ${K + 1}…`);
     try {
-      const reply = await compute.request({ type: "replay-manual", index: K,
-        clueGrid: acceptedInput.clueGrid, expanded: acceptedInput.expanded });
+      const reply = await compute.request({
+        type: "replay-manual",
+        index: K,
+        clueGrid: acceptedInput.clueGrid,
+        expanded: acceptedInput.expanded,
+      });
       if (token !== viewToken || inputRevision !== revision || busy !== owner) return false;
       const { slots: slotsAfter, clueGrid, step } = reply;
       moves[K] = reply.move;
@@ -170,13 +222,22 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
       if (step.after.solvable) {
         renderWordLists(uiEls.slotsEl, slotsAfter, clueGrid, step.after);
       }
-      renderStepSuggest(uiEls.suggestEl, K, moves[K], step.suggest, moves.length, "Played", K === moves.length - 1);
+      renderStepSuggest(
+        uiEls.suggestEl,
+        K,
+        moves[K],
+        step.suggest,
+        moves.length,
+        "Played",
+        K === moves.length - 1,
+      );
       renderTable();
       if (uiEls.sliderEl) uiEls.sliderEl.value = K;
       status(`Move ${K + 1} / ${moves.length}`);
       return true;
     } catch (error) {
-      if (token === viewToken && inputRevision === revision && !isCancelled(error)) status(`Replay failed: ${error.message} Select the move again to retry.`);
+      if (token === viewToken && inputRevision === revision && !isCancelled(error))
+        status(`Replay failed: ${error.message} Select the move again to retry.`);
       return false;
     } finally {
       if (busy === owner) busy = null;
@@ -187,11 +248,16 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
     renderAutoSolveTable(uiEls.moveTableEl, lastAutoSolve, activeIdx, jumpToMove);
   }
 
-  function prev() { if (lastAutoSolve && activeIdx > 0) return jumpToMove(activeIdx - 1); }
-  function next() {
-    if (lastAutoSolve && activeIdx < lastAutoSolve.moves.length - 1) return jumpToMove(activeIdx + 1);
+  function prev() {
+    if (lastAutoSolve && activeIdx > 0) return jumpToMove(activeIdx - 1);
   }
-  function scrubTo(v) { if (lastAutoSolve) return jumpToMove(+v); }
+  function next() {
+    if (lastAutoSolve && activeIdx < lastAutoSolve.moves.length - 1)
+      return jumpToMove(activeIdx + 1);
+  }
+  function scrubTo(v) {
+    if (lastAutoSolve) return jumpToMove(+v);
+  }
 
   function clearAll() {
     if (clueUI) clueUI.setResults(null);
@@ -227,8 +293,18 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
   function inputsChanged() {
     invalidate();
     clearAll();
-    status("Inputs changed — press \"Suggest next guess\" to analyse.");
+    status('Inputs changed — press "Suggest next guess" to analyse.');
   }
 
-  return { onEdit, notifyReady, reset, refreshSuggest, prev, next, scrubTo, inputsChanged, stop: invalidate };
+  return {
+    onEdit,
+    notifyReady,
+    reset,
+    refreshSuggest,
+    prev,
+    next,
+    scrubTo,
+    inputsChanged,
+    stop: invalidate,
+  };
 }

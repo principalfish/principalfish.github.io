@@ -130,7 +130,7 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
 - [x] 2. Python formatting-only commit; `ruff format --check` clean
 - [x] 3. JS formatting-only commit with bundles; `biome format` clean
 - [x] 4. `ruff check` clean in `data/tests/`; fixtures registered; `.git-blame-ignore-revs` lists pieces 2 and 3
-- [ ] 5. `ruff check` clean everywhere; strict mypy still clean
+- [x] 5. `ruff check` clean everywhere; strict mypy still clean
 - [ ] 6. `biome ci` clean; bundles in sync
 - [ ] 7. `./lint.sh` runs all checks and fails at the right steps; CI lint job
 - [ ] 8. README, AGENTS.md and data/README.md meet the project-docs guide; every command accounted for and checked
@@ -165,3 +165,4 @@ After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh`
 - Piece 5, builder-found bug: ruff's C416 unsafe fix broke `export.uncertainty.party_names` at runtime (every export crashed); fixed and tested, see findings. Full-site scratch export (`--output-base`) from HEAD's code and from piece 5's is byte-identical (69 files).
 - Piece 5 also: `turnout_pct` in `export/payload.py` was computed and never used (F841), so it and the docstring claim went; turnout has never been in the results payload, which may be worth its own issue if the front end should show it. `data/pyproject.toml` gains `[tool.ruff.lint.isort] combine-as-imports = true` (review fix), which re-merged import blocks in 13 test files.
 - Piece 5 review: correctness raised 2 low cleanups (orphaned TypeVars; split as-imports), both verified and fixed; security and coverage clean; light re-check clean. Changed-lines coverage 98% (2 of 183 uncovered); accepted reason for both (`console/westminster/poll_import.py:308`, `models/westminster/westminster_validation.py:482`): comment-only `noqa` change on a line already uncovered on master. Suite: 7424 passed (7410 + 14 new tests).
+- Piece 5 committed c4de3561 (2026-11-15), approved under the standing instruction; all five builder decisions accepted, including the two behaviour changes (narrowed fetch errors surface as themselves; Deltapoll's regional parse no longer swallows non-ValueErrors).

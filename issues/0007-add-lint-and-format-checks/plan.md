@@ -34,6 +34,7 @@ Assumed, confirmed with the ledger:
 - Lint fixes keep behaviour. Genuine top-level boundaries that log keep their `except Exception` (ruff exempts handlers that call `logger.exception`; otherwise a `noqa` with a one-line reason). Where a fix would change what a user or a caller sees, the builder stops and asks.
 - After the merge, the planner chat updates `project.md`'s Checks line.
 - Added 2026-11-14 at the user's request ("please also improve README / Agents / other docs as per isntructions in .claude - make it an additional part of this issue"): piece 8 rewrites `README.md`, `AGENTS.md` and `data/README.md` to `~/.claude/guides/project-docs.md`, carrying the lint commands.
+- Added 2026-11-15 at the user's request ("yes do it please", answering the planner's proposal of one `./check.sh` like budget, hillstuff and recipeshub have): piece 9 renames `lint.sh` to `check.sh` and has it run the type checks and tests too.
 - The house-guide mismatches (`shell.md` forbids a global `set -euo pipefail`, which both live scripts use; `javascript.md` assumes no bundler) are fixed in `~/.claude`, not here.
 
 Shared state never to write: the live database (`DATABASE_PATH`, default `/home/philiph/dbs/elections.db`). No piece runs an import, a model or an export into the repo. `data/run_tests.sh` rewrites the tracked `model_output_trends.json`, so stage files explicitly, never `git add -A`.
@@ -125,6 +126,15 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
    - Acceptance: `README.md` and `AGENTS.md` within the guide's size limits (report lines and words), README in the guide's section order; every command that was in the old README, AGENTS.md or data/README.md still appears in exactly one doc (list where each went); every command in the three front doors runs as written from a fresh worktree, except long or live ones (`./server.sh`, the console, real exports, backups), which are named as not run; all relative links resolve.
    - Tests: docs only, nothing to unit-test; the builder runs each command it documents and checks every relative link, and says so in the review request.
 
+9. One check script for everything (added 2026-11-15 at the user's request)
+   - Files: `lint.sh` → `check.sh` (`git mv`, keeps mode 100755), `.github/workflows/ci.yml`, `README.md`, `AGENTS.md`, `data/README.md`, and any other doc that names `lint.sh` (`git grep -n lint.sh`)
+   - What: `check.sh` is today's `lint.sh` plus the test steps, in the same style; the header comment stays the `--help` text. Steps in order: `ruff check`, `ruff format --check`, `biome` (`ci --error-on-warnings .`), `shellcheck`, then `mypy + pytest` (`data/run_tests.sh`, which already stops before pytest when mypy fails) and `vitest` (`npm test`). Every step runs even when an earlier one fails, and the failed steps are named at the end, as `lint.sh` does now. Options: `--fix` (unchanged: fixers first, then every check); `--lint-only` (the four lint steps only); `--` ends the options and passes everything after it to pytest through `run_tests.sh` (e.g. `./check.sh -- -k model_outputs -q`); `-h`/`--help`; anything else exits 2. The CI `lint` job runs `./check.sh --lint-only`, since the `data` and `frontend` jobs already run the tests. No `lint.sh` shim: nothing outside this branch uses it. Docs: the front doors name `./check.sh` as the one command before a commit (`--lint-only` for the fast loop, `--fix`, `--` for pytest args) and keep `cd data && ./run_tests.sh` and `npm test` as the single-suite commands; AGENTS.md keeps its warning that the Python tests rewrite the tracked `model_output_trends.json`, now said of `./check.sh` too. Not included: the bundle-sync check (it rebuilds tracked files; CI's `frontend` job keeps it).
+   - Functions: none
+   - Depends on: 8
+   - Acceptance: `./check.sh` exits 0 on the branch and runs all six steps; `--lint-only` runs only the four lint steps; a lint failure and a failing test each make it exit non-zero, naming the step, with the later steps still run; `./check.sh -- -k <kw>` narrows pytest; `--help` from another directory prints the header; `git grep -n lint.sh` finds nothing; shellcheck passes on `check.sh`; CI's lint job passes on the PR.
+   - Tests: script only; prove each mode by hand once (each edit reverted) and list them in the review request. Restore `data/model_output_trends.json` after each full run; stage files explicitly.
+   - Model: claude-sonnet-5-5
+
 ## Checkpoints
 - [x] 1. Tools pinned; ruff, Biome and shellcheck settings picked up
 - [x] 2. Python formatting-only commit; `ruff format --check` clean
@@ -134,12 +144,13 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
 - [x] 6. `biome ci` clean; bundles in sync
 - [x] 7. `./lint.sh` runs all checks and fails at the right steps; CI lint job
 - [x] 8. README, AGENTS.md and data/README.md meet the project-docs guide; every command accounted for and checked
+- [ ] 9. `./check.sh` runs lint, types and both test suites; `--lint-only` gates CI; no `lint.sh` left
 
 ## Verification
 
-After every piece: `cd data && ./run_tests.sh` (strict mypy then pytest; note the test count, which must not change unless the piece says why), `npm test`, `npm run minify:electionmaps` after any front-end change with the bundles committed, and `git diff --check`. From piece 1, also report the `ruff check`, `ruff format --check`, `npx biome ci .` and `shellcheck` counts until they gate; from piece 7, `./lint.sh`. Coverage: `"$(python3 ~/.claude/lib/planner.py tools)/coverage-changed.sh"` after each piece; uncovered changed lines get a test or a one-line reason (for the formatting pieces: reformatted only, already uncovered on master).
+After every piece: `cd data && ./run_tests.sh` (strict mypy then pytest; note the test count, which must not change unless the piece says why), `npm test`, `npm run minify:electionmaps` after any front-end change with the bundles committed, and `git diff --check`. From piece 1, also report the `ruff check`, `ruff format --check`, `npx biome ci .` and `shellcheck` counts until they gate; from piece 7, `./lint.sh` (from piece 9, `./check.sh`). Coverage: `"$(python3 ~/.claude/lib/planner.py tools)/coverage-changed.sh"` after each piece; uncovered changed lines get a test or a one-line reason (for the formatting pieces: reformatted only, already uncovered on master).
 
-After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh` (`--fix` applies fixes) as its first item, and its Instructions shrink to a pointer at `AGENTS.md` where they now repeat it.
+After the merge, the planner chat updates `project.md`: Checks gains `./check.sh` (everything; `--lint-only`, `--fix`, `--` for pytest args) as its first item, and its Instructions shrink to a pointer at `AGENTS.md` where they now repeat it.
 
 ## Notes
 - Piece 1 (2026-11-14): `biome.json` uses `"linter": {"rules": {"preset": "recommended"}}`, not `"recommended": true`, which Biome 2.6.7 reports as deprecated (a notice that made `biome ci` count biome.json as a 140th file).

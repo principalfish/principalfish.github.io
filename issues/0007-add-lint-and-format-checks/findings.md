@@ -44,3 +44,10 @@ Cost: 5 subagents (correctness, security, coverage, verifier, correctness re-che
 | round | correctness | low | cleanup | verified | fixed | `data/models/support/polling.py:46-47`, `data/models/support/monte_carlo.py:97`, `data/console/shared/wikipedia_queue.py:58` | Module-level TypeVars left orphaned by the PEP 695 rewrites; deleted with their imports, RowT's comment moved onto the function |
 | round | correctness | low | cleanup | verified | fixed | `data/importers/polls/holyrood/holyrood_wikipedia_import.py:28-37`, `data/importers/seed/migrate_us_electoral_votes.py:24-30` | isort split `as` imports into separate blocks; `combine-as-imports = true` added to `[tool.ruff.lint.isort]`, which also merged import blocks in 13 test files (import lines only) |
 | re-check | correctness | - | - | noticed | - | `data/models/westminster/calibrate_uncertainty.py:85` | Says the restored `noqa: PLC0414` comments name an unselected rule — builder: mistaken, ruff 0.17's defaults include PLC0414 (it raised these 3) and RUF100 is active and doesn't flag them |
+
+## piece 6 · 2026-11-15 · Fix the Biome findings
+
+Cost: 3 check subagents (correctness, security, coverage) · ~222k tokens · ~3 min · no verifier (every check clean)
+
+| Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
+|-|-|-|-|-|-|-|-|

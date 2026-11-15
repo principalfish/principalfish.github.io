@@ -31,7 +31,6 @@ from typing import Any
 from core.db import Database
 from core.schema import ElectionType, Map, Party, Seat
 
-
 POST_2022_MAP_NAME_CANDIDATES = (
     "UK 2024 Constituencies",
     "UK Constituencies post 2022",
@@ -355,7 +354,7 @@ def main() -> None:
     for spec in specs:
         selected_map = selected_map_by_group[spec.map_group]
         data_file = FILES_DIR / spec.filename
-        with open(data_file, encoding="utf-8") as f:
+        with data_file.open(encoding="utf-8") as f:
             election_data = json.load(f)
 
         if selected_map.id not in seats_cache:

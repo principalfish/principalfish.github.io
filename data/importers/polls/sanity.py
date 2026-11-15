@@ -53,9 +53,12 @@ def regional_alignment_problem(
     for region, parties in shares.items():
         for party, home in _HOME_REGION.items():
             share = parties.get(party, 0.0)
-            if region != home and share > MISALIGNMENT_THRESHOLD:
-                if worst is None or share > worst[0]:
-                    worst = (share, party, region)
+            if (
+                region != home
+                and share > MISALIGNMENT_THRESHOLD
+                and (worst is None or share > worst[0])
+            ):
+                worst = (share, party, region)
     if worst is not None:
         share, party, region = worst
         return f"{party} {share:g}% in {region}: regional columns look misaligned"

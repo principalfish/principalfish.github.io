@@ -19,9 +19,11 @@ from models.support.persistence import OutputScope, OutputVote, replace_output
 from models.us._common import main_for_spec
 from models.westminster import run_uns_model
 from scripts import rebuild_model_trends
-from tests import test_holyrood_model as holy
-from tests import test_us_model as us
-from tests import test_westminster_model as west
+from tests import (
+    test_holyrood_model as holy,
+    test_us_model as us,
+    test_westminster_model as west,
+)
 from tests.uk_fixtures import WestminsterWorld, seed_holyrood_world
 from tests.us_ev_fixtures import seed_allocations
 

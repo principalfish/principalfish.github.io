@@ -29,7 +29,7 @@ from datetime import UTC, datetime
 from http.client import HTTPException, HTTPMessage
 from pathlib import Path
 from types import TracebackType
-from typing import IO, Any, Protocol, TypeGuard
+from typing import IO, Any, Protocol, Self, TypeGuard
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -91,7 +91,7 @@ class _Response(Protocol):
 
     def geturl(self) -> str: ...
 
-    def __enter__(self) -> _Response: ...
+    def __enter__(self) -> Self: ...
 
     def __exit__(
         self,

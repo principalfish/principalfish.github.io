@@ -49,7 +49,7 @@ import uuid
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import IO
 
@@ -132,7 +132,7 @@ def new_run_id(now: datetime | None = None) -> str:
     Returns:
         An id such as ``20261110T123456123456Z-1a2b3c4d``.
     """
-    moment = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    moment = (now or datetime.now(UTC)).astimezone(UTC)
     return f"{moment:%Y%m%dT%H%M%S%f}Z-{uuid.uuid4().hex[:8]}"
 
 
@@ -282,7 +282,7 @@ class RunRecord:
                 status, a time that is not ISO 8601).
         """
         if not isinstance(data, dict):
-            raise ValueError("record is not an object")
+            raise ValueError("record is not an object")  # noqa: TRY004 - read_record treats ValueError as a corrupt record
         run_id = _text(data, "id")
         if not RECORD_ID_RE.fullmatch(run_id):
             raise ValueError(f"invalid id {run_id!r}")
@@ -332,7 +332,7 @@ _MISSING = object()
 def _text(data: dict[str, object], name: str) -> str:
     value = data.get(name)
     if not isinstance(value, str):
-        raise ValueError(f"field {name!r} is missing or not a string")
+        raise ValueError(f"field {name!r} is missing or not a string")  # noqa: TRY004 - read_record treats ValueError as a corrupt record
     return value
 
 
@@ -349,15 +349,15 @@ def _optional_int(data: dict[str, object], name: str) -> int | None:
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int):
-        raise ValueError(f"field {name!r} is not an integer or null")
+        raise ValueError(f"field {name!r} is not an integer or null")  # noqa: TRY004 - read_record treats ValueError as a corrupt record
     return value
 
 
 def _moment(text: str) -> datetime:
     moment = datetime.fromisoformat(text)
     if moment.tzinfo is None:
-        return moment.replace(tzinfo=timezone.utc)
-    return moment.astimezone(timezone.utc)
+        return moment.replace(tzinfo=UTC)
+    return moment.astimezone(UTC)
 
 
 def _decoded(output: str | bytes | None) -> str:
@@ -406,7 +406,7 @@ def _create_folder(record: RunRecord, stdout: str, stderr: str) -> Path:
         )
         _write_text(staging / STDOUT_FILE, stdout)
         _write_text(staging / STDERR_FILE, stderr)
-        os.rename(staging, final)
+        staging.rename(final)
     except BaseException:
         shutil.rmtree(staging, ignore_errors=True)
         raise
@@ -421,7 +421,7 @@ def _replace_record(folder: Path, record: RunRecord) -> None:
             temporary,
             json.dumps(record.to_json(), indent=2, ensure_ascii=False) + "\n",
         )
-        os.replace(temporary, folder / RECORD_FILE)
+        temporary.replace(folder / RECORD_FILE)
     except BaseException:
         temporary.unlink(missing_ok=True)
         raise
@@ -528,7 +528,7 @@ def begin_run(run_id: str | None = None) -> RunStart:
         run_id: The id to use, when it was allocated earlier (a background
             job's first step takes the job's id); a fresh one otherwise.
     """
-    started = datetime.now(timezone.utc)
+    started = datetime.now(UTC)
     return RunStart(
         run_id or new_run_id(started), started, time.monotonic(), _context.get()
     )
@@ -550,7 +550,7 @@ def _record_for(
     error: BaseException | None,
 ) -> tuple[RunRecord, str, str]:
     """The finished record of a run, and the output text it ended with."""
-    finished = datetime.now(timezone.utc)
+    finished = datetime.now(UTC)
     exit_code: int | None = None
     stdout = stderr = ""
     text: str | None = None
@@ -588,7 +588,7 @@ def _record_for(
 
 def _report_write_failure(err: Exception) -> None:
     """Log a run-log write failure, and flash it when a request is served."""
-    log.warning("Could not write the run log", exc_info=True)
+    log.warning("Could not write the run log", exc_info=err)
     # The request proxy is falsy outside a request.
     if request:
         try:
@@ -625,7 +625,7 @@ def log_run(
             start, command, cwd=cwd, timeout=timeout, result=result, error=error
         )
         write_record(record, stdout, stderr)
-    except Exception as err:
+    except Exception as err:  # noqa: BLE001 - run-log writes never break the run; reported
         _report_write_failure(err)
 
 
@@ -698,8 +698,11 @@ def open_running(
     try:
         folder = _create_folder(record, "", "")
         for name in (STDOUT_FILE, STDERR_FILE):
-            handles[name] = open(folder / name, "a", encoding="utf-8", errors="replace")
-    except Exception as err:
+            # Left open on purpose: the RunningRun keeps appending and closes them.
+            handles[name] = (folder / name).open(
+                "a", encoding="utf-8", errors="replace"
+            )
+    except Exception as err:  # noqa: BLE001 - run-log writes never break the run; reported
         for handle in handles.values():
             handle.close()
         _report_write_failure(err)
@@ -733,7 +736,7 @@ def finish_running(
             _write_text(running.folder / STDERR_FILE, stderr)
         _replace_record(running.folder, record)
         _prune_quietly(running.folder.parent)
-    except Exception as err:
+    except Exception as err:  # noqa: BLE001 - run-log writes never break the run; reported
         _report_write_failure(err)
 
 
@@ -839,7 +842,7 @@ def read_output_from(run_id: str, name: str, offset: int = 0) -> tuple[str, int]
     if folder is None or name not in (STDOUT_FILE, STDERR_FILE):
         return None
     try:
-        with open(folder / name, "rb") as handle:
+        with (folder / name).open("rb") as handle:
             size = os.fstat(handle.fileno()).st_size
             start = min(max(0, offset), size)
             handle.seek(start)

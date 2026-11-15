@@ -80,7 +80,7 @@ from dataclasses import asdict, dataclass, replace
 from datetime import date
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING, Any, Final, TypeVar
+from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 from numpy.typing import NDArray
@@ -94,7 +94,6 @@ if TYPE_CHECKING:
 FloatArray = NDArray[np.float64]
 IndexArray = NDArray[np.intp]
 BoolArray = NDArray[np.bool_]
-Float = TypeVar("Float", np.float32, np.float64)
 
 # Per-seat share intervals come from a histogram per seat and party rather
 # than from every simulated share (10k sims x 650 seats x 13 parties would be
@@ -890,7 +889,9 @@ def centring_sd_ratio(sd: FloatArray, weights: FloatArray) -> FloatArray:
     return ratio
 
 
-def _centre(errors: NDArray[Float], weights: NDArray[Float]) -> NDArray[Float]:
+def _centre[Float: (np.float32, np.float64)](
+    errors: NDArray[Float], weights: NDArray[Float]
+) -> NDArray[Float]:
     """Centre in place across the last axis: ``e − q·Σe``."""
     totals = errors.sum(axis=-1, keepdims=True)
     errors -= weights * totals

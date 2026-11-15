@@ -154,11 +154,10 @@ def load_validation_inputs(path: Path = INPUTS_PATH) -> FrozenValidationInputs:
                 or not math.isfinite(value)
             ):
                 raise SimulationFileError(f"Frozen original setting {name} is invalid")
-            if name in {"simulations", "chunk_size", "majority_threshold"}:
-                if not isinstance(value, int) or value <= 0:
-                    raise SimulationFileError(
-                        f"Frozen original setting {name} is invalid"
-                    )
+            if name in {"simulations", "chunk_size", "majority_threshold"} and (
+                not isinstance(value, int) or value <= 0
+            ):
+                raise SimulationFileError(f"Frozen original setting {name} is invalid")
         settings.pop("chunk_size", None)
         original_hash = hashlib.sha256(
             json.dumps(settings, sort_keys=True).encode()

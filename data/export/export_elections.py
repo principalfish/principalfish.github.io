@@ -40,13 +40,14 @@ import json
 import re
 import shutil
 from collections import defaultdict
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any, Collection, Mapping, Sequence
+from typing import Any
 
 from sqlalchemy import inspect, select
-from sqlalchemy.orm import joinedload, Session
+from sqlalchemy.orm import Session, joinedload
 
 from core.db import Database, SeatStatus
 from core.electoral_votes import allocation_year, get_electoral_votes
@@ -61,24 +62,24 @@ from core.schema import (
     Vote,
 )
 from export.legacy import (
-    SUPPLEMENTAL_LEGACY_ELECTIONS,
     SUPPLEMENTAL_LEGACY_ELECTION_NAMES,
+    SUPPLEMENTAL_LEGACY_ELECTIONS,
     apply_supplemental_legacy_elections,
 )
 from export.manifest import (
+    assign_comparison_elections,
     build_manifest_party_settings,
     build_manifest_regions_by_map_id,
     build_map_modes_with_regions,
-    assign_comparison_elections,
     remove_comparison_for_supplemental_entries,
 )
 from export.naming import (
     choose_map_template_filename,
-    map_filename_for_map_id,
     file_stem_for_election,
     is_folded_senate_special,
     manifest_id_for_election,
     manifest_name_for_election,
+    map_filename_for_map_id,
 )
 from export.ordering import (
     finalize_manifest_order,
@@ -86,8 +87,8 @@ from export.ordering import (
     insert_preserved_entry,
 )
 from export.payload import (
-    SenateResults,
     SeatRow,
+    SenateResults,
     add_previous_senate_results,
     build_result_payload,
     build_special_entries,
@@ -1425,6 +1426,13 @@ def export_pages(
         )
 
 
+# Manually-curated election fields that the export pipeline does not compute.
+# The main loop builds entries from DB rows with only the standard fields (id, name,
+# type, mapId, parliament), so without this merge, manual additions (e.g. the
+# referendum flag) would be wiped on every export.
+PRESERVED_ENTRY_FIELDS: tuple[str, ...] = ("referendum",)
+
+
 def _export_page(
     session: Session,
     elections: Sequence[Election],
@@ -2058,11 +2066,6 @@ def _export_page(
     elif "current-holyrood-prediction" in manifest_ids:
         default_election_id = "current-holyrood-prediction"
 
-    # Preserve manually-curated election fields that the export pipeline does not compute.
-    # The main loop builds entries from DB rows with only the standard fields (id, name,
-    # type, mapId, parliament), so without this merge, manual additions (e.g. the
-    # referendum flag) would be wiped on every export.
-    PRESERVED_ENTRY_FIELDS = ("referendum",)
     for entry in manifest_entries:
         existing_entry = existing_by_id.get(entry.get("id"))
         if not existing_entry:

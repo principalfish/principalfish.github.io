@@ -142,7 +142,6 @@ CLI usage
 from __future__ import annotations
 
 import argparse
-import json
 import math
 import re
 from collections import defaultdict
@@ -181,10 +180,10 @@ from models.support.polling import (
     PollContributor,
     PollSource,
     candidate_since,
-    select_poll_endpoint,
     effective_pollster_weight,
+    select_poll_endpoint,
 )
-from models.support.summaries import recorded_vote_rows, summarize_votes
+from models.support.summaries import recorded_vote_rows
 from models.support.trends import (
     default_trend_path,
     publish_trends,
@@ -414,7 +413,7 @@ def compute_holyrood_swings(
 
 
 def fetch_holyrood_poll_averages(
-    db: "Database",
+    db: Database,
     map_id: int,
     ballot_suffix: str,
     as_of_date: date,
@@ -907,7 +906,6 @@ def run_holyrood_projection(
     map_id = const_election.map_id
 
     all_seats = load_seat_refs(db, map_id)
-    constituency_seats = [s for s in all_seats if not _is_list_seat(s.seat_name)]
     list_seats = [s for s in all_seats if _is_list_seat(s.seat_name)]
 
     region_by_seat_id: dict[int, int | None] = {s.id: s.region_id for s in all_seats}

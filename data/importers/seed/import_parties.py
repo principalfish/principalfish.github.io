@@ -25,7 +25,6 @@ from sqlalchemy import text
 from core.db import Database
 from core.schema import Party
 
-
 PARTY_DEFINITIONS = (
     {"name": "Alba Party", "colour": "#005EB8"},
     {"name": "Alliance", "colour": "#F6CB2F"},

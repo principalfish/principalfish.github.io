@@ -661,7 +661,7 @@ def _detect_layout(full_text: str) -> _Layout:
 
 # "Weighetd" is a typo some 2025 PDFs print (e.g. 6-7 Jul 2025).
 _SAMPLE_ROW = re.compile(
-    r"^[ \t]*(Weighted|Weighetd|Unweighted) Sample((?:[ \t]+\d+)+)[ \t]*$", re.M
+    r"^[ \t]*(Weighted|Weighetd|Unweighted) Sample((?:[ \t]+\d+)+)[ \t]*$", re.MULTILINE
 )
 
 
@@ -888,7 +888,7 @@ def _normalize_percentage(value: float) -> float:
         The value rounded to the nearest whole number, returned as a
         :class:`float` to satisfy the ``PlannedPollRow.percentage`` field type.
     """
-    return float(int(round(value)))
+    return float(round(value))
 
 
 def parse_poll(pdf_text: str) -> ParsedPoll:

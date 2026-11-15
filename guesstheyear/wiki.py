@@ -1,8 +1,9 @@
-import requests
-from bs4 import BeautifulSoup
+import re
 import sqlite3
 import time
-import re
+
+import requests
+from bs4 import BeautifulSoup
 
 
 def setup_database():
@@ -86,7 +87,7 @@ def get_year_events(page_title):
         list[str]: A list of cleaned event strings extracted from the page, or an empty
         list if the page does not exist or an error occurs.
     """
-    URL = "https://en.wikipedia.org/w/api.php"
+    api_url = "https://en.wikipedia.org/w/api.php"
     headers = {"User-Agent": "HistoryGameParser/1.0 (contact@email.com)"}
 
     params = {
@@ -96,7 +97,7 @@ def get_year_events(page_title):
         "format": "json",
     }
     try:
-        res = requests.get(URL, params=params, headers=headers, timeout=10).json()
+        res = requests.get(api_url, params=params, headers=headers, timeout=10).json()
         if "parse" not in res:
             return []
 
@@ -139,7 +140,7 @@ def get_year_events(page_title):
                 "prop": "text",
                 "format": "json",
             }
-            page_res = requests.get(URL, params=params, headers=headers).json()
+            page_res = requests.get(api_url, params=params, headers=headers).json()
             soup = BeautifulSoup(page_res["parse"]["text"]["*"], "html.parser")
 
             for li in soup.find_all("li"):
@@ -163,7 +164,7 @@ def get_year_events(page_title):
                         all_events.append(cleaned)
 
         return all_events
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - per-page boundary, printed and skipped
         print(f"Error on {page_title}: {e}")
         return []
 

@@ -24,7 +24,6 @@ from pathlib import Path
 from core.db import Database
 from core.schema import Region
 
-
 Record = dict[str, str | int]
 
 
@@ -128,12 +127,12 @@ def read_json(path: Path) -> list[Record]:
         data = json.load(handle)
 
     if not isinstance(data, list):
-        raise ValueError("JSON input must be a list of objects")
+        raise ValueError("JSON input must be a list of objects")  # noqa: TRY004 - bad input is a ValueError to callers and tests
 
     records: list[Record] = []
     for item in data:
         if not isinstance(item, dict):
-            raise ValueError("Each JSON item must be an object")
+            raise ValueError("Each JSON item must be an object")  # noqa: TRY004 - bad input is a ValueError to callers and tests
         region = str(item.get("region", "")).strip()
         if not region:
             continue

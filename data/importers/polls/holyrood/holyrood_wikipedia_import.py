@@ -25,11 +25,11 @@ from bs4 import BeautifulSoup, Tag
 from sqlalchemy import select
 
 from core.db import Database
-from core.schema import Poll, PollRow, Pollster
+from core.schema import Poll, Pollster
 from importers.polls.wikipedia_common import (
     clean_text as _clean,
     fetch_html as _fetch_html,
-    parse_date_range as parse_date_range,
+    parse_date_range as parse_date_range,  # noqa: PLC0414 - re-exported for its tests
 )
 
 WIKI_URL = (

@@ -460,7 +460,7 @@ def _to_percentage(value: object) -> float:
         raise ValueError("Encountered empty percentage cell")
     number = float(value)  # type: ignore[arg-type]
     pct = number * 100.0 if 0.0 <= number <= 1.0 else number
-    return float(int(round(pct)))
+    return float(round(pct))
 
 
 def parse_poll(workbook: Any, *, fieldwork_year_hint: int | None = None) -> ParsedPoll:
@@ -776,8 +776,6 @@ def build_import_plan(
         raise ValueError(f"Map not found: {map_name!r}")
 
     regions = db.get_regions_for_map(poll_map.id)
-    regions_by_name = {normalize_name(region.name): region for region in regions}
-
     region_ids_by_name: dict[str, int] = {}
     for region in regions:
         region_ids_by_name[region.name] = region.id

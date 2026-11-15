@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import math
 from collections import Counter, defaultdict
 from collections.abc import Callable
@@ -65,8 +64,8 @@ from models.support.polling import (
     PollContributor,
     PollSource,
     candidate_since,
-    select_poll_endpoint,
     effective_pollster_weight,
+    select_poll_endpoint,
 )
 from models.support.trends import (
     default_trend_path,
@@ -1154,7 +1153,7 @@ def compute_region_diffs(
           Ineligible cells carry zero swing internally and display as N/A.
     """
     party_universe: set[int] = set(national_party_totals.keys())
-    party_universe.update(party_id for _, party_id in weighted_sums.keys())
+    party_universe.update(party_id for _, party_id in weighted_sums)
     region_ids = sorted(
         {seat.region_id for seat in seats if seat.region_id is not None}
     )

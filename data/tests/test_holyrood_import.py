@@ -31,8 +31,6 @@ from importers.polls.holyrood.holyrood_wikipedia_import import (
     identify_party_columns,
     main,
     parse_date_range,
-)
-from importers.polls.holyrood.holyrood_wikipedia_import import (
     parse_polls as parse_constituency_polls,
 )
 from tests.uk_fixtures import HolyroodWorld, add_poll_with_rows, seed_holyrood_world

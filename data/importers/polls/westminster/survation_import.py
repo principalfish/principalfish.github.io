@@ -365,7 +365,7 @@ def _to_percentage(value: object) -> float:
         raise ValueError("Encountered empty percentage cell")
     number = float(value)  # type: ignore[arg-type]
     pct = number * 100.0 if 0.0 <= number <= 1.0 else number
-    return float(int(round(pct)))
+    return float(round(pct))
 
 
 def _to_percentage_or_zero(value: object) -> float:
@@ -443,7 +443,7 @@ def _parse_cover_metadata(workbook: Any, default_year: int) -> tuple[date, date,
         if label == "sample size":
             candidate = cover.cell(row + 1, 1).value
             if isinstance(candidate, (int, float)):
-                sample_size = int(round(float(candidate)))
+                sample_size = round(float(candidate))
             else:
                 digits = re.sub(r"[^0-9]", "", _cell_text(candidate))
                 if digits:
@@ -857,8 +857,6 @@ def build_import_plan(
         )
 
     regions = db.get_regions_for_map(poll_map.id)
-    region_ids_by_name: dict[str, int] = {region.name: region.id for region in regions}
-
     rows: list[PlannedPollRow] = []
     for party_name, region_values in parsed.party_region_percentages.items():
         rows.append(

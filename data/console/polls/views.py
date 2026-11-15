@@ -114,14 +114,15 @@ def _poll_list_page(parliament: str | None, title: str, section: Section | None)
             )
         polls = session.execute(query).all()
 
-        row_counts: dict[int, int] = {
-            poll_id: count
-            for poll_id, count in session.execute(
+        row_counts: dict[int, int] = dict(
+            session.execute(
                 select(PollRow.poll_id, func.count(PollRow.id)).group_by(
                     PollRow.poll_id
                 )
-            ).all()
-        }
+            )
+            .tuples()
+            .all()
+        )
         # National n needs only national bases and sample sizes: no rows.
         national_bases = session.scalars(
             select(PollBase).where(PollBase.region_id.is_(None))
@@ -261,7 +262,7 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
     )
 
     matrix: dict[tuple[str, str], dict[str, float | str]] = {
-        key: {region_name: "" for region_name in region_headers} for key in row_keys
+        key: dict.fromkeys(region_headers, "") for key in row_keys
     }
 
     for row, party, region in rows:

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import re
 from datetime import date
+from http.client import HTTPException
 from tempfile import NamedTemporaryFile
 from urllib.request import Request, urlopen
 
@@ -14,7 +15,7 @@ from pypdf import PdfReader
 from sqlalchemy import select
 
 from core.db import Database
-from core.schema import Poll, PollRow, Pollster
+from core.schema import Poll, PollRow
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -49,7 +50,8 @@ PARTY_NAME_MAP = {
 _UNWEIGHTED_SAMPLE_ROW = re.compile(r"Unweighted Sample(?P<figures>[^\n]*)")
 # The weighted row's previous- and current-wave figures, as separate numbers.
 _WEIGHTED_SAMPLE_ROW = re.compile(
-    r"^\s*Weighted Sample\s+(?P<previous>\d{1,5})\s+(?P<current>\d{1,5})(?!\d)", re.M
+    r"^\s*Weighted Sample\s+(?P<previous>\d{1,5})\s+(?P<current>\d{1,5})(?!\d)",
+    re.MULTILINE,
 )
 # Techne's samples are ~1,600; a longer digit run is figures glued together.
 _MAX_SAMPLE_FIGURE_DIGITS = 5
@@ -228,7 +230,7 @@ def extract_pdf_text(pdf_url: str) -> str:
             if data.startswith(b"%PDF"):
                 payload = data
                 break
-        except Exception:
+        except (OSError, HTTPException, ValueError):
             continue
 
     if payload is None:

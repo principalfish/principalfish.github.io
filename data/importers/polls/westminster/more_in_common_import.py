@@ -365,7 +365,7 @@ def _to_percentage(value: object) -> float:
         raise ValueError("Encountered empty percentage cell")
     number = float(value)  # type: ignore[arg-type]
     pct = number * 100.0 if 0.0 <= number <= 1.0 else number
-    return float(int(round(pct)))
+    return float(round(pct))
 
 
 def _infer_year_from_url(xlsx_url: str) -> int | None:
@@ -382,6 +382,22 @@ def _infer_year_from_url(xlsx_url: str) -> int | None:
     if not matches:
         return None
     return int(matches[0])
+
+
+_MONTH_NAMES = (
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+)
 
 
 def _infer_fieldwork_from_source_url(
@@ -409,22 +425,7 @@ def _infer_fieldwork_from_source_url(
         return None
 
     lower = source_url.lower()
-    month_pattern = "|".join(
-        [
-            "january",
-            "february",
-            "march",
-            "april",
-            "may",
-            "june",
-            "july",
-            "august",
-            "september",
-            "october",
-            "november",
-            "december",
-        ]
-    )
+    month_pattern = "|".join(_MONTH_NAMES)
 
     patterns = [
         re.compile(rf"voting[-_ ]intention[-_ ]({month_pattern})[-_ ](\d{{1,2}})"),

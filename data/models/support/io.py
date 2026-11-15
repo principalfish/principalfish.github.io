@@ -79,7 +79,7 @@ def publish_json(payload: object, destination: Path, *, repair: str) -> None:
         # The published files keep the 0600 mode this function has always
         # given them; changing it is outside the calibration work.
         temporary = _write_temporary(destination, serialized)
-        os.replace(temporary, destination)
+        temporary.replace(destination)
     except (OSError, TypeError, ValueError) as exc:
         raise OutputPublicationError(
             f"Could not publish {destination}. Database commits are retained. {repair}"
@@ -117,7 +117,7 @@ def write_text_files(outputs: Mapping[Path, str]) -> None:
                 destination, text, mode=REPO_FILE_MODE
             )
         for destination, temporary in temporaries.items():
-            os.replace(temporary, destination)
+            temporary.replace(destination)
     finally:
         for temporary in temporaries.values():
             temporary.unlink(missing_ok=True)

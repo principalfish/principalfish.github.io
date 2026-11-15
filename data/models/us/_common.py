@@ -39,16 +39,15 @@ exactly like the Westminster model's.
 from __future__ import annotations
 
 import argparse
-import json
 import math
 import re
 import sys
 from collections import Counter, defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
 from sqlalchemy import select, text
 
@@ -96,7 +95,6 @@ from models.support.summaries import (
     summarize_votes,
 )
 from models.support.trends import (
-    default_trend_path,
     publish_trends,
     trend_batch,
     validate_trend_scope,
@@ -123,7 +121,7 @@ OTHERS_PARTY_NAMES: frozenset[str] = frozenset({"other", "others"})
 MATERIAL_CANDIDATE_SHARE: float = 10.0
 
 
-class TrackedMatchupMissing(ValueError):
+class TrackedMatchupMissingError(ValueError):
     """No usable national tracked matchup for a spec that requires one.
 
     Raised for the President, whose national series is a head-to-head between
@@ -154,7 +152,7 @@ class UsModelSpec:
             this spec's own map. The Senate reads the generic ballot from
             ``"US House Districts 2024"``; ``None`` means "this spec's map".
         tracked_matchup_required: When ``True`` the run aborts unless a national tracked
-            matchup is set (the President — see :class:`TrackedMatchupMissing`).
+            matchup is set (the President — see :class:`TrackedMatchupMissingError`).
         seat_matchup_policy: Which matchup a seat's own polls must carry to count.
             ``"per_seat"`` follows each seat's ``tracked_matchups`` row (Senate, House);
             ``"national"`` makes every seat follow the national matchup (the President,
@@ -863,7 +861,7 @@ def compute_region_diffs(
     Returns ``(party_universe, region_swings, region_diff_rows)``.
     """
     party_universe: set[int] = set(national_party_totals.keys())
-    party_universe.update(party_id for _, party_id in weighted_sums.keys())
+    party_universe.update(party_id for _, party_id in weighted_sums)
     region_ids = sorted(
         {seat.region_id for seat in seats if seat.region_id is not None}
     )
@@ -1718,7 +1716,7 @@ def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
 
     Raises:
         ValueError: If either map is missing.
-        TrackedMatchupMissing: If ``spec.tracked_matchup_required`` and no matchup
+        TrackedMatchupMissingError: If ``spec.tracked_matchup_required`` and no matchup
             is in force — either no row exists, or a row sets ``matchup`` to NULL
             to ignore the race.
     """
@@ -1743,7 +1741,7 @@ def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
             if tracked is not None
             else "no tracked matchup has been set"
         )
-        raise TrackedMatchupMissing(
+        raise TrackedMatchupMissingError(
             f"{spec.election_name_prefix}: {reason} for the national race on "
             f"'{national_map_name}'. Choose a matchup in the console before running "
             "this model."
@@ -2638,7 +2636,7 @@ def run_retrospective_range(
                         f"PROGRESS success={success_count} failed={failed_count} "
                         f"as_of={current.isoformat()} election={election_name} rows={len(projected_votes)}"
                     )
-            except Exception as exc:  # noqa: BLE001 — surfaced per-date, optionally fatal
+            except Exception as exc:  # surfaced per-date, optionally fatal
                 failed_count += 1
                 failures.append((current.isoformat(), str(exc)))
                 print(f"ERROR as_of={current.isoformat()} err={exc}")
@@ -2884,7 +2882,7 @@ def _drop_points_outside(
     if dates and keep_from is not None and dates[0] < keep_from:
         ranges.append(("before", dates[0], keep_from - timedelta(days=1)))
     for side, start_date, end_date in ranges:
-        deleted_elections, deleted_votes, stripped = reset_existing_model_outputs(
+        deleted_elections, deleted_votes, _stripped = reset_existing_model_outputs(
             spec,
             start_date,
             end_date,
@@ -2949,7 +2947,7 @@ def main_for_spec(
     # entry and no meta file.
     try:
         scope = resolve_poll_scope(db, spec)
-    except TrackedMatchupMissing as exc:
+    except TrackedMatchupMissingError as exc:
         print(f"ERROR {exc}", file=sys.stderr)
         return 2
 

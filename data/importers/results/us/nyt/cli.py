@@ -60,11 +60,11 @@ from importers.results.us.nyt.convert import (
     META_KEY,
     VOTES_538,
     VOTES_NOMINAL,
-    map_for,
     ConversionResult,
     ConvertError,
     SourceMeta,
     convert_races,
+    map_for,
     output_name,
 )
 from importers.results.us.nyt.current_senate import (
@@ -216,8 +216,10 @@ class Comparison:
     def summary(self, top_n: int = DEFAULT_TOP_N) -> list[str]:
         """Return printable lines for this comparison."""
         lines = [
-            f"vs {self.label}: {self.old_seats} -> {self.new_seats} seats "
-            f"(+{len(self.added)} added, -{len(self.removed)} removed)",
+            (
+                f"vs {self.label}: {self.old_seats} -> {self.new_seats} seats "
+                f"(+{len(self.added)} added, -{len(self.removed)} removed)"
+            ),
         ]
         if self.added:
             lines.append(f"  added: {', '.join(self.added)}")

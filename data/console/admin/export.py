@@ -38,22 +38,28 @@ _CONTENT_OPTIONS: tuple[tuple[str, str, str], ...] = (
     (
         "results",
         "Results",
-        "Writes each past election's result file, its map data and its entry in "
-        "the map modes manifest.",
+        (
+            "Writes each past election's result file, its map data and its entry in "
+            "the map modes manifest."
+        ),
     ),
     (
         "forecast",
         "Current forecast",
-        "Writes the model forecast's files and manifest entries. Applies to "
-        "Westminster and US President only: Holyrood's forecast is written by "
-        "the Holyrood model run itself, and the US House and Senate forecasts "
-        "are switched off.",
+        (
+            "Writes the model forecast's files and manifest entries. Applies to "
+            "Westminster and US President only: Holyrood's forecast is written by "
+            "the Holyrood model run itself, and the US House and Senate forecasts "
+            "are switched off."
+        ),
     ),
     (
         "metadata",
         "Metadata (parties and regions)",
-        "Refreshes the party list and the selected sections' regions in the map "
-        "modes manifest.",
+        (
+            "Refreshes the party list and the selected sections' regions in the map "
+            "modes manifest."
+        ),
     ),
 )
 
@@ -183,7 +189,7 @@ def export_run() -> ResponseReturnValue:
             back_endpoint="export.export_form",
             back_label="Back to export",
         )
-    except jobs.JobBusy as busy:
+    except jobs.JobBusyError as busy:
         jobs.flash_busy("Export not run", busy)
         return _render_form(form.sections, form.content, dry_run=dry_run)
     return redirect(url_for("runs.run_detail", run_id=job.id), 303)

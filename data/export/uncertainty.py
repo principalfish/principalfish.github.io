@@ -82,10 +82,7 @@ class ModelUncertaintyExport:
 
 def party_names(session: Session) -> dict[int, str]:
     """Return every party's name by id: the whole seats' last tie-break."""
-    return {
-        party_id: name
-        for party_id, name in session.execute(select(Party.id, Party.name))
-    }
+    return dict(session.execute(select(Party.id, Party.name)).tuples().all())
 
 
 def model_uncertainty_export(

@@ -82,7 +82,9 @@ from models.support.uncertainty import (
     UncertaintyConfigError,
     load_uncertainty_config,
 )
-from models.westminster.run_uns_model import PARTY_ID_ALIASES as PARTY_ID_ALIASES
+from models.westminster.run_uns_model import (
+    PARTY_ID_ALIASES as PARTY_ID_ALIASES,  # noqa: PLC0414 - re-exported for westminster_validation
+)
 
 # Consecutive general elections on the same boundaries: (label, earlier, later).
 ELECTION_PAIRS: tuple[tuple[str, str, str], ...] = (
@@ -756,10 +758,14 @@ def table_lines(calibration: Calibration, names: Mapping[int, str]) -> list[str]
         row = "  ".join(f"{key} {ratio:.3f}" for key, ratio in ratios.items())
         lines.append(f"    {year}: {row}")
     lines += [
-        f"    median ratio: two largest {_median(centring.contenders)}, "
-        f"others {_median(centring.others)}",
-        f"σ_nat realised {national.sigma_nat:.3f}; raw (each z ÷ its ratio) "
-        f"{centring.sigma_nat_raw:.3f}",
+        (
+            f"    median ratio: two largest {_median(centring.contenders)}, "
+            f"others {_median(centring.others)}"
+        ),
+        (
+            f"σ_nat realised {national.sigma_nat:.3f}; raw (each z ÷ its ratio) "
+            f"{centring.sigma_nat_raw:.3f}"
+        ),
         "",
         "PollBase results vs database GB shares:",
     ]
@@ -803,13 +809,19 @@ def table_lines(calibration: Calibration, names: Mapping[int, str]) -> list[str]
     pooled = calibration.pooled
     lines += [
         "",
-        f"σ_λ (RMS of per-pair λ̂) = {pooled.sigma_lambda:.3f}; "
-        f"mean λ̂ = {pooled.mean_lambda:+.3f} (information only)",
-        f"σ_seat pooled = {pooled.spread.sd:.3f} over {pooled.cells} cells "
-        f"(median u {pooled.spread.median:+.3f}, MAD {pooled.spread.mad:.3f})",
-        f"σ_seat raw (each u ÷ its ratio) = {pooled.sigma_seat_raw:.3f}; median "
-        f"ratio contenders {_median(pooled.contender_ratios)}, others "
-        f"{_median(pooled.other_ratios)}",
+        (
+            f"σ_λ (RMS of per-pair λ̂) = {pooled.sigma_lambda:.3f}; "
+            f"mean λ̂ = {pooled.mean_lambda:+.3f} (information only)"
+        ),
+        (
+            f"σ_seat pooled = {pooled.spread.sd:.3f} over {pooled.cells} cells "
+            f"(median u {pooled.spread.median:+.3f}, MAD {pooled.spread.mad:.3f})"
+        ),
+        (
+            f"σ_seat raw (each u ÷ its ratio) = {pooled.sigma_seat_raw:.3f}; median "
+            f"ratio contenders {_median(pooled.contender_ratios)}, others "
+            f"{_median(pooled.other_ratios)}"
+        ),
         "",
         "decided_fraction (decided base ÷ sample size):",
     ]
@@ -821,8 +833,10 @@ def table_lines(calibration: Calibration, names: Mapping[int, str]) -> list[str]
     excluded = ", ".join(f"{k} {v}" for k, v in calibration.decided.exclusions.items())
     lines += [
         f"    excluded: {excluded}",
-        f"    polls-weighted mean = {calibration.decided.value:.4f} over "
-        f"{calibration.decided.polls} polls",
+        (
+            f"    polls-weighted mean = {calibration.decided.value:.4f} over "
+            f"{calibration.decided.polls} polls"
+        ),
         "",
         "Config (calibrated values rounded):",
     ]

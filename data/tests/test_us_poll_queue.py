@@ -34,8 +34,7 @@ from console.shared.wikipedia_queue import (
     advance,
     current_item,
 )
-from console.us import poll_import as us_poll_import
-from console.us import poll_queue as us_poll_queue
+from console.us import poll_import as us_poll_import, poll_queue as us_poll_queue
 from console.us.models import MODEL_RUN_LOCK, US_CHAMBERS_BY_SLUG, UsModelRun
 from console.us.poll_queue import (
     AUTO_TRACKING_ERROR_KEY,

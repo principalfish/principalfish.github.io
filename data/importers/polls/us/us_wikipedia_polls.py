@@ -42,6 +42,7 @@ from typing import Literal
 from urllib.error import HTTPError
 
 from bs4 import BeautifulSoup, Tag
+from sqlalchemy import select
 
 from core.db import Database, StoredPollReadings
 from core.schema import Poll, PollRow, Pollster, Seat
@@ -65,7 +66,6 @@ from importers.polls.us.us_polls_common import (
     parse_poll_tables,
     pollster_identifier,
 )
-from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -81,10 +81,14 @@ SENATE_INDEX_URL = f"{WIKIPEDIA_BASE}/wiki/2026_United_States_Senate_elections"
 # rather than an error), but it is the page the statewide polls will appear on,
 # so it is listed here and this tuple is overridable per run.
 PRESIDENT_PAGE_URLS: tuple[str, ...] = (
-    f"{WIKIPEDIA_BASE}/wiki/"
-    "Nationwide_opinion_polling_for_the_2028_United_States_presidential_election",
-    f"{WIKIPEDIA_BASE}/wiki/"
-    "Statewide_opinion_polling_for_the_2028_United_States_presidential_election",
+    (
+        f"{WIKIPEDIA_BASE}/wiki/"
+        "Nationwide_opinion_polling_for_the_2028_United_States_presidential_election"
+    ),
+    (
+        f"{WIKIPEDIA_BASE}/wiki/"
+        "Statewide_opinion_polling_for_the_2028_United_States_presidential_election"
+    ),
 )
 
 #: A page fetcher: takes a URL, returns the page source, raises on failure.
@@ -678,7 +682,7 @@ def _fetch_one(url: str, fetcher: Fetcher) -> _FetchResult:
         if err.code == 404:
             return None, None, f"{url}: not present yet (HTTP 404)"
         return None, f"HTTP {err.code}: {err.reason}", None
-    except Exception as err:  # noqa: BLE001 - per-URL boundary, see below
+    except Exception as err:  # per-URL boundary, see below
         # One unreachable page out of ~90 must not abort a whole import run,
         # and a fetcher is free to raise anything (socket, TLS, decoding), so
         # the boundary is deliberately broad. Nothing is swallowed: the

@@ -9,9 +9,10 @@ for the Census-division region. Presidential JSON weights are descriptive only.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Callable
+from typing import Any
 
 from sqlalchemy import delete
 
@@ -24,13 +25,13 @@ from importers.results.us.regions import STATE_NAMES, division_for_state
 __all__ = [
     "META_KEY",
     "PARTY_KEY_TO_NAME",
-    "check_election_map",
     "STATE_NAMES",
+    "check_election_map",
+    "check_us_election_file",
     "election_meta",
     "ensure_us_map",
     "import_us_election",
     "map_from_meta",
-    "check_us_election_file",
     "plan_us_election",
     "resolve_party_ids",
     "seat_entries",
@@ -425,7 +426,7 @@ def check_us_election_file(
     Raises:
         SystemExit: If the file is malformed.
     """
-    _plan(data, {key: 0 for key in PARTY_KEY_TO_NAME}, state_for_key)
+    _plan(data, dict.fromkeys(PARTY_KEY_TO_NAME, 0), state_for_key)
 
 
 def _plan(

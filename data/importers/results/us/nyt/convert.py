@@ -456,9 +456,12 @@ def _backfill_source(previous: Mapping[str, Any] | None) -> dict[str, Any]:
             continue
         seat_info = seat.get("seatInfo", {})
         party_info = seat.get("partyInfo", {})
-        if is_538 and _has_real_totals(party_info):
-            usable[key] = seat
-        elif not is_538 and seat_info.get("votesSource") == VOTES_538:
+        if (
+            is_538
+            and _has_real_totals(party_info)
+            or not is_538
+            and seat_info.get("votesSource") == VOTES_538
+        ):
             usable[key] = seat
     return usable
 

@@ -21,6 +21,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Sequence
 from datetime import date
+from http.client import IncompleteRead
 from urllib.request import Request
 
 import pytest
@@ -363,6 +364,39 @@ class TestExtractPdfText:
 
         assert len(requested) == 2
         assert result == "text"
+
+    @pytest.mark.parametrize(
+        "error", [IncompleteRead(b"partial"), ValueError("unknown url type")]
+    )
+    def test_http_and_url_errors_move_on_to_the_next_candidate(
+        self, monkeypatch: pytest.MonkeyPatch, error: Exception
+    ) -> None:
+        pdf_url = (
+            "https://web.archive.org/web/20260213120000/"
+            "https://www.techneuk.com/r162.pdf"
+        )
+
+        def _fake_urlopen(request: Request, *, timeout: int) -> FakeUrlResponse:
+            if request.full_url == pdf_url:
+                raise error
+            return FakeUrlResponse(b"%PDF-1.4 bytes")
+
+        monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
+
+        assert extract_pdf_text(pdf_url) == "text"
+
+    def test_an_unexpected_error_during_fetch_is_not_swallowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _fake_urlopen(request: Request, *, timeout: int) -> FakeUrlResponse:
+            raise RuntimeError("bug in the fetch code")
+
+        monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
+        with pytest.raises(RuntimeError, match="bug in the fetch code"):
+            extract_pdf_text("https://www.techneuk.com/r162.pdf")
 
     def test_all_candidates_failing_raises_naming_the_original_url(
         self, monkeypatch: pytest.MonkeyPatch

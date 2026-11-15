@@ -13,6 +13,7 @@ or malformed shows a message rather than failing the page.
 from __future__ import annotations
 
 import dataclasses
+import itertools
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -27,8 +28,10 @@ from console.sections import WESTMINSTER_MAP_NAME
 from console.westminster.uncertainty.export_preview import ExportPreview, export_preview
 from core.db import Database
 from core.schema import Map
-from models.support import calibration as calibration_module
-from models.support import uncertainty as uncertainty_module
+from models.support import (
+    calibration as calibration_module,
+    uncertainty as uncertainty_module,
+)
 from models.support.calibration import (
     PARAMETER_NOTES,
     POLLBASE_CREDIT,
@@ -216,7 +219,7 @@ def histogram_rows(
     if not edges or pooled_counts is None or len(pooled_counts) != len(edges) - 1:
         return []
     labels = [f"< {edges[0]}"]
-    labels += [f"[{low}, {high})" for low, high in zip(edges, edges[1:], strict=False)]
+    labels += [f"[{low}, {high})" for low, high in itertools.pairwise(edges)]
     labels.append(f"≥ {edges[-1]}")
 
     def bins(block: Mapping[str, Any]) -> list[int | None]:

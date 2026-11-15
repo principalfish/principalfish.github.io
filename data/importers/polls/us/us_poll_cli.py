@@ -16,6 +16,8 @@ import argparse
 from collections import Counter
 from collections.abc import Sequence
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from core.db import Database
 from importers.polls.us.us_polls_common import fetch_html
 from importers.polls.us.us_wikipedia_polls import (
@@ -32,7 +34,6 @@ from importers.polls.us.us_wikipedia_polls import (
     commit_us_import_plan,
     fetch_us_poll_index,
 )
-from sqlalchemy.exc import SQLAlchemyError
 
 
 def _scope_label(row: UsPollRow) -> tuple[str, str]:

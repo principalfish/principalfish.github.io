@@ -10,6 +10,7 @@ checks use saved inputs with the requested current config and the real kernel.
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import math
 import sqlite3
@@ -125,7 +126,7 @@ def reliability_bins(
     probabilities, outcomes = probabilities[keep], outcomes[keep]
     indices = np.digitize(probabilities, BINS) - 1
     rows = []
-    for index, (low, high) in enumerate(zip(BINS, BINS[1:], strict=False)):
+    for index, (low, high) in enumerate(itertools.pairwise(BINS)):
         mask = indices == index
         if mask.any():
             rows.append(
@@ -478,7 +479,7 @@ def read_report(path: Path | None = None) -> dict[str, Any]:
             raise ValueError("Unknown Westminster validation report schema")
         for key in ("identity", "historical", "national", "replay", "methods"):
             if not isinstance(report.get(key), dict):
-                raise ValueError(f"Validation report lacks {key}")
+                raise ValueError(f"Validation report lacks {key}")  # noqa: TRY004 - caught below and re-raised as CalibrationError
         if report.get("report_hash") != fingerprint(
             {key: value for key, value in report.items() if key != "report_hash"}
         ):

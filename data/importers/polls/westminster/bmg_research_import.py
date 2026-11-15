@@ -7,6 +7,7 @@ import argparse
 import re
 from datetime import date
 from html.parser import HTMLParser
+from http.client import HTTPException
 from io import BytesIO
 from typing import Any
 from urllib.parse import urldefrag, urljoin, urlsplit
@@ -411,9 +412,12 @@ def resolve_source_url(source_url: str) -> str:
                 continue
             linked = urlsplit(link)
             if linked.path == "/news/":
-                if re.fullmatch(r"results-page=\d+", linked.query):
-                    if link not in visited_listings and link not in pending:
-                        pending.append(link)
+                if (
+                    re.fullmatch(r"results-page=\d+", linked.query)
+                    and link not in visited_listings
+                    and link not in pending
+                ):
+                    pending.append(link)
                 continue
             if not re.fullmatch(r"/news/[^/]+/?", linked.path):
                 continue
@@ -473,7 +477,7 @@ def extract_workbook(xlsx_url: str) -> Any:
                 payload = data
                 break
             errors.append(f"non-xlsx payload at {candidate}")
-        except Exception as exc:
+        except (OSError, HTTPException, ValueError) as exc:
             errors.append(f"{candidate}: {exc}")
 
     if payload is None:
@@ -519,7 +523,7 @@ def _to_percentage(value: object) -> float:
         raise ValueError("Encountered empty percentage cell")
     number = float(value)  # type: ignore[arg-type]
     pct = number * 100.0 if 0.0 <= number <= 1.0 else number
-    return float(int(round(pct)))
+    return float(round(pct))
 
 
 def _to_percentage_or_zero(value: object) -> float:

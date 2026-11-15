@@ -12,8 +12,10 @@ import pytest
 
 from core.db import Database
 from core.schema import ElectionType
-from importers.results.us import import_house_elections as import_house_mod
-from importers.results.us import import_senate_elections as import_senate_mod
+from importers.results.us import (
+    import_house_elections as import_house_mod,
+    import_senate_elections as import_senate_mod,
+)
 from importers.results.us.nyt import convert
 from importers.results.us.nyt.adapters import apply_runoffs, parse
 from importers.results.us.nyt.cli import (

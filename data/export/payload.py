@@ -10,7 +10,6 @@ from typing import Any
 from core.db import SeatStatus
 from core.schema import Vote
 from export.naming import (
-    legacy_party_key_for_vote,
     normalize_region_name,
     normalize_vote_total_value,
 )
@@ -34,8 +33,8 @@ class SeatRow:
         seat_name: Human-readable seat name (used as the result key).
         region_id: Foreign key of the seat's region, or None if unset.
         region_name: Display name of the region, or None if unset.
-        electorate: Registered electorate size used for turnout calculation,
-            or None if the seats table has no electorate column.
+        electorate: Registered electorate size, or None if the seats table has no
+            electorate column.
         electoral_votes: US Electoral College votes for this seat (presidential
             maps only), or None.
     """
@@ -63,10 +62,10 @@ def choose_winner(votes: Sequence[Vote]) -> Vote | None:
     """
     elected = [vote for vote in votes if vote.elected]
     if elected:
-        return sorted(elected, key=lambda vote: vote.vote_total or 0, reverse=True)[0]
+        return max(elected, key=lambda vote: vote.vote_total or 0)
     if not votes:
         return None
-    return sorted(votes, key=lambda vote: vote.vote_total or 0, reverse=True)[0]
+    return max(votes, key=lambda vote: vote.vote_total or 0)
 
 
 def party_id_for_vote(vote: Vote) -> int:
@@ -119,8 +118,7 @@ def build_result_payload(
     """Build a ``pf-results-v4`` result payload for a single election.
 
     Groups votes by seat, aggregates multiple candidate rows for the same
-    party within a seat, determines the winner, and computes turnout where
-    electorate data is available.
+    party within a seat and determines the winner.
 
     Each ``p`` row is ``[party_id, votes]`` and, when the party's winning
     candidate has a name on record, a third element with that candidate name
@@ -199,11 +197,6 @@ def build_result_payload(
 
         winner_vote = choose_winner(seat_votes)
         winner_id = party_id_for_vote(winner_vote) if winner_vote else OTHERS_PARTY_ID
-
-        turnout_total = float(sum((row.vote_total or 0) for row in seat_votes))
-        turnout_pct = 0.0
-        if seat.electorate and seat.electorate > 0:
-            turnout_pct = round(100.0 * turnout_total / seat.electorate, 1)
 
         # Vote total descending, party id ascending as a stable tiebreak for
         # deterministic output when two parties have equal totals. A third element

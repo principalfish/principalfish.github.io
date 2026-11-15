@@ -53,12 +53,12 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from core.db import Database
-from core.schema import Election, ElectionType, Map, Party, Seat
+from core.schema import Election, ElectionType, Map, Party
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -252,7 +252,7 @@ def dhondt_allocate(
     Returns:
         Mapping of party_key → list seats awarded in this region.
     """
-    list_seats: dict[str, int] = {p: 0 for p in regional_votes}
+    list_seats: dict[str, int] = dict.fromkeys(regional_votes, 0)
     total_seats: dict[str, int] = dict(constituency_seats_won)
 
     for _ in range(total_list_seats):
@@ -312,7 +312,7 @@ def import_constituency_results(
             f"Constituency data file not found: {data_file}\n{hint}"
         )
 
-    with open(data_file, encoding="utf-8") as f:
+    with data_file.open(encoding="utf-8") as f:
         election_data: dict[str, Any] = json.load(f)
 
     # Build seat lookup caches
@@ -464,7 +464,7 @@ def import_list_results(
         print(f"  List file not found ({data_file.name}) — skipping list seat import.")
         return stats
 
-    with open(data_file, encoding="utf-8") as f:
+    with data_file.open(encoding="utf-8") as f:
         list_data: dict[str, Any] = json.load(f)
 
     existing_election = db.get_election_by_name(list_name)
@@ -632,13 +632,12 @@ def main() -> None:
     for spec in specs:
         if spec.map_name not in map_cache:
             m = db.get_map_by_name(spec.map_name)
-            if m is None:
-                # Also try legacy name candidates for the 2021 map
-                if spec.map_name == "Scottish Parliament Constituencies 2021":
-                    for candidate in MAP_NAME_CANDIDATES:
-                        m = db.get_map_by_name(candidate)
-                        if m is not None:
-                            break
+            # Also try legacy name candidates for the 2021 map
+            if m is None and spec.map_name == "Scottish Parliament Constituencies 2021":
+                for candidate in MAP_NAME_CANDIDATES:
+                    m = db.get_map_by_name(candidate)
+                    if m is not None:
+                        break
             if m is None:
                 raise ValueError(
                     f"Map '{spec.map_name}' not found. "

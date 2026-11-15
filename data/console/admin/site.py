@@ -64,7 +64,7 @@ def rebuild_database() -> ResponseReturnValue:
             work=work,
             result_kind=jobs.KIND_COMMAND,
         )
-    except jobs.JobBusy as busy:
+    except jobs.JobBusyError as busy:
         jobs.flash_busy("Database not rebuilt", busy)
         return redirect(url_for("admin.admin_page"))
     return redirect(url_for("runs.run_detail", run_id=job.id), 303)

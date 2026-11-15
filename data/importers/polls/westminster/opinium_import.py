@@ -305,7 +305,7 @@ def _to_percentage(value: object) -> float:
         raise ValueError("Encountered empty percentage cell")
     number = float(value)  # type: ignore[arg-type]
     pct = number * 100.0 if 0.0 <= number <= 1.0 else number
-    return float(int(round(pct)))
+    return float(round(pct))
 
 
 def _find_fieldwork_and_sample(

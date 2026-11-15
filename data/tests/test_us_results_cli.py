@@ -9,8 +9,7 @@ from typing import Any
 import pytest
 
 from core.db import Database
-from importers.results.us.nyt import cli
-from importers.results.us.nyt import fetch as fetch_module
+from importers.results.us.nyt import cli, fetch as fetch_module
 from importers.results.us.nyt.cli import SeatResult, diff_against_existing, main
 from importers.results.us.nyt.sources import source_for
 

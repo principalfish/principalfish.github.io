@@ -47,11 +47,9 @@ from importers.polls.types import PollImportResult
 from importers.polls.westminster import survation_import
 from tests.console_fixtures import (
     RecordingRunner,
+    flashes as _flashes,
     forbid_call,
     select_block,
-)
-from tests.console_fixtures import (
-    flashes as _flashes,
 )
 from tests.job_fixtures import job_holding_the_slot
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows, build_workbook

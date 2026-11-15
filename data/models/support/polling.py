@@ -6,7 +6,6 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Generic, TypeVar
 
 from sqlalchemy import select
 
@@ -41,10 +40,6 @@ class PollContributor:
     @property
     def latest_key(self) -> tuple[date, date, int]:
         return latest_poll_key(self.fieldwork_end, self.fieldwork_start, self.poll_id)
-
-
-ObservationKey = TypeVar("ObservationKey")
-WindowResult = TypeVar("WindowResult")
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,7 +78,7 @@ def candidate_since(endpoint: date, duration: timedelta) -> date:
     return endpoint - min(duration, endpoint - date.min)
 
 
-def select_poll_endpoint(
+def select_poll_endpoint[WindowResult](
     raw_endpoints: Iterable[date],
     requested: date,
     since: date,
@@ -118,7 +113,7 @@ def select_poll_endpoint(
 
 
 @dataclass(frozen=True, slots=True)
-class PollAggregation(Generic[ObservationKey]):
+class PollAggregation[ObservationKey]:
     """Weighted observations and the polls admitted to the same calculation."""
 
     weighted_sums: dict[ObservationKey, float]

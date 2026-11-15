@@ -182,9 +182,7 @@ def redrawn_states(old: StateScores, new: StateScores) -> set[str]:
 def state_labels(nyt: Mapping[str, set[str]]) -> dict[str, str]:
     """Map each state FIPS prefix to its postal code, read off NYT's district names."""
     return {
-        fips[:2]: sorted(districts)[0][:2]
-        for fips, districts in nyt.items()
-        if districts
+        fips[:2]: min(districts)[:2] for fips, districts in nyt.items() if districts
     }
 
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import re
 from datetime import date
+from http.client import HTTPException
 from io import BytesIO
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -16,7 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from core.db import Database
-from core.schema import Poll, PollRow, Pollster
+from core.schema import Poll, PollRow
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -346,7 +347,7 @@ def extract_workbook(xlsx_url: str) -> Any:
                 payload = data
                 break
             errors.append(f"non-xlsx payload at {candidate}")
-        except Exception as exc:
+        except (OSError, HTTPException, ValueError) as exc:
             errors.append(f"{candidate}: {exc}")
 
     if payload is None:
@@ -390,7 +391,7 @@ def _to_percentage(value: object) -> float:
         raise ValueError("Encountered empty percentage cell")
     number = float(value)  # type: ignore[arg-type]
     pct = number * 100.0 if 0.0 <= number <= 1.0 else number
-    return float(int(round(pct)))
+    return float(round(pct))
 
 
 def _to_percentage_or_zero(value: object) -> float:
@@ -497,7 +498,7 @@ def _parse_info_sheet(
             fieldwork_raw = _cell_text(value)
         if "sample size" in label and value is not None:
             if isinstance(value, (int, float)):
-                sample_size = int(round(float(value)))
+                sample_size = round(float(value))
             else:
                 digits = re.sub(r"[^0-9]", "", _cell_text(value))
                 if digits:
@@ -520,7 +521,7 @@ def _parse_info_sheet(
                     if value is None:
                         continue
                     if isinstance(value, (int, float)):
-                        sample_size = int(round(float(value)))
+                        sample_size = round(float(value))
                         break
                     digits = re.sub(r"[^0-9]", "", _cell_text(value))
                     if digits:
@@ -537,7 +538,7 @@ def _parse_info_sheet(
                 for col in range(2, 8):
                     val = table_sheet.cell(row, col).value
                     if isinstance(val, (int, float)):
-                        sample_size = int(round(float(val)))
+                        sample_size = round(float(val))
                         break
                 if sample_size is not None:
                     break
@@ -733,7 +734,7 @@ def _parse_party_macro_percentages(workbook: Any) -> dict[str, dict[str, float]]
             continue
 
         lowered = label_col1.lower()
-        if lowered.startswith("column n") or lowered.startswith("column population"):
+        if lowered.startswith(("column n", "column population")):
             break
         if lowered.startswith("q") and row > start_row + 3:
             break

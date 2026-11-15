@@ -23,8 +23,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Mapper, mapped_column, relat
 class Base(DeclarativeBase):
     """Declarative base class for all SQLAlchemy ORM models in this project."""
 
-    pass
-
 
 # ── Enums ────────────────────────────────────────────────────────────────────
 
@@ -85,8 +83,8 @@ class Party(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
-    short_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    colour: Mapped[Optional[str]] = mapped_column(
+    short_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    colour: Mapped[str | None] = mapped_column(
         String, nullable=True
     )  # hex e.g. "#E4003B"
 
@@ -162,10 +160,10 @@ class Region(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     map_id: Mapped[int] = mapped_column(Integer, ForeignKey("maps.id"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    parent_id: Mapped[Optional[int]] = mapped_column(
+    parent_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("regions.id"), nullable=True
     )
-    population: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    population: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     map: Mapped["Map"] = relationship("Map", back_populates="regions")
     parent: Mapped[Optional["Region"]] = relationship(
@@ -204,11 +202,11 @@ class Seat(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     map_id: Mapped[int] = mapped_column(Integer, ForeignKey("maps.id"), nullable=False)
     seat_name: Mapped[str] = mapped_column(String, nullable=False)
-    region_id: Mapped[Optional[int]] = mapped_column(
+    region_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("regions.id"), nullable=True
     )
-    electorate: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    electoral_votes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    electorate: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    electoral_votes: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     map: Mapped["Map"] = relationship("Map", back_populates="seats")
     region: Mapped[Optional["Region"]] = relationship("Region", back_populates="seats")
@@ -295,11 +293,11 @@ class Election(Base):
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     type: Mapped[ElectionType] = mapped_column(Enum(ElectionType), nullable=False)
-    parent_election_id: Mapped[Optional[int]] = mapped_column(
+    parent_election_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("elections.id"), nullable=True
     )
-    election_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    target_election_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    election_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    target_election_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     map: Mapped["Map"] = relationship("Map", back_populates="elections")
@@ -360,13 +358,13 @@ class Vote(Base):
     seat_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("seats.id"), nullable=False
     )
-    party_id: Mapped[Optional[int]] = mapped_column(
+    party_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("parties.id"), nullable=True
     )  # nullable for independents
-    candidate_name: Mapped[Optional[str]] = mapped_column(
+    candidate_name: Mapped[str | None] = mapped_column(
         String, nullable=True
     )  # empty for model_run/model_uns/holyrood_uns elections
-    vote_total: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    vote_total: Mapped[float | None] = mapped_column(Float, nullable=True)
     elected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     election: Mapped["Election"] = relationship("Election", back_populates="votes")
@@ -527,8 +525,8 @@ class Pollster(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     identifier: Mapped[str] = mapped_column(String, nullable=False, unique=True)
-    weight: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=1.0)
-    regions_mapping: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    weight: Mapped[float | None] = mapped_column(Float, nullable=True, default=1.0)
+    regions_mapping: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     polls: Mapped[list["Poll"]] = relationship(
         "Poll", back_populates="pollster", cascade="all, delete-orphan"
@@ -591,8 +589,8 @@ class Poll(Base):
     map_id: Mapped[int] = mapped_column(Integer, ForeignKey("maps.id"), nullable=False)
     fieldwork_start: Mapped[date] = mapped_column(Date, nullable=False)
     fieldwork_end: Mapped[date] = mapped_column(Date, nullable=False)
-    sample_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    source_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    sample_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String, nullable=True)
     matchup: Mapped[str | None] = mapped_column(String, nullable=True)
     seat_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("seats.id"), nullable=True
@@ -668,7 +666,7 @@ class PollRow(Base):
     poll_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("polls.id"), nullable=False
     )
-    region_id: Mapped[Optional[int]] = mapped_column(
+    region_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("regions.id"), nullable=True
     )  # null = national
     party_id: Mapped[int] = mapped_column(

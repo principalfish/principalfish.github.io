@@ -65,6 +65,7 @@ def run_command(
             capture_output=True,
             text=True,
             timeout=timeout,
+            check=False,
         )
     except Exception as err:
         run_log.log_run(start, command, cwd=workdir, timeout=timeout, error=err)

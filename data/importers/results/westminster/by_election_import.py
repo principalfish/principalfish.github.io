@@ -16,9 +16,8 @@ from __future__ import annotations
 import argparse
 import re
 from datetime import date
-from urllib.request import Request, urlopen
-
 from typing import Any
+from urllib.request import Request, urlopen
 
 from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel, Field

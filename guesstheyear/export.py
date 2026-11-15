@@ -1,7 +1,8 @@
-import sqlite3
 import json
-import re
 import random
+import re
+import sqlite3
+from pathlib import Path
 
 
 def get_first_two_sentences(text):
@@ -80,13 +81,15 @@ def clean_event_text(text, target_year):
     text = re.sub(r"\s+([,])\s+", r"\1 ", text)  # Normalize comma spacing
 
     # 9. Remove facts that start with just a month (likely incomplete after cleanup)
-    if re.match(
-        r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+[A-Z]",
-        text,
-    ):
+    if (
+        re.match(
+            r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+[A-Z]",
+            text,
+        )
         # Check if it's ONLY a month and a name/place without substance
-        if len(text) < 50:
-            return ""
+        and len(text) < 50
+    ):
+        return ""
 
     text = text.strip()
 
@@ -185,7 +188,7 @@ def export_challenges(db_path, output_file):
                 seen_centuries.add(key)
                 counts["century"] += 1
 
-    with open(output_file, "w", encoding="utf-8") as f:
+    with Path(output_file).open("w", encoding="utf-8") as f:
         json.dump(final_challenges, f, indent=2)
 
     # --- ANALYSIS CHECKS ---
@@ -193,7 +196,7 @@ def export_challenges(db_path, output_file):
     print(f"   - Years: {counts['year']}")
     print(f"   - Decades: {counts['decade']}")
     print(f"   - Centuries: {counts['century']}")
-    print(f"\n📊 Quality Stats:")
+    print("\n📊 Quality Stats:")
     print(f"   - Raw facts: {quality_stats['total_raw']}")
     print(
         f"   - Kept: {quality_stats['kept']} ({100 * quality_stats['kept'] / quality_stats['total_raw']:.1f}%)"

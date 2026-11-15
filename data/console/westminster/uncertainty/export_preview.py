@@ -95,8 +95,10 @@ def _withheld(stored: StoredUncertainty) -> tuple[str, ...]:
     national = stored.national
     lines = [
         f"national: {private(set(national), PUBLIC_NATIONAL_FIELDS)}",
-        "national parties: "
-        f"{private(_keys(national.get('parties')), PUBLIC_NATIONAL_PARTY_FIELDS)}",
+        (
+            "national parties: "
+            f"{private(_keys(national.get('parties')), PUBLIC_NATIONAL_PARTY_FIELDS)}"
+        ),
     ]
     if stored.regions is not None:
         region_parties: set[str] = set()
@@ -168,8 +170,10 @@ def export_preview(db: Database) -> ExportPreview | None:
     simulation_size = len(compact_json(with_u).encode("utf-8"))
     simulation_details = (
         (
-            f"{len(with_rows)} of {len(seat_entries)} seats gain u: {rows_total} "
-            f"party rows (+{simulation_size - plain_size:,} bytes)",
+            (
+                f"{len(with_rows)} of {len(seat_entries)} seats gain u: {rows_total} "
+                f"party rows (+{simulation_size - plain_size:,} bytes)"
+            ),
             f"{missing} p parties have no row (below the stored 0.5-point floor)",
         )
         if with_rows
@@ -187,8 +191,10 @@ def export_preview(db: Database) -> ExportPreview | None:
                 f"results/{UNCERTAINTY_FILENAME}",
                 None,
                 (
-                    "Not written: the run has no stored regional detail "
-                    "(an existing file would be removed).",
+                    (
+                        "Not written: the run has no stored regional detail "
+                        "(an existing file would be removed)."
+                    ),
                 ),
             )
         )
@@ -203,11 +209,15 @@ def export_preview(db: Database) -> ExportPreview | None:
                 len(compact_json(document).encode("utf-8")),
                 (
                     f"schema {document['schema']}, as of {document['as_of_date']}",
-                    f"national: {len(national_parties)} parties with v, s, mean, "
-                    "whole seats m (largest remainder), pm, pl and seat histogram; "
-                    "hung",
-                    f"{region_count} regions with v, s, mean and m (pm, pl, hung "
-                    "where stored)",
+                    (
+                        f"national: {len(national_parties)} parties with v, s, mean, "
+                        "whole seats m (largest remainder), pm, pl and seat histogram; "
+                        "hung"
+                    ),
+                    (
+                        f"{region_count} regions with v, s, mean and m (pm, pl, hung "
+                        "where stored)"
+                    ),
                 ),
             )
         )
@@ -239,13 +249,17 @@ def export_preview(db: Database) -> ExportPreview | None:
                 "results/model_output_trends.json",
                 None,
                 (
-                    f"This run's entry: vl/vh/sl/sh/sm for {len(trend.parties)} "
-                    "parties, pm "
-                    f"for {with_pm}, pl for {with_pl} (zeros left out), hung "
-                    f"{trend.hung}: about +{added:,} bytes",
-                    f"{_runs_phrase(_stored_runs(db, map_id))} a stored national "
-                    "block, so their entries carry these keys (rebuilt when the "
-                    "model runs)",
+                    (
+                        f"This run's entry: vl/vh/sl/sh/sm for {len(trend.parties)} "
+                        "parties, pm "
+                        f"for {with_pm}, pl for {with_pl} (zeros left out), hung "
+                        f"{trend.hung}: about +{added:,} bytes"
+                    ),
+                    (
+                        f"{_runs_phrase(_stored_runs(db, map_id))} a stored national "
+                        "block, so their entries carry these keys (rebuilt when the "
+                        "model runs)"
+                    ),
                 ),
             )
         )

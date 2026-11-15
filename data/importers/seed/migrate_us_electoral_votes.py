@@ -23,7 +23,7 @@ from core.electoral_votes import (
 )
 from core.migration_helpers import (
     column_exists,
-    open_database as open_database,
+    open_database as open_database,  # noqa: PLC0414 - re-exported for its tests
     schema_object_exists,
 )
 from importers.seed.us_electoral_votes import (
@@ -184,11 +184,15 @@ def _migrate(
     prefix = "Would" if dry_run else "Will"
     lines = [
         f"{prefix} add target_election_year column: {not has_target}",
-        f"{prefix} insert {len(missing_eras)} eras and "
-        f"{len(missing_allocations)} allocation rows; existing values are preserved.",
+        (
+            f"{prefix} insert {len(missing_eras)} eras and "
+            f"{len(missing_allocations)} allocation rows; existing values are preserved."
+        ),
         f"Legacy presidential forecasts with NULL targets: {legacy_count}",
-        f"{prefix} normalize {legacy_map_count} presidential map labels "
-        "from us_president to us_presidential.",
+        (
+            f"{prefix} normalize {legacy_map_count} presidential map labels "
+            "from us_president to us_presidential."
+        ),
     ]
     lines.extend(
         f"  map_id={map_id}: {count} runs, dates {first or 'unknown'} "

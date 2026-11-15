@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-from datetime import date
-import json
 import math
 import re
-from typing import Any, Sequence
+from collections import defaultdict
+from collections.abc import Sequence
+from datetime import date
+from typing import Any
 
-from core.schema import Election, ElectionType, Party, Region
+from core.schema import ElectionType, Party, Region
 from export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
 from export.naming import party_key_for_party
 

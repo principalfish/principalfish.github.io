@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from datetime import date
+from urllib.error import URLError
 from urllib.request import Request
 
 import pytest
@@ -359,7 +360,7 @@ class TestExtractPdfText:
         )
         with_if = "https://web.archive.org/web/20260105120000if_/https://deltapoll.co.uk/r.pdf"
         responses: dict[str, bytes | Exception] = {
-            original: RuntimeError("network error"),
+            original: URLError("network error"),
             with_if: b"%PDF-1.4 real pdf bytes",
         }
         monkeypatch.setattr(deltapoll_import, "_fetch_bytes", _fetch_from(responses))
@@ -370,6 +371,18 @@ class TestExtractPdfText:
         result = _extract_pdf_text(original)
 
         assert result == "text"
+
+    def test_an_unexpected_error_during_fetch_is_not_swallowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        url = "https://deltapoll.co.uk/r.pdf"
+        responses: dict[str, bytes | Exception] = {
+            url: RuntimeError("bug in the fetch code")
+        }
+        monkeypatch.setattr(deltapoll_import, "_fetch_bytes", _fetch_from(responses))
+
+        with pytest.raises(RuntimeError, match="bug in the fetch code"):
+            _extract_pdf_text(url)
 
     def test_wayback_url_with_if_flag_already_present_has_one_candidate(
         self, monkeypatch: pytest.MonkeyPatch
@@ -895,6 +908,19 @@ class TestParsePoll:
 
         assert parsed.party_region_percentages["Conservative"] == {NATIONAL_KEY: 19.0}
         assert parsed.party_region_percentages["Other"] == {NATIONAL_KEY: 2.0}
+
+    def test_an_unexpected_regional_parse_error_is_not_swallowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _broken(
+            lines: list[str], party_order: list[str]
+        ) -> dict[str, dict[str, float]]:
+            raise RuntimeError("bug in the regional parser")
+
+        monkeypatch.setattr(deltapoll_import, "_parse_regional_from_block", _broken)
+
+        with pytest.raises(RuntimeError, match="bug in the regional parser"):
+            parse_poll(_FULL_PDF_TEXT)
 
 
 # ── build_import_plan ────────────────────────────────────────────────────────

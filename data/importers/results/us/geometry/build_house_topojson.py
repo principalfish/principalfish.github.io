@@ -58,7 +58,6 @@ from shapely.validation import make_valid
 
 from importers.results.us.geometry import house_2026_sources as sources
 
-
 Feature = dict[str, Any]
 
 FIPS_TO_ST = {
@@ -436,7 +435,7 @@ def fetch_zip(url: str, dest_dir: Path) -> Path:
         return folder
     if not zip_path.exists():
         req = urllib.request.Request(url, headers={"User-Agent": "election-maps-build"})
-        with urllib.request.urlopen(req, timeout=120) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=120) as resp:
             sources.check_url(
                 resp.geturl()
             )  # a redirect must stay on Census over https

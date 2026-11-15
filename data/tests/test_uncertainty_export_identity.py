@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import copy
 
-from export.uncertainty import link_uncertainty_payload
+from core.db import Database
+from export.uncertainty import link_uncertainty_payload, party_names
 
 
 def test_identity_is_shared_stable_and_contains_only_public_inputs() -> None:
@@ -42,3 +43,11 @@ def test_no_uncertainty_preserves_ordinary_payload() -> None:
     original = copy.deepcopy(result)
     assert link_uncertainty_payload(result, None) is None
     assert result == original
+
+
+def test_party_names_maps_every_party_id_to_its_name(db: Database) -> None:
+    labour = db.add_party("Labour")
+    reform = db.add_party("Reform UK")
+
+    with db.session() as session:
+        assert party_names(session) == {labour.id: "Labour", reform.id: "Reform UK"}

@@ -181,7 +181,7 @@ def import_poll_preview() -> ResponseReturnValue:
             "pollster_identifier": pollster_identifier,
         }
         plan = module.build_import_plan(db, **build_kwargs)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - request boundary, flashed to the user
         flash(f"Import preview failed: {exc}")
         return redirect(url_for("poll_import.import_poll_form"))
 
@@ -233,7 +233,7 @@ def import_poll_confirm(token: str) -> ResponseReturnValue:
     module = IMPORTERS[pollster_identifier]["module"]
     try:
         result = module.commit_import_plan(db, plan, replace_rows=replace_rows)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - request boundary, flashed to the user
         flash(f"Import commit failed: {exc}")
         return redirect(url_for("poll_import.import_poll_form"))
 
@@ -263,7 +263,7 @@ def import_poll_confirm(token: str) -> ResponseReturnValue:
                     try:
                         for message in _run_model_and_export():
                             flash(message)
-                    except Exception as exc:
+                    except Exception as exc:  # noqa: BLE001 - the import is committed; the run's failure is flashed
                         flash(f"Warning: UNS model run failed: {exc}")
 
     return redirect(url_for("polls.poll_detail", poll_id=result.poll_id))
@@ -305,7 +305,7 @@ def wikipedia_start() -> ResponseReturnValue:
     except WikipediaIndexError as exc:
         flash(f"Wikipedia page could not be read: {exc}")
         return redirect(url_for("poll_import.import_poll_form"))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - request boundary, flashed to the user
         flash(f"Wikipedia fetch failed: {exc}")
         return redirect(url_for("poll_import.import_poll_form"))
 
@@ -411,7 +411,7 @@ def wikipedia_confirm(token: str) -> ResponseReturnValue:
     replace_rows = request.form.get("replace_rows") == "on"
     try:
         result = module.commit_import_plan(db, item.plan, replace_rows=replace_rows)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - per-item boundary, recorded on the queue item
         item.status = "failed"
         item.detail = str(exc)
         return redirect(url_for("poll_import.wikipedia_queue", token=token))
@@ -505,7 +505,7 @@ def wikipedia_finish(token: str) -> ResponseReturnValue:
                 else:
                     try:
                         payload["model_output"] = _run_model_and_export()
-                    except Exception as exc:
+                    except Exception as exc:  # noqa: BLE001 - the run's failure is shown on the page
                         payload["model_output"] = []
                         payload["model_error"] = f"UNS model run failed: {exc}"
                     # A failed run may still have written. The app's after-request
@@ -586,7 +586,7 @@ def _prepare_item(item: QueueItem) -> None:
             "pollster_identifier": row.pollster_identifier,
         }
         plan = module.build_import_plan(get_db(), **build_kwargs)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - per-item boundary, recorded on the queue item
         item.status = "failed"
         item.detail = str(exc)
         item.warnings = []

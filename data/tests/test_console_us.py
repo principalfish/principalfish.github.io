@@ -18,8 +18,7 @@ import pytest
 from flask import Flask, Response
 from flask.testing import FlaskClient
 
-from console import create_app
-from console import paths as console_paths
+from console import create_app, paths as console_paths
 from console.shared import jobs, run_log
 from console.shared.runner import run_command
 from console.us.model_form import rebuild_confirm_message

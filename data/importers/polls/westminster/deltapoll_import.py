@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import re
 from datetime import date
+from http.client import HTTPException
 from io import BytesIO
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
@@ -16,7 +17,7 @@ from pypdf import PdfReader
 from sqlalchemy import select
 
 from core.db import Database
-from core.schema import Poll, PollRow, Pollster
+from core.schema import Poll, PollRow
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -241,7 +242,7 @@ def _extract_pdf_text(pdf_url: str) -> str:
     for candidate in candidate_urls:
         try:
             data = _fetch_bytes(candidate)
-        except Exception:
+        except (OSError, HTTPException, ValueError):
             continue
         if data.startswith(b"%PDF"):
             payload = data
@@ -546,7 +547,7 @@ def _parse_regional_from_block(
     parsed: dict[str, dict[str, float]] = {}
     for idx, party_name in enumerate(party_order):
         if idx >= len(rows):
-            parsed[party_name] = {macro: 0.0 for macro in MACRO_ORDER}
+            parsed[party_name] = dict.fromkeys(MACRO_ORDER, 0.0)
             continue
         values = rows[idx]
         parsed[party_name] = {
@@ -657,8 +658,8 @@ def parse_poll(pdf_text: str) -> ParsedPoll:
     party_order, national = _extract_party_order_and_national(lines)
     try:
         regional = _parse_regional_from_block(lines, party_order)
-    except Exception:
-        regional = {party_name: {} for party_name in national.keys()}
+    except ValueError:
+        regional = {party_name: {} for party_name in national}
 
     party_region_percentages: dict[str, dict[str, float]] = {}
     for party_name, national_pct in national.items():

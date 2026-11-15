@@ -310,6 +310,7 @@ def run_step(step: Step, *, timeout: int) -> tuple[bool, str]:
             capture_output=True,
             text=True,
             timeout=timeout,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         return False, f"timed out after {timeout}s"

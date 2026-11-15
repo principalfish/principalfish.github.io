@@ -38,7 +38,7 @@ from models.us._common import (
     LatestPollUsage,
     SeatPollAverage,
     SeatRef,
-    TrackedMatchupMissing,
+    TrackedMatchupMissingError,
     UsModelSpec,
     UsSimulationConfig,
     aggregate_national,
@@ -782,7 +782,7 @@ class TestResolvePollScope:
         spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
 
         with pytest.raises(
-            TrackedMatchupMissing, match="no tracked matchup has been set"
+            TrackedMatchupMissingError, match="no tracked matchup has been set"
         ):
             resolve_poll_scope(db, spec)
 
@@ -795,7 +795,7 @@ class TestResolvePollScope:
         db.set_tracked_matchup(president_map.id, None, None, source="manual")
         spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
 
-        with pytest.raises(TrackedMatchupMissing, match="polls are ignored"):
+        with pytest.raises(TrackedMatchupMissingError, match="polls are ignored"):
             resolve_poll_scope(db, spec)
 
     def test_president_with_a_tracked_matchup_resolves(

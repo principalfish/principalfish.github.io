@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import json
+from pathlib import Path
 from typing import Any
 
-from core.schema import Election, ElectionType, Party, Region
+from core.schema import ElectionType
 from export.naming import map_filename_for_map_id, normalize_region_name
 from export.ordering import register_supplemental_entry
 from export.payload import convert_legacy_seatinfo_to_v4
 from export.serialize import write_json
-
 
 SUPPLEMENTAL_LEGACY_ELECTIONS: list[dict[str, Any]] = [
     {

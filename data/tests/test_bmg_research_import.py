@@ -11,8 +11,10 @@ from __future__ import annotations
 import sys
 from collections.abc import Mapping
 from datetime import date
+from http.client import IncompleteRead
 from types import MappingProxyType
 from typing import Any
+from urllib.error import URLError
 from urllib.request import Request
 
 import pytest
@@ -379,6 +381,34 @@ class TestExtractWorkbook:
 
         monkeypatch.setattr(bmg, "urlopen", fake_urlopen)
         with pytest.raises(ValueError, match="connection timed out"):
+            bmg.extract_workbook("https://bmgresearch.com/tables.xlsx")
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            URLError("name or service not known"),
+            IncompleteRead(b"partial"),
+            ValueError("unknown url type"),
+        ],
+    )
+    def test_network_and_url_errors_are_captured_in_message(
+        self, monkeypatch: pytest.MonkeyPatch, error: Exception
+    ) -> None:
+        def fake_urlopen(req: Request, timeout: float = 45) -> FakeUrlResponse:
+            raise error
+
+        monkeypatch.setattr(bmg, "urlopen", fake_urlopen)
+        with pytest.raises(ValueError, match="Could not fetch XLSX payload"):
+            bmg.extract_workbook("https://bmgresearch.com/tables.xlsx")
+
+    def test_an_unexpected_error_is_not_swallowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_urlopen(req: Request, timeout: float = 45) -> FakeUrlResponse:
+            raise RuntimeError("bug in the fetch code")
+
+        monkeypatch.setattr(bmg, "urlopen", fake_urlopen)
+        with pytest.raises(RuntimeError, match="bug in the fetch code"):
             bmg.extract_workbook("https://bmgresearch.com/tables.xlsx")
 
     def test_co_uk_url_falls_back_through_com_variants(

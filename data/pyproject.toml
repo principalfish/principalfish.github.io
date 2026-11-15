@@ -24,3 +24,6 @@ extend-exclude = ["archive", "election_data", ".venv"]
 
 [tool.ruff.lint]
 extend-select = ["N", "PTH", "C4"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true

@@ -514,7 +514,7 @@ def build_output_detail_context(
 
     shows_electoral_votes = sum(current_ev_by_party.values()) > 0
 
-    for party_id, baseline_wins in baseline_seats_won_by_party.items():
+    for party_id in baseline_seats_won_by_party:
         if party_id not in party_totals:
             party_totals[party_id] = {
                 "party_name": party_name_by_id.get(party_id, "Other")

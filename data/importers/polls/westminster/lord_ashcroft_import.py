@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from core.db import Database
-from core.schema import Poll, PollRow, Pollster
+from core.schema import Poll, PollRow
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -273,7 +273,7 @@ def _resolve_xls_url(source_url: str) -> str:
         urllib.error.URLError: If fetching the HTML page fails.
     """
     lower = source_url.lower()
-    if lower.endswith(".xls") or lower.endswith(".xlsx"):
+    if lower.endswith((".xls", ".xlsx")):
         return source_url
 
     html = _fetch_bytes(source_url).decode("utf-8", errors="replace")
@@ -287,7 +287,7 @@ def _resolve_xls_url(source_url: str) -> str:
             continue
         absolute = urljoin(source_url, href)
         absolute_lower = absolute.lower()
-        if absolute_lower.endswith(".xls") or absolute_lower.endswith(".xlsx"):
+        if absolute_lower.endswith((".xls", ".xlsx")):
             candidates.append(absolute)
 
     if not candidates:
@@ -500,7 +500,7 @@ def _parse_party_percentages(sheet: _Sheet) -> dict[str, float]:
         percentage = (
             float(value) if isinstance(value, (int, float)) else float(_as_text(value))
         )
-        parsed[canonical_party] = float(int(round(percentage)))
+        parsed[canonical_party] = float(round(percentage))
 
         if len(parsed) == 8:
             break
@@ -715,7 +715,7 @@ def _parse_party_region_percentages(
                 continue
 
             numerator = _to_float(values_sheet.cell_value(row_idx, col_idx))
-            percentage = float(int(round((numerator / denominator) * 100.0)))
+            percentage = float(round((numerator / denominator) * 100.0))
             region_values[internal_name] = percentage
 
         if region_values:
@@ -766,7 +766,7 @@ def _parse_direct_region_percentages(sheet: _Sheet) -> dict[str, dict[str, float
             value = sheet.cell_value(row_idx, col_idx)
             if value in (None, ""):
                 continue
-            region_values[internal_name] = float(int(round(_to_float(value))))
+            region_values[internal_name] = float(round(_to_float(value)))
         if region_values:
             parsed[canonical_party] = region_values
             if len(parsed) == 8:

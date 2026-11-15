@@ -27,8 +27,7 @@ import pytest
 from flask import Flask, Response
 from flask.testing import FlaskClient
 
-from console import create_app
-from console import db as console_db
+from console import create_app, db as console_db
 from console.sections import SECTIONS_BY_SLUG
 from console.us.matchups import race_map_name
 from console.westminster.uncertainty.run_data import stored_runs

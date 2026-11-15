@@ -24,7 +24,7 @@ from console.db import get_db
 from console.forms import UsModelRunForm
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.shared import jobs
-from console.shared.jobs import JobBusy, JobOutcome
+from console.shared.jobs import JobBusyError, JobOutcome
 from console.shared.run_form import run_summary
 from console.shared.runner import run_python_script
 from console.us.matchups import (
@@ -251,7 +251,7 @@ def model_run(chamber: str) -> ResponseReturnValue:
             back_label="Back to the run form",
             back_values={"chamber": chamber},
         )
-    except JobBusy as busy:
+    except JobBusyError as busy:
         jobs.flash_busy(
             "History not rebuilt"
             if form.rebuild_history
@@ -475,7 +475,7 @@ def _rebuild_history(
             back_label="Back to matchups",
             back_values=back_values,
         )
-    except JobBusy as busy:
+    except JobBusyError as busy:
         jobs.flash_busy("History not rebuilt", busy)
         return redirect(url_for(back_endpoint, **(back_values or {})))
     return redirect(url_for("runs.run_detail", run_id=job.id), 303)

@@ -43,8 +43,13 @@ job held the run slot), so refreshing the summary page repeats none of them.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Mapping, MutableMapping, Sequence
-from collections.abc import Set as AbstractSet
+from collections.abc import (
+    Callable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+    Set as AbstractSet,
+)
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
@@ -540,8 +545,10 @@ def _heading_warnings(row: UsPollRow) -> list[str]:
     if not missing:
         return []
     return [
-        f"The heading {heading!r} does not name {', '.join(missing)} — check the "
-        "table sits under the right matchup."
+        (
+            f"The heading {heading!r} does not name {', '.join(missing)} — check the "
+            "table sits under the right matchup."
+        )
     ]
 
 
@@ -587,13 +594,17 @@ def _race_warnings(db: Database, row: UsPollRow, plan: UsImportPlan) -> list[str
         tracked = db.get_tracked_matchup(plan.map_id, None)
         if tracked is None or tracked.matchup is None:
             return [
-                "No national presidential matchup is set, so the president "
-                "model will not run until one is chosen."
+                (
+                    "No national presidential matchup is set, so the president "
+                    "model will not run until one is chosen."
+                )
             ]
         if tracked.matchup != row.matchup:
             return [
-                f"Not the tracked presidential matchup ({tracked.matchup}): the "
-                "model will ignore this poll."
+                (
+                    f"Not the tracked presidential matchup ({tracked.matchup}): the "
+                    "model will ignore this poll."
+                )
             ]
         return []
 

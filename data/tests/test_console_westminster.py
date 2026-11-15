@@ -29,20 +29,10 @@ from core.db import Database
 from core.schema import ElectionType
 from tests.console_fixtures import (
     RecordingRunner as _RecordingRunner,
-)
-from tests.console_fixtures import (
     flashes as _flashes,
-)
-from tests.console_fixtures import (
     flashes_on_page as _flashes_on_page,
-)
-from tests.console_fixtures import (
     forbid_call,
-)
-from tests.console_fixtures import (
     pre_after_heading as _pre_after_heading,
-)
-from tests.console_fixtures import (
     select_block as _select_block,
 )
 from tests.uk_fixtures import WestminsterWorld

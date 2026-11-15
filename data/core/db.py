@@ -6,10 +6,11 @@ reading / writing election map data.
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Generator, Iterable, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Generator, Iterable, Literal, Sequence, cast
+from typing import Any, Literal, cast
 
 from sqlalchemy import (
     ColumnElement,
@@ -563,7 +564,7 @@ class Database:
         election_type: ElectionType,
         *,
         parent_election_id: int | None = None,
-        election_date: "date | None" = None,
+        election_date: date | None = None,
     ) -> Election:
         """Insert a new Election row and return it.
 
@@ -775,7 +776,7 @@ class Database:
                 select(Vote).where(
                     Vote.election_id == election_id,
                     Vote.seat_id == seat_id,
-                    Vote.elected == True,  # noqa: E712
+                    Vote.elected == True,  # a SQL expression, so not `is True`
                 )
             ).scalar_one_or_none()
 
@@ -990,8 +991,8 @@ class Database:
         self,
         pollster_id: int,
         map_id: int,
-        fieldwork_start: "date",
-        fieldwork_end: "date",
+        fieldwork_start: date,
+        fieldwork_end: date,
         *,
         sample_size: int | None = None,
         source_url: str | None = None,

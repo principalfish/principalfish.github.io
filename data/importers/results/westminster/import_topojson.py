@@ -17,7 +17,6 @@ from typing import Any
 
 from core.db import Database
 
-
 REGION_DISPLAY_NAMES = {
     "eastmidlands": "East Midlands",
     "eastofengland": "East of England",
@@ -181,7 +180,7 @@ def import_file(
         print(f"  Skipping existing map: {map_name}")
         return
 
-    with open(filepath) as f:
+    with Path(filepath).open() as f:
         topo = json.load(f)
 
     features = decode_topojson(topo, "map")

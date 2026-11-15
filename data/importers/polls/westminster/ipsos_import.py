@@ -14,7 +14,7 @@ from pypdf import PdfReader, PdfWriter
 from sqlalchemy import select
 
 from core.db import Database
-from core.schema import Poll, PollRow, Pollster
+from core.schema import Poll, PollRow
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -555,7 +555,7 @@ def _parse_party_region_percentages(lines: list[str]) -> dict[str, dict[str, flo
     for optional_party in ["Scottish National Party", "Plaid Cymru", "Other"]:
         parsed.setdefault(
             optional_party,
-            {region_name: 0.0 for region_name in REGION_COLUMN_ORDER},
+            dict.fromkeys(REGION_COLUMN_ORDER, 0.0),
         )
 
     return parsed

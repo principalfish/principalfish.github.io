@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import sqlite3
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -50,7 +51,7 @@ def validate_eras(
         seen.add(era.census_year)
         eras.append(era)
     eras.sort(key=lambda era: era.first_election_year)
-    for previous, current in zip(eras, eras[1:]):
+    for previous, current in itertools.pairwise(eras):
         if current.first_election_year <= previous.last_election_year:
             raise ElectoralVoteError(
                 f"Overlapping electoral-vote eras {previous.census_year} "

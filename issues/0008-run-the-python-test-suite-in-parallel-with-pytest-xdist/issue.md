@@ -10,9 +10,9 @@ Out of scope: gating the GitHub Pages deploy on CI (considered and dropped), and
 
 ## Plan
 
-_2026-11-15 · 0 of 3 pieces done · now: waiting on a decision_
+_2026-11-15 · 0 of 3 pieces done · now: piece 1 in progress_
 
-- [ ] **1/3 Run the suite in parallel** · not started
+- [ ] **1/3 Run the suite in parallel** · in progress
   run_tests.sh runs pytest on half the CPUs (4 on CI), with temp files in a per-run RAM folder
 - [ ] **2/3 List the scanned source files through git** · not started
   the repo-scan tests list data/'s files with git, so gitignored folders can't fail them

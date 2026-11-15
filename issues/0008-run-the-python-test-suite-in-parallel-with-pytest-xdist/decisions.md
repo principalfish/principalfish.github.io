@@ -8,9 +8,14 @@
 - The repo-scanning tests list data/'s .py files through one shared helper using `git ls-files --cached --others --exclude-standard`, so gitignored folders are skipped (2026-11-15).
 - Add a session guard: the run fails if tracked files under electionmaps/data or uselectionmaps/data changed during it, naming them (2026-11-15).
 - Coverage works under xdist (identical XML on a subset); this chat adds `-n` to the planner branch's coverage-changed.sh, only when xdist is importable (2026-11-15).
+- CI uses all 4 workers: CPU/2 stays the default (an xdist hook in conftest that the `PYTEST_XDIST_AUTO_NUM_WORKERS` env var overrides), and ci.yml sets it to 4 for the Python job (2026-11-15).
+- Pytest's temp files go in RAM: when `/dev/shm` exists, run_tests.sh points `--basetemp` at a fresh per-run folder under it and deletes it on exit; an env var keeps them on disk instead (2026-11-15).
 
 ## Open
-- CPU/2 gives CI (4 vCPU) only 2 workers: does CI also use CPU/2, or `auto`?
 
 ## Assumed
+- `pytest-xdist>=3.8` in data/requirements.txt, matching pytest's `>=` style (no `psutil`).
+- `--pdb` keeps working: xdist turns itself off for `-n auto` when `--pdb` is passed. `-s` needs `-n 0`, which gets documented.
+- After the PR merges, this chat adds `-n auto` and the RAM temp folder to the planner branch's coverage-changed.sh, only when xdist is importable.
+- Clearing the 6.5 GB `data/.pytest_cache` in the main checkout is Phil's call, outside the plan.
 - Issue 0007 merged (PR #87, 2026-11-15 12:18); the builder branches from `master`.

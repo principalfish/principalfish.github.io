@@ -88,8 +88,18 @@ Cost: 6 subagents (correctness, security, coverage, verifier, correctness re-che
 | Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
 |-|-|-|-|-|-|-|-|
 | round | correctness | medium | defect | verified | fixed | `lint.sh:89` | `biome ci` exits 0 on warnings, so ~85 of the fixed diagnostics could return without failing lint.sh or CI; add `--error-on-warnings` |
-| round | docs | low | docs | verified | open | `CLAUDE.md:1` | 3 lines where the project-docs guide says one line, `@AGENTS.md` |
+| round | docs | low | docs | verified | fixed | `CLAUDE.md:1` | 3 lines where the project-docs guide says one line, `@AGENTS.md`; fixed in 3d1edb61 |
 | round | docs | low | docs | verified | fixed | `data/README.md:20` | `archive/` row says not type-checked; it is also excluded from ruff and shellcheck |
 | round | common-mistakes | low | cleanup | dropped | - | `data/pyproject.toml` | Global EXE001/EXE002 ignore vs "no blanket ignores" — dropped: deliberate recorded decision; rule-level, not a file-wide suppression |
 | round | security | low | defect | dropped | - | `.github/workflows/ci.yml:8` | No top-level `permissions:` — dropped: pre-existing, outside the change |
 | round | security | low | defect | dropped | - | `guesstheyear/wiki.py:143` | `requests.get` without timeout — dropped: pre-existing, outside the change |
+
+## review fixes · 2026-11-15 · /review self 01 fixes
+
+Cost: 1 re-check subagent (correctness) · ~60k tokens · ~1 min
+
+| Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
+|-|-|-|-|-|-|-|-|
+| manual | user | medium | bug | - | fixed | `lint.sh:89` | `biome ci` exited 0 on warnings; now `--error-on-warnings` (a 2-warning probe fails "biome", the tree passes) |
+| manual | user | low | docs | - | fixed | `data/README.md:20` | `archive/` row now says not maintained, type-checked or linted (true of ruff, shellcheck, mypy and Biome) |
+| manual | user | low | docs | - | fixed | `CLAUDE.md:1` | Now exactly `@AGENTS.md` (3d1edb61), on the user's direct go-ahead in the builder chat; a relayed request had been declined |

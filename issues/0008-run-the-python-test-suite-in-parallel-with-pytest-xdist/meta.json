@@ -9,6 +9,14 @@
   "gh_issue": 88,
   "build_model": "claude-opus-5-5",
   "created": "2026-11-15 12:10",
-  "updated": "2026-11-15 13:31",
-  "done": null
+  "updated": "2026-11-15 13:33",
+  "done": null,
+  "local": [
+    {
+      "kind": "session",
+      "name": "local_5450cb9d-8a06-4ab4-acc2-dc3b56ac0452",
+      "added": "2026-11-15 13:33",
+      "note": "builder: run-the-python-test-suite-in-parallel-with-pytest-xdist"
+    }
+  ]
 }

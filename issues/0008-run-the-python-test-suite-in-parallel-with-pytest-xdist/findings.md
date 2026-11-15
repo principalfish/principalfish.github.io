@@ -38,3 +38,20 @@
 | re-check | coverage | low | test | verified | fixed | `data/tests/test_data_guard.py:212` | Nothing covers NO_TESTS_COLLECTED flipping to TESTS_FAILED; only OK is tested |
 | re-check | coverage | - | cleanup | verified | fixed | `data/tests/test_data_guard.py:255` | `assert state.skipped_because is not None` is redundant with the equality on the next line |
 | manual | user | - | test | - | fixed | `data/tests/test_data_guard.py` | User chose option A: the already-failed status test uses USAGE_ERROR and INTERRUPTED, the failing-run test is parametrized over OK and NO_TESTS_COLLECTED, and the redundant assert is gone (mutation proofs: both regressions are now caught) |
+
+## review 01 · 2026-11-15
+
+| Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
+|-|-|-|-|-|-|-|-|
+| round | user | high | defect | verified | open | `data/tests/test_backup.py:231` | Parametrize ID includes gzip's mtime (current time on 3.12), so xdist workers collecting in different seconds disagree and CI fails intermittently |
+| round | correctness | low | defect | verified | open | `data/tests/source_files.py:48` | `decode("utf-8")` raises on a non-UTF-8 file name and breaks collection; use `os.fsdecode` |
+| round | common-mistakes | low | defect | verified | open | `data/tests/source_files.py:48` | Same as correctness: decode vs `os.fsdecode` |
+| round | coverage | low | defect | verified | open | `data/tests/source_files.py:48` | Same as correctness: decode vs `os.fsdecode`, with a `bad-\xff.py` test |
+| round | coverage | low | test | verified | open | `data/tests/conftest.py:39` | No end-to-end test that `-n auto` uses the hook and starts half the CPUs |
+| round | correctness | low | cleanup | verified | skipped | `data/tests/test_data_guard.py:21` | Repo fixture, env-var list and helpers duplicated with `test_source_files.py` |
+| round | common-mistakes | low | cleanup | verified | skipped | `data/tests/test_source_files.py:13` | Same duplication, raised separately |
+| round | correctness | low | cleanup | verified | skipped | `data/tests/test_parallel_run.py:11` | Imports the hook and helper from `tests.conftest` |
+| round | correctness | - | docs | verified | skipped | `data/run_tests.sh:21` | A small or noexec `/dev/shm` isn't detected; a docs line was proposed |
+| round | security | - | - | dropped | - | `data/requirements.txt:17` | `pytest-xdist>=3.8` unpinned — dropped: the settled choice, matching pytest |
+| round | security | low | - | dropped | - | `data/run_tests.sh` | SIGKILL leaves the /dev/shm folder — dropped: accepted by the user at piece 1 |
+| round | docs | - | docs | dropped | - | `AGENTS.md` | "Half the CPUs" against CI's 4 — dropped: `ci.yml` explains it |

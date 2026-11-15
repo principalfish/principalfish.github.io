@@ -30,3 +30,5 @@ _2026-11-15 · 8 of 8 pieces done · now: all done, in review_
   `./lint.sh` and a CI lint job.
 - [x] **8/8 Front-door docs** · `3fabbbd7`, added 2026-11-14: the user asked for the README, AGENTS.md and data/README.md to follow the docs guide
   Rewrite the README, AGENTS.md and data/README.md as short front doors, carrying the lint commands.
+- [x] **Review fixes (CI)** · `cfcfa05b`
+  Ignore ruff's executable-bit rules, which only fire off WSL.

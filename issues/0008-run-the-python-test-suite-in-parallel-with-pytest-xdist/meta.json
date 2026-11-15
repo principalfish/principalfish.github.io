@@ -9,7 +9,7 @@
   "gh_issue": 88,
   "build_model": "claude-sonnet-5-5",
   "created": "2026-11-15 12:10",
-  "updated": "2026-11-15 18:59",
+  "updated": "2026-11-15 19:00",
   "done": "2026-11-15 18:59",
   "local": [
     {
@@ -21,12 +21,14 @@
     {
       "kind": "worktree",
       "name": "/home/philiph/workspace/principalfish.github.io/.claude/worktrees/run-the-python-test-suite-in-parallel-with-pytest--3a40c5",
-      "added": "2026-11-15 13:34"
+      "added": "2026-11-15 13:34",
+      "removed": "2026-11-15 19:00"
     },
     {
       "kind": "branch",
       "name": "claude/run-the-python-test-suite-in-parallel-with-pytest--3a40c5",
-      "added": "2026-11-15 13:34"
+      "added": "2026-11-15 13:34",
+      "removed": "2026-11-15 19:00"
     }
   ],
   "pr": 89

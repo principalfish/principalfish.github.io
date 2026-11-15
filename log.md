@@ -96,3 +96,4 @@
 - 2026-11-15 18:57 · run-the-python-test-suite-in-parallel-with-pytest-xdist (0008) · review → ready
 - 2026-11-15 18:57 · run-the-python-test-suite-in-parallel-with-pytest-xdist (0008) · PR #89 description final
 - 2026-11-15 18:59 · run-the-python-test-suite-in-parallel-with-pytest-xdist (0008) · merged → done
+- 2026-11-15 19:00 · run-the-python-test-suite-in-parallel-with-pytest-xdist (0008) · cleanup: removed worktree /home/philiph/workspace/principalfish.github.io/.claude/worktrees/run-the-python-test-suite-in-parallel-with-pytest--3a40c5, branch claude/run-the-python-test-suite-in-parallel-with-pytest--3a40c5

@@ -12,7 +12,7 @@ Rules that no linter can check, such as how booleans are named, guard clauses or
 
 ## Plan
 
-_2026-11-15 · 6 of 8 pieces done · now: piece 7 in progress_
+_2026-11-15 · 7 of 8 pieces done · now: piece 8 in progress_
 
 - [x] **1/8 Pin the tools and add their settings** · `68720459`
   Pin ruff, shellcheck and Biome and add their settings.
@@ -26,7 +26,7 @@ _2026-11-15 · 6 of 8 pieces done · now: piece 7 in progress_
   Clean up the pipeline code without changing behaviour.
 - [x] **6/8 Fix the Biome findings** · `5dd207ae`
   Clean up the JavaScript across every page, checked by hand in the browser.
-- [ ] **7/8 One lint script and CI** · in progress
+- [x] **7/8 One lint script and CI** · `fb509ea7`
   `./lint.sh` and a CI lint job.
-- [ ] **8/8 Front-door docs** · not started, added 2026-11-14: the user asked for the README, AGENTS.md and data/README.md to follow the docs guide
+- [ ] **8/8 Front-door docs** · in progress, added 2026-11-14: the user asked for the README, AGENTS.md and data/README.md to follow the docs guide
   Rewrite the README, AGENTS.md and data/README.md as short front doors, carrying the lint commands.

@@ -81,3 +81,4 @@
 - 2026-11-15 12:09 · add-lint-and-format-checks (0007) · review → ready
 - 2026-11-15 12:09 · add-lint-and-format-checks (0007) · PR #87 description final
 - 2026-11-15 12:10 · run-the-python-test-suite-in-parallel-with-pytest-xdist (0008) · created (build): Run the Python test suite in parallel with pytest-xdist
+- 2026-11-15 12:19 · add-lint-and-format-checks (0007) · merged → done

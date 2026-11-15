@@ -104,7 +104,7 @@ Rejected alternatives:
 
 ## Checkpoints
 - [x] 1. Suite runs in parallel on half the CPUs (4 on CI), temp files in RAM, docs updated
-- [ ] 2. Repo scans list files through git; stray ignored folders no longer fail them
+- [x] 2. Repo scans list files through git; stray ignored folders no longer fail them
 - [ ] 3. Run fails if it changes tracked exported data
 
 ## Verification
@@ -134,4 +134,4 @@ Piece 1 also reports the draft PR's CI "mypy + pytest" step time against today's
 - Piece 2: changed-lines coverage has no figure (coveragerc omits `tests/*`, where every changed line and the new helper live). Accepted by the coverage check: `test_source_files.py` runs the helper against throwaway git repos (ignored folder, `.pytest_cache` stray copies, untracked, deleted-tracked, `under` absolute and relative, merge conflict, not a checkout, missing folder) and against this checkout.
 - Piece 2: the helper has an extra `root` keyword (default `DATA_DIR`) so tests can point it at a throwaway repo; `under` may be absolute or relative to `root`. The skip sets lost `election_data`, `.venv`, `node_modules`, `__pycache__` (all gitignored, checked with `git check-ignore`); `venv` (not ignored), `archive` and `tests` stay. Old and new file sets were identical for every scan (core 320, layout 302, model 169, us 302, importers 62, console 53).
 - Piece 2: built on claude-opus-5-5 (implementation); review fixes on claude-sonnet-5-5, per the user's change of build model.
-
+- Piece 2, approved (user: "Approve, fix it (A)"): the vacuous env-var test was fixed on claude-sonnet-5-5 (mutation proof: without the delenv loop, 1 passed and 11 errors); the light re-check was clean.

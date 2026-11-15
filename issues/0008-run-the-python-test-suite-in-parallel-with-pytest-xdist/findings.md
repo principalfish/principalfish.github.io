@@ -20,5 +20,5 @@
 | round | correctness | - | cleanup | verified | fixed | `data/tests/test_importer_packages.py:26` | MODULES and RUNNABLE each called `python_files(IMPORTERS_DIR)` at import (two git calls per worker) |
 | round | coverage | - | test | verified | fixed | `data/tests/source_files.py:46` | No test for a conflicted file that git lists once per stage |
 | round | coverage | low | test | dropped | - | `test_core_package.py`, `test_model_package_paths.py`, `test_us_importer_packages.py` | No own "more than 100 files" check — dropped: only `test_project_layout.py` had one, and it is kept; the helper's checkout test covers the empty-scan risk |
-| re-check | correctness | low | test | verified | open | `data/tests/test_source_files.py:105` | `test_the_repo_fixture_clears_the_variables_that_point_git_elsewhere` passes whether or not the fixture's delenv loop exists, unless the suite runs under a git hook |
-
+| re-check | correctness | low | test | verified | fixed | `data/tests/test_source_files.py:105` | `test_the_repo_fixture_clears_the_variables_that_point_git_elsewhere` passes whether or not the fixture's delenv loop exists, unless the suite runs under a git hook |
+| manual | user | - | test | - | fixed | `data/tests/test_source_files.py` | User chose option A: a `_git_pointed_elsewhere` fixture sets the five git env vars and `repo` depends on it, so the env-var test fails (every `repo` test errors) if the clearing is removed |

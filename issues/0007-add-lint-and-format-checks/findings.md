@@ -63,3 +63,21 @@ Cost: 5 subagents (correctness, security, coverage, verifier, correctness re-che
 | round | security | low | risk | dropped | - | `.github/workflows/ci.yml:3` | No top-level `permissions:` block — dropped: pre-existing for every job, not made worse here; could be its own hardening task |
 | round | coverage | low | other | dropped | - | `lint.sh:65` | `git ls-files` skips untracked `.sh` files locally — dropped: the header and plan promise tracked scripts |
 | round | coverage | info | other | dropped | - | `.github/workflows/ci.yml:9-35` | The CI job is only proven by the PR run — dropped: the plan says so |
+
+## piece 8 · 2026-11-15 · Bring the front-door docs up to the project-docs guide
+
+Cost: 6 subagents (correctness, security, coverage, verifier, correctness re-check; plus a light correctness check on the EXE-ignore fix) · ~430k tokens · ~8 min
+
+| Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
+|-|-|-|-|-|-|-|-|
+| build | builder | medium | bug | - | fixed | `data/pyproject.toml` | PR CI's new lint job failed: 28 × EXE001 (shebang scripts committed 100644); ruff skips EXE001/EXE002 on WSL so `./lint.sh` passed locally. Planner's fix: `ignore = ["EXE001", "EXE002"]` with a reason, committed separately as cfcfa05b; CI lint now passes |
+| build | builder | low | docs | - | fixed | `AGENTS.md:15` | Old AGENTS.md said `./run_tests.sh <file>` runs one file; run_tests.sh always passes `tests/`, so it ran the whole suite; now documents `python -m pytest tests/<file>` |
+| round | correctness | medium | docs | verified | fixed | `data/docs/database.md:65` | The moved sqlite3 checks read the shell's unset `$DATABASE_PATH` (opening an empty temp DB); the block now loads `.env` first |
+| round | correctness | low | docs | verified | fixed | `AGENTS.md:16` | "a file path adds to it" was wrong (pytest dedupes it); now "doesn't narrow it" |
+| round | correctness | low | docs | verified | fixed | `electionmapslogic/README.md:86` | `../site/vendor/` ambiguous; now "the repo's `site/vendor/`" |
+| round | correctness | low | docs | verified | fixed | `electionmapslogic/README.md:90` | Stale "ERR_REQUIRE_ESM on Node 21" reason (Node 22 here loads later jsdom); dropped, the jsdom 24 pin kept |
+| round | correctness | low | docs | dropped | - | `data/pyproject.toml:27` | Comment over-claimed which EXE rules WSL skips — dropped: already fixed in cfcfa05b |
+| round | correctness | info | other | dropped | - | plan account | Account still described the reverted chmod fix — dropped: not code, corrected |
+| round | security | info | risk | dropped | - | `guesstheyear/app.py:202` | Flask preview binds `0.0.0.0` — dropped: pre-existing, outside the change; possible separate fix (bind 127.0.0.1) |
+| round | coverage | low | other | dropped | - | `data/docs/database.md` | Moved sqlite3 queries not run — dropped: the builder ran them against a backup copy |
+| re-check | correctness | low | docs | verified | open | `data/docs/database.md:69` | With no `.env` (a supported state: DATABASE_PATH has a default), `. ../.env` fails, `$DATABASE_PATH` stays empty and the queries open an empty temp DB; the :76 bullet also assumes a `.env`. Options: fall back to the code default (`DB=${DATABASE_PATH:-~/dbs/elections.db}` after an optional source), or say so in the lead-in |

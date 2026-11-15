@@ -51,5 +51,7 @@ scratch export of the full site.
 - **Stage files by name, never `git add -A`:** exported data files are tracked. If a test
   run or `./check.sh` leaves `electionmaps/data/results/model_output_trends.json` modified,
   something in the suite is writing it: restore it and find the writer, don't commit it.
+  The suite checks this itself (`data/tests/data_guard.py`): a run that changes any file
+  under `electionmaps/data` or `uselectionmaps/data` fails and lists the paths.
 - **A lint suppression carries its reason** (`# noqa: <code> - <why>`,
   `// biome-ignore <rule>: <why>`); there are no per-file ignores or file-wide suppressions.

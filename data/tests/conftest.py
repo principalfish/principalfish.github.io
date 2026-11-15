@@ -18,8 +18,9 @@ from core.config import DatabaseConfig
 from core.db import Database
 from tests.uk_fixtures import WestminsterWorld, copy_database, seed_westminster_world
 
-# The console app, seeded app and saved-run fixtures, shared by the console tests.
-pytest_plugins = ["tests.console_fixtures"]
+# The console app, seeded app and saved-run fixtures, shared by the console tests,
+# and the check that a run leaves the exported data files alone.
+pytest_plugins = ["tests.console_fixtures", "tests.data_guard"]
 
 
 def half_the_cpus() -> int:

@@ -55,6 +55,7 @@
 | round | security | - | - | dropped | - | `data/requirements.txt:17` | `pytest-xdist>=3.8` unpinned — dropped: the settled choice, matching pytest |
 | round | security | low | - | dropped | - | `data/run_tests.sh` | SIGKILL leaves the /dev/shm folder — dropped: accepted by the user at piece 1 |
 | round | docs | - | docs | dropped | - | `AGENTS.md` | "Half the CPUs" against CI's 4 — dropped: `ci.yml` explains it |
-| re-check | correctness | medium | test | verified | open | `data/tests/test_parallel_run.py:111` | The new `-n auto` test asserts `created: N/N workers`, but xdist prints the singular `1/1 worker` when N is 1 (a machine with 2 or 3 CPUs, or a 1-CPU taskset); reproduced with `taskset -c 0,1`. CI (4 vCPU, 2 workers) and this machine (6) pass |
+| re-check | correctness | medium | test | verified | fixed | `data/tests/test_parallel_run.py:111` | The new `-n auto` test asserts `created: N/N workers`, but xdist prints the singular `1/1 worker` when N is 1 (a machine with 2 or 3 CPUs, or a 1-CPU taskset); reproduced with `taskset -c 0,1`. CI (4 vCPU, 2 workers) and this machine (6) pass |
 | re-check | common-mistakes | - | - | - | - | - | clean |
 | re-check | coverage | - | - | - | - | - | clean |
+| manual | user | - | test | - | fixed | `data/tests/test_parallel_run.py:111` | User chose option A: the `-n auto` test matches `created: N/N workers?` with a regex so xdist's singular `1/1 worker` passes; checked with `taskset -c 0`, `0,1` and `0-2`, and a correctness re-check was clean |

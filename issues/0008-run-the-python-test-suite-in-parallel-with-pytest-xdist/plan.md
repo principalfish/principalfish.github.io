@@ -141,4 +141,5 @@ Piece 1 also reports the draft PR's CI "mypy + pytest" step time against today's
 - Piece 3: implementation on claude-sonnet-5-5 (the user's change of build model); correctness and security stay on frontier.
 - Piece 3, approved (user: "Approve, fix them (A)"): the three test findings were fixed on claude-sonnet-5-5; the light re-check was clean.
 - Review 01 fixes (user picked 1, 2 and 3; implementation on claude-sonnet-5-5): test_backup.py parametrize now has `ids=` and `mtime=0`, which fixes the CI collection mismatch on Python 3.12 (whole suite collected under three hash seeds and different timestamps with identical IDs, but only Python 3.14 is installed here, so a 3.12-only difference can't be ruled out by running it); source_files.py decodes names with `os.fsdecode`; new `test_xdist_uses_the_hook_for_n_auto` runs a real `-n auto` subprocess. The light re-check raised one medium on that new test (singular "1/1 worker"); it is awaiting the user's decision.
+- Review 01 fixes committed as a4db4762 (user: "Approve, fix it (A)" for the last standing finding): the `-n auto` test's regex accepts the singular "worker"; the correctness re-check was clean.
 

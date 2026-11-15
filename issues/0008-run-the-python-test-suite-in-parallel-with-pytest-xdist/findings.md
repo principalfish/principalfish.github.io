@@ -22,3 +22,19 @@
 | round | coverage | low | test | dropped | - | `test_core_package.py`, `test_model_package_paths.py`, `test_us_importer_packages.py` | No own "more than 100 files" check — dropped: only `test_project_layout.py` had one, and it is kept; the helper's checkout test covers the empty-scan risk |
 | re-check | correctness | low | test | verified | fixed | `data/tests/test_source_files.py:105` | `test_the_repo_fixture_clears_the_variables_that_point_git_elsewhere` passes whether or not the fixture's delenv loop exists, unless the suite runs under a git hook |
 | manual | user | - | test | - | fixed | `data/tests/test_source_files.py` | User chose option A: a `_git_pointed_elsewhere` fixture sets the five git env vars and `repo` depends on it, so the env-var test fails (every `repo` test errors) if the clearing is removed |
+
+## piece 3 · 2026-11-15 · Fail the run if it changes tracked exported data
+
+| Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
+|-|-|-|-|-|-|-|-|
+| round | correctness | low | defect | verified | fixed | `data/tests/data_guard.py:63` | An unreadable dirty file raised OSError and ended the run in INTERNAL_ERROR; `_file_state` now returns an `unreadable` marker |
+| round | correctness | - | defect | verified | fixed | `data/tests/data_guard.py:59` | A non-UTF-8 file name made the `-z` decode raise; names now go through `os.fsdecode` |
+| round | correctness | - | defect | verified | fixed | `data/tests/data_guard.py:116` | The finish hook ran before pytest's session-fixture teardown on `-x`/Ctrl-C runs; now `trylast=True` |
+| round | correctness | - | cleanup | verified | fixed | `data/tests/data_guard.py:98` | Every CalledProcessError was reported as "not a git checkout"; now "git ls-files failed in <root>" |
+| round | coverage | - | test | verified | fixed | `data/tests/test_data_guard.py` | No test that an already-failed exit status is left alone |
+| round | docs | - | - | - | - | - | clean |
+| round | security | - | - | - | - | - | clean |
+| re-check | coverage | low | test | verified | open | `data/tests/test_data_guard.py:225` | In the "already-failed status is left alone" test the TESTS_FAILED case can't catch a regression; only INTERRUPTED discriminates |
+| re-check | coverage | low | test | verified | open | `data/tests/test_data_guard.py:212` | Nothing covers NO_TESTS_COLLECTED flipping to TESTS_FAILED; only OK is tested |
+| re-check | coverage | - | cleanup | verified | open | `data/tests/test_data_guard.py:255` | `assert state.skipped_because is not None` is redundant with the equality on the next line |
+

@@ -66,3 +66,32 @@ for supported fields, selection rules, and shell transformations.
   entry; the export never fails over it). A malformed file stops the export with a clear error. Delete the Alaska entry once
   the ranked-choice final round is imported.
 - Frontend loader supports both compact and legacy result formats.
+
+## Driving the pages headlessly
+
+`./server.sh` (from the repo root) serves on 8000, but its server dies with the shell
+that spawned it; for an unattended run start one detached instead:
+
+```bash
+(setsid nohup python3 -m http.server 8000 --bind 127.0.0.1 &)
+```
+
+There is no browser on this machine (Playwright's headless shell needs system
+libraries that need sudo). To exercise the real modules, drive them under `jsdom`
+from a scratch dir:
+
+- **Pre-bundle with esbuild.** `package.json` has no `"type": "module"`, so Node loads
+  `electionmapslogic/*.js` as CJS and their `import`s throw. The engine imports
+  `d3.v7.esm.js` and `topojson-client.v3.esm.js` relative to the shipped bundle, so
+  point those at the repo's `site/vendor/` with a resolve plugin.
+- **Inject `shell.html`** (and the page's fragments) before importing
+  the bundle. `shell-loader.js` does this at runtime; without it `renderLeftBar()`
+  renders an empty nav, which reads as a regression but is a harness bug.
+- **Use jsdom 24**, the version in `node_modules`.
+- **Stub what jsdom lacks:** set `navigator` with `Object.defineProperty` (it is
+  getter-only), stub `ResizeObserver` and `IntersectionObserver`, give
+  `SVGSVGElement` `width`/`height`/`viewBox` `baseVal`s for d3-zoom, and remember jsdom
+  has no `innerText`.
+
+Check a second parliament (e.g. Westminster) alongside the one you changed: it catches
+both harness bugs and accidental cross-page regressions from the shared engine.

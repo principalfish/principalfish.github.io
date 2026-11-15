@@ -42,12 +42,40 @@ Beyond those:
 The US auto import is the review queue described in
 [US polls and forecasts](us-polls-and-forecasts.md#review-queue); the NYT results
 flow is in [US results from NYT](us-results.md). The Westminster catch-up queue is
-walked through in [Import polls](../README.md#import-polls-wikipedia-driven).
+walked through in [Import Westminster polls](#import-westminster-polls).
 
 **Export when done** works differently from the Export page: on the Westminster form
 it refreshes only the current simulation file (`--current-simulation`), and on the
 Holyrood and US forms it runs the full export. It follows a successful run only, and
 never a dry run.
+
+## Import Westminster polls
+
+Open **Westminster**, then **Import poll** (`/westminster/polls/import`), and use
+**Catch Up from Wikipedia**:
+
+1. Optionally set **Only polls ending on or after**. The cutoff includes polls
+   whose fieldwork ends on that date. Leaving it blank uses the latest stored
+   Westminster poll's fieldwork end date; if none is stored, every row in the
+   fetched index is in the window. Set an earlier date to backfill older gaps.
+2. Choose whether to keep **Run the UNS model and export once the queue is
+   finished** checked. It runs once at the end if at least one poll was imported.
+3. Click **Catch Up from Wikipedia**. The console fetches the Westminster
+   voting-intention index, excludes polls already stored, and presents missing
+   polls oldest first for review and import or skip (**Approve & Import**,
+   **Skip this poll**, or **Abandon queue**).
+4. Check the summary for failed imports, rows without an importer, and unreadable
+   Wikipedia rows.
+
+The same page also has **Import Poll**, for a single poll: pick the pollster, give the
+poll's source URL and **Preview Import**, then **Confirm Import**.
+
+The queue lives in memory. Restarting the console, or a code reload under
+`CONSOLE_DEBUG=1`, discards a catch-up in progress; confirmed polls remain stored.
+
+If the catch-up skips everything, check its summary's window and already-imported
+count: set an earlier cutoff to include older missing polls, and read its failed,
+no-importer and unreadable-row reports.
 
 ## Export
 

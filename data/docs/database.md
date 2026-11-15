@@ -60,6 +60,34 @@ sqlite3 /tmp/elections.restored.db "PRAGMA integrity_check"
 A backup of the full database takes about 20 s (most of it gzip and the integrity
 check); the archive is about 136 MB.
 
+## Quick checks and troubleshooting
+
+From `data/`, a few counts show the database is the one you expect. The first two lines
+pick the database the pipeline uses: `DATABASE_PATH` from `.env` if there is one, else
+the shell's, else the default:
+
+```bash
+[ -f ../.env ] && { set -a; . ../.env; set +a; }
+DB=${DATABASE_PATH:-$HOME/dbs/elections.db}; echo "$DB"
+sqlite3 "$DB" "SELECT count(*) FROM maps;"
+sqlite3 "$DB" "SELECT count(*) FROM elections;"
+sqlite3 "$DB" "SELECT count(*) FROM polls;"
+sqlite3 "$DB" "SELECT type, count(*) FROM elections GROUP BY type ORDER BY type;"
+```
+
+- **Wrong database or empty results:** check the path `echo "$DB"` printed. With a
+  `.env`, its `DATABASE_PATH` wins over the shell's (see above); without one, the
+  pipeline uses the shell's `DATABASE_PATH` or `~/dbs/elections.db`.
+- **Database is locked:** SQLite uses WAL journaling; make sure no other writer (a
+  model run, say) is mid-transaction, and never open the live database off a network
+  or synced mount.
+- **Many `0` regional poll rows:** some importers default missing regional values to
+  `0.0` for some source formats. Audit them directly:
+
+```bash
+sqlite3 "$DB" "SELECT poll_id, COUNT(*) AS zero_rows FROM poll_rows WHERE percentage = 0 GROUP BY poll_id ORDER BY zero_rows DESC LIMIT 25;"
+```
+
 ## Rebuild the database from source data
 
 `scripts/rebuild_database.py` re-imports **every** base dataset — parties, maps,

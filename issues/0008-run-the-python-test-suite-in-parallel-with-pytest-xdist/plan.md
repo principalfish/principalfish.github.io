@@ -125,3 +125,6 @@ Piece 1 also reports the draft PR's CI "mypy + pytest" step time against today's
 - Don't touch the live database (`/home/philiph/dbs/elections.db`); nothing here needs it.
 - Stage files explicitly; never `git add -A` (the tracked trend JSON must never ride along).
 - After merge (planner chat): add `-n auto` and the RAM `--basetemp` folder to the planner branch's `tools/coverage-changed.sh`, only when xdist is importable.
+- Piece 1: changed-lines coverage has no figure: the coverage tool's coveragerc omits `tests/*`, where all of the piece's Python lives (conftest hook, new test module), and `run_tests.sh` is shell. Accepted by the coverage check: `test_parallel_run.py` calls the hook and helper directly and drives a copy of `run_tests.sh` against a stub python (RAM folder, cleanup on exit/INT/TERM, exit status, `TESTS_TMP_ON_DISK`).
+- Piece 1: the hook defers to xdist only when `PYTEST_XDIST_AUTO_NUM_WORKERS` parses as an int (review fix), matching xdist 3.8's own parse; junk or empty means half the CPUs.
+- Piece 1: with `-q` xdist prints no "created: N/N workers" line; run without `-q` to see it.

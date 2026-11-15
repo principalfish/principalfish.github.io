@@ -3,14 +3,14 @@
   "slug": "run-the-python-test-suite-in-parallel-with-pytest-xdist",
   "title": "Run the Python test suite in parallel with pytest-xdist",
   "mode": "build",
-  "state": "ready",
+  "state": "done",
   "branch": "claude/run-the-python-test-suite-in-parallel-with-pytest--3a40c5",
   "base": "master",
   "gh_issue": 88,
   "build_model": "claude-sonnet-5-5",
   "created": "2026-11-15 12:10",
-  "updated": "2026-11-15 18:57",
-  "done": null,
+  "updated": "2026-11-15 18:59",
+  "done": "2026-11-15 18:59",
   "local": [
     {
       "kind": "session",

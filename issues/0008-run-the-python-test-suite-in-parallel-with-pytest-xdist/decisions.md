@@ -12,6 +12,8 @@
 - Pytest's temp files go in RAM: when `/dev/shm` exists, run_tests.sh points `--basetemp` at a fresh per-run folder under it and deletes it on exit; an env var keeps them on disk instead (2026-11-15).
 - Piece 2: helper `data/tests/source_files.py` with `python_files(under=None)`; the sub-folder scans (`test_importer_packages.py:27/32`, `test_console_templates.py:339`) switch too ("Switch them too"); no git or not a checkout fails loudly ("Fail loudly"); no caching (2026-11-15).
 - Build on Sonnet from piece 2's review fixes on: the builder session and implementation subagents use `claude-sonnet-5-5`; correctness and security checks stay on frontier ("downgrade the builder to sonnet", then "Implementation too") (2026-11-15).
+- Piece 3: the guard is a plugin module `data/tests/data_guard.py`, registered through `pytest_plugins` ("Plugin module"). A hit prints the changed paths in the terminal summary and sets the session's exit status to failed, with no fake test ("Exit status + summary"). With no git or no checkout it warns and skips, as planned ("Warn and skip") (2026-11-15).
+- A git_guard block caused only by a parse failure may be retried in a simpler form of the same allowed command; policy blocks still stop ("Parse failures may retry") (2026-11-15).
 
 ## Open
 

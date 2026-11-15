@@ -24,3 +24,15 @@ All runs with `-p no:cacheprovider`. Every run left `git status` clean.
 - Coverage on a 292-test subset (jobs, backup, trends, console westminster): identical XML, 6,434 / 22,682 lines covered, serial and `-n auto`. Full `-n auto` coverage: 22,116 / 22,682 lines.
 - Serial wall time exceeds CPU time by about 140s (sleeps in timeout tests, SQLite file I/O), so serial runs leave a core 27% idle.
 - CI (`ubuntu-latest`, 4 vCPU): the "mypy + pytest" step took 5m04s on the #87 branch run. `-n auto` there means 4 workers (no `psutil`, so `os.cpu_count()`).
+
+## Later runs (the machine was shared from about 12:45: another repo's coverage run, load 3–13)
+
+| Run | Wall | CPU | Load at the time |
+|-|-|-|-|
+| `-n 6` (CPU/2) | 3m29s | 266% | ≈1–4 |
+| `-n 2` | 10m16s | 72% | ≈3–4, another repo's coverage running. Not trusted. |
+| `-n 6`, `TMPDIR=/dev/shm` | 3m28s | 363% | ≈10–13 |
+
+Subset (westminster/us model + all console tests, 1,742 tests), back to back: serial 4m49s at 38% CPU · `-n 2` 3m48s · `-n 4` 1m18s.
+
+**Temp files are the hidden bottleneck.** Serial runs leave the CPU 27–62% idle. Every test builds a fresh SQLite file under pytest's temp dir, and `/tmp` here is the ext4 root disk, where fsync is slow under WSL2. `test_console_westminster.py` + `test_console_polls.py` (105 tests), serial: 46.6s with the temp dir on disk, 19.7s with `--basetemp` on `/dev/shm` (tmpfs), even though load had risen from 7 to 13. The full `-n 6` run took the same time on tmpfs at load 10–13 as it did on disk at load 1–4. A full run writes about 350 MB of temp files on tmpfs, and pytest keeps the last 3 runs. `/dev/shm` is 3.9 GB; the machine has 7 GB of RAM.

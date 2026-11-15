@@ -7,9 +7,9 @@
   "branch": "claude/run-the-python-test-suite-in-parallel-with-pytest--3a40c5",
   "base": "master",
   "gh_issue": 88,
-  "build_model": "claude-opus-5-5",
+  "build_model": "claude-sonnet-5-5",
   "created": "2026-11-15 12:10",
-  "updated": "2026-11-15 14:02",
+  "updated": "2026-11-15 17:04",
   "done": null,
   "local": [
     {

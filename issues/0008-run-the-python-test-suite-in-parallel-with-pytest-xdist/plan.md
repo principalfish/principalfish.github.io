@@ -1,6 +1,6 @@
 # Plan: run-the-python-test-suite-in-parallel-with-pytest-xdist
 
-**Build model:** claude-opus-5-5. The pieces are small, but they touch test infrastructure every later run depends on (pytest hook ordering, controller-vs-worker behaviour, shell quoting under shellcheck), where a subtle mistake hides failures.
+**Build model:** claude-sonnet-5-5 from piece 2's review fixes on, by the user's choice (2026-11-15: "downgrade the builder to sonnet", then "Implementation too"). Piece 1 and piece 2's first implementation were built on claude-opus-5-5. Correctness and security checks stay on frontier as the stronger reviewer.
 
 ## Context
 
@@ -130,3 +130,4 @@ Piece 1 also reports the draft PR's CI "mypy + pytest" step time against today's
 - Piece 1: with `-q` xdist prints no "created: N/N workers" line; run without `-q` to see it.
 - Piece 1, accepted at review (user: "Tried it, approve"): a SIGKILLed run leaves its `/dev/shm/data-tests.*` folder until reboot; both the INT and TERM traps stay in `run_tests.sh` (TERM may be redundant but states the intent).
 - 2026-11-15 (planner): piece 2 decisions from the user. Helper at `data/tests/source_files.py`, `python_files(under=None)`, no caching. The sub-folder scans (`test_importer_packages.py:27/32`, `test_console_templates.py:339`) switch to it too ("Switch them too"). With no git, or no checkout, the scans fail loudly rather than skip ("Fail loudly").
+- 2026-11-15 (planner): the builder session and implementation move to Sonnet (`claude-sonnet-5-5`) from piece 2's review fixes on. The user said "downgrade the builder to sonnet", then chose "Implementation too". Correctness and security checks stay on frontier.

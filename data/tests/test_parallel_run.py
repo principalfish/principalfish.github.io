@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -77,6 +78,39 @@ def test_auto_workers_defer_to_the_environment(
     for ignored_by_xdist in ["", "abc"]:
         monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", ignored_by_xdist)
         assert pytest_xdist_auto_num_workers(pytestconfig) == 5
+
+
+def test_xdist_uses_the_hook_for_n_auto(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """End to end: a real ``-n auto`` run starts half the CPUs' worth of workers."""
+    pytest.importorskip("xdist")
+    (tmp_path / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+    # Only the hook is imported, so none of this suite's plugins load into the run.
+    (tmp_path / "conftest.py").write_text(
+        "from tests.conftest import pytest_xdist_auto_num_workers\n"
+        '__all__ = ["pytest_xdist_auto_num_workers"]\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "test_trivial.py").write_text(
+        "def test_it_passes() -> None:\n    assert True\n", encoding="utf-8"
+    )
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+    monkeypatch.delenv("PYTEST_ADDOPTS", raising=False)
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "pytest", "-n", "auto", "-p", "no:cacheprovider"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    expected = half_the_cpus()
+    # xdist prints the singular "worker" when there is only one.
+    created = re.search(rf"created: {expected}/{expected} workers?\b", completed.stdout)
+    assert created is not None, completed.stdout
 
 
 def test_run_tests_passes_n_auto_before_the_callers_args() -> None:

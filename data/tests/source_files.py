@@ -8,6 +8,7 @@ files that are part of the tree (tracked, or new and not ignored) and nothing el
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -44,6 +45,7 @@ def python_files(under: Path | None = None, *, root: Path = DATA_DIR) -> list[Pa
         check=True,
     ).stdout
     # git prints paths relative to the folder it runs in. A file in conflict is listed
-    # once per stage, hence the set.
-    names = {name for name in listed.decode("utf-8").split("\0") if name}
+    # once per stage, hence the set. File names are bytes on Linux and need not be
+    # UTF-8; fsdecode never raises and round-trips them in the path join below.
+    names = {os.fsdecode(name) for name in listed.split(b"\0") if name}
     return sorted(path for name in names if (path := folder / name).is_file())

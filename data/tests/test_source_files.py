@@ -135,6 +135,18 @@ def test_a_file_in_merge_conflict_is_listed_once(repo: Path) -> None:
     assert found == [repo / "pkg" / "kept.py", repo / "top.py"]
 
 
+def test_it_lists_a_file_whose_name_is_not_utf8(repo: Path) -> None:
+    """File names are bytes; one that is not UTF-8 must not break the listing."""
+    odd = repo / os.fsdecode(b"bad-\xff.py")
+    try:
+        _write(odd)
+    except (OSError, UnicodeEncodeError):
+        pytest.skip("the filesystem refuses a non-UTF-8 file name")
+    _git(repo, "add", ".")
+
+    assert odd in python_files(root=repo)
+
+
 def test_it_fails_loudly_outside_a_git_checkout(repo: Path) -> None:
     outside = repo.parent / "plain"
     _write(outside / "loose.py")

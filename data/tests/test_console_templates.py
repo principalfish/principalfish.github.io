@@ -12,6 +12,7 @@ import pytest
 from flask import Flask, render_template_string
 
 from tests.console_fixtures import select_block
+from tests.source_files import python_files
 
 UNCERTAINTY = "/westminster/uncertainty"
 NAV_LINKS = [
@@ -336,7 +337,7 @@ def _classes_used_by_the_console() -> set[str]:
     for script in (CONSOLE_DIR / "static").glob("*.js"):
         for _, text in JS_STRING.findall(script.read_text(encoding="utf-8")):
             used.update(WORD.findall(text))
-    for module in CONSOLE_DIR.rglob("*.py"):
+    for module in python_files(CONSOLE_DIR):
         for node in ast.walk(ast.parse(module.read_text(encoding="utf-8"))):
             if isinstance(node, ast.Constant) and isinstance(node.value, str):
                 used.update(WORD.findall(node.value))

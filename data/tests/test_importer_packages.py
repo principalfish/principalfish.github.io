@@ -18,18 +18,20 @@ from console import paths
 from importers.polls.westminster.registry import IMPORTERS
 from scripts import rebuild_database
 from tests.layout_helpers import leftover_files
+from tests.source_files import python_files
 
 DATA_DIR = Path(__file__).resolve().parent.parent
 IMPORTERS_DIR = DATA_DIR / "importers"
 
+IMPORTER_SOURCES = python_files(IMPORTERS_DIR)
 MODULES = sorted(
     ".".join(path.relative_to(DATA_DIR).with_suffix("").parts)
-    for path in IMPORTERS_DIR.rglob("*.py")
+    for path in IMPORTER_SOURCES
     if path.name != "__init__.py"
 )
 RUNNABLE = sorted(
     path.relative_to(DATA_DIR)
-    for path in IMPORTERS_DIR.rglob("*.py")
+    for path in IMPORTER_SOURCES
     if '__name__ == "__main__"' in path.read_text(encoding="utf-8")
 )
 MOVED_AWAY = [

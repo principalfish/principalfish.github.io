@@ -13,9 +13,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tests.source_files import python_files
+
 DATA_DIR = Path(__file__).resolve().parent.parent
 ARCHIVE_DIR = DATA_DIR / "archive"
-SKIPPED_DIRS = {"archive", "election_data", ".venv", "venv", "__pycache__"}
+# python_files() already skips the gitignored virtualenvs and caches; a plain venv/
+# folder is not ignored and is skipped here.
+SKIPPED_DIRS = {"archive", "venv"}
 # The only mypy sections for our own modules: a Flask stub artifact, not an import path.
 LOCAL_MYPY_SECTIONS = {
     "mypy-console.home",
@@ -132,13 +136,13 @@ def test_no_live_code_adjusts_sys_path() -> None:
     """
     sources = [
         path
-        for path in DATA_DIR.rglob("*.py")
+        for path in python_files()
         if not SKIPPED_DIRS & set(path.relative_to(DATA_DIR).parts)
     ]
     assert len(sources) > 100, "the scan found too few files to be looking at data/"
     offenders = [
         f"{path.relative_to(DATA_DIR)}:{line}"
-        for path in sorted(sources)
+        for path in sources
         for line in sys_path_uses(path.read_text(encoding="utf-8"))
     ]
     assert offenders == []

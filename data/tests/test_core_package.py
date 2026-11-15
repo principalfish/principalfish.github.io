@@ -18,12 +18,15 @@ import pytest
 
 from core import config
 from tests.layout_helpers import leftover_files
+from tests.source_files import python_files
 
 DATA_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = DATA_DIR.parent
 
 MOVED = ["schema", "db", "config", "backup", "electoral_votes"]
-SKIPPED_DIRS = {"election_data", ".venv", "venv", "node_modules", ".git", "__pycache__"}
+# The virtualenvs, caches and node_modules are gitignored, so python_files() skips them;
+# a plain venv/ folder is not ignored and is skipped here.
+SKIPPED_DIRS = {"venv"}
 PATCHING_CALLS = {
     "setattr",
     "delattr",
@@ -39,11 +42,11 @@ DYNAMIC_IMPORTS = {"import_module", "__import__"}
 
 def _sources() -> list[Path]:
     """Every Python file under ``data/``, the archive included, virtualenvs excluded."""
-    return sorted(
+    return [
         path
-        for path in DATA_DIR.rglob("*.py")
+        for path in python_files()
         if not SKIPPED_DIRS & set(path.relative_to(DATA_DIR).parts)
-    )
+    ]
 
 
 def bare_imports(source: str) -> list[str]:

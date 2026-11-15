@@ -22,6 +22,7 @@ from models.westminster import (
     westminster_validation_inputs,
 )
 from tests.layout_helpers import leftover_files
+from tests.source_files import python_files
 
 DATA_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = DATA_DIR.parent
@@ -147,9 +148,9 @@ def test_each_westminster_script_still_runs_by_path(
 
 def test_no_model_or_script_module_names_the_old_packages() -> None:
     offenders: list[str] = []
-    for path in sorted(DATA_DIR.rglob("*.py")):
+    for path in python_files():
         relative = path.relative_to(DATA_DIR)
-        if {"archive", "election_data", ".venv", "tests"} & set(relative.parts):
+        if {"archive", "tests"} & set(relative.parts):
             continue
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.ImportFrom) and node.module:

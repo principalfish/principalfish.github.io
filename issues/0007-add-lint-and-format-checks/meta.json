@@ -9,7 +9,7 @@
   "gh_issue": 86,
   "build_model": null,
   "created": "2026-11-14 06:57",
-  "updated": "2026-11-15 12:19",
+  "updated": "2026-11-15 12:20",
   "done": "2026-11-15 12:19",
   "local": [
     {
@@ -22,12 +22,14 @@
     {
       "kind": "worktree",
       "name": "/home/philiph/workspace/principalfish.github.io/.claude/worktrees/add-lint-and-format-checks-15b52f",
-      "added": "2026-11-14 07:16"
+      "added": "2026-11-14 07:16",
+      "removed": "2026-11-15 12:20"
     },
     {
       "kind": "branch",
       "name": "claude/add-lint-and-format-checks-15b52f",
-      "added": "2026-11-14 07:16"
+      "added": "2026-11-14 07:16",
+      "removed": "2026-11-15 12:20"
     }
   ],
   "pr": 87

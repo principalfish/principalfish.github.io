@@ -83,3 +83,4 @@
 - 2026-11-15 12:10 · run-the-python-test-suite-in-parallel-with-pytest-xdist (0008) · created (build): Run the Python test suite in parallel with pytest-xdist
 - 2026-11-15 12:19 · add-lint-and-format-checks (0007) · merged → done
 - 2026-11-15 12:19 · add-lint-and-format-checks (0007) · session local_6f405315-09d0-4980-937c-86eb98187dae removed
+- 2026-11-15 12:20 · add-lint-and-format-checks (0007) · cleanup: removed worktree /home/philiph/workspace/principalfish.github.io/.claude/worktrees/add-lint-and-format-checks-15b52f, branch claude/add-lint-and-format-checks-15b52f

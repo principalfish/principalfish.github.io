@@ -6,9 +6,10 @@ overview and setup; each area's README holds its detail, and
 
 ## Checks
 
-Run from the repo root, lint first:
+Run `./check.sh` from the repo root before a commit: ruff, Biome, shellcheck, strict
+mypy, pytest, Vitest, each step run even if an earlier one fails. `--lint-only` skips the
+tests, `--fix` applies lint fixes first, and `-- ARGS` goes to pytest. The suites alone:
 
-    ./lint.sh                   # ruff, Biome, shellcheck; ./lint.sh --fix applies fixes first
     cd data && ./run_tests.sh   # strict mypy (gates the run), then pytest
     npm test                    # Vitest
 
@@ -45,5 +46,8 @@ scratch export of the full site.
 - **There is no browser on this machine.** To check the maps engine, drive it under jsdom as
   [the engine README](electionmapslogic/README.md#driving-the-pages-headlessly) describes;
   its stubs and traps have each bitten before.
+- **Stage files by name, never `git add -A`:** exported data files are tracked. If a test
+  run or `./check.sh` leaves `electionmaps/data/results/model_output_trends.json` modified,
+  something in the suite is writing it: restore it and find the writer, don't commit it.
 - **A lint suppression carries its reason** (`# noqa: <code> - <why>`,
   `// biome-ignore <rule>: <why>`); there are no per-file ignores or file-wide suppressions.

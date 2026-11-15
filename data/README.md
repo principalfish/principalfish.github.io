@@ -41,7 +41,7 @@ pip install -r requirements.txt
 pip install --no-deps -e . --config-settings editable_mode=compat
 ```
 
-`requirements.txt` also installs the lint tools `../lint.sh` uses (ruff and
+`requirements.txt` also installs the lint tools `../check.sh` uses (ruff and
 shellcheck). An existing venv picks up new requirements with
 `./election_data/bin/pip install -r requirements.txt`.
 

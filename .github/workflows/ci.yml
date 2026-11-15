@@ -23,7 +23,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      # lint.sh takes ruff and shellcheck from data/election_data or data/.venv,
+      # check.sh takes ruff and shellcheck from data/election_data or data/.venv,
       # and Biome from node_modules.
       - name: Install dependencies
         run: |
@@ -32,7 +32,7 @@ jobs:
           npm ci
 
       - name: ruff, Biome, shellcheck
-        run: ./lint.sh
+        run: ./check.sh --lint-only
 
   data:
     name: Python pipeline (mypy + pytest)

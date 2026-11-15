@@ -1,18 +1,24 @@
 #!/usr/bin/env bash
-# Lint and format checks for the whole repository.
+# Lint, format and test checks for the whole repository.
 #
-#   ./lint.sh          check everything; exit non-zero if any step fails
-#   ./lint.sh --fix    apply the safe fixes and formatting first, then check
-#   ./lint.sh --help   show this help
+#   ./check.sh                 run all six steps; exit non-zero if any fails
+#   ./check.sh --fix           apply the safe fixes and formatting first, then check
+#   ./check.sh --lint-only     the four lint steps only (no tests)
+#   ./check.sh -- ARGS...      pass ARGS to pytest, e.g. -- -k model_outputs -q
+#   ./check.sh --help          show this help
 #
-# Steps: ruff check and ruff format --check (data/ and guesstheyear/), biome ci
-# (all tracked JavaScript), and shellcheck (tracked shell scripts outside
-# data/archive). Every step runs even when an earlier one fails; the failed
-# steps are named at the end.
+# Steps, in order: ruff check and ruff format --check (data/ and guesstheyear/),
+# biome ci (all tracked JavaScript), shellcheck (tracked shell scripts outside
+# data/archive), mypy + pytest (data/run_tests.sh, which skips pytest when mypy
+# fails), and vitest (npm test). Every step runs even when an earlier one fails;
+# the failed steps are named at the end.
 #
-# ruff and shellcheck come from the data virtualenv (data/election_data, or
-# data/.venv); Biome comes from node_modules.
+# ruff, shellcheck, mypy and pytest come from the data virtualenv
+# (data/election_data, or data/.venv); Biome and Vitest come from node_modules.
 set -euo pipefail
+# pytest turns Ctrl-C into an ordinary failure, so stop here rather than run
+# the next step.
+trap 'echo "Interrupted." >&2; exit 130' INT
 cd "$(dirname "$0")"
 
 usage() {
@@ -21,19 +27,32 @@ usage() {
 }
 
 fix=false
-for arg in "$@"; do
-	case "$arg" in
+lint_only=false
+PYTEST_ARGS=()
+while (($#)); do
+	case "$1" in
 	--fix) fix=true ;;
+	--lint-only) lint_only=true ;;
 	-h | --help)
 		usage
 		exit 0
 		;;
+	--)
+		shift
+		PYTEST_ARGS=("$@")
+		break
+		;;
 	*)
-		echo "Unknown argument: $arg (see ./lint.sh --help)" >&2
+		echo "Unknown argument: $1 (see ./check.sh --help)" >&2
 		exit 2
 		;;
 	esac
+	shift
 done
+if [[ "$lint_only" == true ]] && ((${#PYTEST_ARGS[@]})); then
+	echo "Arguments after -- go to pytest, which --lint-only skips (see ./check.sh --help)" >&2
+	exit 2
+fi
 
 if [[ -x ./data/election_data/bin/python ]]; then
 	VENV=./data/election_data
@@ -56,6 +75,10 @@ for tool in "$RUFF" "$SHELLCHECK"; do
 done
 if [[ ! -x "$BIOME" ]]; then
 	echo "Error: $BIOME not found. Install it with: npm ci" >&2
+	missing=true
+fi
+if [[ "$lint_only" == false ]] && ! command -v npm >/dev/null; then
+	echo "Error: npm not found. Install Node.js to run the Vitest step." >&2
 	missing=true
 fi
 if [[ "$missing" == true ]]; then
@@ -88,10 +111,18 @@ run_step "ruff check" "$RUFF" check "${PYTHON_DIRS[@]}"
 run_step "ruff format" "$RUFF" format --check "${PYTHON_DIRS[@]}"
 run_step "biome" "$BIOME" ci --error-on-warnings .
 run_step "shellcheck" "$SHELLCHECK" "${SHELL_SCRIPTS[@]}"
+if [[ "$lint_only" == false ]]; then
+	run_step "mypy + pytest" ./data/run_tests.sh "${PYTEST_ARGS[@]}"
+	run_step "vitest" npm test
+fi
 
 if ((${#failed[@]})); then
 	printf -v joined '%s, ' "${failed[@]}"
 	echo "Failed: ${joined%, }" >&2
 	exit 1
 fi
-echo "All lint checks passed."
+if [[ "$lint_only" == true ]]; then
+	echo "All lint checks passed."
+else
+	echo "All checks passed."
+fi

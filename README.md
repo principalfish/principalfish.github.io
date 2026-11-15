@@ -31,12 +31,15 @@ git config blame.ignoreRevsFile .git-blame-ignore-revs
 cd data && ./election_data/bin/python server.py   # data console on 127.0.0.1:5055
 ```
 
-Every check, from the repo root:
+Before a commit, run every check from the repo root:
 
 ```bash
-./lint.sh                  # ruff, Biome and shellcheck (--fix applies the fixes first)
-cd data && ./run_tests.sh  # strict mypy, then pytest
-npm test                   # front-end tests (Vitest)
+./check.sh                 # lint, strict mypy, pytest and Vitest
+./check.sh --lint-only     # the fast loop: ruff, Biome and shellcheck
+./check.sh --fix           # apply the lint fixes first, then check
+./check.sh -- -k name -q   # everything after -- goes to pytest
+cd data && ./run_tests.sh  # the Python suite alone
+npm test                   # the front-end suite alone (Vitest)
 ```
 
 After editing anything under `electionmapslogic/`, rebuild the bundles with
@@ -48,8 +51,8 @@ GitHub Pages serves `master` as committed: there is no build at deploy, so the
 minified bundles, vendored libraries and exported map data are all committed. The
 data console's **Export** page, or `export/export_elections.py`, writes the maps'
 data files into the repo; commit and push them to publish. CI
-(`.github/workflows/ci.yml`) runs `./lint.sh`, the Python suite and Vitest, and fails
-if a committed bundle is out of date with its source.
+(`.github/workflows/ci.yml`) runs `./check.sh --lint-only`, the Python suite and Vitest in
+separate jobs, and fails if a committed bundle is out of date with its source.
 
 ## More
 

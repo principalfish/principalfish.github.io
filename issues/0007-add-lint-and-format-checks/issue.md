@@ -12,7 +12,7 @@ Rules that no linter can check, such as how booleans are named, guard clauses or
 
 ## Plan
 
-_2026-11-15 · 9 of 9 pieces done · now: all done, in review (draft PR #87)_
+_2026-11-15 · 9 of 9 pieces done · now: PR #87 ready_
 
 - [x] **1/9 Pin the tools and add their settings** · `68720459`
   Pin ruff, shellcheck and Biome and add their settings.

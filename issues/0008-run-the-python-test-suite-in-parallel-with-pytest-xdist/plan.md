@@ -103,7 +103,7 @@ Rejected alternatives:
      - The guard is skipped on xdist workers.
 
 ## Checkpoints
-- [ ] 1. Suite runs in parallel on half the CPUs (4 on CI), temp files in RAM, docs updated
+- [x] 1. Suite runs in parallel on half the CPUs (4 on CI), temp files in RAM, docs updated
 - [ ] 2. Repo scans list files through git; stray ignored folders no longer fail them
 - [ ] 3. Run fails if it changes tracked exported data
 
@@ -128,3 +128,4 @@ Piece 1 also reports the draft PR's CI "mypy + pytest" step time against today's
 - Piece 1: changed-lines coverage has no figure: the coverage tool's coveragerc omits `tests/*`, where all of the piece's Python lives (conftest hook, new test module), and `run_tests.sh` is shell. Accepted by the coverage check: `test_parallel_run.py` calls the hook and helper directly and drives a copy of `run_tests.sh` against a stub python (RAM folder, cleanup on exit/INT/TERM, exit status, `TESTS_TMP_ON_DISK`).
 - Piece 1: the hook defers to xdist only when `PYTEST_XDIST_AUTO_NUM_WORKERS` parses as an int (review fix), matching xdist 3.8's own parse; junk or empty means half the CPUs.
 - Piece 1: with `-q` xdist prints no "created: N/N workers" line; run without `-q` to see it.
+- Piece 1, accepted at review (user: "Tried it, approve"): a SIGKILLed run leaves its `/dev/shm/data-tests.*` folder until reboot; both the INT and TERM traps stay in `run_tests.sh` (TERM may be redundant but states the intent).

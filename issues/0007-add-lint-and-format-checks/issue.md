@@ -12,7 +12,7 @@ Rules that no linter can check, such as how booleans are named, guard clauses or
 
 ## Plan
 
-_2026-11-15 · 8 of 9 pieces done · now: piece 9 (draft PR #87)_
+_2026-11-15 · 9 of 9 pieces done · now: all done, in review (draft PR #87)_
 
 - [x] **1/9 Pin the tools and add their settings** · `68720459`
   Pin ruff, shellcheck and Biome and add their settings.
@@ -30,7 +30,7 @@ _2026-11-15 · 8 of 9 pieces done · now: piece 9 (draft PR #87)_
   `./lint.sh` and a CI lint job.
 - [x] **8/9 Front-door docs** · `3fabbbd7`, added 2026-11-14: the user asked for the README, AGENTS.md and data/README.md to follow the docs guide
   Rewrite the README, AGENTS.md and data/README.md as short front doors, carrying the lint commands.
-- [ ] **9/9 One check script for everything** · added 2026-11-15: the user asked for a single `check.sh` like the other repos
+- [x] **9/9 One check script for everything** · `37f550fd`, added 2026-11-15: the user asked for a single `check.sh` like the other repos
   Rename `lint.sh` to `check.sh` and have it run mypy, pytest and Vitest after the linters.
 - [x] **Review fixes (CI)** · `cfcfa05b`
   Ignore ruff's executable-bit rules, which only fire off WSL.

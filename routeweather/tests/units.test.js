@@ -1,9 +1,21 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  formatDistance, formatSpeed, formatTemp, formatPrecip, formatElevation, formatWind,
-  kmhToSpeed, speedToKmh, isValidSpeedKmh, MISSING,
-  asUnits, isCustomised, resolveUnits, UNIT_CHOICES, UNIT_LABELS,
+  formatDistance,
+  formatSpeed,
+  formatTemp,
+  formatPrecip,
+  formatElevation,
+  formatWind,
+  kmhToSpeed,
+  speedToKmh,
+  isValidSpeedKmh,
+  MISSING,
+  asUnits,
+  isCustomised,
+  resolveUnits,
+  UNIT_CHOICES,
+  UNIT_LABELS,
 } from "../js/units.js";
 import { SPEED_RANGE_KMH } from "../js/config.js";
 
@@ -13,10 +25,18 @@ const IMPERIAL_OVERRIDDEN = resolveUnits("imperial", { wind: "kmh", rain: "mm", 
 
 describe("resolveUnits", () => {
   it("gives each preset's defaults", () => {
-    expect(resolveUnits("metric"))
-      .toEqual({ system: "metric", wind: "kmh", rain: "mm", temp: "c" });
-    expect(resolveUnits("imperial"))
-      .toEqual({ system: "imperial", wind: "mph", rain: "in", temp: "f" });
+    expect(resolveUnits("metric")).toEqual({
+      system: "metric",
+      wind: "kmh",
+      rain: "mm",
+      temp: "c",
+    });
+    expect(resolveUnits("imperial")).toEqual({
+      system: "imperial",
+      wind: "mph",
+      rain: "in",
+      temp: "f",
+    });
   });
 
   it("treats an unknown or missing system as metric", () => {
@@ -25,15 +45,27 @@ describe("resolveUnits", () => {
   });
 
   it("applies each valid override, leaving the rest at the preset's default", () => {
-    expect(resolveUnits("metric", { wind: "mph" }))
-      .toEqual({ system: "metric", wind: "mph", rain: "mm", temp: "c" });
-    expect(resolveUnits("imperial", { temp: "c" }))
-      .toEqual({ system: "imperial", wind: "mph", rain: "in", temp: "c" });
+    expect(resolveUnits("metric", { wind: "mph" })).toEqual({
+      system: "metric",
+      wind: "mph",
+      rain: "mm",
+      temp: "c",
+    });
+    expect(resolveUnits("imperial", { temp: "c" })).toEqual({
+      system: "imperial",
+      wind: "mph",
+      rain: "in",
+      temp: "c",
+    });
   });
 
   it("ignores invalid overrides and unknown keys", () => {
     const units = resolveUnits("imperial", {
-      wind: "knots", rain: null, temp: "C", system: "metric", extra: "x",
+      wind: "knots",
+      rain: null,
+      temp: "C",
+      system: "metric",
+      extra: "x",
     });
     expect(units).toBe(resolveUnits("imperial"));
     expect(resolveUnits("metric", null)).toBe(resolveUnits("metric"));
@@ -63,8 +95,9 @@ describe("asUnits", () => {
 
   it("passes a units set through and completes a partial one", () => {
     expect(asUnits(METRIC_OVERRIDDEN)).toBe(METRIC_OVERRIDDEN);
-    expect(asUnits({ system: "imperial", wind: "kmh" }))
-      .toBe(resolveUnits("imperial", { wind: "kmh" }));
+    expect(asUnits({ system: "imperial", wind: "kmh" })).toBe(
+      resolveUnits("imperial", { wind: "kmh" }),
+    );
   });
 });
 

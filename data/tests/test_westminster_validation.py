@@ -26,7 +26,6 @@ from models.westminster.westminster_validation import (
     reliability_bins,
 )
 from models.westminster.westminster_validation_replay import replay_validation
-from tests.console_fixtures import app as app
 from tests.test_calibrate_uncertainty import SPEAKER, _seed_database
 from tests.test_monte_carlo import WORLD, world_config
 
@@ -68,9 +67,8 @@ def test_database_is_read_only_and_missing_file_not_created(
             connection.execute("DELETE FROM votes")
     assert historical_database.read_bytes() == before
     missing = tmp_path / "missing.db"
-    with pytest.raises(sqlite3.OperationalError):
-        with read_only_database(missing):
-            pass
+    with pytest.raises(sqlite3.OperationalError), read_only_database(missing):
+        pass
     assert not missing.exists()
 
 
@@ -180,9 +178,7 @@ def test_cli_report_and_console(
         ).hexdigest()
         assert digest == expected, name
     assert historical_database.read_bytes() == before
-    monkeypatch.setattr(
-        "models.westminster.westminster_validation.REPORT_PATH", output
-    )
+    monkeypatch.setattr("models.westminster.westminster_validation.REPORT_PATH", output)
     response = app.test_client().get("/westminster/uncertainty/validation")
     assert response.status_code == 200
     assert b"National leave-one-out coverage" in response.data
@@ -218,9 +214,7 @@ def test_malformed_config_keeps_a_valid_report_visible(
     )
     malformed = tmp_path / "uncertainty_config.json"
     malformed.write_text("{", encoding="utf-8")
-    monkeypatch.setattr(
-        "models.westminster.westminster_validation.REPORT_PATH", output
-    )
+    monkeypatch.setattr("models.westminster.westminster_validation.REPORT_PATH", output)
     monkeypatch.setattr("models.support.uncertainty.UNCERTAINTY_CONFIG_PATH", malformed)
     response = app.test_client().get("/westminster/uncertainty/validation")
     assert response.status_code == 200
@@ -249,7 +243,8 @@ def test_missing_report_is_explained(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, app: Flask
 ) -> None:
     monkeypatch.setattr(
-        "models.westminster.westminster_validation.REPORT_PATH", tmp_path / "missing.json"
+        "models.westminster.westminster_validation.REPORT_PATH",
+        tmp_path / "missing.json",
     )
     response = app.test_client().get("/westminster/uncertainty/validation")
     assert response.status_code == 200

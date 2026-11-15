@@ -48,8 +48,9 @@ describe("forecastCallWeight", () => {
 
   it("costs a full 150-sample route with every hourly variable", () => {
     const perLocation = Math.max(1, HOURLY_VARS.length / 10);
-    expect(forecastCallWeight({ locations: 150, variables: HOURLY_VARS.length, hours: 168 }))
-      .toBeCloseTo(150 * perLocation, 6);
+    expect(
+      forecastCallWeight({ locations: 150, variables: HOURLY_VARS.length, hours: 168 }),
+    ).toBeCloseTo(150 * perLocation, 6);
   });
 });
 
@@ -134,11 +135,9 @@ describe("createUsageLog", () => {
 
   it("ignores corrupt or malformed stored data", () => {
     const now = clock(Date.UTC(2026, 9, 25));
-    expect(createUsageLog(memoryStorage({ [STORAGE_KEY]: "{not json" }), now).totals().day)
-      .toBe(0);
+    expect(createUsageLog(memoryStorage({ [STORAGE_KEY]: "{not json" }), now).totals().day).toBe(0);
     const mixed = JSON.stringify([[now(), 4], ["x", 1], [now(), "y"], 7]);
-    expect(createUsageLog(memoryStorage({ [STORAGE_KEY]: mixed }), now).totals().day)
-      .toBe(4);
+    expect(createUsageLog(memoryStorage({ [STORAGE_KEY]: mixed }), now).totals().day).toBe(4);
   });
 
   it("keeps working when storage writes throw", () => {

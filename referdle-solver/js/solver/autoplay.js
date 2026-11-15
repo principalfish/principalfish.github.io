@@ -2,7 +2,7 @@
 // _autosolve_steps. Given the five TRUE words, simulate a full game.
 
 import { getComparison } from "./compare.js";
-import { solve, solveRelaxed, localCandidates } from "./solver.js";
+import { solve, solveRelaxed } from "./solver.js";
 import { bestGuessAcrossBoards, buildSuggestions } from "./suggest.js";
 import { STRATEGY, MAX_STEPS } from "./strategy.js";
 
@@ -17,19 +17,6 @@ export function clueGridFromWords(words) {
     getComparison(words[3], final),
     "22222",
   ];
-}
-
-function parseClue(clueGrid) {
-  const clue = [null, null, null, null, null];
-  if (clueGrid) {
-    for (let i = 0; i < 4; i++) {
-      const c = i < clueGrid.length ? clueGrid[i] : null;
-      if (typeof c === "string" && c.length === 5 && [...c].every((ch) => "012".includes(ch))) {
-        clue[i] = c;
-      }
-    }
-  }
-  return clue;
 }
 
 function allPinned(res) {
@@ -67,21 +54,21 @@ export function autoSolve(trueWords, st, startSlots) {
     if (allPinned(res)) break;
     let ranked = rank(res);
 
-    if ((!ranked || !ranked.length) && pruneCombos) {
+    if (!ranked?.length && pruneCombos) {
       pruneCombos = false;
       relaxedAt = relaxedAt || step + 1;
       res = doSolve(pruneW13, pruneW5, pruneCombos);
       ranked = res.solvable ? rank(res) : null;
     }
-    if ((!ranked || !ranked.length) && (pruneW13 || pruneW5)) {
+    if (!ranked?.length && (pruneW13 || pruneW5)) {
       pruneW13 = pruneW5 = false;
       relaxedAt = relaxedAt || step + 1;
       res = doSolve(false, false, false);
       ranked = res.solvable ? rank(res) : null;
     }
-    if (!ranked || !ranked.length) break;
+    if (!ranked?.length) break;
 
-    let top = ranked[0];
+    const top = ranked[0];
     // forced_opener is "" by default — skipped.
     const board = top.board;
     const word = top.word;

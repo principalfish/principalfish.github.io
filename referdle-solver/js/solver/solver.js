@@ -14,20 +14,10 @@ const FINAL = 4;
 
 // --- pattern access ------------------------------------------------------------
 
-// Pattern code of get_comparison(guess, cand): PM lookup when both are pool
-// words, else computed on the fly. (PM[i*N+j] = code(pool[i] vs pool[j]).)
-function codeFor(guess, cand, PM, N, poolIndex) {
-  const gi = poolIndex.get(guess);
-  if (gi !== undefined) {
-    const ci = poolIndex.get(cand);
-    if (ci !== undefined) return pmCode(PM, N, gi, ci);
-  }
-  return compareCode(guess, cand);
-}
-
 // 2D pattern-code block M[a][b] = code(aWords[a] vs bWords[b]).
 function poolBlock(aWords, bWords, PM, N, poolIndex) {
-  const na = aWords.length, nb = bWords.length;
+  const na = aWords.length,
+    nb = bWords.length;
   const bIndices = bWords.map((w) => poolIndex.get(w));
   const M = new Array(na);
   for (let ai = 0; ai < na; ai++) {
@@ -109,7 +99,7 @@ function feasibleForSlot(s, cands, found) {
   const feasible = [];
   const forbidMemo = new Map();
   for (const w of cands[s]) {
-    if (found && found.has(w)) continue;
+    if (found?.has(w)) continue;
     if (!baseUsed.has(w)) {
       feasible.push(w);
     } else {
@@ -219,7 +209,10 @@ function chainFeasible(C, clue, PM, N, poolIndex) {
       for (let j = 0; j < C[k].length; j++) {
         let any = false;
         for (let i = 0; i < prev.length; i++) {
-          if (M[i][j] === code) { any = true; break; }
+          if (M[i][j] === code) {
+            any = true;
+            break;
+          }
         }
         if (any) keep.push(C[k][j]);
       }
@@ -240,7 +233,10 @@ function chainFeasible(C, clue, PM, N, poolIndex) {
       for (let i = 0; i < F[k].length; i++) {
         let any = false;
         for (let j = 0; j < nxt.length; j++) {
-          if (M[i][j] === code) { any = true; break; }
+          if (M[i][j] === code) {
+            any = true;
+            break;
+          }
         }
         if (any) keep.push(F[k][i]);
       }
@@ -263,7 +259,7 @@ function chainArcConsistency(cands, clue, PM, N, poolIndex) {
       const pat = clue[i];
       if (!pat) continue;
       const code = cluePatternCode(pat);
-      let A = cands[i];
+      const A = cands[i];
       let B = cands[i + 1];
       let M = poolBlock(A, B, PM, N, poolIndex);
       // keep B[j] iff some A[a] matches
@@ -271,7 +267,10 @@ function chainArcConsistency(cands, clue, PM, N, poolIndex) {
       for (let j = 0; j < B.length; j++) {
         let any = false;
         for (let a = 0; a < A.length; a++) {
-          if (M[a][j] === code) { any = true; break; }
+          if (M[a][j] === code) {
+            any = true;
+            break;
+          }
         }
         if (any) keepBidx.push(j);
       }
@@ -288,7 +287,10 @@ function chainArcConsistency(cands, clue, PM, N, poolIndex) {
       for (let a = 0; a < A.length; a++) {
         let any = false;
         for (let j = 0; j < B.length; j++) {
-          if (M[a][j] === code) { any = true; break; }
+          if (M[a][j] === code) {
+            any = true;
+            break;
+          }
         }
         if (any) keepA.push(A[a]);
       }
@@ -386,7 +388,10 @@ function solveWithClue(cands, clue, knownPresent, PM, N, poolIndex) {
       const forbidden = forbiddenLetters(claimed, i);
       if (forbidden.size) lst = lst.filter((w) => !sharesLetter(w, forbidden));
       conditioned[i] = lst;
-      if (lst.length === 0) { ok = false; break; }
+      if (lst.length === 0) {
+        ok = false;
+        break;
+      }
     }
     if (!ok) continue;
     conditioned[FINAL] = [f];
@@ -403,11 +408,15 @@ function solveWithClue(cands, clue, knownPresent, PM, N, poolIndex) {
     //     yellow@1 in a deduced LIGHT, so L can't be @1 elsewhere -> excludes LUMPY).
     // Both hold 0/1916. Re-run the chain after each removal.
     while (feas[FINAL].length) {
-      const owned = [];      // board k -> Set of absent-from-final letters every candidate has
-      const ownedPos = [];   // board k -> Set of "<letter><pos>" yellow placements every candidate has
+      const owned = []; // board k -> Set of absent-from-final letters every candidate has
+      const ownedPos = []; // board k -> Set of "<letter><pos>" yellow placements every candidate has
       for (let k = 0; k < 5; k++) {
         const fk = feas[k];
-        if (!fk.length) { owned.push(new Set()); ownedPos.push(new Set()); continue; }
+        if (!fk.length) {
+          owned.push(new Set());
+          ownedPos.push(new Set());
+          continue;
+        }
         let common = new Set(fk[0]);
         for (let j = 1; j < fk.length && common.size; j++) {
           const wset = new Set(fk[j]);
@@ -437,7 +446,10 @@ function solveWithClue(cands, clue, knownPresent, PM, N, poolIndex) {
             for (let p = 0; p < 5; p++) if (forbiddenPos.has(w[p] + p)) return false;
             return true;
           });
-          if (kept.length !== feas[i].length) { feas[i] = kept; changed = true; }
+          if (kept.length !== feas[i].length) {
+            feas[i] = kept;
+            changed = true;
+          }
         }
       }
       if (!changed) break;
@@ -458,7 +470,7 @@ function solveWithClue(cands, clue, knownPresent, PM, N, poolIndex) {
     return unsolvableResult(
       cands,
       "No final word (Word 5) is consistent with both the clue grid and the " +
-        "board guesses. Check the clue-grid colours and Word 5's guesses."
+        "board guesses. Check the clue-grid colours and Word 5's guesses.",
     );
   }
 
@@ -478,8 +490,19 @@ function solveWithClue(cands, clue, knownPresent, PM, N, poolIndex) {
 // --- public solve --------------------------------------------------------------
 
 // solve(slots, clueGrid, pool, PM, N, poolIndex, PLURALS, pruneW13?, pruneW5?, pruneCombos?)
-export function solve(slots, clueGrid, pool, PM, N, poolIndex, PLURALS,
-                      pruneW13, pruneW5, pruneCombos, combos) {
+export function solve(
+  slots,
+  clueGrid,
+  pool,
+  PM,
+  N,
+  poolIndex,
+  PLURALS,
+  pruneW13,
+  pruneW5,
+  pruneCombos,
+  combos,
+) {
   const clue = normalizeClue(clueGrid);
   const hasClue = clue.some((c) => c !== null);
   const hasGuess = slots.some((s) => (s.guesses || []).length > 0);
@@ -493,9 +516,7 @@ export function solve(slots, clueGrid, pool, PM, N, poolIndex, PLURALS,
   if (pruneCombos === undefined) pruneCombos = STRATEGY.prune_w13_combos;
 
   if (pruneW13) {
-    cands = cands.map((c, i) =>
-      i < 3 ? c.filter((w) => new Set(w).size === 5) : c
-    );
+    cands = cands.map((c, i) => (i < 3 ? c.filter((w) => new Set(w).size === 5) : c));
   }
   if (pruneCombos && combos) {
     cands = cands.map((c, i) => (i >= 3 ? c : c.filter((w) => !combos.has(w))));
@@ -504,17 +525,29 @@ export function solve(slots, clueGrid, pool, PM, N, poolIndex, PLURALS,
     cands = cands.map((c, i) => (i !== 4 ? c : c.filter((w) => !PLURALS.has(w))));
   }
 
-  return hasClue
-    ? solveWithClue(cands, clue, knownPresent, PM, N, poolIndex)
-    : solveSimple(cands);
+  return hasClue ? solveWithClue(cands, clue, knownPresent, PM, N, poolIndex) : solveSimple(cands);
 }
 
 // solveRelaxed: solve with the strategy's prunes, retry once with all prunes off
 // if that yields unsolvable while a prune is on.
 export function solveRelaxed(slots, clueGrid, pool, PM, N, poolIndex, PLURALS, combos) {
-  let res = solve(slots, clueGrid, pool, PM, N, poolIndex, PLURALS, undefined, undefined, undefined, combos);
-  if (!res.solvable &&
-      (STRATEGY.prune_w13_doubles || STRATEGY.prune_w5_plurals || STRATEGY.prune_w13_combos)) {
+  let res = solve(
+    slots,
+    clueGrid,
+    pool,
+    PM,
+    N,
+    poolIndex,
+    PLURALS,
+    undefined,
+    undefined,
+    undefined,
+    combos,
+  );
+  if (
+    !res.solvable &&
+    (STRATEGY.prune_w13_doubles || STRATEGY.prune_w5_plurals || STRATEGY.prune_w13_combos)
+  ) {
     res = solve(slots, clueGrid, pool, PM, N, poolIndex, PLURALS, false, false, false, combos);
   }
   return res;
@@ -582,7 +615,10 @@ export function pickSolution(slots, clueGrid, pool, PM, N, poolIndex) {
       } else {
         cond[i] = cands[i];
       }
-      if (cond[i].length === 0) { ok = false; break; }
+      if (cond[i].length === 0) {
+        ok = false;
+        break;
+      }
     }
     if (!ok) continue;
     const assign = matchDistinct(cond, clue, f);

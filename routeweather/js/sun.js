@@ -32,25 +32,28 @@ function solarGeometry(ms) {
   const meanAnomaly = 357.52911 + t * (35999.05029 - 0.0001537 * t);
   const eccentricity = 0.016708634 - t * (0.000042037 + 0.0000001267 * t);
   const m = toRad(meanAnomaly);
-  const centre = Math.sin(m) * (1.914602 - t * (0.004817 + 0.000014 * t))
-    + Math.sin(2 * m) * (0.019993 - 0.000101 * t)
-    + Math.sin(3 * m) * 0.000289;
+  const centre =
+    Math.sin(m) * (1.914602 - t * (0.004817 + 0.000014 * t)) +
+    Math.sin(2 * m) * (0.019993 - 0.000101 * t) +
+    Math.sin(3 * m) * 0.000289;
   const omega = toRad(125.04 - 1934.136 * t);
   const apparentLong = toRad(meanLong + centre - 0.00569 - 0.00478 * Math.sin(omega));
-  const meanObliquity = 23 + (26 + (21.448 - t * (46.815 + t * (0.00059 - t * 0.001813))) / 60)
-    / 60;
+  const meanObliquity =
+    23 + (26 + (21.448 - t * (46.815 + t * (0.00059 - t * 0.001813))) / 60) / 60;
   const obliquity = toRad(meanObliquity + 0.00256 * Math.cos(omega));
   const declination = Math.asin(Math.sin(obliquity) * Math.sin(apparentLong));
 
   const y = Math.tan(obliquity / 2) ** 2;
   const l0 = toRad(meanLong);
-  const equationOfTime = 4 * toDeg(
-    y * Math.sin(2 * l0)
-    - 2 * eccentricity * Math.sin(m)
-    + 4 * eccentricity * y * Math.sin(m) * Math.cos(2 * l0)
-    - 0.5 * y * y * Math.sin(4 * l0)
-    - 1.25 * eccentricity * eccentricity * Math.sin(2 * m),
-  );
+  const equationOfTime =
+    4 *
+    toDeg(
+      y * Math.sin(2 * l0) -
+        2 * eccentricity * Math.sin(m) +
+        4 * eccentricity * y * Math.sin(m) * Math.cos(2 * l0) -
+        0.5 * y * y * Math.sin(4 * l0) -
+        1.25 * eccentricity * eccentricity * Math.sin(2 * m),
+    );
   return { declination, equationOfTime };
 }
 
@@ -63,8 +66,9 @@ export function solarElevationDeg(ms, lat, lon) {
   const trueSolarMinutes = utcMinutes + equationOfTime + 4 * lon;
   const hourAngle = toRad(trueSolarMinutes / 4 - 180);
   const phi = toRad(lat);
-  const cosZenith = Math.sin(phi) * Math.sin(declination)
-    + Math.cos(phi) * Math.cos(declination) * Math.cos(hourAngle);
+  const cosZenith =
+    Math.sin(phi) * Math.sin(declination) +
+    Math.cos(phi) * Math.cos(declination) * Math.cos(hourAngle);
   return 90 - toDeg(Math.acos(Math.min(1, Math.max(-1, cosZenith))));
 }
 
@@ -145,4 +149,3 @@ export function sunTimes(dayStartMs, dayEndMs, lat, lon) {
   }
   return { sunriseMs: sunrise?.tMs ?? null, sunsetMs: sunset?.tMs ?? null, allDay };
 }
-

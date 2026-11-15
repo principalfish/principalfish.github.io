@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from io import BytesIO
 from types import MappingProxyType, TracebackType
+from typing import Self
 
 from openpyxl import Workbook
 from sqlalchemy import update
@@ -511,7 +512,7 @@ class FakeUrlResponse:
         """Return the whole payload."""
         return self._payload
 
-    def __enter__(self) -> FakeUrlResponse:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(

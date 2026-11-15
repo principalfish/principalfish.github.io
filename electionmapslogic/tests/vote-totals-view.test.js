@@ -4,14 +4,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../files.js", () => ({ fetchJson: vi.fn() }));
 // The table never draws the map, and the vendored topojson build points at a missing source map.
-vi.mock("../../site/vendor/topojson-client.v3.esm.js", () => ({ feature: vi.fn(), mesh: vi.fn(), merge: vi.fn() }));
+vi.mock("../../site/vendor/topojson-client.v3.esm.js", () => ({
+  feature: vi.fn(),
+  mesh: vi.fn(),
+  merge: vi.fn(),
+}));
 
 // jsdom 24 is a devDependency (AGENTS.md pins 24: later majors fail to load on Node 21).
 // PF_TEST_JSDOM overrides it; the suites skip if the chosen jsdom fails to load.
 let JSDOM;
 try {
   ({ JSDOM } = createRequire(import.meta.url)(process.env.PF_TEST_JSDOM || "jsdom"));
-} catch { /* Without jsdom the browser suites below are skipped. */ }
+} catch {
+  /* Without jsdom the browser suites below are skipped. */
+}
 
 const shell = readFileSync(new URL("../shell.html", import.meta.url), "utf8");
 
@@ -22,7 +28,10 @@ const shell = readFileSync(new URL("../shell.html", import.meta.url), "utf8");
  */
 function payload() {
   return {
-    schema: "pf-uncertainty-v1", uncertaintyId: "saved-run", interval: 0.9, simulations: 10000,
+    schema: "pf-uncertainty-v1",
+    uncertaintyId: "saved-run",
+    interval: 0.9,
+    simulations: 10000,
     basis: "Nowcast: if an election were held today.",
     national: {
       parties: {
@@ -33,7 +42,10 @@ function payload() {
     },
     regions: {
       17: {
-        parties: { 1: { v: [30, 40], s: [40, 48, 55], m: 47 }, 2: { v: [10, 20.5], s: [2, 5, 9], m: 6 } },
+        parties: {
+          1: { v: [30, 40], s: [40, 48, 55], m: 47 },
+          2: { v: [10, 20.5], s: [2, 5, 9], m: 6 },
+        },
         hung: null,
       },
     },
@@ -63,17 +75,54 @@ const comparison = {
 
 /** The plain table body, as rendered before simulated seats existed. */
 const PLAIN_BODY = [
-  ["labour", "Labour", "#e4003b", "300", "maps-delta-positive", "+300", "600", "60.00", "maps-delta-positive", "+60.00"],
-  ["reform", "Reform UK", "#12b6cf", "109", "maps-delta-positive", "+109", "380", "38.00", "maps-delta-positive", "+38.00"],
-  ["green", "Green", "#02a95b", "3", "maps-delta-positive", "+3", "20", "2.00", "maps-delta-positive", "+2.00"],
-].map(([, name, colour, seats, seatClass, seatDelta, votes, pct, pctClass, pctDelta]) => `<tr>
+  [
+    "labour",
+    "Labour",
+    "#e4003b",
+    "300",
+    "maps-delta-positive",
+    "+300",
+    "600",
+    "60.00",
+    "maps-delta-positive",
+    "+60.00",
+  ],
+  [
+    "reform",
+    "Reform UK",
+    "#12b6cf",
+    "109",
+    "maps-delta-positive",
+    "+109",
+    "380",
+    "38.00",
+    "maps-delta-positive",
+    "+38.00",
+  ],
+  [
+    "green",
+    "Green",
+    "#02a95b",
+    "3",
+    "maps-delta-positive",
+    "+3",
+    "20",
+    "2.00",
+    "maps-delta-positive",
+    "+2.00",
+  ],
+]
+  .map(
+    ([, name, colour, seats, seatClass, seatDelta, votes, pct, pctClass, pctDelta]) => `<tr>
       <td><span class="maps-party-cell"><span class="maps-party-swatch" style="background:${colour}"></span>${name}</span></td>
       <td>${seats}</td>
       <td class="comparison-col ${seatClass}">${seatDelta}</td>
       <td class="vote-total-col">${votes}</td>
       <td class="vote-pct-col">${pct}</td>
       <td class="comparison-col vote-pct-comparison-col ${pctClass}">${pctDelta}</td>
-    </tr>`).join("");
+    </tr>`,
+  )
+  .join("");
 
 describe.skipIf(!JSDOM)("actual vote totals table", () => {
   let dom;
@@ -87,17 +136,25 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     vi.stubGlobal("document", dom.window.document);
     vi.stubGlobal("navigator", dom.window.navigator);
     // dom.js observes panel sizes at module load; jsdom has no layout to observe.
-    const Observer = class { observe() {} unobserve() {} disconnect() {} };
+    const Observer = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
     vi.stubGlobal("ResizeObserver", Observer);
     vi.stubGlobal("IntersectionObserver", Observer);
     module = await import("../state.js");
     const { decodeUncertainty } = await import("../uncertainty.js");
     state = module.state;
-    module.manifest.init({ parties: [
-      { id: 1, key: "labour", name: "Labour", colour: "#e4003b" },
-      { id: 2, key: "reform", name: "Reform UK", colour: "#12b6cf" },
-      { id: 6, key: "green", name: "Green", colour: "#02a95b" },
-    ], mapModes: { 2: { regions: [{ id: 17, name: "London" }] } }, files: {} });
+    module.manifest.init({
+      parties: [
+        { id: 1, key: "labour", name: "Labour", colour: "#e4003b" },
+        { id: 2, key: "reform", name: "Reform UK", colour: "#12b6cf" },
+        { id: 6, key: "green", name: "Green", colour: "#02a95b" },
+      ],
+      mapModes: { 2: { regions: [{ id: 17, name: "London" }] } },
+      files: {},
+    });
     state.view = "election";
     state.currentParliament = "westminster";
     state.currentElection = { model: true, mapId: 2 };
@@ -105,7 +162,10 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     state.showModelledUncertainty = true;
     state.electionData = new module.ElectionData({ seats: [], uncertaintyId: "saved-run" });
     state.electionData.uncertainty = decodeUncertainty(
-      payload(), "saved-run", (party) => module.manifest.resolvePartyRef(party), module.manifest.regionsById,
+      payload(),
+      "saved-run",
+      (party) => module.manifest.resolvePartyRef(party),
+      module.manifest.regionsById,
     );
     ({ renderVoteTotals } = await import("../dom.js"));
   });
@@ -114,9 +174,12 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     vi.unstubAllGlobals();
   });
 
-  const header = () => [...document.querySelectorAll("#mapsVoteTotalsTable thead th")].map((th) => th.textContent);
-  const table = () => [...document.querySelectorAll("#mapsVoteTotalsBody tr")]
-    .map((tr) => [...tr.cells].map((td) => td.textContent));
+  const header = () =>
+    [...document.querySelectorAll("#mapsVoteTotalsTable thead th")].map((th) => th.textContent);
+  const table = () =>
+    [...document.querySelectorAll("#mapsVoteTotalsBody tr")].map((tr) =>
+      [...tr.cells].map((td) => td.textContent),
+    );
   const MAP_COLOURS = "Map colours show each seat's uniform-swing winner.";
   const mapNote = () => document.getElementById("mapsMapColourNote");
   /** The note in a mean view: the map-colour sentence alone, never "needn't add up". */
@@ -131,7 +194,8 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     expect(mapNote().textContent).toBe("");
     expect(document.body.textContent).not.toMatch(/needn't add up|simulated medians/);
   };
-  const describedBy = () => document.getElementById("mapsVoteTotalsTable").getAttribute("aria-describedby");
+  const describedBy = () =>
+    document.getElementById("mapsVoteTotalsTable").getAttribute("aria-describedby");
   const PLAIN_HEADER = ["Party", "Seats", "±", "Votes", "Vote %", "±"];
 
   it("ticked: shows each party's whole seats and ranges, with ± from them and a dash without them", () => {
@@ -162,7 +226,14 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     // Ticking and unticking again switch the same table in place.
     state.showModelledUncertainty = true;
     renderVoteTotals(summary, comparison);
-    expect(table()[0]).toEqual(["Labour", "280 (199–359)", "-131", "600", "60.00 (21.7–29.3%)", "+10.00"]);
+    expect(table()[0]).toEqual([
+      "Labour",
+      "280 (199–359)",
+      "-131",
+      "600",
+      "60.00 (21.7–29.3%)",
+      "+10.00",
+    ]);
     shownNote();
     state.showModelledUncertainty = false;
     renderVoteTotals(summary, comparison);
@@ -173,12 +244,21 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
   it("unticked: the region view is that region's uniform-swing count", () => {
     state.showModelledUncertainty = false;
     state.mapFilters.region = "london";
-    const london = { totalVotes: 100, totalSeats: 75, parties: [
-      { party: "labour", seats: 60, votes: 70 }, { party: "reform", seats: 1, votes: 30 },
-    ] };
-    const london2024 = { totalVotes: 100, parties: [
-      { party: "labour", seats: 59, votes: 60 }, { party: "reform", seats: 0, votes: 10 },
-    ] };
+    const london = {
+      totalVotes: 100,
+      totalSeats: 75,
+      parties: [
+        { party: "labour", seats: 60, votes: 70 },
+        { party: "reform", seats: 1, votes: 30 },
+      ],
+    };
+    const london2024 = {
+      totalVotes: 100,
+      parties: [
+        { party: "labour", seats: 59, votes: 60 },
+        { party: "reform", seats: 0, votes: 10 },
+      ],
+    };
     renderVoteTotals(london, london2024);
     expect(table()).toEqual([
       ["Labour", "60", "+1", "70", "70.00", "+10.00"],
@@ -190,12 +270,16 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
   it("notes only the map colours under the table, since the whole seats add up", () => {
     renderVoteTotals(summary, comparison);
     shownNote();
-    expect(describedBy()).toBe("mapsSenateForecastComparison mapsUncertaintyBasis mapsMapColourNote");
+    expect(describedBy()).toBe(
+      "mapsSenateForecastComparison mapsUncertaintyBasis mapsMapColourNote",
+    );
   });
 
   it("hides the map-colour note with the table when the card collapses", () => {
     const css = readFileSync(new URL("../maps.css", import.meta.url), "utf8");
-    const collapsedRule = css.match(/#mapsVoteTotalsCard\.maps-vote-totals--collapsed[^{}]+\{[^}]+\}/)?.[0];
+    const collapsedRule = css.match(
+      /#mapsVoteTotalsCard\.maps-vote-totals--collapsed[^{}]+\{[^}]+\}/,
+    )?.[0];
     expect(mapNote().classList.contains("maps-map-colour-note")).toBe(true);
     expect(collapsedRule).toContain(".maps-map-colour-note");
     expect(collapsedRule).toContain("display: none;");
@@ -206,9 +290,13 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
     state.voteTotals.sort = { key: "seats", direction: "desc" };
     // Reform's uniform-swing count and median lead, but Labour's whole seats do.
     state.electionData.uncertainty.national.parties.reform.s = [100, 290, 400];
-    const swapped = { ...summary, parties: [
-      { party: "labour", seats: 100, votes: 300 }, { party: "reform", seats: 400, votes: 700 },
-    ] };
+    const swapped = {
+      ...summary,
+      parties: [
+        { party: "labour", seats: 100, votes: 300 },
+        { party: "reform", seats: 400, votes: 700 },
+      ],
+    };
     renderVoteTotals(swapped, null);
     expect(table().map((row) => row[0])).toEqual(["Labour", "Reform UK"]);
     // Equal whole seats: Reform's larger vote share and median do not put it first.
@@ -222,12 +310,21 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
 
   it("uses one region's whole seats, with ± against that region's 2024 seats", () => {
     state.mapFilters.region = "london";
-    const london = { totalVotes: 100, totalSeats: 75, parties: [
-      { party: "labour", seats: 60, votes: 70 }, { party: "reform", seats: 1, votes: 30 },
-    ] };
-    const london2024 = { totalVotes: 100, parties: [
-      { party: "labour", seats: 59, votes: 60 }, { party: "reform", seats: 0, votes: 10 },
-    ] };
+    const london = {
+      totalVotes: 100,
+      totalSeats: 75,
+      parties: [
+        { party: "labour", seats: 60, votes: 70 },
+        { party: "reform", seats: 1, votes: 30 },
+      ],
+    };
+    const london2024 = {
+      totalVotes: 100,
+      parties: [
+        { party: "labour", seats: 59, votes: 60 },
+        { party: "reform", seats: 0, votes: 10 },
+      ],
+    };
     renderVoteTotals(london, london2024);
     expect(table()).toEqual([
       ["Labour", "47 (40–55)", "-12", "70", "70.00 (30–40%)", "+10.00"],
@@ -237,12 +334,19 @@ describe.skipIf(!JSDOM)("actual vote totals table", () => {
   });
 
   it.each([
-    ["party", "labour"], ["majorityMin", 1], ["gainsOnly", true], ["upcoming", "2026"],
+    ["party", "labour"],
+    ["majorityMin", 1],
+    ["gainsOnly", true],
+    ["upcoming", "2026"],
   ])("keeps the uniform-swing count under plain Seats in the %s-filtered view", (filter, value) => {
     state.mapFilters[filter] = value;
     renderVoteTotals(summary, comparison);
     expect(header()).toEqual(PLAIN_HEADER);
-    expect(table().map((row) => row.slice(1, 3))).toEqual([["300", "-111"], ["109", "+104"], ["3", "-1"]]);
+    expect(table().map((row) => row.slice(1, 3))).toEqual([
+      ["300", "-111"],
+      ["109", "+104"],
+      ["3", "-1"],
+    ]);
     expect(table().flat().join(" ")).not.toMatch(/[–—]/);
     noNote();
     expect(describedBy()).toBe("mapsSenateForecastComparison mapsUncertaintyBasis");

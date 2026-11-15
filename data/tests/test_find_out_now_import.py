@@ -92,22 +92,105 @@ _HEADLINE_COLUMNS: tuple[str, ...] = (
 # 100), and 1.0 sits exactly on that boundary.
 _HEADLINE_VALUES: Mapping[str, tuple[float, ...]] = MappingProxyType(
     {
-        "Conservative": (2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0),
+        "Conservative": (
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
+        ),
         "Labour": (
-            14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0,
+            14.0,
+            15.0,
+            16.0,
+            17.0,
+            18.0,
+            19.0,
+            20.0,
+            21.0,
+            22.0,
+            23.0,
+            24.0,
+            25.0,
         ),
         "Liberal Democrat": (
-            26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0, 37.0,
+            26.0,
+            27.0,
+            28.0,
+            29.0,
+            30.0,
+            31.0,
+            32.0,
+            33.0,
+            34.0,
+            35.0,
+            36.0,
+            37.0,
         ),
         "Reform UK": (
-            38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46.0, 47.0, 48.0, 49.0,
+            38.0,
+            39.0,
+            40.0,
+            41.0,
+            42.0,
+            43.0,
+            44.0,
+            45.0,
+            46.0,
+            47.0,
+            48.0,
+            49.0,
         ),
-        "Green": (50.0, 51.0, 52.0, 53.0, 54.0, 55.0, 56.0, 57.0, 58.0, 59.0, 60.0, 61.0),
+        "Green": (
+            50.0,
+            51.0,
+            52.0,
+            53.0,
+            54.0,
+            55.0,
+            56.0,
+            57.0,
+            58.0,
+            59.0,
+            60.0,
+            61.0,
+        ),
         "SNP": (62.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 72.0, 73.0),
         "Plaid Cymru": (
-            74.0, 75.0, 76.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0,
+            74.0,
+            75.0,
+            76.0,
+            77.0,
+            78.0,
+            79.0,
+            80.0,
+            81.0,
+            82.0,
+            83.0,
+            84.0,
+            85.0,
         ),
-        "Other": (86.0, 87.0, 88.0, 89.0, 90.0, 91.0, 92.0, 93.0, 94.0, 95.0, 96.0, 97.0),
+        "Other": (
+            86.0,
+            87.0,
+            88.0,
+            89.0,
+            90.0,
+            91.0,
+            92.0,
+            93.0,
+            94.0,
+            95.0,
+            96.0,
+            97.0,
+        ),
     }
 )
 
@@ -446,9 +529,7 @@ class TestParseFieldwork:
             "single_day_no_year",
         ],
     )
-    def test_unknown_month_name_raises(
-        self, text: str, kwargs: dict[str, int]
-    ) -> None:
+    def test_unknown_month_name_raises(self, text: str, kwargs: dict[str, int]) -> None:
         with pytest.raises(ValueError, match="Could not parse fieldwork string"):
             fon.parse_fieldwork(text, **kwargs)
 
@@ -532,9 +613,7 @@ class TestFindLabelValue:
     def test_value_two_cells_to_the_right_when_the_adjacent_cell_is_empty(
         self,
     ) -> None:
-        workbook = build_workbook(
-            {"Cover": [["Fieldwork date", None, "1-5 Feb 2026"]]}
-        )
+        workbook = build_workbook({"Cover": [["Fieldwork date", None, "1-5 Feb 2026"]]})
         assert fon._find_label_value(workbook["Cover"], "Fieldwork date") == (
             "1-5 Feb 2026"
         )
@@ -548,9 +627,7 @@ class TestFindLabelValue:
         )
 
     def test_label_found_but_no_value_returns_none(self) -> None:
-        workbook = build_workbook(
-            {"Cover": [["Fieldwork date", None, None, None]]}
-        )
+        workbook = build_workbook({"Cover": [["Fieldwork date", None, None, None]]})
         assert fon._find_label_value(workbook["Cover"], "Fieldwork date") is None
 
     def test_label_not_present_returns_none(self) -> None:
@@ -685,12 +762,14 @@ class TestParsePollHeadlineVi:
             "West Midlands": 12.0,
             "Yorkshire and The Humber": 13.0,
         }
-        assert parsed.party_region_percentages["Liberal Democrats"][
-            fon.NATIONAL_KEY
-        ] == 26.0
-        assert parsed.party_region_percentages["Scottish National Party"][
-            fon.NATIONAL_KEY
-        ] == 62.0
+        assert (
+            parsed.party_region_percentages["Liberal Democrats"][fon.NATIONAL_KEY]
+            == 26.0
+        )
+        assert (
+            parsed.party_region_percentages["Scottish National Party"][fon.NATIONAL_KEY]
+            == 62.0
+        )
         assert parsed.party_region_percentages["Other"][fon.NATIONAL_KEY] == 86.0
 
     def test_sheet_matched_by_headline_substring(self) -> None:
@@ -719,9 +798,7 @@ class TestParsePollHeadlineVi:
     def test_missing_regional_header_row_raises(self) -> None:
         rows: list[list[object]] = [["Nothing", "here"]]
         workbook = _full_workbook(headline_rows=rows)
-        with pytest.raises(
-            ValueError, match="Could not locate regional header row"
-        ):
+        with pytest.raises(ValueError, match="Could not locate regional header row"):
             fon.parse_poll(workbook)
 
     def test_fewer_than_six_region_columns_raises(self) -> None:
@@ -971,9 +1048,7 @@ class TestBuildImportPlanFullBuild:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         world = westminster_world
-        pollster = db.add_pollster(
-            "Find Out Now Ltd", "find_out_now", weight=1.0
-        )
+        pollster = db.add_pollster("Find Out Now Ltd", "find_out_now", weight=1.0)
         poll = db.add_poll(
             pollster.id,
             world.map_id,
@@ -1058,9 +1133,7 @@ class TestBuildImportPlanFieldworkYearHandling:
         # and the range falls in Jan-Feb, so build_import_plan must apply
         # _maybe_adjust_fieldwork_year_from_url and shift both dates forward.
         world = westminster_world
-        cover = _labelled_cover_sheet(
-            fieldwork_text="28th January - 3rd February 2025"
-        )
+        cover = _labelled_cover_sheet(fieldwork_text="28th January - 3rd February 2025")
         workbook = _full_workbook(cover_rows=cover)
 
         def fake_extract_workbook(*_a: object, **_k: object) -> object:
@@ -1164,9 +1237,7 @@ class TestBuildImportPlanRegionMatchingPinnedBug:
 
         plan = fon.build_import_plan(db, map_name=custom_map.name)
 
-        odd_row = next(
-            row for row in plan.rows if row.region_id == odd_region.id
-        )
+        odd_row = next(row for row in plan.rows if row.region_id == odd_region.id)
         # If the parsed "London" figure had matched via normalize_name, this
         # would be 55.0. It is 0.0, because the match is an exact string
         # comparison against "  LONDON  ", which never equals "London".
@@ -1183,9 +1254,7 @@ def _preview_plan(**overrides: object) -> fon.ImportPlan:
         sample_size=1032,
         fieldwork_start=date(2026, 1, 28),
         fieldwork_end=date(2026, 2, 3),
-        party_region_percentages={
-            "Labour": {fon.NATIONAL_KEY: 32.0, "Wales": 22.0}
-        },
+        party_region_percentages={"Labour": {fon.NATIONAL_KEY: 32.0, "Wales": 22.0}},
     )
     row = fon.PlannedPollRow(
         party_id=2,
@@ -1232,7 +1301,9 @@ class TestCliPreview:
     def test_existing_pollster_and_existing_poll(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        fon._cli_preview(_preview_plan(pollster_exists=True, poll_exists=True, poll_id=7))
+        fon._cli_preview(
+            _preview_plan(pollster_exists=True, poll_exists=True, poll_id=7)
+        )
 
         lines = capsys.readouterr().out.splitlines()
         assert "pollster exists: find_out_now" in lines
@@ -1460,8 +1531,18 @@ class TestMain:
 # ── Weighted-only bases from "Filtered N" ──────────────────────────────────────
 
 _FILTERED_N = (
-    1451.671, 97.704, 148.936, 255.237, 56.374, 131.052, 136.345, 188.722,
-    122.994, 73.717, 130.024, 110.565,
+    1451.671,
+    97.704,
+    148.936,
+    255.237,
+    56.374,
+    131.052,
+    136.345,
+    188.722,
+    122.994,
+    73.717,
+    130.024,
+    110.565,
 )
 
 

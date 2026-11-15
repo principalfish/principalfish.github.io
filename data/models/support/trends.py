@@ -224,7 +224,9 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
                     )
             weights_by_year = {
                 year: get_electoral_votes_sqlite(
-                    conn, year, units_by_year.get(year, set()),
+                    conn,
+                    year,
+                    units_by_year.get(year, set()),
                 )
                 for year in set(year_by_election.values())
             }
@@ -398,8 +400,12 @@ def _trend_uncertainty(
                 kernel = national.get("kernel_version")
                 segments[election_id] = (
                     _segment_id(config, kernel)
-                    if (isinstance(config, str) and config.strip()
-                        and isinstance(kernel, str) and kernel.strip())
+                    if (
+                        isinstance(config, str)
+                        and config.strip()
+                        and isinstance(kernel, str)
+                        and kernel.strip()
+                    )
                     else None
                 )
             except PublicUncertaintyError as err:

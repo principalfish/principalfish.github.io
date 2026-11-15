@@ -14,7 +14,7 @@ from datetime import UTC, date, datetime
 from http.client import BadStatusLine, HTTPMessage, RemoteDisconnected
 from pathlib import Path
 from types import TracebackType
-from typing import Any
+from typing import Any, Self
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request
 
@@ -64,7 +64,7 @@ class _FakeResponse:
     def geturl(self) -> str:
         return self._url
 
-    def __enter__(self) -> _FakeResponse:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
@@ -204,7 +204,9 @@ def test_available_source_requires_url() -> None:
 
 def test_cache_dir_default_is_outside_repo() -> None:
     repo = Path(__file__).resolve().parents[2]
-    assert (repo / "server.sh").is_file(), "parents[2] of this file is no longer the repo root"
+    assert (repo / "server.sh").is_file(), (
+        "parents[2] of this file is no longer the repo root"
+    )
     assert repo not in config.NYT_CACHE_DIR.resolve().parents
 
 
@@ -677,7 +679,7 @@ def test_redirect_within_allowlist_followed() -> None:
 
 def test_opener_uses_allowlist_redirect_handler() -> None:
     # OpenerDirector.handlers exists at runtime but is missing from the stubs.
-    handlers: list[object] = getattr(fetch_module._OPENER, "handlers")
+    handlers: list[object] = fetch_module._OPENER.handlers  # type: ignore[attr-defined]
     redirects = [h for h in handlers if isinstance(h, HTTPRedirectHandler)]
     assert len(redirects) == 1
     assert isinstance(redirects[0], fetch_module._AllowlistRedirectHandler)

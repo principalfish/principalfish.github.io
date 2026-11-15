@@ -17,6 +17,9 @@ from core.config import DatabaseConfig
 from core.db import Database
 from tests.uk_fixtures import WestminsterWorld, copy_database, seed_westminster_world
 
+# The console app, seeded app and saved-run fixtures, shared by the console tests.
+pytest_plugins = ["tests.console_fixtures"]
+
 
 @pytest.fixture(autouse=True)
 def _never_open_the_live_database(
@@ -31,8 +34,8 @@ def _never_open_the_live_database(
     variable per test wins, because ``DatabaseConfig.from_env`` reads the
     environment at call time rather than at import.
     """
-    from core import backup
     import console.db
+    from core import backup
 
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "default-guard.db"))
     monkeypatch.setenv("SIMULATIONS_PATH", str(tmp_path / "simulations-guard.npz"))
@@ -148,7 +151,9 @@ def only_the_test_database(db: Database, monkeypatch: pytest.MonkeyPatch) -> Pat
 
     def guarded(database: Any, *args: Any, **kwargs: Any) -> sqlite3.Connection:
         if Path(database).resolve() != allowed:
-            raise AssertionError(f"sqlite3.connect outside the test database: {database}")
+            raise AssertionError(
+                f"sqlite3.connect outside the test database: {database}"
+            )
         connection: sqlite3.Connection = real_connect(database, *args, **kwargs)
         return connection
 

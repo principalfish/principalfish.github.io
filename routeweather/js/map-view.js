@@ -361,8 +361,8 @@ export function createMapUI(container, { L = leaflet } = {}) {
     extremeTips = [];
     if (!samples) return;
 
-    const sampleLatLngs = samples.map(
-      (s) => L.latLng(s.lat, unwrapNear(s.lon, refLonAt(s.cumDistKm))),
+    const sampleLatLngs = samples.map((s) =>
+      L.latLng(s.lat, unwrapNear(s.lon, refLonAt(s.cumDistKm))),
     );
 
     const extremes = [];
@@ -466,9 +466,13 @@ export function createMapUI(container, { L = leaflet } = {}) {
 
   function update(state) {
     if (destroyed) return;
-    const unchanged = state.route === route && state.samples === samples && state.cells === cells
-      && state.results === results && (state.locations ?? null) === locations
-      && state.units === units;
+    const unchanged =
+      state.route === route &&
+      state.samples === samples &&
+      state.cells === cells &&
+      state.results === results &&
+      (state.locations ?? null) === locations &&
+      state.units === units;
     if (unchanged) return;
     if (state.results !== results) lastWeather = null;
     units = state.units;

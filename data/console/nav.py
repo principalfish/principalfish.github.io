@@ -194,19 +194,16 @@ _MODEL_FORMS: Mapping[str, tuple[str, tuple[str, ...]]] = {
         "holyrood.run_holyrood_model_form",
         ("holyrood.run_holyrood_model",),
     ),
-    **{
-        slug: ("us.model_run_form", ("us.model_run",))
-        for slug in ("house", "senate", "president")
-    },
+    **dict.fromkeys(
+        ("house", "senate", "president"), ("us.model_run_form", ("us.model_run",))
+    ),
 }
 
 
 def section_links(section: Section) -> tuple[NavLink, ...]:
     """A section's navigation links, in display order."""
     links: list[NavLink] = [
-        NavLink(
-            "Polls", "polls.section_poll_list", values=(("section", section.slug),)
-        )
+        NavLink("Polls", "polls.section_poll_list", values=(("section", section.slug),))
     ]
     if section.has(Capability.POLL_IMPORT):
         links.append(

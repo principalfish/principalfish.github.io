@@ -43,8 +43,9 @@ const toDeg = (rad) => (rad * 180) / Math.PI;
 export function haversineKm(a, b) {
   const dLat = toRad(b.lat - a.lat);
   const dLon = toRad(b.lon - a.lon);
-  const h = Math.sin(dLat / 2) ** 2
-    + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
   // min() guards against h creeping past 1 through rounding (antipodal points).
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
@@ -221,8 +222,9 @@ export function sampleRoute(route, options = {}) {
   });
 
   const snapKm = SMOOTHING_WINDOW_M / 2000 + EDGE_EPSILON_KM;
-  const extremes = findExtremes(smoothElevation(route), prominenceM)
-    .map((extreme) => snapToRawExtreme(points, extreme, snapKm));
+  const extremes = findExtremes(smoothElevation(route), prominenceM).map((extreme) =>
+    snapToRawExtreme(points, extreme, snapKm),
+  );
   const anchors = [
     vertexSample(0, "start"),
     ...extremes.map(({ index, kind }) => vertexSample(index, kind)),
@@ -251,7 +253,13 @@ export function sampleRoute(route, options = {}) {
   return capSamples(mergeClose([...anchors, ...fillers]), budget)
     .sort(byDistance)
     .map(({ index, lat, lon, ele, cumDistKm, bearingDeg, kind }) => ({
-      index, lat, lon, ele, cumDistKm, bearingDeg, kind,
+      index,
+      lat,
+      lon,
+      ele,
+      cumDistKm,
+      bearingDeg,
+      kind,
     }));
 }
 
@@ -323,8 +331,8 @@ function snapToRawExtreme(points, extreme, halfKm) {
   const consider = (k) => {
     if (sign * points[k].ele > sign * points[best].ele) best = k;
   };
-  const inReach = (k) => k >= 0 && k < points.length
-    && Math.abs(points[k].cumDistKm - centreKm) <= halfKm;
+  const inReach = (k) =>
+    k >= 0 && k < points.length && Math.abs(points[k].cumDistKm - centreKm) <= halfKm;
   for (let k = extreme.index - 1; inReach(k); k--) consider(k);
   for (let k = extreme.index + 1; inReach(k); k++) consider(k);
   return { ...extreme, index: best };
@@ -395,11 +403,11 @@ function capSamples(samples, budget) {
 
 // The highest peak and the lowest valley (first on ties), where present.
 function keyExtremes(extremes) {
-  const pick = (kind, better) => extremes
-    .filter((e) => e.kind === kind)
-    .reduce((best, e) => (best === null || better(e.ele, best.ele) ? e : best), null);
-  return [pick("peak", (x, y) => x > y), pick("valley", (x, y) => x < y)]
-    .filter((e) => e !== null);
+  const pick = (kind, better) =>
+    extremes
+      .filter((e) => e.kind === kind)
+      .reduce((best, e) => (best === null || better(e.ele, best.ele) ? e : best), null);
+  return [pick("peak", (x, y) => x > y), pick("valley", (x, y) => x < y)].filter((e) => e !== null);
 }
 
 // `count` items spread evenly across `items` (all of them if they fit).

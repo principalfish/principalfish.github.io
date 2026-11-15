@@ -47,7 +47,6 @@ from importers.polls.types import PollImportResult
 from importers.polls.westminster import survation_import
 from tests.console_fixtures import (
     RecordingRunner,
-    app,
     flashes as _flashes,
     forbid_call,
     select_block,
@@ -146,12 +145,16 @@ def _survation_workbook() -> Workbook:
     """
     tables_rows: list[list[object]] = [
         [
-            "Table_1. If there was a UK Parliament General Election "
-            "tomorrow, for which party would you vote?"
+            (
+                "Table_1. If there was a UK Parliament General Election "
+                "tomorrow, for which party would you vote?"
+            )
         ],
         [
-            "Base: all respondents, excluding undecided voters and those "
-            "who would remove their preference"
+            (
+                "Base: all respondents, excluding undecided voters and those "
+                "who would remove their preference"
+            )
         ],
     ]
     for party, pct in _SURVATION_PARTY_FIGURES:
@@ -354,9 +357,7 @@ class TestImportPollPreview:
         assert "<p><strong>Pollster:</strong> Survation (survation)</p>" in lines
         assert f"<p><strong>Source URL:</strong> {_DEFAULT_SOURCE_URL}</p>" in lines
         assert "<p><strong>Map:</strong> UK Constituencies post 2022</p>" in lines
-        assert (
-            "<p><strong>Fieldwork:</strong> 2026-01-03 to 2026-01-05</p>" in lines
-        )
+        assert "<p><strong>Fieldwork:</strong> 2026-01-03 to 2026-01-05</p>" in lines
         assert "<p><strong>Sample size:</strong> 1511</p>" in lines
         assert "<p><strong>Rows to insert:</strong> 104</p>" in lines
         assert _TOKEN_RE.search(body) is not None
@@ -425,8 +426,10 @@ class TestImportPreviewBases:
 
         poll_id = _poll_id_from_redirect(response.headers["Location"])
         assert _flashes(client, response) == [
-            f"Import complete. Poll #{poll_id}, inserted 104 rows"
-            " and 13 respondent bases."
+            (
+                f"Import complete. Poll #{poll_id}, inserted 104 rows"
+                " and 13 respondent bases."
+            )
         ]
 
     def test_no_bases_hides_the_table(
@@ -464,13 +467,9 @@ class TestImportPollConfirm:
 
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/westminster/polls/import")
-        assert _flashes(client, response) == [
-            "Preview expired. Please preview again."
-        ]
+        assert _flashes(client, response) == ["Preview expired. Please preview again."]
 
-    def test_wrong_preview_type_flashes_expired(
-        self, app: Flask, db: Database
-    ) -> None:
+    def test_wrong_preview_type_flashes_expired(self, app: Flask, db: Database) -> None:
         # A token minted by a different flow (the Wikipedia queue's own
         # preview type) must not be redeemable here.
         token = store_preview({"type": "wikipedia_queue", "state": object()})
@@ -480,9 +479,7 @@ class TestImportPollConfirm:
 
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/westminster/polls/import")
-        assert _flashes(client, response) == [
-            "Preview expired. Please preview again."
-        ]
+        assert _flashes(client, response) == ["Preview expired. Please preview again."]
 
     def test_commit_error_flashes_message(
         self,
@@ -569,8 +566,10 @@ class TestImportPollConfirm:
         assert response.status_code == 302
         assert response.headers["Location"].endswith(f"/polls/{existing.id}")
         assert _flashes(client, response) == [
-            f"Import complete. Poll #{existing.id}, inserted "
-            f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            (
+                f"Import complete. Poll #{existing.id}, inserted "
+                f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            )
         ]
         rows = db.get_rows_for_poll(existing.id)
         assert len(rows) == _SURVATION_PLANNED_ROW_COUNT
@@ -601,8 +600,10 @@ class TestImportPollConfirm:
         assert len(decoy_ids) == 2
         assert len({poll_id, *decoy_ids}) == 3
         assert _flashes(client, response) == [
-            f"Import complete. Poll #{poll_id}, inserted "
-            f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            (
+                f"Import complete. Poll #{poll_id}, inserted "
+                f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            )
         ]
         assert len(db.get_rows_for_poll(poll_id)) == _SURVATION_PLANNED_ROW_COUNT
         pollster = db.get_pollster_by_identifier("survation")
@@ -618,9 +619,7 @@ class TestImportPollConfirm:
 
         assert repeated.status_code == 302
         assert repeated.headers["Location"].endswith("/westminster/polls/import")
-        assert _flashes(client, repeated) == [
-            "Preview expired. Please preview again."
-        ]
+        assert _flashes(client, repeated) == ["Preview expired. Please preview again."]
         assert len(db.get_rows_for_poll(poll_id)) == _SURVATION_PLANNED_ROW_COUNT
 
     def test_run_model_runs_uns_model_and_export(
@@ -652,8 +651,10 @@ class TestImportPollConfirm:
         ]
         assert recording_runner.timeouts == [1800, 900]
         assert _flashes(client, response) == [
-            f"Import complete. Poll #{poll_id}, inserted "
-            f"{_SURVATION_PLANNED_ROW_COUNT} rows.",
+            (
+                f"Import complete. Poll #{poll_id}, inserted "
+                f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            ),
             "UNS model updated.",
             "Prediction simulation exported.",
         ]
@@ -734,8 +735,10 @@ class TestImportPollConfirm:
         assert response.status_code == 302
         poll_id = _poll_id_from_redirect(response.headers["Location"])
         assert _flashes(client, response) == [
-            f"Import complete. Poll #{poll_id}, inserted "
-            f"{_SURVATION_PLANNED_ROW_COUNT} rows.",
+            (
+                f"Import complete. Poll #{poll_id}, inserted "
+                f"{_SURVATION_PLANNED_ROW_COUNT} rows."
+            ),
             f"Warning: UNS model run failed: {expected_detail}",
         ]
         assert runner.calls == expected_commands

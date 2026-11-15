@@ -178,7 +178,7 @@ class TestApportion:
         assert apportion(333, [63, 96, 56]) == [97, 149, 87]
 
     def test_parts_always_sum_to_the_total(self) -> None:
-        for total in range(0, 60):
+        for total in range(60):
             assert sum(apportion(total, [27, 77, 55])) == total
 
     def test_equal_remainders_go_to_the_earlier_weight(self) -> None:

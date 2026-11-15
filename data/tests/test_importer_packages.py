@@ -105,6 +105,7 @@ def test_every_importer_imports_in_a_fresh_interpreter_under_its_package_name() 
         cwd=DATA_DIR.parent,
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
 
@@ -130,12 +131,15 @@ def test_every_rebuild_step_and_console_script_exists() -> None:
 
 
 @pytest.mark.parametrize("relative", RUNNABLE, ids=[str(path) for path in RUNNABLE])
-def test_each_runnable_importer_still_runs_by_path(relative: Path, tmp_path: Path) -> None:
+def test_each_runnable_importer_still_runs_by_path(
+    relative: Path, tmp_path: Path
+) -> None:
     result = subprocess.run(
         [sys.executable, str(DATA_DIR / relative), "--help"],
         cwd=tmp_path,
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout

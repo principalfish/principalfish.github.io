@@ -17,15 +17,24 @@ class TestTrendEntryAsOfDate:
     """The as-of date prefers the UNS-name date, then falls back to as_of_date."""
 
     def test_prefers_date_in_election_name(self) -> None:
-        entry: dict[str, Any] = {"election_name": "UNS 2025-05-01", "as_of_date": "2020-01-01"}
+        entry: dict[str, Any] = {
+            "election_name": "UNS 2025-05-01",
+            "as_of_date": "2020-01-01",
+        }
         assert trend_entry_as_of_date(entry) == date(2025, 5, 1)
 
     def test_falls_back_to_as_of_date(self) -> None:
-        entry: dict[str, Any] = {"election_name": "no date here", "as_of_date": "2025-06-15"}
+        entry: dict[str, Any] = {
+            "election_name": "no date here",
+            "as_of_date": "2025-06-15",
+        }
         assert trend_entry_as_of_date(entry) == date(2025, 6, 15)
 
     def test_invalid_name_date_falls_back_to_as_of_date(self) -> None:
-        entry: dict[str, Any] = {"election_name": "UNS 2025-13-99", "as_of_date": "2025-06-15"}
+        entry: dict[str, Any] = {
+            "election_name": "UNS 2025-13-99",
+            "as_of_date": "2025-06-15",
+        }
         assert trend_entry_as_of_date(entry) == date(2025, 6, 15)
 
     def test_returns_none_when_nothing_parseable(self) -> None:

@@ -1,401 +1,425 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from "vitest";
 
-vi.mock('../state.js', () => ({
+vi.mock("../state.js", () => ({
   manifest: {
     partiesByKey: {
-      labour: { name: 'Labour', colour: '#E4003B' },
-      snp: { name: 'Scottish National Party', colour: '#FFF95D' },
-      noname: { colour: '#123456' },
-      nocolour: { name: 'No Colour Party' },
+      labour: { name: "Labour", colour: "#E4003B" },
+      snp: { name: "Scottish National Party", colour: "#FFF95D" },
+      noname: { colour: "#123456" },
+      nocolour: { name: "No Colour Party" },
     },
   },
 }));
 
-import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, clampNumber, roundShare, base64urlEncode, base64urlDecode, deltaClass, normalizePostcode, resolveLookupSeatName, buildStateTrendSeries } from '../utils.js';
+import {
+  normalizeRegionKey,
+  titleCaseFromRegionKey,
+  escapeHtml,
+  formatInt,
+  formatPct,
+  formatSigned,
+  getRegionLabel,
+  clampNumber,
+  roundShare,
+  base64urlEncode,
+  base64urlDecode,
+  deltaClass,
+  normalizePostcode,
+  resolveLookupSeatName,
+  buildStateTrendSeries,
+} from "../utils.js";
 
-describe('escapeHtml', () => {
-  it('escapes ampersands', () => {
-    expect(escapeHtml('a & b')).toBe('a &amp; b');
+describe("escapeHtml", () => {
+  it("escapes ampersands", () => {
+    expect(escapeHtml("a & b")).toBe("a &amp; b");
   });
 
-  it('escapes angle brackets', () => {
-    expect(escapeHtml('<script>')).toBe('&lt;script&gt;');
+  it("escapes angle brackets", () => {
+    expect(escapeHtml("<script>")).toBe("&lt;script&gt;");
   });
 
-  it('escapes double quotes', () => {
-    expect(escapeHtml('"hello"')).toBe('&quot;hello&quot;');
+  it("escapes double quotes", () => {
+    expect(escapeHtml('"hello"')).toBe("&quot;hello&quot;");
   });
 
-  it('escapes all special characters in one string', () => {
-    expect(escapeHtml('<a href="x&y">')).toBe('&lt;a href=&quot;x&amp;y&quot;&gt;');
+  it("escapes all special characters in one string", () => {
+    expect(escapeHtml('<a href="x&y">')).toBe("&lt;a href=&quot;x&amp;y&quot;&gt;");
   });
 
-  it('returns empty string for empty input', () => {
-    expect(escapeHtml('')).toBe('');
+  it("returns empty string for empty input", () => {
+    expect(escapeHtml("")).toBe("");
   });
 
-  it('returns empty string for null/undefined', () => {
-    expect(escapeHtml(null)).toBe('');
-    expect(escapeHtml(undefined)).toBe('');
+  it("returns empty string for null/undefined", () => {
+    expect(escapeHtml(null)).toBe("");
+    expect(escapeHtml(undefined)).toBe("");
   });
 
-  it('leaves plain text unchanged', () => {
-    expect(escapeHtml('Hello world')).toBe('Hello world');
-  });
-});
-
-describe('formatInt', () => {
-  it('formats integers with thousands separators', () => {
-    expect(formatInt(1234567)).toBe('1,234,567');
-  });
-
-  it('rounds floats to nearest integer', () => {
-    expect(formatInt(1.6)).toBe('2');
-    expect(formatInt(1.4)).toBe('1');
-  });
-
-  it('handles zero', () => {
-    expect(formatInt(0)).toBe('0');
-  });
-
-  it('handles negative numbers', () => {
-    expect(formatInt(-1234)).toBe('-1,234');
+  it("leaves plain text unchanged", () => {
+    expect(escapeHtml("Hello world")).toBe("Hello world");
   });
 });
 
-describe('formatPct', () => {
-  it('formats to two decimal places', () => {
-    expect(formatPct(42.356)).toBe('42.36');
-    expect(formatPct(42.354)).toBe('42.35');
+describe("formatInt", () => {
+  it("formats integers with thousands separators", () => {
+    expect(formatInt(1234567)).toBe("1,234,567");
   });
 
-  it('pads whole numbers with .00', () => {
-    expect(formatPct(10)).toBe('10.00');
+  it("rounds floats to nearest integer", () => {
+    expect(formatInt(1.6)).toBe("2");
+    expect(formatInt(1.4)).toBe("1");
   });
 
-  it('handles zero', () => {
-    expect(formatPct(0)).toBe('0.00');
+  it("handles zero", () => {
+    expect(formatInt(0)).toBe("0");
   });
 
-  it('handles negative values', () => {
-    expect(formatPct(-3.5)).toBe('-3.50');
-  });
-});
-
-describe('normalizeRegionKey', () => {
-  it('lowercases and strips non-alphanumeric characters', () => {
-    expect(normalizeRegionKey('North East England')).toBe('northeastengland');
-  });
-
-  it('handles hyphens and punctuation', () => {
-    expect(normalizeRegionKey('Yorkshire & The Humber')).toBe('yorkshirethehumber');
-  });
-
-  it('returns empty string for empty input', () => {
-    expect(normalizeRegionKey('')).toBe('');
-  });
-
-  it('returns empty string for null/undefined', () => {
-    expect(normalizeRegionKey(null)).toBe('');
-    expect(normalizeRegionKey(undefined)).toBe('');
-  });
-
-  it('handles numeric input', () => {
-    expect(normalizeRegionKey(123)).toBe('123');
+  it("handles negative numbers", () => {
+    expect(formatInt(-1234)).toBe("-1,234");
   });
 });
 
-describe('titleCaseFromRegionKey', () => {
-  it('title-cases a space-separated string', () => {
-    expect(titleCaseFromRegionKey('north east england')).toBe('North East England');
+describe("formatPct", () => {
+  it("formats to two decimal places", () => {
+    expect(formatPct(42.356)).toBe("42.36");
+    expect(formatPct(42.354)).toBe("42.35");
   });
 
-  it('splits on hyphens', () => {
-    expect(titleCaseFromRegionKey('north-east-england')).toBe('North East England');
+  it("pads whole numbers with .00", () => {
+    expect(formatPct(10)).toBe("10.00");
   });
 
-  it('splits on underscores', () => {
-    expect(titleCaseFromRegionKey('north_east_england')).toBe('North East England');
+  it("handles zero", () => {
+    expect(formatPct(0)).toBe("0.00");
   });
 
-  it('splits on camelCase boundaries', () => {
-    expect(titleCaseFromRegionKey('northEastEngland')).toBe('North East England');
-  });
-
-  it('title-cases a single word', () => {
-    expect(titleCaseFromRegionKey('scotland')).toBe('Scotland');
-  });
-
-  it('returns Unknown for empty string', () => {
-    expect(titleCaseFromRegionKey('')).toBe('Unknown');
-  });
-
-  it('returns Unknown for null/undefined', () => {
-    expect(titleCaseFromRegionKey(null)).toBe('Unknown');
-    expect(titleCaseFromRegionKey(undefined)).toBe('Unknown');
+  it("handles negative values", () => {
+    expect(formatPct(-3.5)).toBe("-3.50");
   });
 });
 
-describe('getRegionLabel', () => {
+describe("normalizeRegionKey", () => {
+  it("lowercases and strips non-alphanumeric characters", () => {
+    expect(normalizeRegionKey("North East England")).toBe("northeastengland");
+  });
+
+  it("handles hyphens and punctuation", () => {
+    expect(normalizeRegionKey("Yorkshire & The Humber")).toBe("yorkshirethehumber");
+  });
+
+  it("returns empty string for empty input", () => {
+    expect(normalizeRegionKey("")).toBe("");
+  });
+
+  it("returns empty string for null/undefined", () => {
+    expect(normalizeRegionKey(null)).toBe("");
+    expect(normalizeRegionKey(undefined)).toBe("");
+  });
+
+  it("handles numeric input", () => {
+    expect(normalizeRegionKey(123)).toBe("123");
+  });
+});
+
+describe("titleCaseFromRegionKey", () => {
+  it("title-cases a space-separated string", () => {
+    expect(titleCaseFromRegionKey("north east england")).toBe("North East England");
+  });
+
+  it("splits on hyphens", () => {
+    expect(titleCaseFromRegionKey("north-east-england")).toBe("North East England");
+  });
+
+  it("splits on underscores", () => {
+    expect(titleCaseFromRegionKey("north_east_england")).toBe("North East England");
+  });
+
+  it("splits on camelCase boundaries", () => {
+    expect(titleCaseFromRegionKey("northEastEngland")).toBe("North East England");
+  });
+
+  it("title-cases a single word", () => {
+    expect(titleCaseFromRegionKey("scotland")).toBe("Scotland");
+  });
+
+  it("returns Unknown for empty string", () => {
+    expect(titleCaseFromRegionKey("")).toBe("Unknown");
+  });
+
+  it("returns Unknown for null/undefined", () => {
+    expect(titleCaseFromRegionKey(null)).toBe("Unknown");
+    expect(titleCaseFromRegionKey(undefined)).toBe("Unknown");
+  });
+});
+
+describe("getRegionLabel", () => {
   const labels = new Map([
-    ['northeastengland', 'North East England'],
-    ['yorkshirethehumber', 'Yorkshire and The Humber'],
-    ['scotland', 'Scotland'],
+    ["northeastengland", "North East England"],
+    ["yorkshirethehumber", "Yorkshire and The Humber"],
+    ["scotland", "Scotland"],
   ]);
 
-  it('returns the label from the lookup map when the normalised key matches', () => {
-    expect(getRegionLabel('North East England', labels)).toBe('North East England');
+  it("returns the label from the lookup map when the normalised key matches", () => {
+    expect(getRegionLabel("North East England", labels)).toBe("North East England");
   });
 
   it('replaces " and " with " & "', () => {
-    expect(getRegionLabel('Yorkshire & The Humber', labels)).toBe('Yorkshire & The Humber');
+    expect(getRegionLabel("Yorkshire & The Humber", labels)).toBe("Yorkshire & The Humber");
   });
 
-  it('falls back to a title-cased form when the key is not in the lookup', () => {
-    expect(getRegionLabel('northWest', labels)).toBe('North West');
+  it("falls back to a title-cased form when the key is not in the lookup", () => {
+    expect(getRegionLabel("northWest", labels)).toBe("North West");
   });
 
-  it('returns Unknown for empty input', () => {
-    expect(getRegionLabel('', labels)).toBe('Unknown');
+  it("returns Unknown for empty input", () => {
+    expect(getRegionLabel("", labels)).toBe("Unknown");
   });
 
-  it('returns Unknown for null/undefined input', () => {
-    expect(getRegionLabel(null, labels)).toBe('Unknown');
-    expect(getRegionLabel(undefined, labels)).toBe('Unknown');
+  it("returns Unknown for null/undefined input", () => {
+    expect(getRegionLabel(null, labels)).toBe("Unknown");
+    expect(getRegionLabel(undefined, labels)).toBe("Unknown");
   });
 
-  it('falls back to a title-cased form when the lookup map is missing', () => {
-    expect(getRegionLabel('scotland', undefined)).toBe('Scotland');
-    expect(getRegionLabel('scotland', null)).toBe('Scotland');
+  it("falls back to a title-cased form when the lookup map is missing", () => {
+    expect(getRegionLabel("scotland", undefined)).toBe("Scotland");
+    expect(getRegionLabel("scotland", null)).toBe("Scotland");
   });
 });
 
-describe('formatSigned', () => {
-  it('prefixes positive values with +', () => {
-    expect(formatSigned(3)).toBe('+3');
-    expect(formatSigned(1.5, 2)).toBe('+1.50');
+describe("formatSigned", () => {
+  it("prefixes positive values with +", () => {
+    expect(formatSigned(3)).toBe("+3");
+    expect(formatSigned(1.5, 2)).toBe("+1.50");
   });
 
-  it('keeps negative sign on negative values', () => {
-    expect(formatSigned(-3)).toBe('-3');
-    expect(formatSigned(-1.5, 2)).toBe('-1.50');
+  it("keeps negative sign on negative values", () => {
+    expect(formatSigned(-3)).toBe("-3");
+    expect(formatSigned(-1.5, 2)).toBe("-1.50");
   });
 
   it('returns "0" for exact zero', () => {
-    expect(formatSigned(0)).toBe('0');
+    expect(formatSigned(0)).toBe("0");
   });
 
   it('returns "0" for values within floating-point epsilon of zero', () => {
-    expect(formatSigned(1e-10)).toBe('0');
-    expect(formatSigned(-1e-10)).toBe('0');
+    expect(formatSigned(1e-10)).toBe("0");
+    expect(formatSigned(-1e-10)).toBe("0");
   });
 
-  it('defaults to zero decimal places', () => {
-    expect(formatSigned(3.7)).toBe('+4');
+  it("defaults to zero decimal places", () => {
+    expect(formatSigned(3.7)).toBe("+4");
   });
 
-  it('treats null/undefined as zero', () => {
-    expect(formatSigned(null)).toBe('0');
-    expect(formatSigned(undefined)).toBe('0');
+  it("treats null/undefined as zero", () => {
+    expect(formatSigned(null)).toBe("0");
+    expect(formatSigned(undefined)).toBe("0");
   });
 });
 
-describe('clampNumber', () => {
-  it('returns value when within range', () => {
+describe("clampNumber", () => {
+  it("returns value when within range", () => {
     expect(clampNumber(5, 0, 10)).toBe(5);
   });
 
-  it('clamps to minimum when value is below range', () => {
+  it("clamps to minimum when value is below range", () => {
     expect(clampNumber(-5, 0, 100)).toBe(0);
   });
 
-  it('clamps to maximum when value is above range', () => {
+  it("clamps to maximum when value is above range", () => {
     expect(clampNumber(150, 0, 100)).toBe(100);
   });
 
-  it('returns minimum for non-finite values', () => {
+  it("returns minimum for non-finite values", () => {
     expect(clampNumber(NaN, 0, 100)).toBe(0);
     expect(clampNumber(Infinity, 0, 100)).toBe(0);
     expect(clampNumber(-Infinity, 0, 100)).toBe(0);
   });
 
-  it('coerces string input', () => {
-    expect(clampNumber('50', 0, 100)).toBe(50);
-    expect(clampNumber('abc', 0, 100)).toBe(0);
+  it("coerces string input", () => {
+    expect(clampNumber("50", 0, 100)).toBe(50);
+    expect(clampNumber("abc", 0, 100)).toBe(0);
   });
 
-  it('returns minimum for null/undefined', () => {
+  it("returns minimum for null/undefined", () => {
     expect(clampNumber(null, 0, 100)).toBe(0);
     expect(clampNumber(undefined, 0, 100)).toBe(0);
   });
 
-  it('handles boundary values inclusively', () => {
+  it("handles boundary values inclusively", () => {
     expect(clampNumber(0, 0, 100)).toBe(0);
     expect(clampNumber(100, 0, 100)).toBe(100);
   });
 });
 
-describe('roundShare', () => {
-  it('rounds an in-range value to the nearest integer', () => {
+describe("roundShare", () => {
+  it("rounds an in-range value to the nearest integer", () => {
     expect(roundShare(42.4)).toBe(42);
     expect(roundShare(42.5)).toBe(43);
     expect(roundShare(42.6)).toBe(43);
   });
 
-  it('clamps below zero to 0', () => {
+  it("clamps below zero to 0", () => {
     expect(roundShare(-5)).toBe(0);
     expect(roundShare(-0.4)).toBe(0);
   });
 
-  it('clamps above 100 to 100', () => {
+  it("clamps above 100 to 100", () => {
     expect(roundShare(101)).toBe(100);
     expect(roundShare(150.7)).toBe(100);
   });
 
-  it('returns 0 for non-finite input', () => {
+  it("returns 0 for non-finite input", () => {
     expect(roundShare(NaN)).toBe(0);
     expect(roundShare(Infinity)).toBe(0);
     expect(roundShare(-Infinity)).toBe(0);
   });
 
-  it('returns 0 for null/undefined', () => {
+  it("returns 0 for null/undefined", () => {
     expect(roundShare(null)).toBe(0);
     expect(roundShare(undefined)).toBe(0);
   });
 
-  it('coerces numeric strings', () => {
-    expect(roundShare('33.6')).toBe(34);
-    expect(roundShare('-10')).toBe(0);
-    expect(roundShare('abc')).toBe(0);
+  it("coerces numeric strings", () => {
+    expect(roundShare("33.6")).toBe(34);
+    expect(roundShare("-10")).toBe(0);
+    expect(roundShare("abc")).toBe(0);
   });
 
-  it('preserves the boundary values', () => {
+  it("preserves the boundary values", () => {
     expect(roundShare(0)).toBe(0);
     expect(roundShare(100)).toBe(100);
   });
 });
 
-describe('base64urlEncode / base64urlDecode', () => {
-  it('round-trips ASCII text', () => {
-    const text = 'hello world';
+describe("base64urlEncode / base64urlDecode", () => {
+  it("round-trips ASCII text", () => {
+    const text = "hello world";
     expect(base64urlDecode(base64urlEncode(text))).toBe(text);
   });
 
-  it('round-trips JSON payloads with predict-like shape', () => {
-    const payload = JSON.stringify({ e: 1, r: [['scotland', 'snp', 50], ['wales', 'plaidcymru', 30]] });
+  it("round-trips JSON payloads with predict-like shape", () => {
+    const payload = JSON.stringify({
+      e: 1,
+      r: [
+        ["scotland", "snp", 50],
+        ["wales", "plaidcymru", 30],
+      ],
+    });
     expect(base64urlDecode(base64urlEncode(payload))).toBe(payload);
   });
 
-  it('substitutes URL-unsafe characters', () => {
+  it("substitutes URL-unsafe characters", () => {
     // Inputs chosen to force btoa output to contain '+' and '/'.
-    const encoded = base64urlEncode('\xff\xfe\xfd\xfc');
+    const encoded = base64urlEncode("\xff\xfe\xfd\xfc");
     expect(encoded).not.toMatch(/[+/=]/);
   });
 
-  it('strips trailing padding from the encoded output', () => {
-    expect(base64urlEncode('a')).toBe('YQ');
-    expect(base64urlEncode('ab')).toBe('YWI');
-    expect(base64urlEncode('abc')).toBe('YWJj');
+  it("strips trailing padding from the encoded output", () => {
+    expect(base64urlEncode("a")).toBe("YQ");
+    expect(base64urlEncode("ab")).toBe("YWI");
+    expect(base64urlEncode("abc")).toBe("YWJj");
   });
 
-  it('returns empty string when encoding empty input', () => {
-    expect(base64urlEncode('')).toBe('');
+  it("returns empty string when encoding empty input", () => {
+    expect(base64urlEncode("")).toBe("");
   });
 
-  it('decodes payloads with arbitrary padding state', () => {
-    expect(base64urlDecode('YQ')).toBe('a');
-    expect(base64urlDecode('YWI')).toBe('ab');
-    expect(base64urlDecode('YWJj')).toBe('abc');
+  it("decodes payloads with arbitrary padding state", () => {
+    expect(base64urlDecode("YQ")).toBe("a");
+    expect(base64urlDecode("YWI")).toBe("ab");
+    expect(base64urlDecode("YWJj")).toBe("abc");
   });
 
-  it('returns null for malformed input', () => {
-    expect(base64urlDecode('!!!not base64!!!')).toBeNull();
-  });
-});
-
-describe('deltaClass', () => {
-  it('classifies positive, negative, and neutral values', () => {
-    expect(deltaClass(3)).toBe('maps-delta-positive');
-    expect(deltaClass(-1.5)).toBe('maps-delta-negative');
-    expect(deltaClass(0)).toBe('maps-delta-neutral');
-  });
-
-  it('treats values within floating-point epsilon of zero as neutral', () => {
-    expect(deltaClass(1e-12)).toBe('maps-delta-neutral');
-    expect(deltaClass(null)).toBe('maps-delta-neutral');
+  it("returns null for malformed input", () => {
+    expect(base64urlDecode("!!!not base64!!!")).toBeNull();
   });
 });
 
-describe('normalizePostcode', () => {
-  it('uppercases and inserts the inward-code space', () => {
-    expect(normalizePostcode('sw1a1aa')).toBe('SW1A 1AA');
-    expect(normalizePostcode('m11ae')).toBe('M1 1AE');
+describe("deltaClass", () => {
+  it("classifies positive, negative, and neutral values", () => {
+    expect(deltaClass(3)).toBe("maps-delta-positive");
+    expect(deltaClass(-1.5)).toBe("maps-delta-negative");
+    expect(deltaClass(0)).toBe("maps-delta-neutral");
   });
 
-  it('collapses existing internal whitespace to the canonical single space', () => {
-    expect(normalizePostcode('SW1A  1AA')).toBe('SW1A 1AA');
-    expect(normalizePostcode(' m1\t1ae ')).toBe('M1 1AE');
-  });
-
-  it('leaves an already-canonical postcode unchanged', () => {
-    expect(normalizePostcode('SW1A 1AA')).toBe('SW1A 1AA');
-  });
-
-  it('passes short fragments through without inserting a space', () => {
-    expect(normalizePostcode('M1')).toBe('M1');
-    expect(normalizePostcode('sw1a')).toBe('SW1A');
-  });
-
-  it('returns empty string for empty or null input', () => {
-    expect(normalizePostcode('')).toBe('');
-    expect(normalizePostcode(null)).toBe('');
-    expect(normalizePostcode(undefined)).toBe('');
+  it("treats values within floating-point epsilon of zero as neutral", () => {
+    expect(deltaClass(1e-12)).toBe("maps-delta-neutral");
+    expect(deltaClass(null)).toBe("maps-delta-neutral");
   });
 });
 
-describe('resolveLookupSeatName', () => {
+describe("normalizePostcode", () => {
+  it("uppercases and inserts the inward-code space", () => {
+    expect(normalizePostcode("sw1a1aa")).toBe("SW1A 1AA");
+    expect(normalizePostcode("m11ae")).toBe("M1 1AE");
+  });
+
+  it("collapses existing internal whitespace to the canonical single space", () => {
+    expect(normalizePostcode("SW1A  1AA")).toBe("SW1A 1AA");
+    expect(normalizePostcode(" m1\t1ae ")).toBe("M1 1AE");
+  });
+
+  it("leaves an already-canonical postcode unchanged", () => {
+    expect(normalizePostcode("SW1A 1AA")).toBe("SW1A 1AA");
+  });
+
+  it("passes short fragments through without inserting a space", () => {
+    expect(normalizePostcode("M1")).toBe("M1");
+    expect(normalizePostcode("sw1a")).toBe("SW1A");
+  });
+
+  it("returns empty string for empty or null input", () => {
+    expect(normalizePostcode("")).toBe("");
+    expect(normalizePostcode(null)).toBe("");
+    expect(normalizePostcode(undefined)).toBe("");
+  });
+});
+
+describe("resolveLookupSeatName", () => {
   const seatKeys = new Map([
-    ['ynys mon', 'Ynys Mon'],
-    ['cardiff north', 'Cardiff North'],
+    ["ynys mon", "Ynys Mon"],
+    ["cardiff north", "Cardiff North"],
   ]);
 
-  it('strips accents so API names match unaccented seat data', () => {
-    expect(resolveLookupSeatName('Ynys Môn', seatKeys, null)).toBe('Ynys Mon');
+  it("strips accents so API names match unaccented seat data", () => {
+    expect(resolveLookupSeatName("Ynys Môn", seatKeys, null)).toBe("Ynys Mon");
   });
 
-  it('returns a known seat name unchanged without consulting renames', () => {
-    expect(resolveLookupSeatName('Cardiff North', seatKeys, { 'Cardiff North': 'WRONG' }))
-      .toBe('Cardiff North');
+  it("returns a known seat name unchanged without consulting renames", () => {
+    expect(resolveLookupSeatName("Cardiff North", seatKeys, { "Cardiff North": "WRONG" })).toBe(
+      "Cardiff North",
+    );
   });
 
-  it('applies the boundary-rename fallback for names missing from the seat index', () => {
-    const renames = { 'Old Boundary Seat': 'New Boundary Seat' };
-    expect(resolveLookupSeatName('Old Boundary Seat', seatKeys, renames)).toBe('New Boundary Seat');
+  it("applies the boundary-rename fallback for names missing from the seat index", () => {
+    const renames = { "Old Boundary Seat": "New Boundary Seat" };
+    expect(resolveLookupSeatName("Old Boundary Seat", seatKeys, renames)).toBe("New Boundary Seat");
   });
 
-  it('returns the accent-stripped name when no rename matches', () => {
-    expect(resolveLookupSeatName('Unknown Seat', seatKeys, { Other: 'X' })).toBe('Unknown Seat');
-    expect(resolveLookupSeatName('Unknown Seat', seatKeys, null)).toBe('Unknown Seat');
+  it("returns the accent-stripped name when no rename matches", () => {
+    expect(resolveLookupSeatName("Unknown Seat", seatKeys, { Other: "X" })).toBe("Unknown Seat");
+    expect(resolveLookupSeatName("Unknown Seat", seatKeys, null)).toBe("Unknown Seat");
   });
 
-  it('tolerates a missing seat index', () => {
-    expect(resolveLookupSeatName('Ynys Môn', null, null)).toBe('Ynys Mon');
-    expect(resolveLookupSeatName('Ynys Môn', undefined, { 'Ynys Mon': 'Renamed' })).toBe('Renamed');
+  it("tolerates a missing seat index", () => {
+    expect(resolveLookupSeatName("Ynys Môn", null, null)).toBe("Ynys Mon");
+    expect(resolveLookupSeatName("Ynys Môn", undefined, { "Ynys Mon": "Renamed" })).toBe("Renamed");
   });
 
-  it('returns empty string for empty input', () => {
-    expect(resolveLookupSeatName('', seatKeys, null)).toBe('');
-    expect(resolveLookupSeatName(null, seatKeys, null)).toBe('');
+  it("returns empty string for empty input", () => {
+    expect(resolveLookupSeatName("", seatKeys, null)).toBe("");
+    expect(resolveLookupSeatName(null, seatKeys, null)).toBe("");
   });
 });
 
-describe('buildStateTrendSeries', () => {
-  it('passes a well-formed series through unchanged', () => {
-    expect(buildStateTrendSeries([{ year: 2020, dem: 51.2, rep: 48.8 }]))
-      .toEqual([{ year: 2020, dem: 51.2, rep: 48.8 }]);
+describe("buildStateTrendSeries", () => {
+  it("passes a well-formed series through unchanged", () => {
+    expect(buildStateTrendSeries([{ year: 2020, dem: 51.2, rep: 48.8 }])).toEqual([
+      { year: 2020, dem: 51.2, rep: 48.8 },
+    ]);
   });
 
-  it('sorts entries ascending by year', () => {
+  it("sorts entries ascending by year", () => {
     const out = buildStateTrendSeries([
       { year: 2024, dem: 40, rep: 60 },
       { year: 2016, dem: 45, rep: 55 },
@@ -404,22 +428,23 @@ describe('buildStateTrendSeries', () => {
     expect(out.map((entry) => entry.year)).toEqual([2016, 2020, 2024]);
   });
 
-  it('coerces string-typed numbers', () => {
-    expect(buildStateTrendSeries([{ year: '2020', dem: '51.2', rep: '48.8' }]))
-      .toEqual([{ year: 2020, dem: 51.2, rep: 48.8 }]);
+  it("coerces string-typed numbers", () => {
+    expect(buildStateTrendSeries([{ year: "2020", dem: "51.2", rep: "48.8" }])).toEqual([
+      { year: 2020, dem: 51.2, rep: 48.8 },
+    ]);
   });
 
-  it('drops malformed entries', () => {
+  it("drops malformed entries", () => {
     const out = buildStateTrendSeries([
       { year: 2020, dem: 51, rep: 49 },
-      { year: 2016, dem: 'x', rep: 40 }, // non-numeric dem
-      { year: 2012, rep: 40 },           // missing dem
-      null,                              // nullish entry
+      { year: 2016, dem: "x", rep: 40 }, // non-numeric dem
+      { year: 2012, rep: 40 }, // missing dem
+      null, // nullish entry
     ]);
     expect(out).toEqual([{ year: 2020, dem: 51, rep: 49 }]);
   });
 
-  it('returns an empty array for non-array input', () => {
+  it("returns an empty array for non-array input", () => {
     expect(buildStateTrendSeries(undefined)).toEqual([]);
     expect(buildStateTrendSeries(null)).toEqual([]);
     expect(buildStateTrendSeries({})).toEqual([]);

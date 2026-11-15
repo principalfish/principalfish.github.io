@@ -42,6 +42,7 @@ from typing import Literal
 from urllib.error import HTTPError
 
 from bs4 import BeautifulSoup, Tag
+from sqlalchemy import select
 
 from core.db import Database, StoredPollReadings
 from core.schema import Poll, PollRow, Pollster, Seat
@@ -65,7 +66,6 @@ from importers.polls.us.us_polls_common import (
     parse_poll_tables,
     pollster_identifier,
 )
-from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -81,10 +81,14 @@ SENATE_INDEX_URL = f"{WIKIPEDIA_BASE}/wiki/2026_United_States_Senate_elections"
 # rather than an error), but it is the page the statewide polls will appear on,
 # so it is listed here and this tuple is overridable per run.
 PRESIDENT_PAGE_URLS: tuple[str, ...] = (
-    f"{WIKIPEDIA_BASE}/wiki/"
-    "Nationwide_opinion_polling_for_the_2028_United_States_presidential_election",
-    f"{WIKIPEDIA_BASE}/wiki/"
-    "Statewide_opinion_polling_for_the_2028_United_States_presidential_election",
+    (
+        f"{WIKIPEDIA_BASE}/wiki/"
+        "Nationwide_opinion_polling_for_the_2028_United_States_presidential_election"
+    ),
+    (
+        f"{WIKIPEDIA_BASE}/wiki/"
+        "Statewide_opinion_polling_for_the_2028_United_States_presidential_election"
+    ),
 )
 
 #: A page fetcher: takes a URL, returns the page source, raises on failure.
@@ -678,7 +682,7 @@ def _fetch_one(url: str, fetcher: Fetcher) -> _FetchResult:
         if err.code == 404:
             return None, None, f"{url}: not present yet (HTTP 404)"
         return None, f"HTTP {err.code}: {err.reason}", None
-    except Exception as err:  # noqa: BLE001 - per-URL boundary, see below
+    except Exception as err:  # per-URL boundary, see below
         # One unreachable page out of ~90 must not abort a whole import run,
         # and a fetcher is free to raise anything (socket, TLS, decoding), so
         # the boundary is deliberately broad. Nothing is swallowed: the
@@ -1347,8 +1351,7 @@ def _contest_page_urls(
     if discovered is not None and discovered.dropped_overflow:
         count = discovered.dropped_overflow
         overflow[f"{contest.slug}: {count} more discovery link(s) dropped"] = (
-            f"past the {_MAX_DROPPED_LINKS}-link cap on one index's rejected "
-            "race links"
+            f"past the {_MAX_DROPPED_LINKS}-link cap on one index's rejected race links"
         )
     wanted = list(dict.fromkeys(urls))
     if not contest.is_per_state:
@@ -1433,9 +1436,7 @@ def fetch_us_poll_index(
     for contest in contests:
         seat_ids = _seat_ids_for_map(db, contest.map_name)
         if seat_ids is None:
-            notes.append(
-                f"{contest.slug}: skipped — no map named {contest.map_name!r}"
-            )
+            notes.append(f"{contest.slug}: skipped — no map named {contest.map_name!r}")
             continue
         scoped.append((contest, seat_ids))
 
@@ -1451,9 +1452,7 @@ def fetch_us_poll_index(
     for contest, _ in scoped:
         index_html = pages.get(contest.index_url) if contest.index_url else None
         if contest.index_url is not None and index_html is None:
-            notes.append(
-                f"{contest.slug}: no race pages — its index could not be read"
-            )
+            notes.append(f"{contest.slug}: no race pages — its index could not be read")
         urls, unplaced = _contest_page_urls(
             contest, index_html=index_html, wanted_states=wanted_states
         )
@@ -1635,9 +1634,7 @@ def build_us_import_plan(db: Database, row: UsPollRow) -> UsImportPlan:
         if party_id is None:
             if reading.party_name not in unknown:
                 unknown.append(reading.party_name)
-                warnings.append(
-                    f"party not in the database: {reading.party_name!r}"
-                )
+                warnings.append(f"party not in the database: {reading.party_name!r}")
             continue
         planned.append(
             PlannedUsPollRow(

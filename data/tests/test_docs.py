@@ -29,7 +29,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = Path(__file__).resolve().parents[1] / "console" / "static"
 
 
-
 def docs_files(root: Path) -> list[Path]:
     """The markdown docs under ``root``, failing loudly if there are none.
 
@@ -208,11 +207,12 @@ def unmatched_console_paths(
             continue
         if not any(matches_rule(raw, rule) for rule in rules):
             findings.append(Finding(number, raw, "no URL rule matches"))
-        elif segments[0] == "static" and not any(
-            PLACEHOLDER.match(s) for s in segments
+        elif (
+            segments[0] == "static"
+            and not any(PLACEHOLDER.match(s) for s in segments)
+            and not static_dir.joinpath(*segments[1:]).is_file()
         ):
-            if not static_dir.joinpath(*segments[1:]).is_file():
-                findings.append(Finding(number, raw, "no such static file"))
+            findings.append(Finding(number, raw, "no such static file"))
     return findings
 
 

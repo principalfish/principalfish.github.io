@@ -15,7 +15,6 @@ from console.us.models import US_CHAMBERS
 from core.db import Database
 from core.schema import ElectionType
 from export.export_elections import PAGE_PARLIAMENTS
-from tests.console_fixtures import app  # noqa: F401  (pytest fixture)
 from tests.us_ev_fixtures import seed_allocations, set_model_target
 
 
@@ -90,7 +89,7 @@ def test_the_westminster_map_name_matches_the_database_map() -> None:
     ],
 )
 def test_only_the_westminster_output_page_links_to_uncertainty(
-    app: Flask,  # noqa: F811
+    app: Flask,
     db: Database,
     monkeypatch: pytest.MonkeyPatch,
     section: str,

@@ -1,15 +1,19 @@
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
-import { readFile } from "node:fs/promises";
 import { build } from "esbuild";
 
 const componentDir = fileURLToPath(new URL("../", import.meta.url));
 const solverDir = path.join(componentDir, "js/solver");
 
 // Node transport only; the browser client and shared handler remain production code.
-export async function createNativeWorkerFactory({ dataDir = path.join(componentDir, "data"), replacements = {} } = {}) {
-  const output = await build({ stdin: { contents: `
+export async function createNativeWorkerFactory({
+  dataDir = path.join(componentDir, "data"),
+  replacements = {},
+} = {}) {
+  const output = await build({
+    stdin: {
+      contents: `
 import { parentPort } from "node:worker_threads";
 import { createLocalFetch } from ${JSON.stringify(path.join(componentDir, "benchmarks/local-fetch.mjs"))};
 import { createContract } from ${JSON.stringify(path.join(componentDir, "benchmarks/contract.mjs"))};
@@ -38,17 +42,32 @@ parentPort.on("message", async envelope => {
     parentPort.postMessage({ type: "benchmark:contract-result", serial: envelope.serial, error: error.message });
   }
 });
-parentPort.postMessage({ type: "ready" });`, resolveDir: solverDir },
-    bundle: true, write: false, format: "esm", platform: "node", logLevel: "silent",
-    define: { "import.meta.url": JSON.stringify(pathToFileURL(path.join(solverDir, "data.js")).href) },
-    plugins: [{ name: "bounded-worker-fixtures", setup(builder) {
-      builder.onLoad({ filter: /[/\\][^/\\]+\.js$/ }, async args => {
-        const contents = replacements[path.basename(args.path)];
-        return contents === undefined ? undefined : { contents, resolveDir: solverDir };
-      });
-    } }],
+parentPort.postMessage({ type: "ready" });`,
+      resolveDir: solverDir,
+    },
+    bundle: true,
+    write: false,
+    format: "esm",
+    platform: "node",
+    logLevel: "silent",
+    define: {
+      "import.meta.url": JSON.stringify(pathToFileURL(path.join(solverDir, "data.js")).href),
+    },
+    plugins: [
+      {
+        name: "bounded-worker-fixtures",
+        setup(builder) {
+          builder.onLoad({ filter: /[/\\][^/\\]+\.js$/ }, async (args) => {
+            const contents = replacements[path.basename(args.path)];
+            return contents === undefined ? undefined : { contents, resolveDir: solverDir };
+          });
+        },
+      },
+    ],
   });
-  const url = new URL(`data:text/javascript;base64,${Buffer.from(output.outputFiles[0].text).toString("base64")}`);
+  const url = new URL(
+    `data:text/javascript;base64,${Buffer.from(output.outputFiles[0].text).toString("base64")}`,
+  );
   const workers = [];
   let serial = 0;
   function factory() {
@@ -57,14 +76,23 @@ parentPort.postMessage({ type: "ready" });`, resolveDir: solverDir },
     let termination = null;
     const adapter = {
       native,
-      postMessage: message => native.postMessage(message),
+      postMessage: (message) => native.postMessage(message),
       addEventListener(name, handler) {
-        const wrapped = name === "message" ? data => {
-          if (data?.type !== "benchmark:contract-result") handler({ data });
-        } : name === "error" ? error => handler({ message: error.message }) : handler;
-        const exited = name === "error" ? code => {
-          if (!termination) handler({ message: `Native computation Worker exited unexpectedly (${code})` });
-        } : null;
+        const wrapped =
+          name === "message"
+            ? (data) => {
+                if (data?.type !== "benchmark:contract-result") handler({ data });
+              }
+            : name === "error"
+              ? (error) => handler({ message: error.message })
+              : handler;
+        const exited =
+          name === "error"
+            ? (code) => {
+                if (!termination)
+                  handler({ message: `Native computation Worker exited unexpectedly (${code})` });
+              }
+            : null;
         listeners.set(handler, { name, wrapped, exited });
         native.on(name, wrapped);
         if (exited) native.on("exit", exited);
@@ -99,10 +127,14 @@ parentPort.postMessage({ type: "ready" });`, resolveDir: solverDir },
         worker.native.off("error", fail);
         worker.native.off("exit", exited);
       };
-      const fail = error => { cleanup(); reject(error); };
+      const fail = (error) => {
+        cleanup();
+        reject(error);
+      };
       const exited = () => fail(new Error("Worker exited before returning benchmark metadata"));
-      const receive = message => {
-        if (message?.type !== "benchmark:contract-result" || message.serial !== requestSerial) return;
+      const receive = (message) => {
+        if (message?.type !== "benchmark:contract-result" || message.serial !== requestSerial)
+          return;
         cleanup();
         if (message.error) reject(new Error(message.error));
         else resolve({ contract: message.contract, ownership: message.ownership });
@@ -111,9 +143,17 @@ parentPort.postMessage({ type: "ready" });`, resolveDir: solverDir },
       worker.native.on("message", receive);
       worker.native.on("error", fail);
       worker.native.on("exit", exited);
-      try { worker.native.postMessage({ type: "benchmark:contract", serial: requestSerial, sample }); }
-      catch (error) { fail(error); }
+      try {
+        worker.native.postMessage({ type: "benchmark:contract", serial: requestSerial, sample });
+      } catch (error) {
+        fail(error);
+      }
     });
   }
-  return { factory, workers, contract, dispose: () => Promise.all(workers.map(worker => worker.terminate())) };
+  return {
+    factory,
+    workers,
+    contract,
+    dispose: () => Promise.all(workers.map((worker) => worker.terminate())),
+  };
 }

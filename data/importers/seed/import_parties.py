@@ -25,7 +25,6 @@ from sqlalchemy import text
 from core.db import Database
 from core.schema import Party
 
-
 PARTY_DEFINITIONS = (
     {"name": "Alba Party", "colour": "#005EB8"},
     {"name": "Alliance", "colour": "#F6CB2F"},
@@ -80,7 +79,9 @@ def generate_short_name(name: str) -> str:
         return name
 
     if name in ACRONYM_PARTIES:
-        words = [part for part in name.split() if part.lower() not in {"and", "of", "the"}]
+        words = [
+            part for part in name.split() if part.lower() not in {"and", "of", "the"}
+        ]
         return "".join(word[0] for word in words if word).upper()
 
     normalized = unicodedata.normalize("NFKD", name)
@@ -176,7 +177,9 @@ def drop_long_name_column(db: Database, dry_run: bool) -> None:
         dry_run: If ``True``, print the would-be SQL without executing it.
     """
     with db.engine.begin() as connection:
-        columns = [row[1] for row in connection.execute(text("PRAGMA table_info(parties)"))]
+        columns = [
+            row[1] for row in connection.execute(text("PRAGMA table_info(parties)"))
+        ]
         if "long_name" not in columns:
             print("- parties.long_name already absent, skipping")
             return
@@ -228,7 +231,9 @@ def main() -> None:
         name = party["name"]
         colour = party.get("colour")
         short_name = generate_short_name(name)
-        result = upsert_party(db, name, short_name, colour, args.dry_run, args.skip_existing)
+        result = upsert_party(
+            db, name, short_name, colour, args.dry_run, args.skip_existing
+        )
         print(f"- {result}")
 
         if "created:" in result or "would create:" in result:

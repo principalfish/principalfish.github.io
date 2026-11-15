@@ -180,7 +180,7 @@ def test_schema_a_house() -> None:
             (("frost-m", "democrat", 0),),
         ),
     }  # fmt: skip
-    assert [race.nyt_race_id for race in races][0] == "TX-G-H-28-2026-11-03"
+    assert next(race.nyt_race_id for race in races) == "TX-G-H-28-2026-11-03"
 
 
 def test_schema_a_full_race() -> None:
@@ -214,9 +214,7 @@ def test_schema_a_full_race() -> None:
 
 
 def test_schema_a_senate() -> None:
-    races = parse_a(
-        _load("schema-a.json"), year=2026, chamber="senate", kind="general"
-    )
+    races = parse_a(_load("schema-a.json"), year=2026, chamber="senate", kind="general")
 
     assert _rows(races) == {
         "OH-S_W-S-2026-11-03": (
@@ -244,9 +242,7 @@ def test_schema_a_senate() -> None:
 
 
 def test_schema_a2_house() -> None:
-    races = parse_a(
-        _load("schema-a2.json"), year=2022, chamber="house", kind="general"
-    )
+    races = parse_a(_load("schema-a2.json"), year=2022, chamber="house", kind="general")
 
     # Puerto Rico's delegate is dropped.
     assert _rows(races) == {
@@ -347,9 +343,7 @@ def test_schema_b_house() -> None:
 
 
 def test_schema_b_senate() -> None:
-    races = parse_b(
-        _load("schema-b.json"), year=2020, chamber="senate", kind="general"
-    )
+    races = parse_b(_load("schema-b.json"), year=2020, chamber="senate", kind="general")
 
     assert _rows(races) == {
         "AL-G-S-2020-11-03": (
@@ -428,9 +422,7 @@ def test_schema_c_house() -> None:
 
 
 def test_schema_c_senate() -> None:
-    races = parse_c(
-        _load("schema-c.json"), year=2018, chamber="senate", kind="general"
-    )
+    races = parse_c(_load("schema-c.json"), year=2018, chamber="senate", kind="general")
 
     assert _rows(races) == {
         "ca-8619-2018-11-06": (
@@ -665,9 +657,7 @@ def _missing_type(data: dict[str, Any]) -> None:
         (_missing_type, "TX-G-H-28-2026-11-03", "missing 'type'"),
     ],
 )
-def test_schema_a_errors_name_the_race(
-    mutate: Any, race_id: str, detail: str
-) -> None:
+def test_schema_a_errors_name_the_race(mutate: Any, race_id: str, detail: str) -> None:
     data = copy.deepcopy(_load("schema-a.json"))
     mutate(data)
 

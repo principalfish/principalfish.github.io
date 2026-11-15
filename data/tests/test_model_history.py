@@ -25,9 +25,11 @@ from models.support.trends import TREND_MODELS, reconstruct_trends
 from models.us import _common
 from models.us._common import UsSimulationConfig
 from models.westminster import run_uns_model
-from tests import test_holyrood_model as holy
-from tests import test_us_model as us
-from tests import test_westminster_model as west
+from tests import (
+    test_holyrood_model as holy,
+    test_us_model as us,
+    test_westminster_model as west,
+)
 from tests.uk_fixtures import seed_holyrood_world
 from tests.us_ev_fixtures import seed_allocations
 

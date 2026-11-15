@@ -2,22 +2,39 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { state as defaultState } from "../state.js";
 import {
-  renderModelledUncertaintyToggle, renderUncertaintyBasis, renderUncertaintyHeader,
+  renderModelledUncertaintyToggle,
+  renderUncertaintyBasis,
+  renderUncertaintyHeader,
   wireModelledUncertaintyToggle,
 } from "../uncertainty-view.js";
 
 function element() {
   return {
-    hidden: true, checked: false, textContent: "", children: [], attributes: {}, listeners: {},
-    appendChild(child) { this.children.push(child); },
-    setAttribute(name, value) { this.attributes[name] = value; },
-    addEventListener(name, callback) { this.listeners[name] = callback; },
+    hidden: true,
+    checked: false,
+    textContent: "",
+    children: [],
+    attributes: {},
+    listeners: {},
+    appendChild(child) {
+      this.children.push(child);
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+    addEventListener(name, callback) {
+      this.listeners[name] = callback;
+    },
   };
 }
 
 const summary = {
-  basis: "Nowcast: if an election were held today. 90% ranges and probabilities from 10,000 simulations, conditional on current polls and the model's error assumptions.",
-  national: { parties: { labour: { v: [20, 30], s: [200, 300, 400], m: 297, pl: 0.9, pm: 0.3 } }, hung: 0.7 },
+  basis:
+    "Nowcast: if an election were held today. 90% ranges and probabilities from 10,000 simulations, conditional on current polls and the model's error assumptions.",
+  national: {
+    parties: { labour: { v: [20, 30], s: [200, 300, 400], m: 297, pl: 0.9, pm: 0.3 } },
+    hung: 0.7,
+  },
   regions: { scotland: { parties: { labour: { v: [10, 20], s: [2, 4, 6], m: 4 } } } },
 };
 
@@ -29,10 +46,20 @@ describe("uncertainty display controls", () => {
   beforeEach(() => {
     vi.stubGlobal("document", { createElement: element });
     state = {
-      view: "election", currentElection: { model: true },
-      electionData: { uncertainty: summary }, showModelledUncertainty: false,
+      view: "election",
+      currentElection: { model: true },
+      electionData: { uncertainty: summary },
+      showModelledUncertainty: false,
       voteTotals: { mode: "all" },
-      mapFilters: { party: "all", secondParty: "all", region: "all", majorityMin: 0, majorityMax: 100, gainsOnly: false, upcoming: "all" },
+      mapFilters: {
+        party: "all",
+        secondParty: "all",
+        region: "all",
+        majorityMin: 0,
+        majorityMax: 100,
+        gainsOnly: false,
+        upcoming: "all",
+      },
     };
     control = element();
     input = element();
@@ -59,10 +86,30 @@ describe("uncertainty display controls", () => {
   });
 
   it.each([
-    ["a historical election", (s) => { s.currentElection.model = false; }],
-    ["predict", (s) => { s.view = "predict"; }],
-    ["the poll tracker", (s) => { s.view = "polltracker"; }],
-    ["a saved model without uncertainty", (s) => { s.electionData.uncertainty = null; }],
+    [
+      "a historical election",
+      (s) => {
+        s.currentElection.model = false;
+      },
+    ],
+    [
+      "predict",
+      (s) => {
+        s.view = "predict";
+      },
+    ],
+    [
+      "the poll tracker",
+      (s) => {
+        s.view = "polltracker";
+      },
+    ],
+    [
+      "a saved model without uncertainty",
+      (s) => {
+        s.electionData.uncertainty = null;
+      },
+    ],
   ])("hides the checkbox on %s, keeping the reader's choice", (_label, change) => {
     state.showModelledUncertainty = true;
     change(state);
@@ -111,10 +158,16 @@ describe("uncertainty display controls", () => {
     const shell = readFileSync(new URL("../shell.html", import.meta.url), "utf8");
     expect(shell).not.toContain("mapsUncertaintyToggle");
     expect(shell).not.toMatch(/Show uncertainty|Hide uncertainty/);
-    expect(shell).toMatch(/id="mapsVoteTotalsToggle"[^>]*>Show all<\/button>\s*<button[^>]*id="mapsVoteTotalsCollapse"/);
+    expect(shell).toMatch(
+      /id="mapsVoteTotalsToggle"[^>]*>Show all<\/button>\s*<button[^>]*id="mapsVoteTotalsCollapse"/,
+    );
     // The footer follows the map viewport, inside the map stage.
-    expect(shell).toMatch(/<\/svg>\s*<\/div>\s*(<!--[\s\S]*?-->\s*)?<p id="mapsMapFooter" class="maps-map-footer" hidden><\/p>/);
-    expect(shell).toMatch(/data-sort-key="seats"[^>]*>Seats<\/th>\s*<th class="comparison-col">±<\/th>\s*<th class="vote-total-col"/);
+    expect(shell).toMatch(
+      /<\/svg>\s*<\/div>\s*(<!--[\s\S]*?-->\s*)?<p id="mapsMapFooter" class="maps-map-footer" hidden><\/p>/,
+    );
+    expect(shell).toMatch(
+      /data-sort-key="seats"[^>]*>Seats<\/th>\s*<th class="comparison-col">±<\/th>\s*<th class="vote-total-col"/,
+    );
     expect(shell).not.toMatch(/uncertainty-col|data-uncertainty-label/);
     expect(shell).not.toContain("mapsSeatMedianNote");
     expect(shell).toMatch(/<p id="mapsMapColourNote"[^>]*hidden><\/p>/);
@@ -122,8 +175,11 @@ describe("uncertainty display controls", () => {
   });
 
   it("puts the unticked checkbox directly below the Westminster subtitle only", () => {
-    const page = (name) => readFileSync(new URL(`../../${name}/index.html`, import.meta.url), "utf8");
-    expect(page("electionmaps")).toMatch(/<p id="mapsSubtitle"[^>]*>[^<]*<\/p>\s*(<!--[\s\S]*?-->\s*)?<label id="mapsModelledUncertainty"[^>]*hidden>\s*<input id="mapsModelledUncertaintyInput" type="checkbox" \/>\s*Show with modelled uncertainty\s*<\/label>/);
+    const page = (name) =>
+      readFileSync(new URL(`../../${name}/index.html`, import.meta.url), "utf8");
+    expect(page("electionmaps")).toMatch(
+      /<p id="mapsSubtitle"[^>]*>[^<]*<\/p>\s*(<!--[\s\S]*?-->\s*)?<label id="mapsModelledUncertainty"[^>]*hidden>\s*<input id="mapsModelledUncertaintyInput" type="checkbox" \/>\s*Show with modelled uncertainty\s*<\/label>/,
+    );
     expect(page("electionmaps")).not.toMatch(/mapsModelledUncertaintyInput"[^>]*checked/);
     expect(page("uselectionmaps")).not.toContain("mapsModelledUncertainty");
   });

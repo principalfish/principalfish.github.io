@@ -1,6 +1,7 @@
 """Tests for the Election table and Database election methods."""
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from core.db import Database
 from core.schema import ElectionType
@@ -35,11 +36,11 @@ class TestAddElection:
     def test_duplicate_name_raises(self, db: Database) -> None:
         m = db.add_map("UK")
         db.add_election(m.id, 2024, "GE 2024", ElectionType.uk_general)
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             db.add_election(m.id, 2024, "GE 2024", ElectionType.uk_general)
 
     def test_invalid_map_raises(self, db: Database) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             db.add_election(9999, 2024, "Bad", ElectionType.uk_general)
 
 

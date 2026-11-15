@@ -33,23 +33,44 @@ def allocations(db: Database) -> Iterator[sqlite3.Connection]:
 
 @pytest.mark.parametrize(
     ("year", "california"),
-    [(1964, 40), (1968, 40), (1972, 45), (1980, 45), (1984, 47),
-     (1988, 47), (1992, 54), (2000, 54), (2004, 55), (2008, 55),
-     (2012, 55), (2020, 55), (2024, 54), (2028, 54)],
+    [
+        (1964, 40),
+        (1968, 40),
+        (1972, 45),
+        (1980, 45),
+        (1984, 47),
+        (1988, 47),
+        (1992, 54),
+        (2000, 54),
+        (2004, 55),
+        (2008, 55),
+        (2012, 55),
+        (2020, 55),
+        (2024, 54),
+        (2028, 54),
+    ],
 )
 def test_readers_agree_on_boundaries(
-    db: Database, allocations: sqlite3.Connection, year: int, california: int,
+    db: Database,
+    allocations: sqlite3.Connection,
+    year: int,
+    california: int,
 ) -> None:
     units = ["California", "Maine", "Maine CD-2", "Nebraska CD-3"]
-    expected = {"California": california, "Maine": 2,
-                "Maine CD-2": 1, "Nebraska CD-3": 1}
+    expected = {
+        "California": california,
+        "Maine": 2,
+        "Maine CD-2": 1,
+        "Nebraska CD-3": 1,
+    }
     assert get_electoral_votes_sqlite(allocations, year, units) == expected
     with db.session() as session:
         assert get_electoral_votes(session, year, iter(units)) == expected
 
 
 def test_reader_observes_database_edits_without_cache(
-    db: Database, allocations: sqlite3.Connection,
+    db: Database,
+    allocations: sqlite3.Connection,
 ) -> None:
     with db.session() as session:
         assert get_electoral_votes(session, 2028, ["California"]) == {"California": 54}
@@ -66,7 +87,8 @@ def test_reader_observes_database_edits_without_cache(
 
 
 def test_reader_supports_operator_added_future_era(
-    db: Database, allocations: sqlite3.Connection,
+    db: Database,
+    allocations: sqlite3.Connection,
 ) -> None:
     allocations.execute(
         "INSERT INTO us_electoral_vote_eras VALUES (2030, 2032, 2040)",
@@ -84,17 +106,22 @@ def test_reader_supports_operator_added_future_era(
 
 @pytest.mark.parametrize("year", [1960, 1970, 2022, 2032])
 def test_reader_rejects_unseeded_years(
-    db: Database, allocations: sqlite3.Connection, year: int,
+    db: Database,
+    allocations: sqlite3.Connection,
+    year: int,
 ) -> None:
     with pytest.raises(ElectoralVoteError, match=f"year {year}.*found 0"):
         get_electoral_votes_sqlite(allocations, year, ["California"])
-    with db.session() as session:
-        with pytest.raises(ElectoralVoteError, match=f"year {year}.*found 0"):
-            get_electoral_votes(session, year, ["California"])
+    with (
+        db.session() as session,
+        pytest.raises(ElectoralVoteError, match=f"year {year}.*found 0"),
+    ):
+        get_electoral_votes(session, year, ["California"])
 
 
 def test_readers_reject_missing_units(
-    db: Database, allocations: sqlite3.Connection,
+    db: Database,
+    allocations: sqlite3.Connection,
 ) -> None:
     allocations.execute(
         "DELETE FROM us_electoral_vote_allocations "
@@ -116,7 +143,8 @@ def _session_weights(db: Database, year: int, units: list[str]) -> dict[str, int
 
 
 def test_readers_reject_overlap(
-    db: Database, allocations: sqlite3.Connection,
+    db: Database,
+    allocations: sqlite3.Connection,
 ) -> None:
     allocations.execute("INSERT INTO us_electoral_vote_eras VALUES (2021, 2028, 2032)")
     allocations.commit()
@@ -147,16 +175,20 @@ def test_readers_reject_corrupt_weights(weight: object) -> None:
             (weight,),
         )
     try:
-        with Session(engine) as session:
-            with pytest.raises(
-                ElectoralVoteError, match="California.*positive integer",
-            ):
-                get_electoral_votes(session, 2028, ["California"])
+        with (
+            Session(engine) as session,
+            pytest.raises(
+                ElectoralVoteError,
+                match="California.*positive integer",
+            ),
+        ):
+            get_electoral_votes(session, 2028, ["California"])
         with engine.connect() as conn:
             raw = conn.connection.driver_connection
             assert isinstance(raw, sqlite3.Connection)
             with pytest.raises(
-                ElectoralVoteError, match="California.*positive integer",
+                ElectoralVoteError,
+                match="California.*positive integer",
             ):
                 get_electoral_votes_sqlite(raw, 2028, ["California"])
     finally:
@@ -166,9 +198,11 @@ def test_readers_reject_corrupt_weights(weight: object) -> None:
 def test_missing_schema_points_to_migration() -> None:
     engine = create_engine("sqlite://")
     try:
-        with Session(engine) as session:
-            with pytest.raises(ElectoralVoteError, match="migrate_us_electoral_votes"):
-                get_electoral_votes(session, 2028, ["California"])
+        with (
+            Session(engine) as session,
+            pytest.raises(ElectoralVoteError, match="migrate_us_electoral_votes"),
+        ):
+            get_electoral_votes(session, 2028, ["California"])
         with closing(sqlite3.connect(":memory:")) as conn:
             with pytest.raises(ElectoralVoteError, match="migrate_us_electoral_votes"):
                 get_electoral_votes_sqlite(conn, 2028, ["California"])
@@ -201,14 +235,18 @@ def test_readers_preserve_database_locked_errors(tmp_path: Path) -> None:
         writer.commit()
         migrate(writer, dry_run=False)
         writer.execute("BEGIN EXCLUSIVE")
-        with closing(sqlite3.connect(path, timeout=0)) as reader:
-            with pytest.raises(sqlite3.OperationalError, match="locked"):
-                get_electoral_votes_sqlite(reader, 2028, ["California"])
+        with (
+            closing(sqlite3.connect(path, timeout=0)) as reader,
+            pytest.raises(sqlite3.OperationalError, match="locked"),
+        ):
+            get_electoral_votes_sqlite(reader, 2028, ["California"])
         engine = create_engine(f"sqlite:///{path}", connect_args={"timeout": 0})
         try:
-            with Session(engine) as session:
-                with pytest.raises(OperationalError, match="locked"):
-                    get_electoral_votes(session, 2028, ["California"])
+            with (
+                Session(engine) as session,
+                pytest.raises(OperationalError, match="locked"),
+            ):
+                get_electoral_votes(session, 2028, ["California"])
         finally:
             engine.dispose()
         writer.rollback()

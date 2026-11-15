@@ -78,7 +78,7 @@ def _seat_shares(seed: int) -> tuple[SeatShares, SeatShares]:
     earlier: dict[int, dict[int, float]] = {}
     later: dict[int, dict[int, float]] = {}
     seat_id = 0
-    for region_id, swings in REGION_SWING.items():
+    for swings in REGION_SWING.values():
         seats = list(range(seat_id + 1, seat_id + SEATS_PER_REGION + 1))
         seat_id += SEATS_PER_REGION
         for seat in seats:

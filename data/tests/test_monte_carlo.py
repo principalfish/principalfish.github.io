@@ -260,11 +260,11 @@ class World:
             region_baseline_shares=self.baseline,
             region_average_shares=region_averages,
             region_variances={
-                region: {party: variance for party in parties}
+                region: dict.fromkeys(parties, variance)
                 for region, parties in region_averages.items()
             },
             national_average_shares=self.national,
-            national_variances={party: national_variance for party in self.national},
+            national_variances=dict.fromkeys(self.national, national_variance),
             additive_party_ids=additive_party_ids,
         )
 
@@ -396,7 +396,7 @@ class TestBuildSimulationInputs:
         # Party 20 averages 3% in region 8's crossbreaks but has no baseline
         # there (like SNP in an English region); party 30 is new everywhere.
         averages = {10: 50.0, 20: 3.0, 30: 3.0}
-        variances = {party: 1.0 for party in averages}
+        variances = dict.fromkeys(averages, 1.0)
 
         inputs = build_simulation_inputs(
             config=DEFAULTS,
@@ -732,7 +732,8 @@ class TestDrawErrors:
         inputs, draws = _draws(sigma_nat=3.0)
         small = _index(inputs, 4)  # about 3%
         large = _index(inputs, 5)  # about 30%
-        assert inputs.national_average[small] < 5 < 25 < inputs.national_average[large]
+        assert inputs.national_average[small] < 5
+        assert inputs.national_average[large] > 25
 
         ratio = draws.national[:, small].std() / draws.national[:, large].std()
 

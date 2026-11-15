@@ -91,7 +91,9 @@ def _senate_shell(shell_path: Path) -> tuple[dict[str, Any], dict[str, Any]] | N
     if not isinstance(payload, dict):
         return None
     map_modes = payload.get("mapModes")
-    senate_mode = map_modes.get(SENATE_MAP_MODE_KEY) if isinstance(map_modes, dict) else None
+    senate_mode = (
+        map_modes.get(SENATE_MAP_MODE_KEY) if isinstance(map_modes, dict) else None
+    )
     if not isinstance(senate_mode, dict):
         return None
     return payload, senate_mode
@@ -132,7 +134,10 @@ def class_state_allowlist(
     states = {
         str(seat.get("n") or "")
         for seat in data.get("seats", [])
-        if any(int(member.get("class", 0) or 0) == seat_class for member in seat.get("members", []))
+        if any(
+            int(member.get("class", 0) or 0) == seat_class
+            for member in seat.get("members", [])
+        )
     }
     states.discard("")
     return frozenset(states) or None
@@ -209,7 +214,9 @@ def senate_seat_baseline_overrides(
     _payload, senate_mode = loaded
     return {
         entry["seat"]: entry["baselineElectionId"]
-        for entry in senate_baseline_overrides(senate_mode.get("senateBaselineOverrides"))
+        for entry in senate_baseline_overrides(
+            senate_mode.get("senateBaselineOverrides")
+        )
         if entry["class"] == contested_class
     }
 
@@ -255,7 +262,9 @@ SPEC = UsModelSpec(
     national_poll_map_name="US House Districts 2024",
     # Seats off the field's baseline: specials the cycle holds, and seats last filled at a
     # special since the class voted (Florida and Ohio swing from their 2026 specials).
-    seat_baseline_overrides=senate_seat_baselines(SENATE_SPECIALS, SENATE_BASELINE_OVERRIDES),
+    seat_baseline_overrides=senate_seat_baselines(
+        SENATE_SPECIALS, SENATE_BASELINE_OVERRIDES
+    ),
 )
 
 

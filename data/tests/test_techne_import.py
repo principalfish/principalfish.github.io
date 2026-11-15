@@ -21,6 +21,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Sequence
 from datetime import date
+from http.client import IncompleteRead
 from urllib.request import Request
 
 import pytest
@@ -220,7 +221,9 @@ class TestExtractPdfText:
             lambda *_a, **_k: FakeUrlResponse(b"%PDF-1.4 bytes"),
         )
         monkeypatch.setattr(
-            techne_import, "PdfReader", _fake_pdf_reader_factory(["Page one", "Page two"])
+            techne_import,
+            "PdfReader",
+            _fake_pdf_reader_factory(["Page one", "Page two"]),
         )
 
         result = extract_pdf_text("https://www.techneuk.com/report.pdf")
@@ -255,7 +258,9 @@ class TestExtractPdfText:
             return FakeUrlResponse(b"%PDF-1.4 bytes")
 
         monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
-        monkeypatch.setattr(techne_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         extract_pdf_text("https://www.techneuk.com/report.pdf")
 
@@ -275,7 +280,9 @@ class TestExtractPdfText:
             return FakeUrlResponse(b"%PDF-1.4 bytes")
 
         monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
-        monkeypatch.setattr(techne_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         extract_pdf_text("https://www.techneuk.com/report.pdf")
 
@@ -302,7 +309,9 @@ class TestExtractPdfText:
             return FakeUrlResponse(b"%PDF-1.4 bytes")
 
         monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
-        monkeypatch.setattr(techne_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         result = extract_pdf_text(pdf_url)
 
@@ -323,7 +332,9 @@ class TestExtractPdfText:
             return FakeUrlResponse(b"%PDF-1.4 bytes")
 
         monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
-        monkeypatch.setattr(techne_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         extract_pdf_text(pdf_url)
 
@@ -345,12 +356,47 @@ class TestExtractPdfText:
             return FakeUrlResponse(b"%PDF-1.4 bytes")
 
         monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
-        monkeypatch.setattr(techne_import, "PdfReader", _fake_pdf_reader_factory(["text"]))
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
 
         result = extract_pdf_text(pdf_url)
 
         assert len(requested) == 2
         assert result == "text"
+
+    @pytest.mark.parametrize(
+        "error", [IncompleteRead(b"partial"), ValueError("unknown url type")]
+    )
+    def test_http_and_url_errors_move_on_to_the_next_candidate(
+        self, monkeypatch: pytest.MonkeyPatch, error: Exception
+    ) -> None:
+        pdf_url = (
+            "https://web.archive.org/web/20260213120000/"
+            "https://www.techneuk.com/r162.pdf"
+        )
+
+        def _fake_urlopen(request: Request, *, timeout: int) -> FakeUrlResponse:
+            if request.full_url == pdf_url:
+                raise error
+            return FakeUrlResponse(b"%PDF-1.4 bytes")
+
+        monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
+        monkeypatch.setattr(
+            techne_import, "PdfReader", _fake_pdf_reader_factory(["text"])
+        )
+
+        assert extract_pdf_text(pdf_url) == "text"
+
+    def test_an_unexpected_error_during_fetch_is_not_swallowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _fake_urlopen(request: Request, *, timeout: int) -> FakeUrlResponse:
+            raise RuntimeError("bug in the fetch code")
+
+        monkeypatch.setattr(techne_import, "urlopen", _fake_urlopen)
+        with pytest.raises(RuntimeError, match="bug in the fetch code"):
+            extract_pdf_text("https://www.techneuk.com/r162.pdf")
 
     def test_all_candidates_failing_raises_naming_the_original_url(
         self, monkeypatch: pytest.MonkeyPatch
@@ -517,18 +563,14 @@ class TestParseSampleSize:
         assert _parse_sample_size("Unweighted Sample 1636 1644 808") == 1644
 
     def test_missing_label_raises(self) -> None:
-        with pytest.raises(
-            ValueError, match="Unweighted sample size not found in PDF"
-        ):
+        with pytest.raises(ValueError, match="Unweighted sample size not found in PDF"):
             _parse_sample_size("FIELDWORK: February 11th - February 13th")
 
     def test_lowercase_label_does_not_match(self) -> None:
         # The regex has no re.IGNORECASE flag, unlike _parse_fieldwork's and
         # _parse_party_percentages's patterns. Harmless against real Techne
         # PDFs, which always capitalise "Unweighted Sample" exactly.
-        with pytest.raises(
-            ValueError, match="Unweighted sample size not found in PDF"
-        ):
+        with pytest.raises(ValueError, match="Unweighted sample size not found in PDF"):
             _parse_sample_size("unweighted sample 1636 1644")
 
     @pytest.mark.parametrize(
@@ -900,9 +942,7 @@ Unweighted Sample 1647 1636 795 841
 
     def test_missing_sample_size_propagates(self) -> None:
         text = f"FIELDWORK: February 11th - February 13th\n{_FULL_BLOCK_TEXT}"
-        with pytest.raises(
-            ValueError, match="Unweighted sample size not found in PDF"
-        ):
+        with pytest.raises(ValueError, match="Unweighted sample size not found in PDF"):
             parse_poll(text, inferred_year=2026)
 
     def test_missing_fieldwork_propagates(self) -> None:

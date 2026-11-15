@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from http.client import IncompleteRead
 from types import TracebackType
+from typing import Self
 from urllib.request import Request
 
 import pytest
@@ -35,7 +36,7 @@ class _FakeResponse:
         self._size = size
         self.length = promised
 
-    def __enter__(self) -> _FakeResponse:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(

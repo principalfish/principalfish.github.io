@@ -2,7 +2,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
 import {
-  createClock, createPlaybackUI, MAX_FRAME_MS, PLAYBACK_DURATION_MS, SLIDER_MAX,
+  createClock,
+  createPlaybackUI,
+  MAX_FRAME_MS,
+  PLAYBACK_DURATION_MS,
+  SLIDER_MAX,
   VALUETEXT_INTERVAL_MS,
 } from "../js/playback.js";
 import { PLAYBACK_SPEEDS } from "../js/config.js";
@@ -28,9 +32,13 @@ function fakeFrames() {
       t += ms;
       const due = [...pending.values()];
       pending.clear();
-      due.forEach((cb) => cb(t));
+      due.forEach((cb) => {
+        cb(t);
+      });
     },
-    advance(ms) { t += ms; },
+    advance(ms) {
+      t += ms;
+    },
   };
 }
 
@@ -199,7 +207,10 @@ describe("createClock", () => {
     let clock;
     const frames = fakeFrames();
     clock = createClock({
-      durationMs: 1000, now: frames.now, raf: frames.raf, caf: frames.caf,
+      durationMs: 1000,
+      now: frames.now,
+      raf: frames.raf,
+      caf: frames.caf,
       onTick: () => clock.pause(),
     });
     clock.play();
@@ -212,8 +223,14 @@ describe("createClock", () => {
     let clock;
     const frames = fakeFrames();
     clock = createClock({
-      durationMs: 1000, now: frames.now, raf: frames.raf, caf: frames.caf,
-      onTick: () => { clock.pause(); clock.play(); },
+      durationMs: 1000,
+      now: frames.now,
+      raf: frames.raf,
+      caf: frames.caf,
+      onTick: () => {
+        clock.pause();
+        clock.play();
+      },
     });
     clock.play();
     frames.step(100);
@@ -225,8 +242,13 @@ describe("createClock", () => {
     const states = [];
     const frames = fakeFrames();
     const clock = createClock({
-      durationMs: 1000, now: frames.now, raf: frames.raf, caf: frames.caf,
-      onTick: () => { throw new Error("boom"); },
+      durationMs: 1000,
+      now: frames.now,
+      raf: frames.raf,
+      caf: frames.caf,
+      onTick: () => {
+        throw new Error("boom");
+      },
       onStateChange: (p) => states.push(p),
     });
     clock.play();
@@ -255,7 +277,7 @@ describe("createPlaybackUI", () => {
   let t;
 
   beforeEach(() => {
-    document.body.innerHTML = "<div id=\"pb\"></div>";
+    document.body.innerHTML = '<div id="pb"></div>';
     container = document.getElementById("pb");
     calls = [];
     t = 0;

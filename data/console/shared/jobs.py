@@ -8,7 +8,7 @@ block: the command, its output, exit code and summary.
 One job runs at a time. :func:`start_job` takes the console's single run slot
 (:func:`console.us.models.model_run_slot`) in the request, before the thread
 starts, and the thread gives it back in a ``finally``, so the slot is held for the
-job's whole life however it ends. A second start raises :class:`JobBusy`.
+job's whole life however it ends. A second start raises :class:`JobBusyError`.
 
 While a job's thread runs, :func:`current_job` returns it, and
 :func:`console.shared.runner.run_command` then streams each command's output
@@ -33,7 +33,7 @@ from collections import OrderedDict
 from collections.abc import Callable, Mapping
 from contextlib import ExitStack
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Protocol
 
 from flask import flash
@@ -174,7 +174,7 @@ class Job:
                 self.error = text
 
 
-class JobBusy(Exception):
+class JobBusyError(Exception):
     """The run slot is taken, so no job was started.
 
     Attributes:
@@ -314,7 +314,7 @@ def start_job(
         executor.
 
     Raises:
-        JobBusy: The slot is held; nothing was started.
+        JobBusyError: The slot is held; nothing was started.
         ValueError: ``result_kind`` is unknown.
     """
     # Imported here: the US models import the runner, which imports this module.
@@ -325,7 +325,7 @@ def start_job(
     stack = ExitStack()
     if not stack.enter_context(model_run_slot()):
         stack.close()
-        raise JobBusy(running_job_id())
+        raise JobBusyError(running_job_id())
     job: Job | None = None
     try:
         job = Job(
@@ -334,7 +334,7 @@ def start_job(
             section=section,
             dry_run=dry_run,
             result_kind=result_kind,
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
             back_endpoint=back_endpoint,
             back_label=back_label,
             back_values=dict(back_values or {}),
@@ -460,7 +460,7 @@ def _mark_crashed(job: Job, text: str) -> None:
     with _lock:
         if job.running:
             job.note_error(text)
-            job.finished_at = datetime.now(timezone.utc)
+            job.finished_at = datetime.now(UTC)
             job.status = STATUS_CRASHED
 
 
@@ -484,7 +484,7 @@ def _finish(
             status = STATUS_OK if outcome is not None and outcome.ok else STATUS_FAILED
         if outcome is not None:
             job.payload = outcome.payload
-        job.finished_at = datetime.now(timezone.utc)
+        job.finished_at = datetime.now(UTC)
         job.status = status
         finished = [j for j in _jobs.values() if not j.running]
         for old in finished[: max(0, len(finished) - KEEP_FINISHED)]:
@@ -499,12 +499,12 @@ class BusyRefusal:
     job_id: str | None
 
 
-def busy_refusal(refused: str, busy: JobBusy | None = None) -> BusyRefusal:
+def busy_refusal(refused: str, busy: JobBusyError | None = None) -> BusyRefusal:
     """The refusal for a run that found the slot taken.
 
     Args:
         refused: What did not happen, such as ``"Export not run"``.
-        busy: The :class:`JobBusy` that ``start_job`` raised; None looks up
+        busy: The :class:`JobBusyError` that ``start_job`` raised; None looks up
             the running job now (for a view that took the slot itself).
     """
     # Imported here for the same reason as in start_job: a module-level import
@@ -515,7 +515,7 @@ def busy_refusal(refused: str, busy: JobBusy | None = None) -> BusyRefusal:
     return BusyRefusal(busy_message(refused), job_id)
 
 
-def flash_busy(refused: str, busy: JobBusy | None = None) -> None:
+def flash_busy(refused: str, busy: JobBusyError | None = None) -> None:
     """Flash the busy refusal; the page links to the running job, if there is one.
 
     The link rides in the flash category (``job:<id>``), which the base template

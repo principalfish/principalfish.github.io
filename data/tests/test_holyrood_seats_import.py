@@ -87,14 +87,10 @@ def test_import_map_seats_creates_shared_regions_and_seats(db: Database) -> None
         "Glasgow Central": "Glasgow",
     }
 
-    ensured = importer.import_map_seats(
-        db, 11, "Synthetic Holyrood map", expected
-    )
+    ensured = importer.import_map_seats(db, 11, "Synthetic Holyrood map", expected)
 
     assert ensured == 3
-    regions, seats = _assert_map_structure(
-        db, 11, "Synthetic Holyrood map", expected
-    )
+    regions, seats = _assert_map_structure(db, 11, "Synthetic Holyrood map", expected)
     assert len(regions) == 2
     assert len(seats) == 3
 
@@ -123,9 +119,10 @@ def test_import_map_seats_reuses_existing_rows_and_adds_missing_rows(
         "Existing seat": "New source region",
         "New seat": "New source region",
     }
-    assert importer.import_map_seats(
-        db, map_row.id, "Ignored replacement name", expected
-    ) == 2
+    assert (
+        importer.import_map_seats(db, map_row.id, "Ignored replacement name", expected)
+        == 2
+    )
     first_new_region = db.get_regions_for_map(map_row.id)
     new_region = next(
         region for region in first_new_region if region.name == "New source region"
@@ -142,9 +139,10 @@ def test_import_map_seats_reuses_existing_rows_and_adds_missing_rows(
         {region.name: region.id for region in first_new_region},
         {seat.seat_name: seat.id for seat in db.get_seats_for_map(map_row.id)},
     )
-    assert importer.import_map_seats(
-        db, map_row.id, "Ignored replacement name", expected
-    ) == 2
+    assert (
+        importer.import_map_seats(db, map_row.id, "Ignored replacement name", expected)
+        == 2
+    )
     second_ids = (
         {region.name: region.id for region in db.get_regions_for_map(map_row.id)},
         {seat.seat_name: seat.id for seat in db.get_seats_for_map(map_row.id)},

@@ -34,7 +34,8 @@ export function getComparison(guess, answer) {
 // On-the-fly pattern matrix (probe words vs a small answer set). Int32Array,
 // row-major [guessWords.length * answerWords.length].
 export function patternMatrix(guessWords, answerWords) {
-  const ng = guessWords.length, na = answerWords.length;
+  const ng = guessWords.length,
+    na = answerWords.length;
   const out = new Int32Array(ng * na);
   for (let gi = 0; gi < ng; gi++) {
     const g = guessWords[gi];

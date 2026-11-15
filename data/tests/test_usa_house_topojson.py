@@ -65,14 +65,28 @@ class TestDistrictNames:
     def test_voting_districts_drops_delegates_and_water(self) -> None:
         raw = {
             "features": [
-                {"properties": {"STATEFP": "06", "CD120FP": "12"}, "geometry": square(0, 0)},
-                {"properties": {"STATEFP": "11", "CD120FP": "98"}, "geometry": square(1, 0)},
-                {"properties": {"STATEFP": "06", "CD120FP": "ZZ"}, "geometry": square(2, 0)},
-                {"properties": {"STATEFP": "72", "CD120FP": "98"}, "geometry": square(3, 0)},
+                {
+                    "properties": {"STATEFP": "06", "CD120FP": "12"},
+                    "geometry": square(0, 0),
+                },
+                {
+                    "properties": {"STATEFP": "11", "CD120FP": "98"},
+                    "geometry": square(1, 0),
+                },
+                {
+                    "properties": {"STATEFP": "06", "CD120FP": "ZZ"},
+                    "geometry": square(2, 0),
+                },
+                {
+                    "properties": {"STATEFP": "72", "CD120FP": "98"},
+                    "geometry": square(3, 0),
+                },
             ]
         }
         got = builder.voting_districts(raw, "CD120FP")
-        assert [f["properties"] for f in got] == [{"name": "CA-12", "region": "california"}]
+        assert [f["properties"] for f in got] == [
+            {"name": "CA-12", "region": "california"}
+        ]
 
 
 class TestStitchStates:
@@ -95,14 +109,19 @@ class TestStitchStates:
         got = builder.stitch_states(self.base(), {"UT": repl})
         assert [f["properties"]["name"] for f in got] == ["OH-01", "UT-01", "UT-02"]
         by_name = {f["properties"]["name"]: f for f in got}
-        assert by_name["OH-01"]["geometry"] == square(2, 0)  # untouched state kept as is
+        assert by_name["OH-01"]["geometry"] == square(
+            2, 0
+        )  # untouched state kept as is
         ut1 = builder.shape(by_name["UT-01"]["geometry"])
         assert ut1.bounds == (0.0, 0.0, 2.0, 0.5)
         assert ut1.area == pytest.approx(1.0)
 
     def test_small_gap_goes_to_the_neighbouring_district(self) -> None:
         # The new plan leaves a thin strip at the top of the outline uncovered.
-        repl = [feature("UT-01", square(0, 0, 2, 0.5)), feature("UT-02", square(0, 0.5, 2, 0.495))]
+        repl = [
+            feature("UT-01", square(0, 0, 2, 0.5)),
+            feature("UT-02", square(0, 0.5, 2, 0.495)),
+        ]
         got = builder.stitch_states(self.base(), {"UT": repl})
         areas = {
             f["properties"]["name"]: builder.shape(f["geometry"]).area
@@ -138,7 +157,12 @@ class TestGapFallback:
         # An L-shaped district A whose bounding box covers an outline-only island; district C
         # lies outside that box. The island touches neither, so it must go to the nearer one.
         a = builder.shape(
-            {"type": "Polygon", "coordinates": [[[0, 0], [4, 0], [4, 1], [1, 1], [1, 4], [0, 4], [0, 0]]]}
+            {
+                "type": "Polygon",
+                "coordinates": [
+                    [[0, 0], [4, 0], [4, 1], [1, 1], [1, 4], [0, 4], [0, 0]]
+                ],
+            }
         )
         island = builder.shape(square(2, 2, 0.1, 0.1))
         c = builder.shape(square(5, 2, 1, 1))
@@ -164,7 +188,17 @@ class TestSourceTable:
     """The per-state source table behind map 24."""
 
     def test_nine_redrawn_states_with_census_urls(self) -> None:
-        assert set(sources.REDRAWN_2026) == {"AL", "CA", "FL", "LA", "NC", "OH", "TN", "TX", "UT"}
+        assert set(sources.REDRAWN_2026) == {
+            "AL",
+            "CA",
+            "FL",
+            "LA",
+            "NC",
+            "OH",
+            "TN",
+            "TX",
+            "UT",
+        }
         for state, src in sources.REDRAWN_2026.items():
             assert builder.FIPS_TO_ST[src.fips] == state
             assert src.name == builder.ST_NAME[state]
@@ -179,7 +213,11 @@ class TestSourceTable:
 
     @pytest.mark.parametrize(
         "url",
-        ["http://www2.census.gov/x.zip", "https://example.com/x.zip", "file:///etc/passwd"],
+        [
+            "http://www2.census.gov/x.zip",
+            "https://example.com/x.zip",
+            "file:///etc/passwd",
+        ],
     )
     def test_check_url_refuses_other_hosts_and_schemes(self, url: str) -> None:
         with pytest.raises(ValueError, match="refusing"):
@@ -208,14 +246,18 @@ def test_build_topojson_writes_a_map_object(tmp_path: Path) -> None:
 
 
 def _topo_names(map_id: int) -> list[str]:
-    topo = json.loads((MAPS_DIR / f"map-{map_id}.topo.json").read_text(encoding="utf-8"))
+    topo = json.loads(
+        (MAPS_DIR / f"map-{map_id}.topo.json").read_text(encoding="utf-8")
+    )
     return [g["properties"]["name"] for g in topo["objects"]["map"]["geometries"]]
 
 
 class TestCommittedMaps:
     """Invariants of the committed House maps."""
 
-    @pytest.mark.parametrize(("map_id", "seats"), [(21, SEATS_2020), (24, SEATS_2020), (25, SEATS_2010)])
+    @pytest.mark.parametrize(
+        ("map_id", "seats"), [(21, SEATS_2020), (24, SEATS_2020), (25, SEATS_2010)]
+    )
     def test_435_unique_districts_matching_the_apportionment(
         self, map_id: int, seats: dict[str, int]
     ) -> None:
@@ -231,7 +273,9 @@ class TestCommittedMaps:
 
     def test_regions_are_lowercase_state_names(self) -> None:
         for map_id in (21, 24, 25):
-            topo = json.loads((MAPS_DIR / f"map-{map_id}.topo.json").read_text(encoding="utf-8"))
+            topo = json.loads(
+                (MAPS_DIR / f"map-{map_id}.topo.json").read_text(encoding="utf-8")
+            )
             for g in topo["objects"]["map"]["geometries"]:
                 props = g["properties"]
                 assert props["region"] == builder.ST_NAME[props["name"][:2]].lower()
@@ -244,9 +288,24 @@ NYT_FIXTURE = {
             "seat_number": "1",
             "reporting_units": [
                 {"level": "state", "state_postal": "AA"},
-                {"level": "county", "fips_state": "01", "fips_county": "001", "total_votes": 10},
-                {"level": "county", "fips_state": "01", "fips_county": "002", "total_votes": 10},
-                {"level": "county", "fips_state": "01", "fips_county": "003", "total_votes": 0},
+                {
+                    "level": "county",
+                    "fips_state": "01",
+                    "fips_county": "001",
+                    "total_votes": 10,
+                },
+                {
+                    "level": "county",
+                    "fips_state": "01",
+                    "fips_county": "002",
+                    "total_votes": 10,
+                },
+                {
+                    "level": "county",
+                    "fips_state": "01",
+                    "fips_county": "003",
+                    "total_votes": 0,
+                },
             ],
         },
         {
@@ -254,7 +313,12 @@ NYT_FIXTURE = {
             "seat_number": "2",
             "reporting_units": [
                 {"level": "state", "state_postal": "AA"},
-                {"level": "county", "fips_state": "01", "fips_county": "002", "total_votes": 5},
+                {
+                    "level": "county",
+                    "fips_state": "01",
+                    "fips_county": "002",
+                    "total_votes": 5,
+                },
             ],
         },
         {
@@ -262,7 +326,12 @@ NYT_FIXTURE = {
             "seat_number": None,  # at-large
             "reporting_units": [
                 {"level": "state", "state_postal": "BB"},
-                {"level": "county", "fips_state": "02", "fips_county": "001", "total_votes": 1},
+                {
+                    "level": "county",
+                    "fips_state": "02",
+                    "fips_county": "001",
+                    "total_votes": 1,
+                },
             ],
         },
         {"office_id": "S", "seat_number": "1", "reporting_units": []},
@@ -289,7 +358,12 @@ class TestRedistrictingCheck:
                     "type": "Special",
                     "reporting_units": [
                         {"level": "state", "state_postal": "AA"},
-                        {"level": "county", "fips_state": "01", "fips_county": "001", "total_votes": 5},
+                        {
+                            "level": "county",
+                            "fips_state": "01",
+                            "fips_county": "001",
+                            "total_votes": 5,
+                        },
                     ],
                 }
             ]
@@ -303,7 +377,10 @@ class TestRedistrictingCheck:
     def test_geometry_county_districts_applies_the_threshold(self) -> None:
         counties = [
             {"properties": {"GEOID": "01001"}, "geometry": square(0, 0, 1, 1)},
-            {"properties": {"STATEFP": "01", "COUNTYFP": "002"}, "geometry": square(1, 0, 1, 1)},
+            {
+                "properties": {"STATEFP": "01", "COUNTYFP": "002"},
+                "geometry": square(1, 0, 1, 1),
+            },
         ]
         districts = [
             {"properties": {"name": "AA-01"}, "geometry": square(0, 0, 1.5, 1)},
@@ -328,14 +405,19 @@ class TestRedistrictingCheck:
         assert scores == {"01": (None, 2)}
 
     def test_redrawn_means_the_score_falls_against_the_new_map(self) -> None:
-        nyt = {f"{st}{i:03d}": {f"{st}-x"} for st in ("01", "02", "03") for i in range(10)}
+        nyt = {
+            f"{st}{i:03d}": {f"{st}-x"} for st in ("01", "02", "03") for i in range(10)
+        }
         # State 01 moved (all counties wrong on the old map, right on the new one); state 02
         # is noisy on both maps; state 03 is right on both.
         old = {k: {"other"} if k[:2] == "01" else v for k, v in nyt.items()}
         noisy = {k: {"other"} for k in list(nyt) if k.startswith("02")}
         old.update(noisy)
         new = {k: v for k, v in nyt.items() if k[:2] != "02"} | noisy
-        old_scores, new_scores = check.state_scores(nyt, old), check.state_scores(nyt, new)
+        old_scores, new_scores = (
+            check.state_scores(nyt, old),
+            check.state_scores(nyt, new),
+        )
         assert check.redrawn_states(old_scores, new_scores) == {"01"}
 
     def test_a_drop_of_exactly_the_threshold_counts(self) -> None:
@@ -378,6 +460,7 @@ def _main_counties() -> list[dict[str, Any]]:
 
 def _main_districts(*, redrawn: bool) -> list[dict[str, Any]]:
     """The old map (``redrawn=False``) puts AA in a district NYT never reported."""
+
     def district(name: str, state: str, first: int, width: int) -> dict[str, Any]:
         return {
             "properties": {"name": name},
@@ -396,7 +479,9 @@ def _main_districts(*, redrawn: bool) -> list[dict[str, Any]]:
 
 class TestRedistrictingMain:
     @pytest.fixture()
-    def inputs(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
+    def inputs(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> dict[str, Path]:
         paths = {
             "nyt": tmp_path / "house.json",
             "new": tmp_path / "new.topo.json",
@@ -486,7 +571,11 @@ class TestStateTables:
 
     @pytest.mark.parametrize(
         ("fips", "abbrev", "name"),
-        [("06", "CA", "California"), ("48", "TX", "Texas"), ("38", "ND", "North Dakota")],
+        [
+            ("06", "CA", "California"),
+            ("48", "TX", "Texas"),
+            ("38", "ND", "North Dakota"),
+        ],
     )
     def test_known_states(self, fips: str, abbrev: str, name: str) -> None:
         assert builder.FIPS_TO_ST[fips] == abbrev
@@ -572,7 +661,9 @@ needs_gdal = pytest.mark.skipif(
 )
 
 
-def _write_shapefile(path: Path, rows: list[tuple[str, str, dict[str, Any]]], cd_field: str) -> None:
+def _write_shapefile(
+    path: Path, rows: list[tuple[str, str, dict[str, Any]]], cd_field: str
+) -> None:
     """Write a small shapefile of (STATEFP, district, geometry) rows with ogr2ogr."""
     geojson = path.with_suffix(".geojson")
     geojson.write_text(
@@ -592,7 +683,15 @@ def _write_shapefile(path: Path, rows: list[tuple[str, str, dict[str, Any]]], cd
         encoding="utf-8",
     )
     subprocess.run(
-        ["ogr2ogr", "-f", "ESRI Shapefile", "-a_srs", "EPSG:4326", str(path), str(geojson)],
+        [
+            "ogr2ogr",
+            "-f",
+            "ESRI Shapefile",
+            "-a_srs",
+            "EPSG:4326",
+            str(path),
+            str(geojson),
+        ],
         check=True,
         capture_output=True,
     )
@@ -629,7 +728,9 @@ class TestBuildMapEndToEnd:
             return folders["ut" if "tl_2026_49" in url else "base"]
 
         monkeypatch.setattr(builder, "fetch_zip", fake_fetch)
-        monkeypatch.setattr(builder, "check_districts", lambda features, expected=435: None)
+        monkeypatch.setattr(
+            builder, "check_districts", lambda features, expected=435: None
+        )
         return builder.MapRecipe(
             99,
             "https://www2.census.gov/base.zip",
@@ -644,7 +745,11 @@ class TestBuildMapEndToEnd:
         recipe = self.prepare(tmp_path, monkeypatch)
         out = tmp_path / "out" / "m.topo.json"
         features = builder.build_map(recipe, tmp_path, out)
-        assert [f["properties"]["name"] for f in features] == ["OH-01", "UT-01", "UT-02"]
+        assert [f["properties"]["name"] for f in features] == [
+            "OH-01",
+            "UT-01",
+            "UT-02",
+        ]
         topo = json.loads(out.read_text(encoding="utf-8"))
         geoms = topo["objects"]["map"]["geometries"]
         assert [g["properties"] for g in geoms] == [
@@ -652,28 +757,42 @@ class TestBuildMapEndToEnd:
             {"name": "UT-01", "region": "utah"},
             {"name": "UT-02", "region": "utah"},
         ]
-        ut1 = builder.shape(next(f for f in features if f["properties"]["name"] == "UT-01")["geometry"])
+        ut1 = builder.shape(
+            next(f for f in features if f["properties"]["name"] == "UT-01")["geometry"]
+        )
         assert ut1.bounds == (0.0, 0.0, 2.0, 0.5)  # the new plan's top/bottom split
 
     def test_cli_with_map_and_fetch(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         out = tmp_path / "cli.topo.json"
         recipe = self.prepare(tmp_path, monkeypatch)
         monkeypatch.setitem(builder.RECIPES, 24, recipe)
         monkeypatch.setattr(
-            sys, "argv", ["b", "--map", "24", "--fetch", str(tmp_path), "--out", str(out)]
+            sys,
+            "argv",
+            ["b", "--map", "24", "--fetch", str(tmp_path), "--out", str(out)],
         )
         builder.main()
         assert "Wrote 3 districts" in capsys.readouterr().out
         assert out.exists()
 
     def test_cli_with_shp_builds_map_21_style(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         shp = tmp_path / "cd.shp"
-        _write_shapefile(shp, [("49", "00", square(0, 0)), ("11", "98", square(1, 0))], "CD119FP")
-        monkeypatch.setattr(builder, "check_districts", lambda features, expected=435: None)
+        _write_shapefile(
+            shp, [("49", "00", square(0, 0)), ("11", "98", square(1, 0))], "CD119FP"
+        )
+        monkeypatch.setattr(
+            builder, "check_districts", lambda features, expected=435: None
+        )
         out = tmp_path / "21.topo.json"
         monkeypatch.setattr(sys, "argv", ["b", "--shp", str(shp), "--out", str(out)])
         builder.main()

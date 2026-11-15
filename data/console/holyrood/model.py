@@ -318,7 +318,7 @@ def run_holyrood_model() -> ResponseReturnValue:
             back_endpoint="holyrood.run_holyrood_model_form",
             back_label="Back to the model form",
         )
-    except jobs.JobBusy as busy:
+    except jobs.JobBusyError as busy:
         jobs.flash_busy("Holyrood model not run", busy)
         return render_template(
             "model_run.html",

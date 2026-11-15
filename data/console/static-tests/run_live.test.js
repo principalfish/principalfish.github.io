@@ -6,8 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // jsdom replaces the global URL, which node:fs rejects, so the path comes from
 // __dirname. RUN_LIVE_SCRIPT lets a scratch copy of the script stand in for the real one.
-const SCRIPT_PATH = process.env.RUN_LIVE_SCRIPT
-  || resolve(__dirname, "../static/run_live.js");
+const SCRIPT_PATH = process.env.RUN_LIVE_SCRIPT || resolve(__dirname, "../static/run_live.js");
 const SOURCE = readFileSync(SCRIPT_PATH, "utf8");
 
 const STATUS_URL = "/runs/job1/status";
@@ -29,8 +28,16 @@ const err = () => document.getElementById("run-live-stderr").textContent;
 // A status body in the shape /runs/<id>/status returns.
 function body(over = {}) {
   return {
-    status: "running", done: false, step: 0, steps: 1, step_label: "First",
-    stdout: "", stderr: "", stdout_offset: 0, stderr_offset: 0, caught_up: false,
+    status: "running",
+    done: false,
+    step: 0,
+    steps: 1,
+    step_label: "First",
+    stdout: "",
+    stderr: "",
+    stdout_offset: 0,
+    stderr_offset: 0,
+    caught_up: false,
     ...over,
   };
 }
@@ -87,7 +94,9 @@ describe("run_live.js", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].url).toBe(`${STATUS_URL}?step=0&stdout=0&stderr=0`);
 
-    calls[0].resolve(body({ stdout: "out-1;", stderr: "err-1;", stdout_offset: 6, stderr_offset: 6 }));
+    calls[0].resolve(
+      body({ stdout: "out-1;", stderr: "err-1;", stdout_offset: 6, stderr_offset: 6 }),
+    );
     await flush();
     expect(out()).toBe("out-1;");
     expect(err()).toBe("err-1;");
@@ -158,15 +167,24 @@ describe("run_live.js", () => {
   it("clears the output and restarts the offsets when the step changes", async () => {
     runScript();
     await tick();
-    calls[0].resolve(body({ stdout: "old out", stderr: "old err", stdout_offset: 7, stderr_offset: 7, steps: 2 }));
+    calls[0].resolve(
+      body({ stdout: "old out", stderr: "old err", stdout_offset: 7, stderr_offset: 7, steps: 2 }),
+    );
     await flush();
     expect(out()).toBe("old out");
 
     await tick();
     expect(calls[1].url).toBe(`${STATUS_URL}?step=0&stdout=7&stderr=7`);
-    calls[1].resolve(body({
-      step: 1, steps: 2, step_label: "Second", stdout: "new", stdout_offset: 3, stderr_offset: 0,
-    }));
+    calls[1].resolve(
+      body({
+        step: 1,
+        steps: 2,
+        step_label: "Second",
+        stdout: "new",
+        stdout_offset: 3,
+        stderr_offset: 0,
+      }),
+    );
     await flush();
     expect(out()).toBe("new");
     expect(err()).toBe("");

@@ -18,6 +18,7 @@ from core import backup
 
 bp = Blueprint("db_admin", __name__)
 
+
 def _status_lines() -> list[str]:
     """Where backups live now, for the bottom of a result page."""
     state = backup.status()

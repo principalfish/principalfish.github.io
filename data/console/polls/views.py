@@ -79,9 +79,7 @@ def _share_cell(
     return {"share": value, "moe": moe}
 
 
-def _poll_list_page(
-    parliament: str | None, title: str, section: Section | None
-) -> str:
+def _poll_list_page(parliament: str | None, title: str, section: Section | None) -> str:
     """Render the poll table for one parliament's polls, or every poll.
 
     Args:
@@ -116,13 +114,15 @@ def _poll_list_page(
             )
         polls = session.execute(query).all()
 
-        row_counts: dict[int, int] = {
-            poll_id: count
-            for poll_id, count in session.execute(
-                select(PollRow.poll_id, func.count(PollRow.id))
-                .group_by(PollRow.poll_id)
-            ).all()
-        }
+        row_counts: dict[int, int] = dict(
+            session.execute(
+                select(PollRow.poll_id, func.count(PollRow.id)).group_by(
+                    PollRow.poll_id
+                )
+            )
+            .tuples()
+            .all()
+        )
         # National n needs only national bases and sample sizes: no rows.
         national_bases = session.scalars(
             select(PollBase).where(PollBase.region_id.is_(None))
@@ -262,7 +262,7 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
     )
 
     matrix: dict[tuple[str, str], dict[str, float | str]] = {
-        key: {region_name: "" for region_name in region_headers} for key in row_keys
+        key: dict.fromkeys(region_headers, "") for key in row_keys
     }
 
     for row, party, region in rows:
@@ -350,9 +350,10 @@ def delete_poll(poll_id: int) -> ResponseReturnValue:
             flash(f"Poll #{poll_id} not found.")
             return redirect(_after_delete_url())
 
-        deleted_rows = session.execute(
-            delete(PollRow).where(PollRow.poll_id == poll.id)
-        ).rowcount or 0  # type: ignore[attr-defined]
+        deleted_rows = (
+            session.execute(delete(PollRow).where(PollRow.poll_id == poll.id)).rowcount  # type: ignore[attr-defined]
+            or 0
+        )
         session.delete(poll)
 
     flash(f"Deleted poll #{poll_id} and {deleted_rows} poll rows.")

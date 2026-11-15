@@ -57,8 +57,12 @@ async function setup({ flags = [true, false, false], scenario = "normal" } = {})
   const ui = createUIDoubles(false);
   const pool = Object.values(GAMES).flat();
   const state = {
-    POOL: pool, ALL_GUESSES: [...pool, "ZZZZZ"], PM: new Uint8Array(), N: pool.length,
-    poolIndex: new Map(pool.map((word, i) => [word, i])), PLURALS: new Set(),
+    POOL: pool,
+    ALL_GUESSES: [...pool, "ZZZZZ"],
+    PM: new Uint8Array(),
+    N: pool.length,
+    poolIndex: new Map(pool.map((word, i) => [word, i])),
+    PLURALS: new Set(),
   };
   const controller = module.initDailyMode(state, ui.manual, ui.clueUI, ui.uiEls);
   await controller.loadDay(1000);
@@ -78,33 +82,66 @@ describe("daily solve reuse", () => {
     expect(module.capture.publication.steps[0].after).toBe(firstAfter);
     expect(firstAfter).toEqual(saved);
     for (let i = 0; i < 3; i++) await controller.nextTurn();
-    const result = { publication: module.capture.publication, finalResult: module.capture.lastResult };
+    const result = {
+      publication: module.capture.publication,
+      finalResult: module.capture.lastResult,
+    };
     expect(module.capture.calls.map((call) => call.count)).toEqual([0, 1, 2, 3, 4, 5]);
     expect(result.publication.moves.map((move) => move.word)).toEqual(GAMES[1000]);
-    expect(result.publication.moves.map((move) => move.isClosing)).toEqual([false, true, true, true, true]);
+    expect(result.publication.moves.map((move) => move.isClosing)).toEqual([
+      false,
+      true,
+      true,
+      true,
+      true,
+    ]);
     expect(result.finalResult.note).toBe("100:5");
     expect(firstAfter).toEqual(saved);
-    const trace = normalizeTrace({ day: 1000, answers: GAMES[1000], expanded: false, clueGrid: clueUI.getClueGrid(), ...result, finalSlots: manual.getSlots() });
+    const trace = normalizeTrace({
+      day: 1000,
+      answers: GAMES[1000],
+      expanded: false,
+      clueGrid: clueUI.getClueGrid(),
+      ...result,
+      finalSlots: manual.getSlots(),
+    });
     expect(trace.final.status).toBe("solved");
-    expect(trace.moves.map((move) => move.before.note)).toEqual(["100:0", "100:1", "100:2", "100:3", "100:4"]);
+    expect(trace.moves.map((move) => move.before.note)).toEqual([
+      "100:0",
+      "100:1",
+      "100:2",
+      "100:3",
+      "100:4",
+    ]);
   });
 
   it.each([
-    { flags: [true, false, false] }, { flags: [false, true, false] },
-    { flags: [false, false, true] }, { flags: [true, true, true] },
+    { flags: [true, false, false] },
+    { flags: [false, true, false] },
+    { flags: [false, false, true] },
+    { flags: [true, true, true] },
   ])("keys successful and failed solves by all three pruning booleans %j", async ({ flags }) => {
     const { module, controller } = await setup({ flags, scenario: "relax" });
     const result = await driveController(controller, module.capture);
-    const initial = module.capture.calls.filter((call) => call.count === 0).map((call) => call.flags);
+    const initial = module.capture.calls
+      .filter((call) => call.count === 0)
+      .map((call) => call.flags);
     const expectedInitial = [flags];
     if (flags[2]) expectedInitial.push([flags[0], flags[1], false]);
     if (flags[0] || flags[1]) expectedInitial.push([false, false, false]);
     expect(initial).toEqual(expectedInitial);
     for (let count = 1; count <= 5; count++) {
-      expect(module.capture.calls.filter((call) => call.count === count).map((call) => call.flags))
-        .toEqual([flags, [false, false, false]]);
+      expect(
+        module.capture.calls.filter((call) => call.count === count).map((call) => call.flags),
+      ).toEqual([flags, [false, false, false]]);
     }
-    expect(result.publication.steps.map((step) => step.after.note)).toEqual(["000:1", "000:2", "000:3", "000:4", "000:5"]);
+    expect(result.publication.steps.map((step) => step.after.note)).toEqual([
+      "000:1",
+      "000:2",
+      "000:3",
+      "000:4",
+      "000:5",
+    ]);
     expect(result.finalResult).toEqual(result.publication.steps.at(-1).after);
     expect(result.finalResult.note).toBe("000:5");
     expect(result.finalResult.solvable).toBe(true);
@@ -119,8 +156,12 @@ describe("daily solve reuse", () => {
     await controller.nextTurn();
     expect(module.capture.publication.moves[1].isClosing).toBe(false);
     expect(module.capture.publication.steps[1].suggest.__benchmarkBefore.note).toBe("000:1");
-    expect(module.capture.calls.filter((call) => call.count === 1).map((call) => call.flags))
-      .toEqual([[true, false, false], [false, false, false]]);
+    expect(
+      module.capture.calls.filter((call) => call.count === 1).map((call) => call.flags),
+    ).toEqual([
+      [true, false, false],
+      [false, false, false],
+    ]);
     expect(firstAfter.note).toBe("100:1");
     expect(module.capture.publication.steps[1].after.note).toBe("100:2");
   });
@@ -136,7 +177,9 @@ describe("daily solve reuse", () => {
     expect(module.capture.calls).toHaveLength(count);
     await controller.nextTurn();
     expect(module.capture.calls.map((call) => call.count)).toEqual([0, 1, 2, 3]);
-    expect(module.capture.calls.at(-1).slots.map((slot) => slot.guesses.length)).toEqual([1, 1, 1, 0, 0]);
+    expect(module.capture.calls.at(-1).slots.map((slot) => slot.guesses.length)).toEqual([
+      1, 1, 1, 0, 0,
+    ]);
   });
 
   it("discards cached positions on reset/probe changes and loading another day", async () => {
@@ -157,7 +200,10 @@ describe("daily solve reuse", () => {
   it("observes the full unpruned unsolvable terminal without playing a move", async () => {
     const { module, controller } = await setup({ scenario: "unsolvable" });
     const result = await driveController(controller, module.capture);
-    expect(module.capture.calls.map((call) => call.flags)).toEqual([[true, false, false], [false, false, false]]);
+    expect(module.capture.calls.map((call) => call.flags)).toEqual([
+      [true, false, false],
+      [false, false, false],
+    ]);
     expect(result.publication.moves).toEqual([]);
     expect(result.finalResult.note).toBe("000:0");
     expect(result.finalResult.solvable).toBe(false);
@@ -168,7 +214,13 @@ describe("daily solve reuse", () => {
     const { module, controller } = await setup({ scenario: "ordinary" });
     const result = await driveController(controller, module.capture);
     expect(module.capture.calls.map((call) => call.count)).toEqual([0, 1, 2, 3, 4, 5]);
-    expect(result.publication.moves.map((move) => move.isClosing)).toEqual([false, false, false, false, false]);
+    expect(result.publication.moves.map((move) => move.isClosing)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
     expect(result.turnMs).toHaveLength(6);
     expect(result.finalResult).toEqual(result.publication.steps.at(-1).after);
     expect(result.finalResult.note).toBe("100:5");

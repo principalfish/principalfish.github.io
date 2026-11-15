@@ -28,8 +28,8 @@ from __future__ import annotations
 
 import json
 from datetime import date
-from pathlib import Path
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 import xlrd
@@ -354,9 +354,7 @@ class TestFindFieldwork:
         assert _find_fieldwork(sheet) == (date(2026, 1, 3), date(2026, 1, 5))
 
     def test_blank_rows_before_the_line_are_skipped(self) -> None:
-        sheet = FakeXlrdSheet(
-            "Sheet1", [[""], [""], ["Fieldwork: 3-5 January 2026"]]
-        )
+        sheet = FakeXlrdSheet("Sheet1", [[""], [""], ["Fieldwork: 3-5 January 2026"]])
         assert _find_fieldwork(sheet) == (date(2026, 1, 3), date(2026, 1, 5))
 
     def test_rows_with_no_match_are_skipped(self) -> None:
@@ -1051,9 +1049,7 @@ class TestParsePollFromXlsUrl:
         monkeypatch.setattr(
             lord_ashcroft_import, "_fetch_bytes", lambda _url: b"xls-bytes"
         )
-        monkeypatch.setattr(
-            xlrd, "open_workbook", lambda **_k: book
-        )
+        monkeypatch.setattr(xlrd, "open_workbook", lambda **_k: book)
 
         parsed = parse_poll_from_xls_url("https://x.test/poll.xls")
 
@@ -1078,9 +1074,7 @@ class TestParsePollFromXlsUrl:
         monkeypatch.setattr(
             lord_ashcroft_import, "_fetch_bytes", lambda _url: b"xls-bytes"
         )
-        monkeypatch.setattr(
-            xlrd, "open_workbook", lambda **_k: book
-        )
+        monkeypatch.setattr(xlrd, "open_workbook", lambda **_k: book)
 
         parsed = parse_poll_from_xls_url("https://x.test/poll.xls")
 
@@ -1177,7 +1171,8 @@ class TestParsePollFromXlsUrl:
         parsed = parse_poll_from_xls_url(f"https://x.test/poll.{url_suffix}")
         assert parsed.sample_size == 1503
         assert (parsed.fieldwork_start, parsed.fieldwork_end) == (
-            date(2026, 8, 27), date(2026, 9, 1)
+            date(2026, 8, 27),
+            date(2026, 9, 1),
         )
         assert parsed.party_percentages == {
             "Conservative": 19.0,
@@ -1217,9 +1212,7 @@ class TestParsePollFromXlsUrl:
         monkeypatch.setattr(
             lord_ashcroft_import, "_fetch_bytes", lambda _url: b"xls-bytes"
         )
-        monkeypatch.setattr(
-            xlrd, "open_workbook", lambda **_k: book
-        )
+        monkeypatch.setattr(xlrd, "open_workbook", lambda **_k: book)
 
         parsed = parse_poll_from_xls_url("https://x.test/poll.xls")
 
@@ -1231,9 +1224,7 @@ class TestParsePollFromXlsUrl:
         monkeypatch.setattr(
             lord_ashcroft_import, "_fetch_bytes", lambda _url: b"xls-bytes"
         )
-        monkeypatch.setattr(
-            xlrd, "open_workbook", lambda **_k: book
-        )
+        monkeypatch.setattr(xlrd, "open_workbook", lambda **_k: book)
 
         with pytest.raises(ValueError, match="Lord Ashcroft workbook has no sheets"):
             parse_poll_from_xls_url("https://x.test/poll.xls")
@@ -1886,9 +1877,11 @@ class TestMain:
             "-but-plenty-agree-with-him-that-britain-is-broken/" in out
         )
         assert resolved_with == [
-            "https://lordashcroftpolls.com/2026/01/kemis-been-tough-and-jenricks"
-            "-a-bit-of-a-bounder-say-tory-voters-but-plenty-agree-with-him-that"
-            "-britain-is-broken/"
+            (
+                "https://lordashcroftpolls.com/2026/01/kemis-been-tough-and-jenricks"
+                "-a-bit-of-a-bounder-say-tory-voters-but-plenty-agree-with-him-that"
+                "-britain-is-broken/"
+            )
         ]
         # Exact-line check: "would create poll" (printed on its own line
         # just below) is a literal prefix of this pollster line's text.
@@ -1900,15 +1893,38 @@ class TestMain:
 # Total then eleven regions, London printed twice (the later column wins, as
 # for the shares), like the September 2026 workbook's "Region (2)" block.
 _BASE_HEADER: list[object] = [
-    "", "Total", "London", "North East", "North West", "Yorkshire and the Humber",
-    "East Midlands", "West Midlands", "East of England", "London", "South East",
-    "South West", "Wales", "Scotland",
+    "",
+    "Total",
+    "London",
+    "North East",
+    "North West",
+    "Yorkshire and the Humber",
+    "East Midlands",
+    "West Midlands",
+    "East of England",
+    "London",
+    "South East",
+    "South West",
+    "Wales",
+    "Scotland",
 ]
 _WEIGHTED_N = (5039, 999, 196, 534, 464, 409, 417, 513, 610, 706, 509, 242, 438)
 _BASE_WEIGHTED: list[object] = ["Weighted Sample", *(float(n) for n in _WEIGHTED_N)]
 _BASE_UNWEIGHTED: list[object] = [
-    "Unweighted Sample", 5039.0, 998.0, 196.0, 526.0, 457.0, 410.0, 446.0, 555.0,
-    440.0, 752.0, 536.0, 276.0, 445.0,
+    "Unweighted Sample",
+    5039.0,
+    998.0,
+    196.0,
+    526.0,
+    457.0,
+    410.0,
+    446.0,
+    555.0,
+    440.0,
+    752.0,
+    536.0,
+    276.0,
+    445.0,
 ]
 
 
@@ -2081,10 +2097,11 @@ class TestRegionalGuardsAndBases:
         sheets = _fixture_sheets("tables-2025-06-30.json")
         rows = [list(row) for row in sheets[0]._rows]
         vi = next(
-            i for i, row in enumerate(rows)
+            i
+            for i, row in enumerate(rows)
             if "CURRENT WESTMINSTER" in str(row[0]).upper()
         )
-        for row in rows[vi + 1:]:
+        for row in rows[vi + 1 :]:
             row[52:63] = [
                 round(v / 5) if isinstance(v, (int, float)) else v for v in row[52:63]
             ]

@@ -30,9 +30,7 @@ const ISO_START_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
 
 function parseActivity(value) {
-  return value !== null && Object.hasOwn(ACTIVITIES, value)
-    ? value
-    : DEFAULT_STATE.activity;
+  return value !== null && Object.hasOwn(ACTIVITIES, value) ? value : DEFAULT_STATE.activity;
 }
 
 // A missing or invalid speed falls back to the activity's preset; `custom`
@@ -87,16 +85,13 @@ export function readState(search = "") {
 // invalid or equal to the default of `units` (metric when unset). Speed is
 // rounded to 2 dp so an mph entry doesn't leak a long float into the shared
 // link.
-export function writeState({
-  activity, speed, start, units, wind, rain, temp,
-} = {}) {
+export function writeState({ activity, speed, start, units, wind, rain, temp } = {}) {
   const params = new URLSearchParams();
   // A non-finite speed is treated as unset rather than written as "NaN".
   const roundedSpeed = Number.isFinite(speed) ? Math.round(speed * 100) / 100 : undefined;
   const preset = resolveUnits(units);
-  const override = (key, value) => (
-    UNIT_CHOICES[key].includes(value) && value !== preset[key] ? value : undefined
-  );
+  const override = (key, value) =>
+    UNIT_CHOICES[key].includes(value) && value !== preset[key] ? value : undefined;
   const fields = [
     ["activity", activity],
     ["speed", roundedSpeed],

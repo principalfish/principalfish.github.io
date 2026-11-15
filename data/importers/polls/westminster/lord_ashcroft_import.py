@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from core.db import Database
-from core.schema import Poll, PollRow, Pollster
+from core.schema import Poll, PollRow
 from importers.polls.bases import (
     ParsedBase,
     PlannedPollBase,
@@ -246,7 +246,9 @@ def _fetch_bytes(url: str) -> bytes:
     Raises:
         urllib.error.URLError: If the request fails (network error, HTTP error, etc.).
     """
-    request = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
+    request = Request(
+        url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"}
+    )
     with urlopen(request, timeout=60) as response:
         data: bytes = response.read()
         return data
@@ -271,7 +273,7 @@ def _resolve_xls_url(source_url: str) -> str:
         urllib.error.URLError: If fetching the HTML page fails.
     """
     lower = source_url.lower()
-    if lower.endswith(".xls") or lower.endswith(".xlsx"):
+    if lower.endswith((".xls", ".xlsx")):
         return source_url
 
     html = _fetch_bytes(source_url).decode("utf-8", errors="replace")
@@ -285,11 +287,13 @@ def _resolve_xls_url(source_url: str) -> str:
             continue
         absolute = urljoin(source_url, href)
         absolute_lower = absolute.lower()
-        if absolute_lower.endswith(".xls") or absolute_lower.endswith(".xlsx"):
+        if absolute_lower.endswith((".xls", ".xlsx")):
             candidates.append(absolute)
 
     if not candidates:
-        raise ValueError(f"No XLS/XLSX link found in Lord Ashcroft HTML page: {source_url}")
+        raise ValueError(
+            f"No XLS/XLSX link found in Lord Ashcroft HTML page: {source_url}"
+        )
 
     return candidates[0]
 
@@ -496,7 +500,7 @@ def _parse_party_percentages(sheet: _Sheet) -> dict[str, float]:
         percentage = (
             float(value) if isinstance(value, (int, float)) else float(_as_text(value))
         )
-        parsed[canonical_party] = float(int(round(percentage)))
+        parsed[canonical_party] = float(round(percentage))
 
         if len(parsed) == 8:
             break
@@ -711,7 +715,7 @@ def _parse_party_region_percentages(
                 continue
 
             numerator = _to_float(values_sheet.cell_value(row_idx, col_idx))
-            percentage = float(int(round((numerator / denominator) * 100.0)))
+            percentage = float(round((numerator / denominator) * 100.0))
             region_values[internal_name] = percentage
 
         if region_values:
@@ -762,7 +766,7 @@ def _parse_direct_region_percentages(sheet: _Sheet) -> dict[str, dict[str, float
             value = sheet.cell_value(row_idx, col_idx)
             if value in (None, ""):
                 continue
-            region_values[internal_name] = float(int(round(_to_float(value))))
+            region_values[internal_name] = float(round(_to_float(value)))
         if region_values:
             parsed[canonical_party] = region_values
             if len(parsed) == 8:
@@ -844,7 +848,9 @@ def parse_poll_from_xls_url(xls_url: str) -> ParsedPoll:
     )
 
 
-def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+def _find_existing_poll(
+    db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll
+) -> Poll | None:
     """Query the database for a poll matching the given pollster, map, and dates.
 
     The lookup is exact on pollster ID, map ID, fieldwork start/end dates, and
@@ -936,12 +942,13 @@ def build_import_plan(
     ]
     if missing_parties:
         raise ValueError(
-            "Missing parties in database (run party importer first): "
-            f"{missing_parties}"
+            f"Missing parties in database (run party importer first): {missing_parties}"
         )
 
     rows: list[PlannedPollRow] = []
-    region_by_name = {region.name: region for region in db.get_regions_for_map(poll_map.id)}
+    region_by_name = {
+        region.name: region for region in db.get_regions_for_map(poll_map.id)
+    }
     for party_name, percentage in parsed.party_percentages.items():
         rows.append(
             PlannedPollRow(
@@ -1057,9 +1064,11 @@ def commit_import_plan(
         created_poll_row = False
 
     with db.session() as session:
-        existing_rows = session.execute(
-            select(PollRow).where(PollRow.poll_id == poll_id)
-        ).scalars().all()
+        existing_rows = (
+            session.execute(select(PollRow).where(PollRow.poll_id == poll_id))
+            .scalars()
+            .all()
+        )
 
         if existing_rows and not replace_rows:
             return PollImportResult(
@@ -1188,8 +1197,7 @@ def main() -> None:
 
     if result.skipped_existing_rows:
         print(
-            f"poll {result.poll_id} already has rows; "
-            "use --replace-rows to overwrite"
+            f"poll {result.poll_id} already has rows; use --replace-rows to overwrite"
         )
     else:
         if result.replaced_rows:

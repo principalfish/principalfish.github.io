@@ -11,7 +11,7 @@ import subprocess
 import sys
 import threading
 from collections.abc import Callable, Generator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -20,11 +20,10 @@ from flask import Flask, Response, flash, render_template_string
 from flask.testing import FlaskClient
 
 from console.shared import jobs, run_log, runner
-from console.shared.jobs import Job, JobBusy, JobOutcome, start_job
+from console.shared.jobs import Job, JobBusyError, JobOutcome, start_job
 from console.shared.runner import run_command
 from console.us.models import MODEL_RUN_LOCK, busy_message, model_run_slot
 from core import backup
-from tests.console_fixtures import app  # noqa: F401  (pytest fixture)
 
 WAIT_SECONDS = 20
 
@@ -116,7 +115,7 @@ def backups(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 
 @pytest.fixture()
-def client(app: Flask) -> FlaskClient[Response]:  # noqa: F811
+def client(app: Flask) -> FlaskClient[Response]:
     return app.test_client()
 
 
@@ -453,7 +452,7 @@ def test_an_orphan_holding_the_pipe_open_is_a_timeout(
 
 def _recording_popen(
     monkeypatch: pytest.MonkeyPatch,
-) -> list["subprocess.Popen[bytes]"]:
+) -> list[subprocess.Popen[bytes]]:
     started: list[subprocess.Popen[bytes]] = []
 
     class Recording(subprocess.Popen[bytes]):
@@ -584,10 +583,10 @@ def test_a_second_start_is_refused_with_the_running_jobs_id(threaded: None) -> N
     job = _start(gate.work)
     try:
         assert gate.started.wait(WAIT_SECONDS)
-        with pytest.raises(JobBusy) as busy:
+        with pytest.raises(JobBusyError) as busy:
             _start(lambda: JobOutcome({}, ok=True), label="Second")
         assert busy.value.job_id == job.id
-        assert [seen for seen in jobs._jobs] == [job.id]
+        assert list(jobs._jobs) == [job.id]
     finally:
         gate.release.set()
     _finished(job)
@@ -597,7 +596,7 @@ def test_a_second_start_is_refused_with_the_running_jobs_id(threaded: None) -> N
 def test_a_slot_held_by_something_else_is_refused_without_a_job_id() -> None:
     with model_run_slot() as free:
         assert free
-        with pytest.raises(JobBusy) as busy:
+        with pytest.raises(JobBusyError) as busy:
             _start(lambda: JobOutcome({}, ok=True))
 
     assert busy.value.job_id is None
@@ -892,7 +891,7 @@ def test_the_registry_keeps_a_running_job_and_only_the_last_finished_ones() -> N
         section=None,
         dry_run=True,
         result_kind="command",
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(UTC),
     )
     with jobs._lock:
         jobs._jobs[running.id] = running
@@ -990,7 +989,7 @@ def test_the_refusal_names_the_running_job(threaded: None) -> None:
     try:
         assert gate.started.wait(WAIT_SECONDS)
         refusal = jobs.busy_refusal("Export not run")
-        explicit = jobs.busy_refusal("Export not run", JobBusy(job.id))
+        explicit = jobs.busy_refusal("Export not run", JobBusyError(job.id))
     finally:
         gate.release.set()
     _finished(job)
@@ -1007,19 +1006,19 @@ def test_the_refusal_has_no_job_when_something_else_holds_the_slot() -> None:
 
 
 def test_a_flashed_refusal_links_to_the_job_only_when_there_is_one(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     job_id = "20261110T120000000000Z-1a2b3c4d"
     page = '{% extends "base.html" %}{% block content %}{% endblock %}'
 
     @app.route("/_flash_job")
     def flash_job() -> str:
-        jobs.flash_busy("Export not run", JobBusy(job_id))
+        jobs.flash_busy("Export not run", JobBusyError(job_id))
         return render_template_string(page)
 
     @app.route("/_flash_plain")
     def flash_plain() -> str:
-        jobs.flash_busy("Export not run", JobBusy(None))
+        jobs.flash_busy("Export not run", JobBusyError(None))
         return render_template_string(page)
 
     client = app.test_client()
@@ -1033,7 +1032,7 @@ def test_a_flashed_refusal_links_to_the_job_only_when_there_is_one(
 
 
 def test_a_flash_with_a_hostile_job_id_cannot_inject_markup(
-    app: Flask,  # noqa: F811
+    app: Flask,
 ) -> None:
     @app.route("/_flash_bad")
     def flash_bad() -> str:
@@ -1174,8 +1173,16 @@ def test_the_status_route_is_get_only(
 
 @pytest.mark.parametrize(
     "query",
-    ["stdout=-1", "stdout=abc", "stderr=1.5", "stdout=", "step=-1", "step=x",
-     "stdout=" + "9" * 5000, "stdout=%EF%BC%91"],
+    [
+        "stdout=-1",
+        "stdout=abc",
+        "stderr=1.5",
+        "stdout=",
+        "step=-1",
+        "step=x",
+        "stdout=" + "9" * 5000,
+        "stdout=%EF%BC%91",
+    ],
 )
 def test_bad_offsets_are_a_400(
     folder: Path, client: FlaskClient[Response], query: str
@@ -1302,8 +1309,11 @@ def test_a_finished_command_job_shows_the_command_result_block(
 def test_a_command_job_without_a_back_page_links_home(
     client: FlaskClient[Response],
 ) -> None:
-    job = _start(lambda: JobOutcome(_command_payload(
-        subprocess.CompletedProcess([], 0, "o", "e")), ok=True))
+    job = _start(
+        lambda: JobOutcome(
+            _command_payload(subprocess.CompletedProcess([], 0, "o", "e")), ok=True
+        )
+    )
 
     body = client.get(f"/runs/{job.id}").get_data(as_text=True)
 
@@ -1399,11 +1409,12 @@ def test_a_running_job_page_shows_the_step_and_the_live_blocks(
         go.write_text("")
     _finished(job)
 
-    assert '<span>running</span>' in body
+    assert "<span>running</span>" in body
     assert "<strong>Step 1:</strong> Westminster model" in body
     assert f'data-status-url="/runs/{job.id}/status"' in body
     assert 'data-step="0"' in body
-    assert 'data-stdout-offset="%d"' % len("hello <b>\n") in body
+    stdout_offset = len("hello <b>\n")
+    assert f'data-stdout-offset="{stdout_offset}"' in body
     assert (
         '<pre id="run-live-stdout" class="terminal-output">hello &lt;b&gt;\n</pre>'
     ) in body
@@ -1477,4 +1488,4 @@ def test_a_running_record_shows_as_running_in_the_list_and_detail(
     assert "<td>running</td>" in listing
     assert "<strong>Finished:</strong> not yet" in detail
     assert "still in progress" in detail
-    assert '<span>running</span>' in detail
+    assert "<span>running</span>" in detail

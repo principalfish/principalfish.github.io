@@ -40,7 +40,11 @@ def test_inputs_has_one_folder_per_jurisdiction() -> None:
         (current_senate.DEFAULT_ELECTION_FILE, INPUTS / "us" / "senate-2026.json"),
         (
             current_senate.DEFAULT_SNAPSHOT,
-            DATA_DIR.parent / "uselectionmaps" / "data" / "results" / "senate-current.json",
+            DATA_DIR.parent
+            / "uselectionmaps"
+            / "data"
+            / "results"
+            / "senate-current.json",
         ),
     ],
 )

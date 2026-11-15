@@ -18,11 +18,13 @@ const track = (...parts) => gpx11(`<trk><trkseg>${parts.join("")}</trkseg></trk>
 describe("parseGpx", () => {
   describe("tracks", () => {
     it("concatenates points from multiple segments in order", () => {
-      const result = parseGpx(gpx11(`
+      const result = parseGpx(
+        gpx11(`
         <trk><name>Two Segments</name>
           <trkseg>${pt("trkpt", 51.0, -1.0, 10)}${pt("trkpt", 51.1, -1.1, 20)}</trkseg>
           <trkseg>${pt("trkpt", 51.2, -1.2, 30)}</trkseg>
-        </trk>`));
+        </trk>`),
+      );
       expect(result).toEqual({
         name: "Two Segments",
         points: [
@@ -35,17 +37,21 @@ describe("parseGpx", () => {
     });
 
     it("concatenates points from multiple tracks in order, taking the first track's name", () => {
-      const result = parseGpx(gpx11(`
+      const result = parseGpx(
+        gpx11(`
         <trk><name>First</name><trkseg>${pt("trkpt", 1, 1, 1)}</trkseg></trk>
-        <trk><name>Second</name><trkseg>${pt("trkpt", 2, 2, 2)}</trkseg></trk>`));
+        <trk><name>Second</name><trkseg>${pt("trkpt", 2, 2, 2)}</trkseg></trk>`),
+      );
       expect(result.points.map((p) => p.lat)).toEqual([1, 2]);
       expect(result.name).toBe("First");
     });
 
     it("prefers track points over route points when both exist", () => {
-      const result = parseGpx(gpx11(`
+      const result = parseGpx(
+        gpx11(`
         <rte><name>Route</name>${pt("rtept", 9, 9)}</rte>
-        <trk><name>Track</name><trkseg>${pt("trkpt", 1, 1)}</trkseg></trk>`));
+        <trk><name>Track</name><trkseg>${pt("trkpt", 1, 1)}</trkseg></trk>`),
+      );
       expect(result.points).toEqual([{ lat: 1, lon: 1, ele: undefined }]);
       expect(result.name).toBe("Track");
     });
@@ -53,8 +59,10 @@ describe("parseGpx", () => {
 
   describe("routes", () => {
     it("falls back to route points when there is no track", () => {
-      const result = parseGpx(gpx11(`
-        <rte><name>A Route</name>${pt("rtept", 50.5, 0.5, 5)}${pt("rtept", 50.6, 0.6, 6)}</rte>`));
+      const result = parseGpx(
+        gpx11(`
+        <rte><name>A Route</name>${pt("rtept", 50.5, 0.5, 5)}${pt("rtept", 50.6, 0.6, 6)}</rte>`),
+      );
       expect(result).toEqual({
         name: "A Route",
         points: [
@@ -66,9 +74,11 @@ describe("parseGpx", () => {
     });
 
     it("falls back to route points when tracks exist but are empty", () => {
-      const result = parseGpx(gpx11(`
+      const result = parseGpx(
+        gpx11(`
         <trk><name>Empty</name><trkseg></trkseg></trk>
-        <rte><name>Real</name>${pt("rtept", 1, 2)}</rte>`));
+        <rte><name>Real</name>${pt("rtept", 1, 2)}</rte>`),
+      );
       expect(result.points).toEqual([{ lat: 1, lon: 2, ele: undefined }]);
       expect(result.name).toBe("Real");
     });
@@ -90,16 +100,20 @@ describe("parseGpx", () => {
     });
 
     it("ignores metadata and point names", () => {
-      const result = parseGpx(gpx11(`
+      const result = parseGpx(
+        gpx11(`
         <metadata><name>Metadata</name></metadata>
-        <trk><trkseg><trkpt lat="1" lon="1"><name>Point</name></trkpt></trkseg></trk>`));
+        <trk><trkseg><trkpt lat="1" lon="1"><name>Point</name></trkpt></trkseg></trk>`),
+      );
       expect(result.name).toBeNull();
     });
 
     it("skips an unnamed first track for a named later one", () => {
-      const result = parseGpx(gpx11(`
+      const result = parseGpx(
+        gpx11(`
         <trk><trkseg>${pt("trkpt", 1, 1)}</trkseg></trk>
-        <trk><name>Later</name><trkseg>${pt("trkpt", 2, 2)}</trkseg></trk>`));
+        <trk><name>Later</name><trkseg>${pt("trkpt", 2, 2)}</trkseg></trk>`),
+      );
       expect(result.name).toBe("Later");
     });
   });
@@ -169,10 +183,12 @@ describe("parseGpx", () => {
     });
 
     it("ignores extension elements alongside the points", () => {
-      const result = parseGpx(gpx11(`<trk><trkseg>
+      const result = parseGpx(
+        gpx11(`<trk><trkseg>
         <trkpt lat="1" lon="2"><ele>3</ele><time>2026-10-25T08:00:00Z</time>
           <extensions><hr xmlns="urn:example">140</hr></extensions></trkpt>
-      </trkseg></trk>`));
+      </trkseg></trk>`),
+      );
       expect(result.points).toEqual([{ lat: 1, lon: 2, ele: 3 }]);
     });
   });
@@ -195,14 +211,15 @@ describe("parseGpx", () => {
         <h3>Below is a rendering of the page up to the first error.</h3>
       </parsererror></gpx>`;
       expect(() => parseGpx(text)).toThrow(
-        "GPX file is not valid XML: error on line 1 at column 23: "
-          + "Extra content at the end of the document",
+        "GPX file is not valid XML: error on line 1 at column 23: " +
+          "Extra content at the end of the document",
       );
     });
 
     it("throws a descriptive error when there are no track or route points", () => {
-      expect(() => parseGpx(gpx11(`<trk><name>Empty</name><trkseg></trkseg></trk>`)))
-        .toThrow("GPX file has no track or route points");
+      expect(() => parseGpx(gpx11(`<trk><name>Empty</name><trkseg></trkseg></trk>`))).toThrow(
+        "GPX file has no track or route points",
+      );
       expect(() => parseGpx(gpx11(`<wpt lat="1" lon="1"/>`))).toThrow(/no track or route points/);
     });
 
@@ -225,7 +242,10 @@ describe("parseGpx", () => {
 
     it("accepts the coordinate range bounds", () => {
       const result = parseGpx(track(pt("trkpt", -90, -180), pt("trkpt", 90, 180)));
-      expect(result.points.map((p) => [p.lat, p.lon])).toEqual([[-90, -180], [90, 180]]);
+      expect(result.points.map((p) => [p.lat, p.lon])).toEqual([
+        [-90, -180],
+        [90, 180],
+      ]);
     });
   });
 });

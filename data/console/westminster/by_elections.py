@@ -69,7 +69,7 @@ def by_election_preview() -> ResponseReturnValue:
             url=source_url,
             parent_election_name=parent_election_name,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - request boundary, flashed to the user
         flash(f"Import preview failed: {exc}")
         return redirect(url_for("by_elections.by_election_form"))
 
@@ -108,7 +108,7 @@ def by_election_confirm(token: str) -> ResponseReturnValue:
     db = get_db()
     try:
         result = by_election_import.commit_import_plan(db, plan)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - request boundary, flashed to the user
         flash(f"Import failed: {exc}")
         return redirect(url_for("by_elections.by_election_form"))
 

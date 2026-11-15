@@ -465,9 +465,7 @@ class TestOneSectionLeavesTheRestAlone:
         assert changed == {"uselectionmaps/data/map-modes.json"}
 
     @staticmethod
-    def _export_pages(
-        world: World, page_roots: dict[str, Path], scope: Any
-    ) -> None:
+    def _export_pages(world: World, page_roots: dict[str, Path], scope: Any) -> None:
         """Call ``export_pages`` directly, as ``main`` does, for ``scope``."""
         others = world.db.get_party_by_name("Others")
         assert others is not None
@@ -867,8 +865,10 @@ class TestDryRun:
         assert world.tree() == before
         assert out.splitlines() == [
             "Export scope: sections=house content=metadata",
-            "Would write manifest metadata: "
-            f"{world.base}/uselectionmaps/data/map-modes.json",
+            (
+                "Would write manifest metadata: "
+                f"{world.base}/uselectionmaps/data/map-modes.json"
+            ),
             f"parties={len(world.manifest('uselectionmaps')['parties'])} maps=1",
         ]
 

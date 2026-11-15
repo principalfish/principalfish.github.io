@@ -353,7 +353,11 @@ def us_results_preview(chamber: str) -> ResponseReturnValue:
         races = parse_cycle(general, runoffs)
         result = convert_cycle(general, runoffs, out_dir=out_dir, races=races)
         targets = _check_and_describe(
-            db, result, year=year, chamber=office, out_dir=out_dir,
+            db,
+            result,
+            year=year,
+            chamber=office,
+            out_dir=out_dir,
         )
     except (
         FetchError,
@@ -445,7 +449,11 @@ def us_results_confirm(chamber: str, token: str) -> ResponseReturnValue:
         try:
             _refuse_older_preview(result, year=year, chamber=office, out_dir=out_dir)
             written, report = _write_and_import(
-                db, result, year=year, chamber=office, out_dir=out_dir,
+                db,
+                result,
+                year=year,
+                chamber=office,
+                out_dir=out_dir,
             )
         except (CliError, OSError) as err:
             flash(f"Import failed: {err}")
@@ -500,7 +508,9 @@ def us_results_current_senate(chamber: str) -> ResponseReturnValue:
             jobs.flash_busy("Current Senate not rebuilt")
             return redirect(url_for("us_results.us_results_form", chamber=chamber))
         try:
-            report = rebuild_current_senate(snapshot_path=snapshot, election_path=election)
+            report = rebuild_current_senate(
+                snapshot_path=snapshot, election_path=election
+            )
         except (CurrentSenateError, OSError) as err:
             stdout, stderr, code = "", f"error: {err}", 1
         else:
@@ -659,7 +669,8 @@ def _write_and_import(
             path: old for path, old in previous.items() if path not in imported
         }
         problems = _restore_files(
-            to_restore, () if imported else created_dirs,
+            to_restore,
+            () if imported else created_dirs,
         )
         raise CliError(
             _failure_message(message, imported, to_restore, problems),
@@ -941,7 +952,8 @@ def _party_rows(races: Sequence[Race]) -> list[PartyRow]:
             votes=votes[(nyt_party, party_key)],
         )
         for (nyt_party, party_key), count in sorted(
-            candidates.items(), key=lambda item: (item[0][1], -item[1], item[0][0]),
+            candidates.items(),
+            key=lambda item: (item[0][1], -item[1], item[0][0]),
         )
     ]
 
@@ -1029,9 +1041,7 @@ def _render_form(
         out_dir=_out_dir(),
         senate_file=_out_dir() / CURRENT_SENATE_ELECTION_FILE,
         cache=[
-            entry
-            for entry in cache_entries(_cache_dir())
-            if entry.chamber == chamber
+            entry for entry in cache_entries(_cache_dir()) if entry.chamber == chamber
         ],
     )
 
@@ -1051,7 +1061,8 @@ def cache_entries(cache_dir: Path) -> list[CacheEntry]:
     """
     entries: list[CacheEntry] = []
     for (year, chamber, kind), source in sorted(
-        SOURCES.items(), key=lambda item: (-item[0][0], item[0][1], item[0][2]),
+        SOURCES.items(),
+        key=lambda item: (-item[0][0], item[0][1], item[0][2]),
     ):
         pending = source.status is SourceStatus.PENDING
         info = problem = None

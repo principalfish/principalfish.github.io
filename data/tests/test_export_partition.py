@@ -54,17 +54,26 @@ class TestPageRoutingContract:
         # A parliament in two pages would be exported to both data dirs.
         seen: set[str] = set()
         for parliaments in PAGE_PARLIAMENTS.values():
-            assert seen.isdisjoint(parliaments), "parliament assigned to more than one page"
+            assert seen.isdisjoint(parliaments), (
+                "parliament assigned to more than one page"
+            )
             seen |= parliaments
 
     def test_known_parliaments_map_to_expected_page(self) -> None:
         assert PAGE_PARLIAMENTS["electionmaps"] == {"westminster", "holyrood"}
-        assert PAGE_PARLIAMENTS["uselectionmaps"] == {"us_house", "us_senate", "us_presidential"}
+        assert PAGE_PARLIAMENTS["uselectionmaps"] == {
+            "us_house",
+            "us_senate",
+            "us_presidential",
+        }
 
     def test_output_roots_land_in_their_page_directory(self) -> None:
         # Pins that US data can never be written under electionmaps/ (and vice versa).
         assert PAGE_OUTPUT_ROOTS["electionmaps"].parts[-2:] == ("electionmaps", "data")
-        assert PAGE_OUTPUT_ROOTS["uselectionmaps"].parts[-2:] == ("uselectionmaps", "data")
+        assert PAGE_OUTPUT_ROOTS["uselectionmaps"].parts[-2:] == (
+            "uselectionmaps",
+            "data",
+        )
 
 
 class TestPartitionElectionsByPage:
@@ -81,7 +90,9 @@ class TestPartitionElectionsByPage:
 
     def test_every_page_key_present_even_when_empty(self) -> None:
         # US-only input still yields an (empty) electionmaps bucket, so callers can index it.
-        by_page = partition_elections_by_page([_election("2024-us-house", _Map("us_house"))])
+        by_page = partition_elections_by_page(
+            [_election("2024-us-house", _Map("us_house"))]
+        )
         assert set(by_page) == set(PAGE_PARLIAMENTS)
         assert by_page["electionmaps"] == []
 

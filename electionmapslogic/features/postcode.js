@@ -7,15 +7,15 @@
 // no jurisdiction-specific branching here. The markup is `hidden` by default, so on a page
 // that doesn't load this feature the input never appears.
 
-import { selectSeatBySearchQuery } from '../dom.js';
-import { state } from '../state.js';
-import { fetchJson } from '../files.js';
-import { normalizePostcode, resolveLookupSeatName } from '../utils.js';
+import { selectSeatBySearchQuery } from "../dom.js";
+import { state } from "../state.js";
+import { fetchJson } from "../files.js";
+import { normalizePostcode, resolveLookupSeatName } from "../utils.js";
 
-const postcodeSearchInput = document.getElementById('maps-postcode-search');
-const postcodeSearchGroup = postcodeSearchInput?.closest('.maps-toolbar-group-postcode') ?? null;
-const postcodeWarningBtn = document.getElementById('mapsPostcodeWarningBtn');
-const postcodeWarningPanel = document.getElementById('mapsPostcodeWarningPanel');
+const postcodeSearchInput = document.getElementById("maps-postcode-search");
+const postcodeSearchGroup = postcodeSearchInput?.closest(".maps-toolbar-group-postcode") ?? null;
+const postcodeWarningBtn = document.getElementById("mapsPostcodeWarningBtn");
+const postcodeWarningPanel = document.getElementById("mapsPostcodeWarningPanel");
 let postcodeErrorTimeout = null;
 
 /**
@@ -47,12 +47,12 @@ function showPostcodeError(msg) {
   // Display the error text in the input and lock it readonly so the user can't type over it.
   postcodeSearchInput.value = msg;
   postcodeSearchInput.readOnly = true;
-  postcodeSearchInput.classList.add('is-postcode-error');
+  postcodeSearchInput.classList.add("is-postcode-error");
   // Store the timer ID so clearPostcodeError can cancel it if the user focuses before 2 s.
   postcodeErrorTimeout = window.setTimeout(() => {
     postcodeSearchInput.readOnly = false;
-    postcodeSearchInput.value = '';
-    postcodeSearchInput.classList.remove('is-postcode-error');
+    postcodeSearchInput.value = "";
+    postcodeSearchInput.classList.remove("is-postcode-error");
     postcodeErrorTimeout = null;
   }, 2000);
 }
@@ -71,7 +71,7 @@ function clearPostcodeError() {
   // Restore the input to its normal editable state.
   if (postcodeSearchInput) {
     postcodeSearchInput.readOnly = false;
-    postcodeSearchInput.classList.remove('is-postcode-error');
+    postcodeSearchInput.classList.remove("is-postcode-error");
   }
 }
 
@@ -110,9 +110,9 @@ async function lookupPostcode(postcode) {
  * @returns {void}
  */
 export function wirePostcodeSearch() {
-  if (postcodeSearchInput.dataset.wired === 'true') return;
+  if (postcodeSearchInput.dataset.wired === "true") return;
 
-  let lastSubmittedPostcode = '';
+  let lastSubmittedPostcode = "";
 
   /**
    * Reads the postcode input, runs the lookup, and selects the resolved seat.
@@ -130,35 +130,35 @@ export function wirePostcodeSearch() {
     if (constituencyName) {
       selectSeatBySearchQuery(constituencyName);
     } else {
-      showPostcodeError('Postcode not found');
+      showPostcodeError("Postcode not found");
     }
   };
 
-  postcodeSearchInput.addEventListener('focus', () => {
+  postcodeSearchInput.addEventListener("focus", () => {
     // If the error flash is showing, dismiss it and restore the original value
     // so the user can immediately retype without clearing "Postcode not found" manually.
     if (postcodeSearchInput.readOnly) {
       clearPostcodeError();
-      postcodeSearchInput.value = '';
-      lastSubmittedPostcode = '';
+      postcodeSearchInput.value = "";
+      lastSubmittedPostcode = "";
     }
   });
-  postcodeSearchInput.addEventListener('input', () => {
+  postcodeSearchInput.addEventListener("input", () => {
     // Reset the dedup guard so the same value can be re-submitted after editing.
-    lastSubmittedPostcode = '';
+    lastSubmittedPostcode = "";
     clearPostcodeError();
   });
-  postcodeSearchInput.addEventListener('keydown', (event) => {
+  postcodeSearchInput.addEventListener("keydown", (event) => {
     // Enter submits immediately without waiting for blur.
-    if (event.key === 'Enter') {
+    if (event.key === "Enter") {
       event.preventDefault();
       submitPostcode();
     }
   });
-  postcodeSearchInput.addEventListener('blur', () => {
+  postcodeSearchInput.addEventListener("blur", () => {
     // Brief delay absorbs Enter-then-blur so submitPostcode isn't called twice in quick succession.
     window.setTimeout(submitPostcode, 120);
   });
 
-  postcodeSearchInput.dataset.wired = 'true';
+  postcodeSearchInput.dataset.wired = "true";
 }

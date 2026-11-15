@@ -9,7 +9,10 @@ from typing import Any
 
 from core.db import SeatStatus
 from core.schema import Vote
-from export.naming import legacy_party_key_for_vote, normalize_region_name, normalize_vote_total_value
+from export.naming import (
+    normalize_region_name,
+    normalize_vote_total_value,
+)
 from models.support.public_uncertainty import SeatBand
 
 OTHERS_PARTY_ID: int = 0
@@ -30,8 +33,8 @@ class SeatRow:
         seat_name: Human-readable seat name (used as the result key).
         region_id: Foreign key of the seat's region, or None if unset.
         region_name: Display name of the region, or None if unset.
-        electorate: Registered electorate size used for turnout calculation,
-            or None if the seats table has no electorate column.
+        electorate: Registered electorate size, or None if the seats table has no
+            electorate column.
         electoral_votes: US Electoral College votes for this seat (presidential
             maps only), or None.
     """
@@ -59,10 +62,10 @@ def choose_winner(votes: Sequence[Vote]) -> Vote | None:
     """
     elected = [vote for vote in votes if vote.elected]
     if elected:
-        return sorted(elected, key=lambda vote: (vote.vote_total or 0), reverse=True)[0]
+        return max(elected, key=lambda vote: vote.vote_total or 0)
     if not votes:
         return None
-    return sorted(votes, key=lambda vote: (vote.vote_total or 0), reverse=True)[0]
+    return max(votes, key=lambda vote: vote.vote_total or 0)
 
 
 def party_id_for_vote(vote: Vote) -> int:
@@ -115,8 +118,7 @@ def build_result_payload(
     """Build a ``pf-results-v4`` result payload for a single election.
 
     Groups votes by seat, aggregates multiple candidate rows for the same
-    party within a seat, determines the winner, and computes turnout where
-    electorate data is available.
+    party within a seat and determines the winner.
 
     Each ``p`` row is ``[party_id, votes]`` and, when the party's winning
     candidate has a name on record, a third element with that candidate name
@@ -166,7 +168,11 @@ def build_result_payload(
     payload_seats: list[dict[str, Any]] = []
 
     for seat in sorted(seats, key=lambda row: row.seat_name):
-        seat_votes = sorted(votes_by_seat.get(seat.seat_id, []), key=lambda row: (row.vote_total or 0), reverse=True)
+        seat_votes = sorted(
+            votes_by_seat.get(seat.seat_id, []),
+            key=lambda row: row.vote_total or 0,
+            reverse=True,
+        )
 
         party_info: dict[int, dict[str, Any]] = {}
         for vote in seat_votes:
@@ -191,11 +197,6 @@ def build_result_payload(
 
         winner_vote = choose_winner(seat_votes)
         winner_id = party_id_for_vote(winner_vote) if winner_vote else OTHERS_PARTY_ID
-
-        turnout_total = float(sum((row.vote_total or 0) for row in seat_votes))
-        turnout_pct = 0.0
-        if seat.electorate and seat.electorate > 0:
-            turnout_pct = round(100.0 * turnout_total / seat.electorate, 1)
 
         # Vote total descending, party id ascending as a stable tiebreak for
         # deterministic output when two parties have equal totals. A third element
@@ -260,7 +261,9 @@ def _leading_party(compact_party_rows: list[list[Any]]) -> int | None:
     """
     if not compact_party_rows:
         return None
-    if len(compact_party_rows) > 1 and float(compact_party_rows[0][1]) == float(compact_party_rows[1][1]):
+    if len(compact_party_rows) > 1 and float(compact_party_rows[0][1]) == float(
+        compact_party_rows[1][1]
+    ):
         return None
     leader: int = compact_party_rows[0][0]
     return leader
@@ -290,7 +293,9 @@ def build_special_entries(
         One ``{"n", "cl"?, "w"?, "p", "c"?, "pc"?, "sp"?, "rd"?}`` dict per seat
         with votes, sorted by seat name (``w`` follows the same rule as a seat's).
     """
-    payload = build_result_payload(seats, votes, election_year=election_year, statuses=statuses)
+    payload = build_result_payload(
+        seats, votes, election_year=election_year, statuses=statuses
+    )
     class_by_name = senate_class_by_name(seats, statuses)
 
     entries: list[dict[str, Any]] = []
@@ -299,12 +304,16 @@ def build_special_entries(
         senate_class = class_by_name.get(seat_entry["n"])
         if senate_class is not None:
             entry["cl"] = senate_class
-        entry.update({key: value for key, value in seat_entry.items() if key not in ("n", "r")})
+        entry.update(
+            {key: value for key, value in seat_entry.items() if key not in ("n", "r")}
+        )
         entries.append(entry)
     return entries
 
 
-def senate_class_by_name(seats: list[SeatRow], statuses: Mapping[int, SeatStatus]) -> dict[str, int]:
+def senate_class_by_name(
+    seats: list[SeatRow], statuses: Mapping[int, SeatStatus]
+) -> dict[str, int]:
     """Return ``{seat_name: senate_class}`` for the seats whose status row has a class."""
     class_by_name: dict[str, int] = {}
     for seat in seats:
@@ -483,12 +492,14 @@ def convert_legacy_seatinfo_to_v4(
         # so the output is deterministic when two parties have equal totals.
         compact.sort(key=lambda row: (-float(row[1]), row[0]))
 
-        seats_out.append({
-            "n": seat_name,
-            "r": region_id,
-            "w": winner_id,
-            "p": compact,
-        })
+        seats_out.append(
+            {
+                "n": seat_name,
+                "r": region_id,
+                "w": winner_id,
+                "p": compact,
+            }
+        )
 
     seats_out.sort(key=lambda s: s["n"])
     return {"schema": "pf-results-v4", "seats": seats_out}

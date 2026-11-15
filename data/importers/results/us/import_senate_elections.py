@@ -80,9 +80,13 @@ def import_senate(
     if parent_name is not None:
         parent = db.get_election_by_name(parent_name)
         if parent is None:
-            raise SystemExit(f"Parent election {parent_name!r} not found — import it first.")
+            raise SystemExit(
+                f"Parent election {parent_name!r} not found — import it first."
+            )
         if parent.type != ElectionType.us_senate:
-            raise SystemExit(f"Parent election {parent_name!r} is not a US Senate election.")
+            raise SystemExit(
+                f"Parent election {parent_name!r} is not a US Senate election."
+            )
         parent_id = parent.id
     check_election_map(db, name, map_id)
     # Check the whole file before the map exists, so a refused import leaves no map.
@@ -90,13 +94,19 @@ def import_senate(
     plan = plan_us_election(db, data, state_for_key=_senate_state)
     # A special shares the regular election's map, so it must never rebuild it.
     senate_map = ensure_us_map(
-        db, map_id, map_name, "us_senate",
+        db,
+        map_id,
+        map_name,
+        "us_senate",
         replace=replace and not refresh and parent_name is None,
     )
     return import_us_election(
-        db, data, senate_map,
+        db,
+        data,
+        senate_map,
         election_type=ElectionType.us_senate,
-        year=year, name=name,
+        year=year,
+        name=name,
         state_for_key=_senate_state,
         refresh=refresh,
         parent_election_id=parent_id,
@@ -111,10 +121,18 @@ def _senate_state(key: str) -> str:
 def main() -> None:
     """CLI entry point: load a US Senate election JSON file into the database."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--file", required=True, type=Path, help="Path to the senate-YYYY.json file")
-    parser.add_argument("--year", type=int, required=True, help="Election year (e.g. 2024)")
-    parser.add_argument("--name", required=True, help="Election name (e.g. '2024 US Senate Election')")
-    parser.add_argument("--replace", action="store_true", help="Rebuild the US Senate map first")
+    parser.add_argument(
+        "--file", required=True, type=Path, help="Path to the senate-YYYY.json file"
+    )
+    parser.add_argument(
+        "--year", type=int, required=True, help="Election year (e.g. 2024)"
+    )
+    parser.add_argument(
+        "--name", required=True, help="Election name (e.g. '2024 US Senate Election')"
+    )
+    parser.add_argument(
+        "--replace", action="store_true", help="Rebuild the US Senate map first"
+    )
     parser.add_argument(
         "--refresh",
         action="store_true",
@@ -129,8 +147,13 @@ def main() -> None:
     db = Database()
     db.create_tables()
     inserted = import_senate(
-        db, args.file, args.year, args.name,
-        replace=args.replace, refresh=args.refresh, parent_name=args.parent_name,
+        db,
+        args.file,
+        args.year,
+        args.name,
+        replace=args.replace,
+        refresh=args.refresh,
+        parent_name=args.parent_name,
     )
     election = db.get_election_by_name(args.name)
     map_id = election.map_id if election is not None else MAP_ID

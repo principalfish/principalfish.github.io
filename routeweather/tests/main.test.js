@@ -8,7 +8,11 @@ import { init, MAX_GPX_BYTES } from "../js/main.js";
 import { ELEVATION_URL, FORECAST_URL } from "../js/openmeteo.js";
 import { HOURLY_VARS, PROBABILITY } from "../js/config.js";
 import {
-  forecastWindow, latestStartMs, MINUTE_MS, nextWholeHour, toLocalInputValue,
+  forecastWindow,
+  latestStartMs,
+  MINUTE_MS,
+  nextWholeHour,
+  toLocalInputValue,
 } from "../js/schedule.js";
 import { formatDateTime } from "../js/display.js";
 
@@ -22,8 +26,7 @@ const here = (rel) => fileURLToPath(new URL(rel, import.meta.url).href);
 const FIXTURE = JSON.parse(readFileSync(here("./fixtures/forecast-2loc.json"), "utf8"));
 
 const PAGE = readFileSync(here("../index.html"), "utf8");
-const BODY = /<body[^>]*>([\s\S]*)<\/body>/.exec(PAGE)[1]
-  .replace(/<script[\s\S]*?<\/script>/g, "");
+const BODY = /<body[^>]*>([\s\S]*)<\/body>/.exec(PAGE)[1].replace(/<script[\s\S]*?<\/script>/g, "");
 
 // Inside the fixture's day: the forecast window is 09:00 Oct 26 to 09:00 Nov 2.
 const NOW = Date.UTC(2026, 9, 26, 9, 20);
@@ -50,12 +53,15 @@ function syntheticLocation(lat, lon, i, times, names, { leadingNulls, trailingNu
   const hourly = { time: times.map(isoHour) };
   for (const name of names) hourly[name] = times.map((_, t) => base.hourly[name][t % n]);
   // Open-Meteo pads hours a model run hasn't reached with nulls.
-  hourly.temperature_2m &&= hourly.temperature_2m.map(
-    (v, t) => (t < leadingNulls || t >= times.length - trailingNulls ? null : v),
+  hourly.temperature_2m &&= hourly.temperature_2m.map((v, t) =>
+    t < leadingNulls || t >= times.length - trailingNulls ? null : v,
   );
   // Cell centre a little off the requested point, like a real model grid.
   const loc = {
-    latitude: lat + 0.004, longitude: lon - 0.006, elevation: base.elevation, hourly,
+    latitude: lat + 0.004,
+    longitude: lon - 0.006,
+    elevation: base.elevation,
+    hourly,
   };
   // Like the real API: the first location has no location_id.
   return i === 0 ? loc : { ...loc, location_id: i };
@@ -75,8 +81,14 @@ function syntheticLocation(lat, lon, i, times, names, { leadingNulls, trailingNu
 // Time zone lookups are counted in `zoneCalls`, not `calls`; chance-of-rain
 // URLs are kept in `probabilityUrls`.
 function mockFetch({
-  failForecast = 0, failProbability = false, holdFirst = null, maxHours = Infinity,
-  leadingNulls = 0, trailingNulls = 0, nullElevation = false, timeZone = process.env.TZ,
+  failForecast = 0,
+  failProbability = false,
+  holdFirst = null,
+  maxHours = Infinity,
+  leadingNulls = 0,
+  trailingNulls = 0,
+  nullElevation = false,
+  timeZone = process.env.TZ,
 } = {}) {
   const calls = { forecast: 0, probability: 0, elevation: 0 };
   const zoneCalls = [];
@@ -84,7 +96,9 @@ function mockFetch({
   const signals = [];
   let failuresLeft = failForecast;
   let release;
-  const held = new Promise((resolve) => { release = resolve; });
+  const held = new Promise((resolve) => {
+    release = resolve;
+  });
   const impl = async (href, options) => {
     signals.push(options?.signal);
     const url = new URL(href);
@@ -123,9 +137,9 @@ function mockFetch({
     const times = [];
     for (let t = start; t <= end; t += HOUR_MS) times.push(t);
     const names = url.searchParams.get("hourly").split(",");
-    const locations = lats.map((lat, i) => syntheticLocation(
-      lat, lons[i], i, times, names, { leadingNulls, trailingNulls },
-    ));
+    const locations = lats.map((lat, i) =>
+      syntheticLocation(lat, lons[i], i, times, names, { leadingNulls, trailingNulls }),
+    );
     return new Response(JSON.stringify(locations.length === 1 ? locations[0] : locations));
   };
   return { impl, calls, zoneCalls, probabilityUrls, signals, release: () => release() };
@@ -135,23 +149,25 @@ function mockFetch({
 // `name: null` leaves the track unnamed.
 function gpxText({ withElevation = true, name = "Fell <b>loop</b>" } = {}) {
   const eles = [100, 160, 230, 280, 200, 140];
-  const pts = eles.map((ele, i) => {
-    const lon = (-3.2 + i * 0.014).toFixed(3);
-    const eleTag = withElevation ? `<ele>${ele}</ele>` : "";
-    return `<trkpt lat="54.45" lon="${lon}">${eleTag}</trkpt>`;
-  }).join("");
-  const nameTag = name === null
-    ? ""
-    : `<name>${name.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</name>`;
-  return `<?xml version="1.0"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">`
-    + `<trk>${nameTag}<trkseg>${pts}</trkseg></trk></gpx>`;
+  const pts = eles
+    .map((ele, i) => {
+      const lon = (-3.2 + i * 0.014).toFixed(3);
+      const eleTag = withElevation ? `<ele>${ele}</ele>` : "";
+      return `<trkpt lat="54.45" lon="${lon}">${eleTag}</trkpt>`;
+    })
+    .join("");
+  const nameTag =
+    name === null ? "" : `<name>${name.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</name>`;
+  return (
+    `<?xml version="1.0"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">` +
+    `<trk>${nameTag}<trkseg>${pts}</trkseg></trk></gpx>`
+  );
 }
 
 const $ = (id) => document.getElementById(id);
 
-const gpxFile = (text, name = "route.gpx") => (
-  new File([text], name, { type: "application/gpx+xml" })
-);
+const gpxFile = (text, name = "route.gpx") =>
+  new File([text], name, { type: "application/gpx+xml" });
 
 function chooseFile(file) {
   const input = $("gpxFile");
@@ -177,9 +193,8 @@ function commit(id) {
 }
 
 const checkedValue = (name) => document.querySelector(`input[name="${name}"]:checked`).value;
-const clickRadio = (name, value) => (
-  document.querySelector(`input[name="${name}"][value="${value}"]`).click()
-);
+const clickRadio = (name, value) =>
+  document.querySelector(`input[name="${name}"][value="${value}"]`).click();
 
 async function waitForLoad(page) {
   await vi.waitFor(() => {
@@ -195,9 +210,15 @@ async function loadRoute(page, options) {
 
 // A Map-backed Storage stand-in for the usage log.
 class MemoryStorage {
-  constructor() { this.data = new Map(); }
-  getItem(key) { return this.data.has(key) ? this.data.get(key) : null; }
-  setItem(key, value) { this.data.set(key, String(value)); }
+  constructor() {
+    this.data = new Map();
+  }
+  getItem(key) {
+    return this.data.has(key) ? this.data.get(key) : null;
+  }
+  setItem(key, value) {
+    this.data.set(key, String(value));
+  }
 }
 
 function startPage(options = {}) {
@@ -214,13 +235,16 @@ function startPage(options = {}) {
   return { page, fetch, calls: fetch.calls };
 }
 
-const usageReports = () => console.info.mock.calls
-  .map(([text]) => String(text))
-  .filter((text) => text.startsWith("Open-Meteo:"));
+const usageReports = () =>
+  console.info.mock.calls
+    .map(([text]) => String(text))
+    .filter((text) => text.startsWith("Open-Meteo:"));
 
 describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
   const originalTz = process.env.TZ;
-  beforeAll(() => { process.env.TZ = zone; });
+  beforeAll(() => {
+    process.env.TZ = zone;
+  });
   afterAll(() => {
     if (originalTz === undefined) delete process.env.TZ;
     else process.env.TZ = originalTz;
@@ -268,8 +292,9 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     const outside = dragover(document.body);
     expect(outside.defaultPrevented).toBe(true);
     expect(outside.dataTransfer.dropEffect).toBe("none");
-    expect(dragover($("dropZone").querySelector(".drop-title")).dataTransfer.dropEffect)
-      .toBe("copy");
+    expect(dragover($("dropZone").querySelector(".drop-title")).dataTransfer.dropEffect).toBe(
+      "copy",
+    );
   });
 
   it("bounds the start input from now to the end of the forecast", () => {
@@ -329,8 +354,9 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     const panel = $("mapPanel");
     expect(panel.hidden).toBe(false);
     expect(panel.querySelectorAll(".leaflet-container")).toHaveLength(1);
-    expect(panel.querySelectorAll(".leaflet-rwCells-pane path"))
-      .toHaveLength(page.state.samples.length * 2);
+    expect(panel.querySelectorAll(".leaflet-rwCells-pane path")).toHaveLength(
+      page.state.samples.length * 2,
+    );
 
     $("speedInput").value = "7";
     $("speedInput").dispatchEvent(new Event("change", { bubbles: true }));
@@ -568,8 +594,14 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
   const rowText = (row) => {
     const cells = [...row.querySelectorAll("td")].map((td) => td.textContent);
     return {
-      distance: cells[0], temp: cells[5], feels: cells[6], wind: cells[7], gust: cells[8],
-      head: cells[9], cross: cells[10], rain: cells[11],
+      distance: cells[0],
+      temp: cells[5],
+      feels: cells[6],
+      wind: cells[7],
+      gust: cells[8],
+      head: cells[9],
+      cross: cells[10],
+      rain: cells[11],
     };
   };
   const firstRow = () => rowText($("pointsBody").querySelector("tr"));
@@ -588,7 +620,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
   it("shows wind in mph over metric without touching distance, speed or the data", async () => {
     const { page, calls } = startPage();
     const reasons = [];
-    page.addView((state, reason) => reasons.push(reason));
+    page.addView((_state, reason) => reasons.push(reason));
     await loadRoute(page);
     // Through the clock, so the position survives the units re-render.
     page.playback.clock.seek(0.5);
@@ -620,11 +652,15 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     expect(readoutText("distance")).toBe(distanceBefore);
     expect($("speedUnit").textContent).toBe("km/h");
     expect($("speedInput").value).toBe("5");
-    expect([...$("chartsPanel").querySelectorAll(".strip-title")].map((t) => t.textContent))
-      .toEqual([
-        "Elevation (m)", "Temperature (°C)", "Wind (mph)", "Rain (mm/h)",
-        "Sky (cloud %, sunshine)",
-      ]);
+    expect(
+      [...$("chartsPanel").querySelectorAll(".strip-title")].map((t) => t.textContent),
+    ).toEqual([
+      "Elevation (m)",
+      "Temperature (°C)",
+      "Wind (mph)",
+      "Rain (mm/h)",
+      "Sky (cloud %, sunshine)",
+    ]);
 
     expect(urlParams().get("units")).toBe("metric");
     expect(urlParams().get("wind")).toBe("mph");
@@ -675,7 +711,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
   it("ignores re-picking a preset or toggle with nothing to change", () => {
     const { page } = startPage();
     const reasons = [];
-    page.addView((state, reason) => reasons.push(reason));
+    page.addView((_state, reason) => reasons.push(reason));
     const units = page.state.units;
     clickRadio("units", "metric");
     clickRadio("windUnit", "kmh");
@@ -838,16 +874,19 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     expect($("startInput").min).toBe(toLocalInputValue(NOW, "Asia/Tokyo"));
     expect($("startZone").textContent).toBe("route time: Asia/Tokyo (GMT+9)");
     expect($("summaryList").textContent).toContain("Times inAsia/Tokyo (GMT+9)");
-    expect($("summaryList").textContent)
-      .toContain(formatDateTime(page.state.times[0], "Asia/Tokyo"));
-    expect($("pointsBody").rows[0].cells[1].textContent)
-      .toBe(formatDateTime(page.state.times[0], "Asia/Tokyo").slice(-5));
+    expect($("summaryList").textContent).toContain(
+      formatDateTime(page.state.times[0], "Asia/Tokyo"),
+    );
+    expect($("pointsBody").rows[0].cells[1].textContent).toBe(
+      formatDateTime(page.state.times[0], "Asia/Tokyo").slice(-5),
+    );
   });
 
   it("keeps a linked start's instant when the zone arrives", async () => {
     const start = "2026-10-26T12:00Z";
     const { page } = startPage({
-      search: `?start=${start}`, fetchOptions: { timeZone: "Asia/Tokyo" },
+      search: `?start=${start}`,
+      fetchOptions: { timeZone: "Asia/Tokyo" },
     });
     await loadRoute(page);
     expect(page.state.startMs).toBe(Date.parse(start));
@@ -897,8 +936,9 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     const { page } = startPage();
     await loadRoute(page);
     expect(page.state.rain).toBeGreaterThan(0);
-    expect($("summaryList").textContent)
-      .toMatch(/Rain on the route~[\d.]+ mm · wettest [\d.]+ mm\/h at /);
+    expect($("summaryList").textContent).toMatch(
+      /Rain on the route~[\d.]+ mm · wettest [\d.]+ mm\/h at /,
+    );
   });
 
   it("stays in the browser's zone when the zone lookup fails", async () => {
@@ -941,15 +981,16 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
     const row = $("pointsBody").rows[0].cells;
     expect(row[12].textContent).toMatch(/^\d+%$/);
     expect(row[13].textContent).toMatch(/^\d+ min\/h$/);
-    expect($("playback").querySelector(".readout-light dd").textContent)
-      .toMatch(/^Daylight · sunset 16:\d\d \(in /);
+    expect($("playback").querySelector(".readout-light dd").textContent).toMatch(
+      /^Daylight · sunset 16:\d\d \(in /,
+    );
     expect($("chartsPanel").querySelectorAll(".strip")).toHaveLength(5);
   });
 
   it("passes a reason to registered views", async () => {
     const { page } = startPage();
     const reasons = [];
-    page.addView((state, reason) => reasons.push(reason));
+    page.addView((_state, reason) => reasons.push(reason));
     await loadRoute(page);
     expect(reasons).toContain("load");
     expect(reasons).toContain("status");

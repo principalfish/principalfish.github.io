@@ -5,16 +5,23 @@ import { freshSlots, reconstructSlots } from "./engine.js";
 
 // An all-gray clue carries no signal; null takes the fast no-clue solver path.
 export const clueIsSet = (grid) =>
-  grid && grid.slice(0, 4).some((c) => typeof c === "string" && (c.includes("1") || c.includes("2")));
-export const manualClue = (grid) => clueIsSet(grid) ? grid : null;
+  grid?.slice(0, 4).some((c) => typeof c === "string" && (c.includes("1") || c.includes("2")));
+export const manualClue = (grid) => (clueIsSet(grid) ? grid : null);
 
 export function createManualAnalysis(st) {
   let replayCache = null;
   const reSolve = (slots, clueGrid) =>
     solveRelaxed(slots, clueGrid, st.POOL, st.PM, st.N, st.poolIndex, st.PLURALS, null);
   const buildSuggest = (res, slots, clueGrid, expanded) =>
-    buildSuggestions(res, st.PM, st.N, st.poolIndex, expanded ? st.ALL_GUESSES : st.POOL,
-      st.PLURALS, { slots, clueGrid, pool: st.POOL });
+    buildSuggestions(
+      res,
+      st.PM,
+      st.N,
+      st.poolIndex,
+      expanded ? st.ALL_GUESSES : st.POOL,
+      st.PLURALS,
+      { slots, clueGrid, pool: st.POOL },
+    );
 
   function prepare(inputSlots, rawGrid) {
     const slots = structuredClone(inputSlots);
@@ -22,7 +29,14 @@ export function createManualAnalysis(st) {
     const moves = [];
     for (let b = 0; b < slots.length; b++) {
       for (const g of slots[b].guesses) {
-        moves.push({ board: b, word: g.word, colors: g.colors, probe: false, expanded: false, isClosing: false });
+        moves.push({
+          board: b,
+          word: g.word,
+          colors: g.colors,
+          probe: false,
+          expanded: false,
+          isClosing: false,
+        });
       }
     }
 
@@ -34,22 +48,27 @@ export function createManualAnalysis(st) {
     let reuse = 0;
     if (replayCache && replayCache.clueKey === clueKey) {
       const cm = replayCache.moves;
-      while (reuse < cm.length && reuse < moves.length &&
-             cm[reuse].board === moves[reuse].board &&
-             cm[reuse].word === moves[reuse].word &&
-             cm[reuse].colors === moves[reuse].colors) {
+      while (
+        reuse < cm.length &&
+        reuse < moves.length &&
+        cm[reuse].board === moves[reuse].board &&
+        cm[reuse].word === moves[reuse].word &&
+        cm[reuse].colors === moves[reuse].colors
+      ) {
         reuse++;
       }
     }
 
     const startSlots = freshSlots();
     const steps = [];
-    for (let i = 0; i < reuse; i++) {                 // unchanged prefix — reuse cached solve (lazy)
+    for (let i = 0; i < reuse; i++) {
+      // unchanged prefix — reuse cached solve (lazy)
       moves[i].setSize = replayCache.moves[i].setSize;
       moves[i].expRemaining = replayCache.moves[i].expRemaining;
       steps.push(replayCache.steps[i]);
     }
-    for (let i = reuse; i < moves.length; i++) {      // diverging tail — solve LAZILY (on scrub)
+    for (let i = reuse; i < moves.length; i++) {
+      // diverging tail — solve LAZILY (on scrub)
       // Broad early prefixes are expensive. Solve their results and cut counts
       // only when the user visits them, just like their suggestions.
       steps.push({ after: undefined, suggest: undefined });
@@ -66,10 +85,16 @@ export function createManualAnalysis(st) {
     // Solve ONLY the current/final state — that's all the displayed suggestion needs, and a
     // settled end-state is narrow (fast). The per-move replay is filled in lazily on scrub.
     const res = reSolve(slots, clueGrid);
-    if (moves.length) steps[steps.length - 1].after = res;  // last step == final state; reuse it
-    return structuredClone({ result: res, clueGrid, startSlots, moves,
+    if (moves.length) steps[steps.length - 1].after = res; // last step == final state; reuse it
+    return structuredClone({
+      result: res,
+      clueGrid,
+      startSlots,
+      moves,
       ...(compact ? { reuse, finalStep: steps.at(-1) } : { steps }),
-      suggest: !moves.length && res.solvable ? buildSuggest(res, slots, clueGrid, expanded) : undefined });
+      suggest:
+        !moves.length && res.solvable ? buildSuggest(res, slots, clueGrid, expanded) : undefined,
+    });
   }
 
   function ensureStepSolved(K, clueGrid) {
@@ -82,7 +107,8 @@ export function createManualAnalysis(st) {
       const before = reSolve(reconstructSlots(startSlots, moves, K), clueGrid);
       moves[K].setSize = before.solvable ? before.perSlotFeasible[moves[K].board].length : null;
       moves[K].expRemaining = step.after.solvable
-        ? step.after.perSlotFeasible[moves[K].board].length : null;
+        ? step.after.perSlotFeasible[moves[K].board].length
+        : null;
     }
   }
 
@@ -103,6 +129,8 @@ export function createManualAnalysis(st) {
     return structuredClone({ slots: slotsAfter, clueGrid, move: moves[K], step });
   }
 
-  function reset() { replayCache = null; }
+  function reset() {
+    replayCache = null;
+  }
   return { analyse, replay, reset, restore: prepare };
 }

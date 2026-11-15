@@ -1,6 +1,7 @@
 """Tests for the Region table and Database region methods."""
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from core.db import Database
 
@@ -28,7 +29,7 @@ class TestAddRegion:
         assert region.population == 5430000
 
     def test_invalid_map_raises(self, db: Database) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             db.add_region(9999, "Nowhere")
 
 

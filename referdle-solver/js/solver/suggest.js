@@ -6,8 +6,6 @@ import { pmCode } from "./data.js";
 import { STRATEGY } from "./strategy.js";
 import { solve } from "./solver.js";
 
-const LOOKAHEAD_MAX = 14;
-
 function hasRepeat(word) {
   return new Set(word).size < 5;
 }
@@ -44,11 +42,6 @@ function answerIndices(answers, poolIndex) {
   return idx;
 }
 
-// code(answers[g] vs answers[s]) using PM.
-function setCode(idx, PM, N, g, s) {
-  return pmCode(PM, N, idx[g], idx[s]);
-}
-
 export function expectedRemainingAll(answers, PM, N, poolIndex) {
   const n = answers.length;
   const exp = new Float64Array(n);
@@ -64,7 +57,10 @@ export function expectedRemainingAll(answers, PM, N, poolIndex) {
       counts[c]++;
     }
     let total = 0;
-    for (const c of seen) { total += counts[c] * counts[c]; counts[c] = 0; }
+    for (const c of seen) {
+      total += counts[c] * counts[c];
+      counts[c] = 0;
+    }
     exp[i] = total / n;
   }
   return exp;
@@ -85,7 +81,8 @@ export function expectedAndMaxAll(answers, PM, N, poolIndex) {
       if (counts[c] === 0) seen.push(c);
       counts[c]++;
     }
-    let total = 0, mx = 0;
+    let total = 0,
+      mx = 0;
     for (const c of seen) {
       total += counts[c] * counts[c];
       if (counts[c] > mx) mx = counts[c];
@@ -115,13 +112,13 @@ export function bestProbeWords(ALL_GUESSES, answers, PM, N, poolIndex, avoidDoub
     const gPoolIdx = poolIndex.get(g);
     seen.length = 0;
     for (let s = 0; s < na; s++) {
-      const code = gPoolIdx !== undefined
-        ? pmCode(PM, N, gPoolIdx, aIdx[s])
-        : compareCode(g, answers[s]);
+      const code =
+        gPoolIdx !== undefined ? pmCode(PM, N, gPoolIdx, aIdx[s]) : compareCode(g, answers[s]);
       if (counts[code] === 0) seen.push(code);
       counts[code]++;
     }
-    let total = 0, mx = 0;
+    let total = 0,
+      mx = 0;
     for (const c of seen) {
       total += counts[c] * counts[c];
       if (tailLambda > 0 && counts[c] > mx) mx = counts[c];
@@ -138,7 +135,15 @@ export function bestProbeWords(ALL_GUESSES, answers, PM, N, poolIndex, avoidDoub
 
 function findProbe(ALL_GUESSES, answers, PM, N, poolIndex, avoidDoubles) {
   // probe_source == "expanded" (default): use ALL_GUESSES.
-  return bestProbeWords(ALL_GUESSES, answers, PM, N, poolIndex, avoidDoubles, STRATEGY.probe_tail_lambda);
+  return bestProbeWords(
+    ALL_GUESSES,
+    answers,
+    PM,
+    N,
+    poolIndex,
+    avoidDoubles,
+    STRATEGY.probe_tail_lambda,
+  );
 }
 
 // --- lookahead -----------------------------------------------------------------
@@ -168,7 +173,10 @@ function lookaheadChoice(answers, PM, N, poolIndex, ALL_GUESSES, avoidDoubles, e
       for (const s of idxTuple) {
         const pat = P[g][s];
         let arr = buckets.get(pat);
-        if (!arr) { arr = []; buckets.set(pat, arr); }
+        if (!arr) {
+          arr = [];
+          buckets.set(pat, arr);
+        }
         arr.push(s);
       }
       let c = 1.0;
@@ -192,13 +200,17 @@ function lookaheadChoice(answers, PM, N, poolIndex, ALL_GUESSES, avoidDoubles, e
   const full = [];
   for (let i = 0; i < n; i++) full.push(i);
 
-  let bestG = null, bestC = Infinity;
+  let bestG = null,
+    bestC = Infinity;
   for (const g of cand) {
     const buckets = new Map();
     for (const s of full) {
       const pat = P[g][s];
       let arr = buckets.get(pat);
-      if (!arr) { arr = []; buckets.set(pat, arr); }
+      if (!arr) {
+        arr = [];
+        buckets.set(pat, arr);
+      }
       arr.push(s);
     }
     let c = 1.0;
@@ -227,9 +239,13 @@ function lookaheadChoice(answers, PM, N, poolIndex, ALL_GUESSES, avoidDoubles, e
     const pIdx = poolIndex.get(probe.word);
     const buckets = new Map();
     for (let s = 0; s < n; s++) {
-      const code = pIdx !== undefined ? pmCode(PM, N, pIdx, idx[s]) : compareCode(probe.word, answers[s]);
+      const code =
+        pIdx !== undefined ? pmCode(PM, N, pIdx, idx[s]) : compareCode(probe.word, answers[s]);
       let arr = buckets.get(code);
-      if (!arr) { arr = []; buckets.set(code, arr); }
+      if (!arr) {
+        arr = [];
+        buckets.set(code, arr);
+      }
       arr.push(s);
     }
     let cp = 1.0;
@@ -281,8 +297,7 @@ function chooseGuessForSet(answers, PM, N, poolIndex, ALL_GUESSES, PLURALS, opts
     nLa >= STRATEGY.danger_min_n &&
     freePositions(answers) <= STRATEGY.danger_free_max;
 
-  if (2 <= nLa && nLa <= STRATEGY.lookahead_max &&
-      (STRATEGY.danger_lookahead && dangerous)) {
+  if (2 <= nLa && nLa <= STRATEGY.lookahead_max && STRATEGY.danger_lookahead && dangerous) {
     return lookaheadChoice(answers, PM, N, poolIndex, ALL_GUESSES, avoidDoubles, scores?.exp);
   }
 
@@ -292,9 +307,10 @@ function chooseGuessForSet(answers, PM, N, poolIndex, ALL_GUESSES, PLURALS, opts
   const { exp, score } = scores || candidateScores(answers, PM, N, poolIndex);
 
   // Selectable indices: W1-3 exclude doubles from the final pick.
-  const sel = (avoidDoubles && nd.length)
-    ? answers.map((_, i) => i).filter((i) => !hasRepeat(answers[i]))
-    : answers.map((_, i) => i);
+  const sel =
+    avoidDoubles && nd.length
+      ? answers.map((_, i) => i).filter((i) => !hasRepeat(answers[i]))
+      : answers.map((_, i) => i);
 
   let bestI = sel[0];
   for (let k = 1; k < sel.length; k++) {
@@ -306,14 +322,21 @@ function chooseGuessForSet(answers, PM, N, poolIndex, ALL_GUESSES, PLURALS, opts
 
   // Plural endgame tie-break — W5 only. W5 is a plural in 0/1000 current-era games;
   // swapping a plural best-pick to a near-tied non-plural is pure upside.
-  if (STRATEGY.plural_endgame_avoid && board === 4 && answers.length <= STRATEGY.plural_endgame_max_n) {
+  if (
+    STRATEGY.plural_endgame_avoid &&
+    board === 4 &&
+    answers.length <= STRATEGY.plural_endgame_max_n
+  ) {
     if (PLURALS.has(answers[bestI])) {
       const thr = score[bestI] + STRATEGY.plural_endgame_eps;
       let alt = null;
       for (const i of sel) {
         if (PLURALS.has(answers[i]) || score[i] > thr) continue;
-        if (alt === null || score[i] < score[alt] ||
-            (score[i] === score[alt] && answers[i] < answers[alt])) {
+        if (
+          alt === null ||
+          score[i] < score[alt] ||
+          (score[i] === score[alt] && answers[i] < answers[alt])
+        ) {
           alt = i;
         }
       }
@@ -331,8 +354,11 @@ function chooseGuessForSet(answers, PM, N, poolIndex, ALL_GUESSES, PLURALS, opts
       let alt = null;
       for (const i of sel) {
         if (!hasRepeat(answers[i]) || score[i] > thr) continue;
-        if (alt === null || score[i] < score[alt] ||
-            (score[i] === score[alt] && answers[i] < answers[alt])) {
+        if (
+          alt === null ||
+          score[i] < score[alt] ||
+          (score[i] === score[alt] && answers[i] < answers[alt])
+        ) {
           alt = i;
         }
       }
@@ -385,7 +411,10 @@ function topFromScores(answers, scores, n, avoidDoubles) {
     const nd = idxs.filter((i) => !hasRepeat(answers[i]));
     if (nd.length) idxs = nd;
   }
-  idxs.sort((a, b) => (score[a] - score[b]) || (answers[a] < answers[b] ? -1 : answers[a] > answers[b] ? 1 : 0));
+  idxs.sort(
+    (a, b) =>
+      score[a] - score[b] || (answers[a] < answers[b] ? -1 : answers[a] > answers[b] ? 1 : 0),
+  );
   return idxs.slice(0, n).map((i) => ({
     word: answers[i],
     expRemaining: round2(exp[i]),
@@ -397,21 +426,48 @@ function topFromScores(answers, scores, n, avoidDoubles) {
 // Top-n guesses for one board, INCLUDING the best probe when a probe is the
 // solver's actual pick (topCandidates alone only ranks in-set answers, so a
 // winning probe would otherwise be invisible in the per-word view).
-export function topGuessesForBoard(answers, PM, N, poolIndex, ALL_GUESSES, PLURALS,
-                                  n = 5, avoidDoubles = false, board = null) {
-  const analysis = analyzeBoard(answers, PM, N, poolIndex, ALL_GUESSES, PLURALS, avoidDoubles, board);
+export function topGuessesForBoard(
+  answers,
+  PM,
+  N,
+  poolIndex,
+  ALL_GUESSES,
+  PLURALS,
+  n = 5,
+  avoidDoubles = false,
+  board = null,
+) {
+  const analysis = analyzeBoard(
+    answers,
+    PM,
+    N,
+    poolIndex,
+    ALL_GUESSES,
+    PLURALS,
+    avoidDoubles,
+    board,
+  );
   return topForBoard(analysis, n);
 }
 
 function analyzeBoard(answers, PM, N, poolIndex, ALL_GUESSES, PLURALS, avoidDoubles, board) {
   const scores = answers.length > 1 ? candidateScores(answers, PM, N, poolIndex) : null;
-  const best = chooseGuessForSet(answers, PM, N, poolIndex, ALL_GUESSES, PLURALS, { avoidDoubles, board }, scores);
+  const best = chooseGuessForSet(
+    answers,
+    PM,
+    N,
+    poolIndex,
+    ALL_GUESSES,
+    PLURALS,
+    { avoidDoubles, board },
+    scores,
+  );
   return { answers, scores, best, avoidDoubles, board };
 }
 
 function topForBoard({ answers, scores, best, avoidDoubles }, n) {
   const top = topFromScores(answers, scores, n, avoidDoubles);
-  if (best && best.probe && !top.some((t) => t.word === best.word)) {
+  if (best?.probe && !top.some((t) => t.word === best.word)) {
     top.unshift({
       word: best.word,
       expRemaining: round2(best.expRemaining),
@@ -429,7 +485,7 @@ function topForBoard({ answers, scores, best, avoidDoubles }, n) {
 // (and STRATEGY.resolve_tiebreak is on), the endgame tie-break refines the chosen
 // board's word; without it, behaviour is unchanged.
 export function bestGuessAcrossBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURALS, ctx) {
-  if (!res || !res.solvable) return [];
+  if (!res?.solvable) return [];
   const analyses = analyzeBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURALS);
   return rankBoards(analyses, res, PM, N, poolIndex, PLURALS, ctx);
 }
@@ -437,10 +493,13 @@ export function bestGuessAcrossBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURAL
 // One request's scores and independent choices serve both ranking and display.
 // Endgame refinement changes only the copied ranked entry, not a board's choice.
 export function buildSuggestions(res, PM, N, poolIndex, ALL_GUESSES, PLURALS, ctx) {
-  if (!res || !res.solvable) return { solvable: false };
+  if (!res?.solvable) return { solvable: false };
   const analyses = analyzeBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURALS);
   const ranked = rankBoards(analyses, res, PM, N, poolIndex, PLURALS, ctx);
-  const perBoard = analyses.map((analysis) => ({ board: analysis.board, top: topForBoard(analysis, 5) }));
+  const perBoard = analyses.map((analysis) => ({
+    board: analysis.board,
+    top: topForBoard(analysis, 5),
+  }));
   return { solvable: true, ranked, perBoard };
 }
 
@@ -456,7 +515,8 @@ function analyzeBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURALS) {
 }
 
 function rankBoards(analyses, res, PM, N, poolIndex, PLURALS, ctx) {
-  const out = analyses.filter((analysis) => analysis.best)
+  const out = analyses
+    .filter((analysis) => analysis.best)
     .map(({ board, answers, best }) => ({ board, setSize: answers.length, ...best }));
 
   // Board ordering: frac objective = expRemaining/setSize, ascending.
@@ -467,7 +527,8 @@ function rankBoards(analyses, res, PM, N, poolIndex, PLURALS, ctx) {
   }
 
   out.sort((a, b) => {
-    const ma = metric(a), mb = metric(b);
+    const ma = metric(a),
+      mb = metric(b);
     if (ma !== mb) return ma - mb;
     if (a.board !== b.board) return b.board - a.board;
     return a.word < b.word ? -1 : a.word > b.word ? 1 : 0;
@@ -522,7 +583,10 @@ function resolveTiebreak(out, res, PM, N, poolIndex, PLURALS, ctx, analyses) {
   let pickPins = otherPins(tied[0]);
   for (let k = 1; k < tied.length; k++) {
     const p = otherPins(tied[k]);
-    if (p > pickPins) { pick = tied[k]; pickPins = p; }
+    if (p > pickPins) {
+      pick = tied[k];
+      pickPins = p;
+    }
   }
   if (pick !== top.word) top.word = pick;
 }

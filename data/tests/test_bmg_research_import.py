@@ -11,8 +11,10 @@ from __future__ import annotations
 import sys
 from collections.abc import Mapping
 from datetime import date
+from http.client import IncompleteRead
 from types import MappingProxyType
 from typing import Any
+from urllib.error import URLError
 from urllib.request import Request
 
 import pytest
@@ -300,9 +302,7 @@ class TestParseFieldwork:
         assert start == date(2026, 1, 3)
         assert end == date(2026, 1, 4)
 
-    @pytest.mark.parametrize(
-        "dash", ["–", "—"], ids=["en_dash", "em_dash"]
-    )
+    @pytest.mark.parametrize("dash", ["–", "—"], ids=["en_dash", "em_dash"])
     def test_dash_variants_normalised(self, dash: str) -> None:
         start, end = bmg._parse_fieldwork(f"31 January {dash} 2 February 2026")
         assert start == date(2026, 1, 31)
@@ -381,6 +381,34 @@ class TestExtractWorkbook:
 
         monkeypatch.setattr(bmg, "urlopen", fake_urlopen)
         with pytest.raises(ValueError, match="connection timed out"):
+            bmg.extract_workbook("https://bmgresearch.com/tables.xlsx")
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            URLError("name or service not known"),
+            IncompleteRead(b"partial"),
+            ValueError("unknown url type"),
+        ],
+    )
+    def test_network_and_url_errors_are_captured_in_message(
+        self, monkeypatch: pytest.MonkeyPatch, error: Exception
+    ) -> None:
+        def fake_urlopen(req: Request, timeout: float = 45) -> FakeUrlResponse:
+            raise error
+
+        monkeypatch.setattr(bmg, "urlopen", fake_urlopen)
+        with pytest.raises(ValueError, match="Could not fetch XLSX payload"):
+            bmg.extract_workbook("https://bmgresearch.com/tables.xlsx")
+
+    def test_an_unexpected_error_is_not_swallowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_urlopen(req: Request, timeout: float = 45) -> FakeUrlResponse:
+            raise RuntimeError("bug in the fetch code")
+
+        monkeypatch.setattr(bmg, "urlopen", fake_urlopen)
+        with pytest.raises(RuntimeError, match="bug in the fetch code"):
             bmg.extract_workbook("https://bmgresearch.com/tables.xlsx")
 
     def test_co_uk_url_falls_back_through_com_variants(
@@ -1550,9 +1578,7 @@ class TestResolveSourceUrl:
         with pytest.raises(ValueError, match="Unexpected BMG news listing redirect"):
             bmg.resolve_source_url(_ARTICLE_URL)
 
-    def test_oversize_html_fails_clearly(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_oversize_html_fails_clearly(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _mock_pages(monkeypatch, {_RELEASE_URL: (_RELEASE_URL, "x" * 2_000_001)})
         with pytest.raises(ValueError, match="Source page is too large"):
             bmg.resolve_source_url(_RELEASE_URL)
@@ -1565,12 +1591,12 @@ def _staged_vi_workbook(
 ) -> Workbook:
     rows = [
         _row({2: _VI_MARKER}),
-        *_national_block({party: 0.01 for party in final}),
+        *_national_block(dict.fromkeys(final, 0.01)),
     ]
     rows.extend([_row({2: "Table 2"}), _row({2: _VI_MARKER}), _row({2: base})])
     rows.extend(_national_block(final))
     rows.append(_row({2: "Table 3: unrelated party question"}))
-    rows.extend(_national_block({party: 0.99 for party in _REQUIRED_PARTIES}))
+    rows.extend(_national_block(dict.fromkeys(_REQUIRED_PARTIES, 0.99)))
     return build_workbook(
         {
             "Methodology": _methodology_sheet(
@@ -1632,8 +1658,7 @@ class TestFinalHeadlineAndSample:
             party: values[bmg.NATIONAL_KEY]
             for party, values in parsed.party_region_percentages.items()
         } == {
-            party: round(value * 100, 2)
-            for party, value in _NATIONAL_FRACTIONS.items()
+            party: round(value * 100, 2) for party, value in _NATIONAL_FRACTIONS.items()
         }
         assert {
             party: {
@@ -1736,7 +1761,7 @@ def _counted_table(
     rows.append(_row({2: "Base: Total", **weighted}))
     for party, fraction in fractions.items():
         rows.append(_row({2: party, 3: fraction * 1000}))
-        regional = {col: fraction for col in _BASE_REGION_COLUMNS.values()}
+        regional = dict.fromkeys(_BASE_REGION_COLUMNS.values(), fraction)
         rows.append(_row({3: fraction, **regional}))
     return rows
 
@@ -1746,9 +1771,7 @@ def _counted_workbook(*tables: list[list[object]]) -> Workbook:
     for number, table in enumerate(tables, 1):
         rows.append(_row({2: f"Table {number}"}))
         rows.extend(table)
-    return build_workbook(
-        {"Methodology": _methodology_sheet(), "Tables": rows}
-    )
+    return build_workbook({"Methodology": _methodology_sheet(), "Tables": rows})
 
 
 _FINAL_UNWEIGHTED = {3: 1306, 36: 166, 37: 57, 43: 114, 44: 71}

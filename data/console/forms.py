@@ -35,7 +35,7 @@ class ModelRunForm(BaseModel):
         return validate_half_life(value)
 
     @model_validator(mode="after")
-    def check_since_gte_as_of(self) -> "ModelRunForm":
+    def check_since_gte_as_of(self) -> ModelRunForm:
         """Validate that since_days_back is not narrower than as_of_days_back.
 
         Returns:
@@ -66,7 +66,7 @@ class HolyroodModelRunForm(BaseModel):
         return validate_half_life(value)
 
     @model_validator(mode="after")
-    def check_since_gte_as_of(self) -> "HolyroodModelRunForm":
+    def check_since_gte_as_of(self) -> HolyroodModelRunForm:
         """Validate that since_days_back is not narrower than as_of_days_back.
 
         Returns:
@@ -120,7 +120,7 @@ class UsModelRunForm(BaseModel):
         return validate_prior_weight(value)
 
     @model_validator(mode="after")
-    def check_rebuild_is_a_real_run(self) -> "UsModelRunForm":
+    def check_rebuild_is_a_real_run(self) -> UsModelRunForm:
         """Refuse a rebuild that is also a dry run.
 
         The runner skips ``--rebuild-history`` in dry-run mode, so the pair

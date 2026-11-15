@@ -1,5 +1,5 @@
-import { activeMapMode, manifest, Seat } from '../state.js';
-import { seatLookupKey } from '../utils.js';
+import { activeMapMode, manifest, Seat } from "../state.js";
+import { seatLookupKey } from "../utils.js";
 
 // A Senate term: each class votes once every six years.
 const SENATE_TERM_YEARS = 6;
@@ -18,9 +18,10 @@ export function regularSenateClass(year) {
   const cycle = activeMapMode().senateClassNextElection || {};
   const target = Number(year);
   if (!Number.isInteger(target)) return null;
-  const match = Object.entries(cycle).find(([, upYear]) => (
-    Number.isInteger(Number(upYear)) && (target - Number(upYear)) % SENATE_TERM_YEARS === 0
-  ));
+  const match = Object.entries(cycle).find(
+    ([, upYear]) =>
+      Number.isInteger(Number(upYear)) && (target - Number(upYear)) % SENATE_TERM_YEARS === 0,
+  );
   return match ? Number(match[0]) : null;
 }
 
@@ -41,27 +42,41 @@ export function regularSenateClass(year) {
  * @param {number|null} [regularClass=null] - Class the regular election contests.
  * @returns {Seat[]}
  */
-export function buildSenateChamber(chamberSeats, contestedSeats, specialClassBySeat = new Map(), regularClass = null) {
+export function buildSenateChamber(
+  chamberSeats,
+  contestedSeats,
+  specialClassBySeat = new Map(),
+  regularClass = null,
+) {
   if (!chamberSeats.length) return contestedSeats;
   const winnerByState = new Map();
-  contestedSeats.forEach((seat) => winnerByState.set(seatLookupKey(seat.seat), seat.winner));
+  contestedSeats.forEach((seat) => {
+    winnerByState.set(seatLookupKey(seat.seat), seat.winner);
+  });
 
   return chamberSeats.map((seat) => {
     const seatKey = seatLookupKey(seat.seat);
     const projectedWinner = winnerByState.get(seatKey);
     const contestedClass = specialClassBySeat.get(seatKey) ?? regularClass;
     const members = (seat.members || []).map((member) => {
-      if (contestedClass == null || Number(member?.class) !== contestedClass || !projectedWinner) return { ...member };
+      if (contestedClass == null || Number(member?.class) !== contestedClass || !projectedWinner)
+        return { ...member };
       // The projected winner is a settled member: drop the uncalled flag and count.
-      const settled = { ...member, party: projectedWinner, name: `${manifest.labelParty(projectedWinner)} (projected)` };
+      const settled = {
+        ...member,
+        party: projectedWinner,
+        name: `${manifest.labelParty(projectedWinner)} (projected)`,
+      };
       delete settled.c;
       delete settled.pc;
       return settled;
     });
     // Only called members colour the state; with none called it is uncalled and neutral.
-    const parties = members.filter((member) => !Seat.isUncalledMember(member)).map((member) => member.party);
+    const parties = members
+      .filter((member) => !Seat.isUncalledMember(member))
+      .map((member) => member.party);
     const uncalled = parties.length === 0;
-    const winner = parties.every((party) => party === parties[0]) ? parties[0] : 'split';
+    const winner = parties.every((party) => party === parties[0]) ? parties[0] : "split";
     return new Seat({
       seat: seat.seat,
       region: seat.region,

@@ -6,12 +6,28 @@
 
 import { describeWeather } from "./weather.js";
 import {
-  formatDistance, formatElevation, formatPrecip, formatTemp, formatWind, MISSING,
+  formatDistance,
+  formatElevation,
+  formatPrecip,
+  formatTemp,
+  formatWind,
+  MISSING,
 } from "./units.js";
 import {
-  compassPoint, formatArrival, formatCell, formatClock, formatCloud, formatCrossWind,
-  formatDateTime, formatDuration, formatHeadWind, formatHours, formatRainRate, formatSun,
-  isFiniteNumber as isNum, KIND_LABELS,
+  compassPoint,
+  formatArrival,
+  formatCell,
+  formatClock,
+  formatCloud,
+  formatCrossWind,
+  formatDateTime,
+  formatDuration,
+  formatHeadWind,
+  formatHours,
+  formatRainRate,
+  formatSun,
+  isFiniteNumber as isNum,
+  KIND_LABELS,
 } from "./display.js";
 import { startDaySun } from "./daylight.js";
 import { HOUR_MS } from "./schedule.js";
@@ -22,11 +38,12 @@ const OUTSIDE_NOTE = "outside the forecast window: nearest forecast hour shown";
 // Points above the forecast's top level (weather.js aboveProfile): the height
 // in each preset's units, rounded (the 700 hPa level wanders ±200 m).
 const TOP_LEVEL_TEXT = { metric: "about 3,000 m", imperial: "about 9,800 ft" };
-const FLAT_HORIZON_NOTE = "Sunrise and sunset are for a flat horizon; hills and valleys "
-  + "can hide the sun for longer.";
+const FLAT_HORIZON_NOTE =
+  "Sunrise and sunset are for a flat horizon; hills and valleys " + "can hide the sun for longer.";
 
-const heldNote = (units) => `Above ${TOP_LEVEL_TEXT[units.system]}, temperature and wind are `
-  + `held at their ${TOP_LEVEL_TEXT[units.system].replace("about ", "~")} values.`;
+const heldNote = (units) =>
+  `Above ${TOP_LEVEL_TEXT[units.system]}, temperature and wind are ` +
+  `held at their ${TOP_LEVEL_TEXT[units.system].replace("about ", "~")} values.`;
 
 // True when any of `keys` differs from the last call's snapshot (then stored).
 function createChangeCheck(keys) {
@@ -124,7 +141,14 @@ function sunshineText({ sunshine, daylight }) {
 export function createSummaryUI(doc) {
   const $ = (id) => doc.getElementById(id);
   const changed = createChangeCheck([
-    "route", "routeName", "samples", "results", "speedKmh", "units", "timeZone", "startMs",
+    "route",
+    "routeName",
+    "samples",
+    "results",
+    "speedKmh",
+    "units",
+    "timeZone",
+    "startMs",
   ]);
 
   function update(state) {
@@ -228,9 +252,7 @@ function pointRow(doc, state, i) {
 export function createPointsTableUI(doc) {
   const $ = (id) => doc.getElementById(id);
   // results is replaced on every recompute; cells/samples change with a load.
-  const changed = createChangeCheck([
-    "results", "samples", "cells", "units", "nowMs", "timeZone",
-  ]);
+  const changed = createChangeCheck(["results", "samples", "cells", "units", "nowMs", "timeZone"]);
 
   function update(state) {
     if (!changed(state)) return;
@@ -238,7 +260,9 @@ export function createPointsTableUI(doc) {
     body.innerHTML = "";
     $("pointsDetails").hidden = !state.results;
     if (!state.results) return;
-    state.results.forEach((_, i) => body.append(pointRow(doc, state, i)));
+    state.results.forEach((_, i) => {
+      body.append(pointRow(doc, state, i));
+    });
   }
 
   return { update };

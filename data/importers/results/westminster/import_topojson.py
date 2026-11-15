@@ -17,7 +17,6 @@ from typing import Any
 
 from core.db import Database
 
-
 REGION_DISPLAY_NAMES = {
     "eastmidlands": "East Midlands",
     "eastofengland": "East of England",
@@ -71,10 +70,12 @@ def decode_topojson(topo: dict[str, Any], object_name: str) -> list[dict[str, An
             for dx, dy in arc:
                 x += dx
                 y += dy
-                coords.append([
-                    x * scale[0] + translate[0],
-                    y * scale[1] + translate[1],
-                ])
+                coords.append(
+                    [
+                        x * scale[0] + translate[0],
+                        y * scale[1] + translate[1],
+                    ]
+                )
             decoded_arcs.append(coords)
     else:
         decoded_arcs = arcs
@@ -130,8 +131,7 @@ def decode_topojson(topo: dict[str, Any], object_name: str) -> list[dict[str, An
             geo = {"type": "Polygon", "coordinates": coordinates}
         elif geom_type == "MultiPolygon":
             coordinates = [
-                [decode_ring(ring) for ring in polygon]
-                for polygon in geom["arcs"]
+                [decode_ring(ring) for ring in polygon] for polygon in geom["arcs"]
             ]
             geo = {"type": "MultiPolygon", "coordinates": coordinates}
         else:
@@ -180,7 +180,7 @@ def import_file(
         print(f"  Skipping existing map: {map_name}")
         return
 
-    with open(filepath) as f:
+    with Path(filepath).open() as f:
         topo = json.load(f)
 
     features = decode_topojson(topo, "map")

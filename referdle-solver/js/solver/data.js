@@ -64,7 +64,7 @@ async function loadMatrix(path) {
 }
 
 export async function loadAssets(onProgress) {
-  const note = (m) => onProgress && onProgress(m);
+  const note = (m) => onProgress?.(m);
 
   note("Loading word lists…");
   const [poolTxt, expandedTxt, pluralsTxt, manifest] = await Promise.all([
@@ -80,14 +80,24 @@ export async function loadAssets(onProgress) {
   const ALL_GUESSES = POOL.concat(EXPANDED);
   const N = manifest.matrix_dim;
   if (manifest.matrix_storage !== "uint8") throw new Error("Unsupported matrix storage format");
-  if (typeof manifest.matrix_file !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]*\.gz$/.test(manifest.matrix_file)) {
+  if (
+    typeof manifest.matrix_file !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]*\.gz$/.test(manifest.matrix_file)
+  ) {
     throw new Error("Invalid component-local matrix filename");
   }
-  if (!Number.isSafeInteger(N) || N < 1 || N !== POOL.length || manifest.pool_n !== N
-      || !Number.isSafeInteger(N * N) || manifest.decoded_bytes !== N * N) {
+  if (
+    !Number.isSafeInteger(N) ||
+    N < 1 ||
+    N !== POOL.length ||
+    manifest.pool_n !== N ||
+    !Number.isSafeInteger(N * N) ||
+    manifest.decoded_bytes !== N * N
+  ) {
     throw new Error("Invalid matrix dimensions or decoded byte length");
   }
-  if (!Number.isSafeInteger(manifest.gzip_bytes) || manifest.gzip_bytes < 1) throw new Error("Invalid matrix gzip byte length");
+  if (!Number.isSafeInteger(manifest.gzip_bytes) || manifest.gzip_bytes < 1)
+    throw new Error("Invalid matrix gzip byte length");
 
   const poolIndex = new Map();
   for (let i = 0; i < POOL.length; i++) poolIndex.set(POOL[i], i);
@@ -119,7 +129,7 @@ async function loadDailyFile(state, file) {
     let arr = null;
     try {
       arr = await fetchJSON(`${BASE}/${file}`);
-    } catch (e) {
+    } catch {
       arr = null;
     }
     state.dailyCache.set(file, arr);

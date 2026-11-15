@@ -29,7 +29,9 @@ class TestParseByElectionsFile:
 
     def test_skips_comments_and_blanks(self, tmp_path: Path) -> None:
         f = tmp_path / "by.txt"
-        f.write_text("# header\n\nhttps://x/a\n   \n# c\nhttps://x/b\n", encoding="utf-8")
+        f.write_text(
+            "# header\n\nhttps://x/a\n   \n# c\nhttps://x/b\n", encoding="utf-8"
+        )
         entries = parse_by_elections_file(f)
         assert [e.url for e in entries] == ["https://x/a", "https://x/b"]
 
@@ -37,11 +39,15 @@ class TestParseByElectionsFile:
         f = tmp_path / "by.txt"
         f.write_text("https://x/a\n", encoding="utf-8")
         entry = parse_by_elections_file(f)[0]
-        assert entry == ByElectionEntry(url="https://x/a", parent_election=None, map_name=None)
+        assert entry == ByElectionEntry(
+            url="https://x/a", parent_election=None, map_name=None
+        )
 
     def test_pipe_overrides_parsed(self, tmp_path: Path) -> None:
         f = tmp_path / "by.txt"
-        f.write_text("https://x/a | 2019 General Election | Old Map\n", encoding="utf-8")
+        f.write_text(
+            "https://x/a | 2019 General Election | Old Map\n", encoding="utf-8"
+        )
         entry = parse_by_elections_file(f)[0]
         assert entry.parent_election == "2019 General Election"
         assert entry.map_name == "Old Map"
@@ -58,18 +64,25 @@ class TestByElectionSteps:
     """Covers by_election_steps — arg construction per entry."""
 
     def test_bare_entry_url_and_refresh_only(self) -> None:
-        steps = by_election_steps([ByElectionEntry(url="https://x/2025_foo_by-election")])
+        steps = by_election_steps(
+            [ByElectionEntry(url="https://x/2025_foo_by-election")]
+        )
         assert steps[0].script == BY_ELECTION_IMPORT
         assert steps[0].args == ("--url", "https://x/2025_foo_by-election", "--refresh")
         assert steps[0].label.endswith("2025_foo_by-election")
 
     def test_overrides_appear_in_args(self) -> None:
-        entry = ByElectionEntry(url="https://x/a", parent_election="2019 GE", map_name="Old Map")
+        entry = ByElectionEntry(
+            url="https://x/a", parent_election="2019 GE", map_name="Old Map"
+        )
         args = by_election_steps([entry])[0].args
         assert args == (
-            "--url", "https://x/a",
-            "--parent-election", "2019 GE",
-            "--map-name", "Old Map",
+            "--url",
+            "https://x/a",
+            "--parent-election",
+            "2019 GE",
+            "--map-name",
+            "Old Map",
             "--refresh",
         )
 
@@ -100,7 +113,9 @@ class TestUsElectionSteps:
         with pytest.raises(RebuildError, match="is not valid JSON"):
             us_election_steps(tmp_path)
 
-    def test_special_file_without_its_regular_file_is_refused(self, tmp_path: Path) -> None:
+    def test_special_file_without_its_regular_file_is_refused(
+        self, tmp_path: Path
+    ) -> None:
         self._write(tmp_path, "senate-2020-special.json")
         with pytest.raises(RebuildError, match="not named by senate-2020.json"):
             us_election_steps(tmp_path)
@@ -124,14 +139,23 @@ class TestUsElectionSteps:
         self._write(tmp_path, "presidential-1968.json")
         steps = us_election_steps(tmp_path)
         by_script = {s.script.name: s for s in steps}
-        assert by_script["import_house_elections.py"].args[:6] == (
-            "--file", str(tmp_path / "house-2024.json"),
-            "--year", "2024",
-            "--name", "2024 US House Election",
-        )[:6]
+        assert (
+            by_script["import_house_elections.py"].args[:6]
+            == (
+                "--file",
+                str(tmp_path / "house-2024.json"),
+                "--year",
+                "2024",
+                "--name",
+                "2024 US House Election",
+            )[:6]
+        )
         assert "2024 US House Election" in by_script["import_house_elections.py"].args
         assert "2020 US Senate Election" in by_script["import_senate_elections.py"].args
-        assert "1968 US Presidential Election" in by_script["import_presidential_elections.py"].args
+        assert (
+            "1968 US Presidential Election"
+            in by_script["import_presidential_elections.py"].args
+        )
 
     def test_all_steps_refresh(self, tmp_path: Path) -> None:
         self._write(tmp_path, "house-2024.json")
@@ -164,17 +188,24 @@ class TestUsElectionSteps:
         special = steps[2]
         assert special.script.name == "import_senate_elections.py"
         assert special.args == (
-            "--file", str(tmp_path / "senate-2020-special.json"),
-            "--year", "2020",
-            "--name", "2020 US Senate Special Election",
-            "--parent-name", "2020 US Senate Election",
+            "--file",
+            str(tmp_path / "senate-2020-special.json"),
+            "--year",
+            "2020",
+            "--name",
+            "2020 US Senate Special Election",
+            "--parent-name",
+            "2020 US Senate Election",
             "--refresh",
         )
         # Regular files keep their exact arguments.
         assert steps[1].args == (
-            "--file", str(tmp_path / "senate-2020.json"),
-            "--year", "2020",
-            "--name", "2020 US Senate Election",
+            "--file",
+            str(tmp_path / "senate-2020.json"),
+            "--year",
+            "2020",
+            "--name",
+            "2020 US Senate Election",
             "--refresh",
         )
 
@@ -223,7 +254,9 @@ class TestRunStep:
         assert "done" in output
 
     def test_nonzero_exit_is_failure(self, tmp_path: Path) -> None:
-        script = self._script(tmp_path, "import sys; sys.stderr.write('boom'); sys.exit(2)")
+        script = self._script(
+            tmp_path, "import sys; sys.stderr.write('boom'); sys.exit(2)"
+        )
         ok, output = run_step(Step("s", script, ()), timeout=30)
         assert ok is False
         assert "boom" in output
@@ -239,7 +272,9 @@ class TestRunStep:
         assert ok is False
         assert "timed out" in output
 
-    def test_spawn_oserror_is_failure(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_spawn_oserror_is_failure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         script = self._script(tmp_path, "print('unused')")
 
         def boom(*_a: object, **_k: object) -> None:

@@ -6,10 +6,11 @@ reading / writing election map data.
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Generator, Iterable, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Generator, Iterable, Literal, Sequence, cast
+from typing import Any, Literal, cast
 
 from sqlalchemy import (
     ColumnElement,
@@ -180,9 +181,7 @@ class Database:
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.close()
 
-        self._session_factory = sessionmaker(
-            bind=self.engine, expire_on_commit=False
-        )
+        self._session_factory = sessionmaker(bind=self.engine, expire_on_commit=False)
 
     # ── lifecycle ─────────────────────────────────────────────────────────
 
@@ -261,7 +260,9 @@ class Database:
             Matching Party instance, or None.
         """
         with self.session() as s:
-            return s.execute(select(Party).where(Party.name == name)).scalar_one_or_none()
+            return s.execute(
+                select(Party).where(Party.name == name)
+            ).scalar_one_or_none()
 
     def get_all_parties(self) -> Sequence[Party]:
         """Return all Party rows ordered by name.
@@ -413,14 +414,16 @@ class Database:
             The existing or newly created Region instance.
         """
         with self.session() as s:
-            region = s.execute(
-                select(Region).where(Region.map_id == map_id, Region.name == name)
-            ).scalars().first()
+            region = (
+                s.execute(
+                    select(Region).where(Region.map_id == map_id, Region.name == name)
+                )
+                .scalars()
+                .first()
+            )
             if region is not None:
                 return region
-        return self.add_region(
-            map_id, name, parent_id=parent_id, population=population
-        )
+        return self.add_region(map_id, name, parent_id=parent_id, population=population)
 
     # ── seats ─────────────────────────────────────────────────────────────
 
@@ -514,11 +517,15 @@ class Database:
             The existing or newly created Seat instance.
         """
         with self.session() as s:
-            seat = s.execute(
-                select(Seat).where(
-                    Seat.map_id == map_id, Seat.seat_name == seat_name
+            seat = (
+                s.execute(
+                    select(Seat).where(
+                        Seat.map_id == map_id, Seat.seat_name == seat_name
+                    )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             if seat is not None:
                 return seat
         return self.add_seat(
@@ -557,7 +564,7 @@ class Database:
         election_type: ElectionType,
         *,
         parent_election_id: int | None = None,
-        election_date: "date | None" = None,
+        election_date: date | None = None,
     ) -> Election:
         """Insert a new Election row and return it.
 
@@ -737,7 +744,9 @@ class Database:
                 .all()
             )
 
-    def get_turnout_for_seat_election(self, election_id: int, seat_id: int) -> float | None:
+    def get_turnout_for_seat_election(
+        self, election_id: int, seat_id: int
+    ) -> float | None:
         """Return the total votes cast in a seat for a given election.
 
         Sums all Vote.vote_total values for the seat/election combination.
@@ -760,16 +769,14 @@ class Database:
                 return None
             return float(turnout)
 
-    def get_winner_for_seat(
-        self, election_id: int, seat_id: int
-    ) -> Vote | None:
+    def get_winner_for_seat(self, election_id: int, seat_id: int) -> Vote | None:
         """Return the elected candidate for a seat, if any."""
         with self.session() as s:
             return s.execute(
                 select(Vote).where(
                     Vote.election_id == election_id,
                     Vote.seat_id == seat_id,
-                    Vote.elected == True,  # noqa: E712
+                    Vote.elected == True,  # a SQL expression, so not `is True`
                 )
             ).scalar_one_or_none()
 
@@ -814,9 +821,7 @@ class Database:
                     ElectionSeatStatus.election_id == election_id
                 )
             )
-            result = s.execute(
-                delete(Vote).where(Vote.election_id == election_id)
-            )
+            result = s.execute(delete(Vote).where(Vote.election_id == election_id))
             return cast("CursorResult[Any]", result).rowcount
 
     # ── seat statuses ─────────────────────────────────────────────────────
@@ -986,8 +991,8 @@ class Database:
         self,
         pollster_id: int,
         map_id: int,
-        fieldwork_start: "date",
-        fieldwork_end: "date",
+        fieldwork_start: date,
+        fieldwork_end: date,
         *,
         sample_size: int | None = None,
         source_url: str | None = None,

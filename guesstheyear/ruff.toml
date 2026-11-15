@@ -1,0 +1,2 @@
+# Same lint and format settings as the data pipeline.
+extend = "../data/pyproject.toml"

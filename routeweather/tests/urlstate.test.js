@@ -54,13 +54,16 @@ describe("readState", () => {
 
   describe("missing fields fall back individually", () => {
     it("activity", () => {
-      expect(readState("?speed=22.5&start=2026-10-26T08%3A30%3A00.000Z&units=imperial"))
-        .toEqual({ ...FULL, activity: "walk" });
+      expect(readState("?speed=22.5&start=2026-10-26T08%3A30%3A00.000Z&units=imperial")).toEqual({
+        ...FULL,
+        activity: "walk",
+      });
     });
 
     it("speed -> the activity's preset", () => {
-      expect(readState("?activity=cycle&start=2026-10-26T08%3A30%3A00.000Z&units=imperial"))
-        .toEqual({ ...FULL, speed: ACTIVITIES.cycle.defaultSpeedKmh });
+      expect(
+        readState("?activity=cycle&start=2026-10-26T08%3A30%3A00.000Z&units=imperial"),
+      ).toEqual({ ...FULL, speed: ACTIVITIES.cycle.defaultSpeedKmh });
     });
 
     it("speed for custom (no preset) -> the walk preset", () => {
@@ -68,13 +71,17 @@ describe("readState", () => {
     });
 
     it("start", () => {
-      expect(readState("?activity=cycle&speed=22.5&units=imperial"))
-        .toEqual({ ...FULL, start: null });
+      expect(readState("?activity=cycle&speed=22.5&units=imperial")).toEqual({
+        ...FULL,
+        start: null,
+      });
     });
 
     it("units -> metric, with metric's wind, rain and temp", () => {
-      expect(readState("?activity=cycle&speed=22.5&start=2026-10-26T08%3A30%3A00.000Z"))
-        .toEqual({ ...FULL, ...METRIC_UNITS });
+      expect(readState("?activity=cycle&speed=22.5&start=2026-10-26T08%3A30%3A00.000Z")).toEqual({
+        ...FULL,
+        ...METRIC_UNITS,
+      });
     });
   });
 
@@ -94,12 +101,15 @@ describe("readState", () => {
       expect(withParam("activity", "__proto__").activity).toBe("walk");
     });
 
-    it.each([
-      "-5", "0", "0.1", "500", "fast", "", "12abc", "Infinity", "NaN", "0x10", "1e1",
-    ])("speed %j -> the activity's preset", (value) => {
-      expect(withParam("speed", value))
-        .toEqual({ ...FULL, speed: ACTIVITIES.cycle.defaultSpeedKmh });
-    });
+    it.each(["-5", "0", "0.1", "500", "fast", "", "12abc", "Infinity", "NaN", "0x10", "1e1"])(
+      "speed %j -> the activity's preset",
+      (value) => {
+        expect(withParam("speed", value)).toEqual({
+          ...FULL,
+          speed: ACTIVITIES.cycle.defaultSpeedKmh,
+        });
+      },
+    );
 
     it.each([
       "not-a-date",
@@ -121,8 +131,15 @@ describe("readState", () => {
     });
 
     it.each([
-      ["wind", "knots"], ["wind", "MPH"], ["wind", "km/h"], ["wind", ""],
-      ["rain", "cm"], ["rain", "IN"], ["temp", "k"], ["temp", "F"], ["temp", "°c"],
+      ["wind", "knots"],
+      ["wind", "MPH"],
+      ["wind", "km/h"],
+      ["wind", ""],
+      ["rain", "cm"],
+      ["rain", "IN"],
+      ["temp", "k"],
+      ["temp", "F"],
+      ["temp", "°c"],
       ["temp", "__proto__"],
     ])("%s %j -> the preset's default", (key, value) => {
       expect(withParam(key, value)).toEqual(FULL);
@@ -139,7 +156,11 @@ describe("readState", () => {
 
     it("reads overrides over the imperial preset", () => {
       expect(readState("?units=imperial&wind=kmh&temp=c")).toEqual({
-        ...DEFAULT_STATE, units: "imperial", wind: "kmh", rain: "in", temp: "c",
+        ...DEFAULT_STATE,
+        units: "imperial",
+        wind: "kmh",
+        rain: "in",
+        temp: "c",
       });
     });
 
@@ -167,10 +188,12 @@ describe("writeState", () => {
 
   it("writes only the overrides that differ from the preset's default", () => {
     expect(writeState({ ...FULL, wind: "kmh" })).toBe(`${FULL_QUERY}&wind=kmh`);
-    expect(writeState({ units: "metric", wind: "mph", rain: "mm", temp: "f" }))
-      .toBe("?units=metric&wind=mph&temp=f");
-    expect(writeState({ units: "imperial", wind: "kmh", rain: "mm", temp: "c" }))
-      .toBe("?units=imperial&wind=kmh&rain=mm&temp=c");
+    expect(writeState({ units: "metric", wind: "mph", rain: "mm", temp: "f" })).toBe(
+      "?units=metric&wind=mph&temp=f",
+    );
+    expect(writeState({ units: "imperial", wind: "kmh", rain: "mm", temp: "c" })).toBe(
+      "?units=imperial&wind=kmh&rain=mm&temp=c",
+    );
   });
 
   it("compares overrides with metric when units is unset", () => {
@@ -179,13 +202,15 @@ describe("writeState", () => {
   });
 
   it("omits invalid overrides", () => {
-    expect(writeState({ units: "metric", wind: "knots", rain: "", temp: null }))
-      .toBe("?units=metric");
+    expect(writeState({ units: "metric", wind: "knots", rain: "", temp: null })).toBe(
+      "?units=metric",
+    );
   });
 
   it("omits undefined and empty values", () => {
-    expect(writeState({ activity: "run", speed: undefined, start: "", units: "metric" }))
-      .toBe("?activity=run&units=metric");
+    expect(writeState({ activity: "run", speed: undefined, start: "", units: "metric" })).toBe(
+      "?activity=run&units=metric",
+    );
   });
 
   it("rounds speed to 2 dp", () => {

@@ -214,7 +214,7 @@ def start(chamber: str) -> ResponseReturnValue:
             cutoff=form.cutoff_date,
             run_model_at_end=form.run_model_at_end,
         )
-    except Exception as err:  # noqa: BLE001 - request boundary, reported below
+    except Exception as err:  # request boundary, reported below
         # Per-page fetch failures are already recorded on the index; anything
         # that escapes is a parser fault, or a database fault while scraping or
         # building the queue. It is logged in full and surfaced to the user

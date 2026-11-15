@@ -2,6 +2,11 @@
 
 Shared frontend assets — styles, top bar, Google Analytics, vendored `d3`/`topojson`/`leaflet` bundles.
 
+The rest of the site's shared pieces sit at the repo root: `index.html`, `404.html` and
+`CNAME` are the landing page, error page and custom domain; `bio/` is the static bio page;
+`imgs/` holds shared images; and `package.json` holds the build tooling (esbuild, terser,
+clean-css) and Vitest.
+
 ## Static site local preview (`/`, `/bio`, `/electionmaps`)
 
 Prerequisites:

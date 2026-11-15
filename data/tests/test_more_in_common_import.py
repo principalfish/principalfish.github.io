@@ -103,26 +103,103 @@ _HEADLINE_COLUMNS: tuple[str, ...] = (
 _HEADLINE_VALUES: Mapping[str, tuple[float, ...]] = MappingProxyType(
     {
         "Conservative": (
-            2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
         ),
         "Labour": (
-            14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0,
+            14.0,
+            15.0,
+            16.0,
+            17.0,
+            18.0,
+            19.0,
+            20.0,
+            21.0,
+            22.0,
+            23.0,
+            24.0,
+            25.0,
         ),
         "Liberal Democrat": (
-            26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0, 37.0,
+            26.0,
+            27.0,
+            28.0,
+            29.0,
+            30.0,
+            31.0,
+            32.0,
+            33.0,
+            34.0,
+            35.0,
+            36.0,
+            37.0,
         ),
         "Reform UK": (
-            38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46.0, 47.0, 48.0, 49.0,
+            38.0,
+            39.0,
+            40.0,
+            41.0,
+            42.0,
+            43.0,
+            44.0,
+            45.0,
+            46.0,
+            47.0,
+            48.0,
+            49.0,
         ),
         "Green Party": (
-            50.0, 51.0, 52.0, 53.0, 54.0, 55.0, 56.0, 57.0, 58.0, 59.0, 60.0, 61.0,
+            50.0,
+            51.0,
+            52.0,
+            53.0,
+            54.0,
+            55.0,
+            56.0,
+            57.0,
+            58.0,
+            59.0,
+            60.0,
+            61.0,
         ),
         "SNP": (62.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 72.0, 73.0),
         "Plaid Cymru": (
-            74.0, 75.0, 76.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0,
+            74.0,
+            75.0,
+            76.0,
+            77.0,
+            78.0,
+            79.0,
+            80.0,
+            81.0,
+            82.0,
+            83.0,
+            84.0,
+            85.0,
         ),
         "Other": (
-            86.0, 87.0, 88.0, 89.0, 90.0, 91.0, 92.0, 93.0, 94.0, 95.0, 96.0, 97.0,
+            86.0,
+            87.0,
+            88.0,
+            89.0,
+            90.0,
+            91.0,
+            92.0,
+            93.0,
+            94.0,
+            95.0,
+            96.0,
+            97.0,
         ),
     }
 )
@@ -809,8 +886,13 @@ class TestParsePollRegionColumns:
         # Pins the "< 6" boundary precisely (a mutant comparing "< 4" would
         # let this workbook through).
         header: list[object] = [
-            "Party", "All", "East Midlands", "East of England", "London",
-            "Scotland", "Wales",
+            "Party",
+            "All",
+            "East Midlands",
+            "East of England",
+            "London",
+            "Scotland",
+            "Wales",
         ]
         workbook = _full_workbook(headline_rows=[header])
         with pytest.raises(
@@ -820,13 +902,25 @@ class TestParsePollRegionColumns:
 
     def test_exactly_six_region_columns_does_not_raise(self) -> None:
         header: list[object] = [
-            "Party", "All", "East Midlands", "East of England", "London",
-            "North East England", "Scotland", "Wales",
+            "Party",
+            "All",
+            "East Midlands",
+            "East of England",
+            "London",
+            "North East England",
+            "Scotland",
+            "Wales",
         ]
         rows: list[list[object]] = [header]
         for raw_label in (
-            "Conservative", "Labour", "Liberal Democrat", "Reform UK",
-            "Green Party", "SNP", "Plaid Cymru", "Other",
+            "Conservative",
+            "Labour",
+            "Liberal Democrat",
+            "Reform UK",
+            "Green Party",
+            "SNP",
+            "Plaid Cymru",
+            "Other",
         ):
             rows.append([raw_label, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0])
         workbook = _full_workbook(headline_rows=rows)
@@ -895,9 +989,7 @@ class TestParsePollPartyRows:
             == 26.0
         )
         assert (
-            parsed.party_region_percentages["Scottish National Party"][
-                mic.NATIONAL_KEY
-            ]
+            parsed.party_region_percentages["Scottish National Party"][mic.NATIONAL_KEY]
             == 62.0
         )
         assert parsed.party_region_percentages["Other"][mic.NATIONAL_KEY] == 86.0
@@ -1542,7 +1634,9 @@ class TestSplitRegionHeaders:
         [("Unweighted N", "%"), ("", "Unweighted N"), ("%", ""), ("%", "All")],
     )
     def test_invalid_pairs_cannot_supply_region_headers(
-        self, percentage_marker: str, count_marker: str,
+        self,
+        percentage_marker: str,
+        count_marker: str,
     ) -> None:
         workbook = _split_header_workbook()
         sheet = workbook["votingintention (headline)"]
@@ -1621,7 +1715,18 @@ class TestParseBases:
 
     def test_blank_or_zero_column_counts_are_skipped(self) -> None:
         unweighted: list[object] = [
-            1609, 92, "-", 230, 0, 178, 128, 255, 133, 79, 131, 142,
+            1609,
+            92,
+            "-",
+            230,
+            0,
+            178,
+            128,
+            255,
+            133,
+            79,
+            131,
+            142,
         ]
         rows = _headline_sheet_rows()
         rows.append(["Unweighted N", *unweighted])

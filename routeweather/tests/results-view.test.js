@@ -2,7 +2,11 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  coldestFeelsText, coldestTempText, rainOnRouteText, strongestWindText, summaryNotes,
+  coldestFeelsText,
+  coldestTempText,
+  rainOnRouteText,
+  strongestWindText,
+  summaryNotes,
 } from "../js/results-view.js";
 import { resolveUnits } from "../js/units.js";
 
@@ -28,7 +32,9 @@ describe("coldestFeelsText", () => {
   it("names the coldest temperature and the strongest wind the same way", () => {
     const state = {
       results: [
-        { tempC: 4, windKmh: 20 }, { tempC: 1.2, windKmh: 47.6 }, { tempC: 1.2, windKmh: 30 },
+        { tempC: 4, windKmh: 20 },
+        { tempC: 1.2, windKmh: 47.6 },
+        { tempC: 1.2, windKmh: 30 },
       ],
       samples: [{ cumDistKm: 0 }, { cumDistKm: 6.2 }, { cumDistKm: 9 }],
       times: [Date.UTC(2026, 9, 26, 11), Date.UTC(2026, 9, 26, 13, 20), Date.UTC(2026, 9, 26, 14)],
@@ -39,15 +45,19 @@ describe("coldestFeelsText", () => {
     // A tie keeps the first.
     expect(coldestTempText(state)).toBe("1 °C at 6.2 km (13:20)");
     expect(strongestWindText(state)).toBe("48 km/h at 6.2 km (13:20)");
-    expect(strongestWindText({ ...state, units: resolveUnits("metric", { wind: "mph" }) }))
-      .toBe("30 mph at 6.2 km (13:20)");
+    expect(strongestWindText({ ...state, units: resolveUnits("metric", { wind: "mph" }) })).toBe(
+      "30 mph at 6.2 km (13:20)",
+    );
   });
 });
 
 describe("rainOnRouteText", () => {
   const state = {
     rain: 2.14,
-    results: [{ precipMm: 0.2, precipStepH: 3 }, { precipMm: 0.7, precipStepH: 3 }],
+    results: [
+      { precipMm: 0.2, precipStepH: 3 },
+      { precipMm: 0.7, precipStepH: 3 },
+    ],
     samples: [{ cumDistKm: 0 }, { cumDistKm: 43.7 }],
     times: [Date.UTC(2026, 9, 31, 7), Date.UTC(2026, 9, 31, 15, 44)],
     units: metric,
@@ -57,8 +67,9 @@ describe("rainOnRouteText", () => {
 
   it("gives the total and where the rain is heaviest", () => {
     expect(rainOnRouteText(state)).toBe("~2.1 mm · wettest 0.7 mm/h at 43.7 km (15:44)");
-    expect(rainOnRouteText({ ...state, units: resolveUnits("imperial") }))
-      .toBe("~0.08 in · wettest 0.03 in/h at 27.2 mi (15:44)");
+    expect(rainOnRouteText({ ...state, units: resolveUnits("imperial") })).toBe(
+      "~0.08 in · wettest 0.03 in/h at 27.2 mi (15:44)",
+    );
   });
 
   it("says when there is none, and dashes without a total", () => {
@@ -86,22 +97,29 @@ describe("summaryNotes", () => {
   it("says when the route starts before sunrise or runs past sunset", () => {
     const results = [{}];
     const base = { results, units: metric, timeZone: "UTC" };
-    const flat = "Sunrise and sunset are for a flat horizon; hills and valleys can hide the sun "
-      + "for longer.";
+    const flat =
+      "Sunrise and sunset are for a flat horizon; hills and valleys can hide the sun " +
+      "for longer.";
     const dawn = {
-      startsInDark: true, events: [event("sunrise", 3.4, Date.UTC(2026, 9, 26, 6, 43))],
+      startsInDark: true,
+      events: [event("sunrise", 3.4, Date.UTC(2026, 9, 26, 6, 43))],
     };
     expect(summaryNotes({ ...base, daylight: dawn })).toEqual([
-      "Starts before sunrise: the sun rises at 06:43, 3.4 km in.", flat,
+      "Starts before sunrise: the sun rises at 06:43, 3.4 km in.",
+      flat,
     ]);
     const dusk = {
-      startsInDark: false, events: [event("sunset", 12.3, Date.UTC(2026, 9, 26, 16, 44))],
+      startsInDark: false,
+      events: [event("sunset", 12.3, Date.UTC(2026, 9, 26, 16, 44))],
     };
     expect(summaryNotes({ ...base, daylight: dusk })).toEqual([
-      "Runs past sunset: the sun sets at 16:44, 12.3 km in.", flat,
+      "Runs past sunset: the sun sets at 16:44, 12.3 km in.",
+      flat,
     ]);
-    expect(summaryNotes({ ...base, daylight: { startsInDark: true, events: [] } }))
-      .toEqual(["The whole route is in the dark.", flat]);
+    expect(summaryNotes({ ...base, daylight: { startsInDark: true, events: [] } })).toEqual([
+      "The whole route is in the dark.",
+      flat,
+    ]);
     expect(summaryNotes({ ...base, daylight: { startsInDark: false, events: [] } })).toEqual([]);
   });
 });

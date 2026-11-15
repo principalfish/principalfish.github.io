@@ -32,7 +32,7 @@ import time
 from collections.abc import Iterator
 from contextlib import closing, contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from core.config import DatabaseConfig
@@ -73,7 +73,7 @@ def _exclusive(archive_dir: Path) -> Iterator[None]:
     one process wait on each other just as separate processes do.
     """
     archive_dir.mkdir(parents=True, exist_ok=True)
-    with open(archive_dir / LOCK_NAME, "a") as handle:
+    with (archive_dir / LOCK_NAME).open("a") as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
         yield
 
@@ -99,7 +99,7 @@ def _stamp() -> str:
     hour, so a later backup could sort before an earlier one and ``_prune``
     would then delete the newer archive.
     """
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S")
+    return datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S")
 
 
 def _archives(folder: Path) -> list[Path]:
@@ -215,11 +215,14 @@ def backup_database(
         # was — doesn't fill the folder. Streamed through a file object rather
         # than gzip.compress(f.read()), so the database is never held in memory
         # whole.
-        with latest.open("rb") as src, gz_partial.open("wb") as dest:
-            with gzip.GzipFile(
+        with (
+            latest.open("rb") as src,
+            gz_partial.open("wb") as dest,
+            gzip.GzipFile(
                 fileobj=dest, mode="wb", mtime=0, compresslevel=_GZIP_LEVEL
-            ) as gz:
-                shutil.copyfileobj(src, gz, _CHUNK)
+            ) as gz,
+        ):
+            shutil.copyfileobj(src, gz, _CHUNK)
 
         existing = _archives(archive)
         made: Path | None

@@ -103,7 +103,12 @@ class TestCanonicalState:
 
     @pytest.mark.parametrize(
         ("code", "expected"),
-        [("TX", "Texas"), ("or", "Oregon"), (" In ", "Indiana"), ("dc", "District of Columbia")],
+        [
+            ("TX", "Texas"),
+            ("or", "Oregon"),
+            (" In ", "Indiana"),
+            ("dc", "District of Columbia"),
+        ],
     )
     def test_postal_codes_resolve_when_allowed(self, code: str, expected: str) -> None:
         assert canonical_state(code, allow_postal=True) == expected
@@ -135,8 +140,10 @@ class TestStateFromPageSlug:
             ("2026_United_States_Senate_election_in_New_Hampshire", "New Hampshire"),
             # A leading "the " on the state part is dropped.
             (
-                "2026_United_States_House_of_Representatives_election_in_the_"
-                "District_of_Columbia",
+                (
+                    "2026_United_States_House_of_Representatives_election_in_the_"
+                    "District_of_Columbia"
+                ),
                 "District of Columbia",
             ),
             # Full URLs, fragments and query strings.
@@ -167,10 +174,14 @@ class TestStateFromPageSlug:
             "2026_United_States_House_of_Representatives_election_in_Guam",
             "2026_American_Samoa_House_of_Representatives_election_in_American_Samoa",
             "2026_United_States_House_of_Representatives_election_in_Puerto_Rico",
-            "2026_United_States_House_of_Representatives_election_in_the_Northern_"
-            "Mariana_Islands",
-            "2026_United_States_House_of_Representatives_election_in_the_United_"
-            "States_Virgin_Islands",
+            (
+                "2026_United_States_House_of_Representatives_election_in_the_Northern_"
+                "Mariana_Islands"
+            ),
+            (
+                "2026_United_States_House_of_Representatives_election_in_the_United_"
+                "States_Virgin_Islands"
+            ),
         ],
     )
     def test_territories_are_none(self, slug: str) -> None:
@@ -181,8 +192,10 @@ class TestStateFromPageSlug:
         [
             "2026_United_States_Senate_elections",
             "2026_United_States_House_of_Representatives_elections",
-            "Opinion_polling_for_the_2026_United_States_House_of_Representatives_"
-            "elections",
+            (
+                "Opinion_polling_for_the_2026_United_States_House_of_Representatives_"
+                "elections"
+            ),
             "2026_United_States_Senate_election_in_Narnia",
             "",
             "   ",
@@ -207,9 +220,7 @@ class TestHouseSeatName:
             ("pennsylvania", 7, "PA-07"),
         ],
     )
-    def test_numbered_districts(
-        self, state: str, district: int, expected: str
-    ) -> None:
+    def test_numbered_districts(self, state: str, district: int, expected: str) -> None:
         assert house_seat_name(state, district) == expected
 
     @pytest.mark.parametrize("state", sorted(AT_LARGE_STATES))

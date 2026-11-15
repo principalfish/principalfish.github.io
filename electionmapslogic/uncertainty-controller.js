@@ -9,15 +9,21 @@ export async function activateUncertaintyView() {
   const parliament = state.currentParliament;
   const electionData = state.electionData;
   const path = manifest.parliamentConfig(parliament).uncertaintyDataPath;
-  if (state.view !== "election" || !election?.model || !path || !electionData?.uncertaintyId) return;
-  const isCurrent = () => state.view === "election" && state.currentElection === election
-    && state.currentParliament === parliament && state.electionData === electionData;
+  if (state.view !== "election" || !election?.model || !path || !electionData?.uncertaintyId)
+    return;
+  const isCurrent = () =>
+    state.view === "election" &&
+    state.currentElection === election &&
+    state.currentParliament === parliament &&
+    state.electionData === electionData;
   try {
     const payload = await fetchJson(`${page.dataBase || "data"}/${path}`);
     if (!isCurrent()) return;
     electionData.uncertainty = decodeUncertainty(
-      payload, electionData.uncertaintyId,
-      (party) => manifest.resolvePartyRef(party), manifest.regionsById,
+      payload,
+      electionData.uncertaintyId,
+      (party) => manifest.resolvePartyRef(party),
+      manifest.regionsById,
     );
   } catch {
     if (!isCurrent()) return;

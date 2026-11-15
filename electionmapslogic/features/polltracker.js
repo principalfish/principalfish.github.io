@@ -1,28 +1,42 @@
-import { manifest } from '../state.js';
-import { DEFAULT_PARTY_COLOUR } from '../utils.js';
+import { manifest } from "../state.js";
+import { DEFAULT_PARTY_COLOUR } from "../utils.js";
 
 function probability(value) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1
-    ? value : null;
+    ? value
+    : null;
 }
 
 function optionalFields(party, hasUncertainty) {
   const lo = party?.vl;
   const hi = party?.vh;
-  const hasBand = typeof lo === "number" && Number.isFinite(lo) && typeof hi === "number"
-    && Number.isFinite(hi) && lo >= 0 && hi <= 100 && lo <= hi;
+  const hasBand =
+    typeof lo === "number" &&
+    Number.isFinite(lo) &&
+    typeof hi === "number" &&
+    Number.isFinite(hi) &&
+    lo >= 0 &&
+    hi <= 100 &&
+    lo <= hi;
   const seatLo = party?.sl;
   const seatHi = party?.sh;
-  const hasSeatBand = Number.isInteger(seatLo) && Number.isInteger(seatHi)
-    && seatLo >= 0 && seatLo <= seatHi;
+  const hasSeatBand =
+    Number.isInteger(seatLo) && Number.isInteger(seatHi) && seatLo >= 0 && seatLo <= seatHi;
   // The compact export omits zero odds, but only runs with hung carry uncertainty.
-  const odds = (key) => hasUncertainty && (hasBand || hasSeatBand)
-    ? (Object.hasOwn(party, key) ? probability(party[key]) : 0) : null;
+  const odds = (key) =>
+    hasUncertainty && (hasBand || hasSeatBand)
+      ? Object.hasOwn(party, key)
+        ? probability(party[key])
+        : 0
+      : null;
   return {
-    voteLo: hasBand ? lo : null, voteHi: hasBand ? hi : null,
-    seatLo: hasSeatBand ? seatLo : null, seatHi: hasSeatBand ? seatHi : null,
+    voteLo: hasBand ? lo : null,
+    voteHi: hasBand ? hi : null,
+    seatLo: hasSeatBand ? seatLo : null,
+    seatHi: hasSeatBand ? seatHi : null,
     seatMean: seatMean(party),
-    pMaj: odds("pm"), pLargest: odds("pl"),
+    pMaj: odds("pm"),
+    pLargest: odds("pl"),
   };
 }
 
@@ -84,18 +98,22 @@ export function parsePollTrackerData(data, { segmentBreaks = true } = {}) {
   const rows = [];
   const runsByDate = new Map();
   for (const entry of data) {
-    const asOfDate = String(entry.as_of_date || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(asOfDate)
-        || !Number.isFinite(new Date(`${asOfDate}T00:00:00Z`).getTime())) continue;
+    const asOfDate = String(entry.as_of_date || "").trim();
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(asOfDate) ||
+      !Number.isFinite(new Date(`${asOfDate}T00:00:00Z`).getTime())
+    )
+      continue;
     const hung = probability(entry.hung);
-    const segment = typeof entry.segment_id === "string" && entry.segment_id.trim()
-      ? entry.segment_id : null;
+    const segment =
+      typeof entry.segment_id === "string" && entry.segment_id.trim() ? entry.segment_id : null;
     runsByDate.set(asOfDate, { hung, segment });
     for (const [partyIdStr, pdata] of Object.entries(entry.parties || {})) {
       const partyId = Number(partyIdStr);
       const seats = Number(pdata.s);
       const votePct = Number(pdata.v);
-      if (!Number.isFinite(partyId) || !Number.isFinite(seats) || !Number.isFinite(votePct)) continue;
+      if (!Number.isFinite(partyId) || !Number.isFinite(seats) || !Number.isFinite(votePct))
+        continue;
       const optional = optionalFields(pdata, hung !== null);
       rows.push({
         partyKey: String(partyId),
@@ -108,7 +126,9 @@ export function parsePollTrackerData(data, { segmentBreaks = true } = {}) {
   }
 
   // 2. Index by date and by (party, date).
-  const timelineByDateKey = new Map(Array.from(runsByDate.keys(), (dateKey) => [dateKey, { dateKey }]));
+  const timelineByDateKey = new Map(
+    Array.from(runsByDate.keys(), (dateKey) => [dateKey, { dateKey }]),
+  );
   const byParty = new Map();
 
   rows.forEach((row) => {
@@ -119,23 +139,27 @@ export function parsePollTrackerData(data, { segmentBreaks = true } = {}) {
   });
 
   // 3. Sort: ISO date strings sort chronologically as plain strings.
-  const sortedDates = Array.from(timelineByDateKey.values())
-    .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  const sortedDates = Array.from(timelineByDateKey.values()).sort((a, b) =>
+    a.dateKey.localeCompare(b.dateKey),
+  );
 
   // 4. Expand: produce one entry per calendar day from first to last date inclusive.
   // UTC throughout to avoid timezone drift bumping a date to the previous/next day.
   const parseIsoDate = (value) => new Date(`${value}T00:00:00Z`);
   const formatIsoDate = (value) => {
     const year = value.getUTCFullYear();
-    const month = String(value.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(value.getUTCDate()).padStart(2, '0');
+    const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(value.getUTCDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
 
   let timeline = (() => {
     // Single point or empty: nothing to expand, just attach dateValue.
     if (sortedDates.length <= 1) {
-      return sortedDates.map((entry) => ({ dateKey: entry.dateKey, dateValue: parseIsoDate(entry.dateKey) }));
+      return sortedDates.map((entry) => ({
+        dateKey: entry.dateKey,
+        dateValue: parseIsoDate(entry.dateKey),
+      }));
     }
     // Walk day-by-day from earliest to latest date.
     const start = parseIsoDate(sortedDates[0].dateKey);
@@ -165,14 +189,18 @@ export function parsePollTrackerData(data, { segmentBreaks = true } = {}) {
       const current = runsByDate.get(entry.dateKey);
       if (!current) return [entry];
       const uncertain = current.hung !== null;
-      const boundary = previous !== undefined && (
-        uncertain !== (previous.hung !== null)
-        || (uncertain && current.segment !== null && lastSegment !== null
-          && current.segment !== lastSegment));
+      const boundary =
+        previous !== undefined &&
+        (uncertain !== (previous.hung !== null) ||
+          (uncertain &&
+            current.segment !== null &&
+            lastSegment !== null &&
+            current.segment !== lastSegment));
       previous = current;
       if (uncertain && current.segment !== null) lastSegment = current.segment;
-      return boundary ? [{ ...entry, boundary: true,
-        dateValue: new Date(entry.dateValue.getTime() - 1) }, entry] : [entry];
+      return boundary
+        ? [{ ...entry, boundary: true, dateValue: new Date(entry.dateValue.getTime() - 1) }, entry]
+        : [entry];
     });
   }
 
@@ -183,7 +211,13 @@ export function parsePollTrackerData(data, { segmentBreaks = true } = {}) {
     const seats = [];
     const votePct = [];
     const optional = {
-      voteLo: [], voteHi: [], seatLo: [], seatHi: [], seatMean: [], pMaj: [], pLargest: [],
+      voteLo: [],
+      voteHi: [],
+      seatLo: [],
+      seatHi: [],
+      seatMean: [],
+      pMaj: [],
+      pLargest: [],
     };
     let lastOptional = optionalFields(null, false);
     let lastSeats = null;
@@ -205,7 +239,8 @@ export function parsePollTrackerData(data, { segmentBreaks = true } = {}) {
         lastVotePct = Number(row.votePct || 0);
       }
       // Calendar gaps carry forward; an explicit run clears any missing optional values.
-      if (!entry.boundary && runsByDate.has(entry.dateKey)) lastOptional = row ?? optionalFields(null, false);
+      if (!entry.boundary && runsByDate.has(entry.dateKey))
+        lastOptional = row ?? optionalFields(null, false);
       for (const key of Object.keys(optional)) {
         optional[key].push(key === "seatMean" ? lastSeatMean : lastOptional[key]);
       }

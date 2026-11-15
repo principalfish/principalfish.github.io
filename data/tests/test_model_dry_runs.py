@@ -19,9 +19,11 @@ from models.support.persistence import OutputScope, OutputVote, replace_output
 from models.us._common import main_for_spec
 from models.westminster import run_uns_model
 from scripts import rebuild_model_trends
-from tests import test_holyrood_model as holy
-from tests import test_us_model as us
-from tests import test_westminster_model as west
+from tests import (
+    test_holyrood_model as holy,
+    test_us_model as us,
+    test_westminster_model as west,
+)
 from tests.uk_fixtures import WestminsterWorld, seed_holyrood_world
 from tests.us_ev_fixtures import seed_allocations
 
@@ -387,7 +389,8 @@ def test_us_default_dry_run_preserves_all_outputs(
     if model == "president":
         seed_allocations(db, {"One": 3})
     election_map, seats = us._seat_map_with_baseline(
-        db, f"test {model}",
+        db,
+        f"test {model}",
         "us_presidential" if model == "president" else f"us_{model}",
         {"One": {dem.id: 60, rep.id: 40}},
     )

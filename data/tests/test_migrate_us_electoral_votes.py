@@ -51,7 +51,9 @@ def test_migration_normalizes_only_legacy_presidential_map_labels(
     report = "\n".join(migrate(legacy, dry_run=False))
     assert "normalize 1 presidential map labels" in report
     assert legacy.execute("SELECT parliament FROM maps ORDER BY id").fetchall() == [
-        ("us_presidential",), ("us_presidential",), ("us_house",)
+        ("us_presidential",),
+        ("us_presidential",),
+        ("us_house",),
     ]
     before = list(legacy.iterdump())
     report = "\n".join(migrate(legacy, dry_run=False))
@@ -71,16 +73,25 @@ def test_seed_structure() -> None:
 
 def test_migration_seeds_and_reruns_without_changes(legacy: sqlite3.Connection) -> None:
     migrate(legacy, dry_run=False)
-    assert legacy.execute(
-        "SELECT COUNT(*) FROM us_electoral_vote_eras",
-    ).fetchone()[0] == 7
-    assert legacy.execute(
-        "SELECT COUNT(*) FROM us_electoral_vote_allocations",
-    ).fetchone()[0] == 392
-    assert legacy.execute(
-        "SELECT SUM(electoral_votes) FROM us_electoral_vote_allocations "
-        "GROUP BY era_year",
-    ).fetchall() == [(538,)] * 7
+    assert (
+        legacy.execute(
+            "SELECT COUNT(*) FROM us_electoral_vote_eras",
+        ).fetchone()[0]
+        == 7
+    )
+    assert (
+        legacy.execute(
+            "SELECT COUNT(*) FROM us_electoral_vote_allocations",
+        ).fetchone()[0]
+        == 392
+    )
+    assert (
+        legacy.execute(
+            "SELECT SUM(electoral_votes) FROM us_electoral_vote_allocations "
+            "GROUP BY era_year",
+        ).fetchall()
+        == [(538,)] * 7
+    )
     before = list(legacy.iterdump())
     lines = migrate(legacy, dry_run=False)
     assert list(legacy.iterdump()) == before
@@ -119,10 +130,14 @@ def test_rerun_preserves_edits_custom_rows_and_targets(
         pytest.param((2020, "California", 0), "Stored weight", id="zero_weight"),
         pytest.param((2020, "California", -1), "Stored weight", id="negative_weight"),
         pytest.param(
-            (2020, "California", 1.5), "Stored weight", id="fractional_weight",
+            (2020, "California", 1.5),
+            "Stored weight",
+            id="fractional_weight",
         ),
         pytest.param(
-            (2020, "California", "invalid"), "Stored weight", id="text_weight",
+            (2020, "California", "invalid"),
+            "Stored weight",
+            id="text_weight",
         ),
         pytest.param((2020, "California", None), "Stored weight", id="null_weight"),
         pytest.param((2020, "", 54), "Invalid allocation unit", id="empty_unit"),
@@ -149,7 +164,8 @@ def test_migration_rejects_invalid_existing_allocations_without_changes(
         "(era_year, unit_name, electoral_votes)",
     )
     legacy.execute(
-        "INSERT INTO us_electoral_vote_allocations VALUES (?, ?, ?)", allocation,
+        "INSERT INTO us_electoral_vote_allocations VALUES (?, ?, ?)",
+        allocation,
     )
     legacy.execute("CREATE TABLE maps (id INTEGER PRIMARY KEY, parliament TEXT)")
     legacy.execute("INSERT INTO maps VALUES (7, 'us_president')")
@@ -208,7 +224,8 @@ def test_missing_target_rejects_apply_without_schema_changes(
     _insert_legacy_rows(legacy)
     before = list(legacy.iterdump())
     with pytest.raises(
-        ElectoralVoteError, match="explicit.*legacy-forecast-target-year",
+        ElectoralVoteError,
+        match="explicit.*legacy-forecast-target-year",
     ):
         migrate(legacy, dry_run=False)
     assert list(legacy.iterdump()) == before
@@ -321,18 +338,24 @@ def _column(conn: sqlite3.Connection, table: str, name: str) -> tuple[object, ..
 
 
 def test_fresh_orm_and_migration_schema_parity(
-    db: Database, legacy: sqlite3.Connection,
+    db: Database,
+    legacy: sqlite3.Connection,
 ) -> None:
     migrate(legacy, dry_run=False)
     with closing(sqlite3.connect(db.config.database_path)) as orm:
         for table in ("us_electoral_vote_eras", "us_electoral_vote_allocations"):
             assert _columns(orm, table) == _columns(legacy, table)
             expected = orm.execute(f"PRAGMA foreign_key_list({table})").fetchall()
-            assert expected == legacy.execute(
-                f"PRAGMA foreign_key_list({table})",
-            ).fetchall()
+            assert (
+                expected
+                == legacy.execute(
+                    f"PRAGMA foreign_key_list({table})",
+                ).fetchall()
+            )
         assert _column(orm, "elections", "target_election_year") == _column(
-            legacy, "elections", "target_election_year",
+            legacy,
+            "elections",
+            "target_election_year",
         )
 
 
@@ -341,7 +364,9 @@ def test_raw_bootstrap_target_matches_orm(db: Database) -> None:
         ensure_elections_sqlite_schema(raw)
         with closing(sqlite3.connect(db.config.database_path)) as orm:
             assert _column(raw, "elections", "target_election_year") == _column(
-                orm, "elections", "target_election_year",
+                orm,
+                "elections",
+                "target_election_year",
             )
 
 

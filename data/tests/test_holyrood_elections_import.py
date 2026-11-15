@@ -44,26 +44,46 @@ class Importer(Protocol):
     def normalize_party_key(self, value: str) -> str: ...
     def humanize_party_name(self, value: str) -> str: ...
     def ensure_party(
-        self, db: Database, cache: dict[str, Party], key: str,
+        self,
+        db: Database,
+        cache: dict[str, Party],
+        key: str,
     ) -> Party: ...
     def pick_winner_key(self, current: str, parties: dict[str, object]) -> str: ...
     def dhondt_allocate(
-        self, votes: dict[str, int], constituency: dict[str, int], seats: int,
+        self,
+        votes: dict[str, int],
+        constituency: dict[str, int],
+        seats: int,
     ) -> dict[str, int]: ...
     def import_constituency_results(
-        self, db: Database, spec: Spec, map_row: Map, cache: dict[str, Party],
-        dry_run: bool, skip_existing: bool, refresh: bool = False,
+        self,
+        db: Database,
+        spec: Spec,
+        map_row: Map,
+        cache: dict[str, Party],
+        dry_run: bool,
+        skip_existing: bool,
+        refresh: bool = False,
     ) -> Stats: ...
     def import_list_results(
-        self, db: Database, spec: Spec, map_row: Map, parent: int | None,
-        cache: dict[str, Party], dry_run: bool, skip_existing: bool,
+        self,
+        db: Database,
+        spec: Spec,
+        map_row: Map,
+        parent: int | None,
+        cache: dict[str, Party],
+        dry_run: bool,
+        skip_existing: bool,
         refresh: bool = False,
     ) -> Stats: ...
     def main(self) -> None: ...
 
 
 def _load() -> Importer:
-    module = importlib.import_module("importers.results.holyrood.import_holyrood_elections")
+    module = importlib.import_module(
+        "importers.results.holyrood.import_holyrood_elections"
+    )
     return cast(Importer, module)
 
 
@@ -94,18 +114,22 @@ def _write(files: Path, spec: Spec = SPEC, *, labour: int = 40) -> None:
         **{f"Missing {i}": {} for i in range(11)},
     }
     (files / spec.constituency_file).write_text(json.dumps(constituency))
-    (files / spec.list_file).write_text(json.dumps({
-        "central-scotland": {
-            "regionVotes": {"S.N.P.": 90, "Labour": labour},
-            "seats": {"S.N.P.": 1, "Labour": 2},
-        },
-        "Lothian": {
-            "regionVotes": {"snp": 90, "labour": 60},
-            "constituencySeatsWon": {"S.N.P.": 2},
-        },
-        "Empty": {},
-        "Missing region": {"regionVotes": {"labour": 50}},
-    }))
+    (files / spec.list_file).write_text(
+        json.dumps(
+            {
+                "central-scotland": {
+                    "regionVotes": {"S.N.P.": 90, "Labour": labour},
+                    "seats": {"S.N.P.": 1, "Labour": 2},
+                },
+                "Lothian": {
+                    "regionVotes": {"snp": 90, "labour": 60},
+                    "constituencySeatsWon": {"S.N.P.": 2},
+                },
+                "Empty": {},
+                "Missing region": {"regionVotes": {"labour": 50}},
+            }
+        )
+    )
 
 
 def _world(db: Database, name: str = SPEC.map_name) -> tuple[Map, list[Seat]]:
@@ -122,19 +146,27 @@ def _world(db: Database, name: str = SPEC.map_name) -> tuple[Map, list[Seat]]:
     ]
 
 
-@pytest.mark.parametrize("value, expected", [
-    (" King's & Queen's! 42 ", "kingsandqueens42"), ("S.N.P.", "snp"),
-    ("", ""),
-])
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (" King's & Queen's! 42 ", "kingsandqueens42"),
+        ("S.N.P.", "snp"),
+        ("", ""),
+    ],
+)
 def test_normalization(value: str, expected: str) -> None:
     assert importer.normalize_name(value) == expected
     assert importer.normalize_party_key(value) == expected
 
 
-@pytest.mark.parametrize("key, expected", [
-    ("Scottish-Greens", "Scottish Greens"),
-    ("__new-local  party__", "New Local Party"), ("", ""),
-])
+@pytest.mark.parametrize(
+    "key, expected",
+    [
+        ("Scottish-Greens", "Scottish Greens"),
+        ("__new-local  party__", "New Local Party"),
+        ("", ""),
+    ],
+)
 def test_humanize(key: str, expected: str) -> None:
     assert importer.humanize_party_name(key) == expected
 
@@ -147,36 +179,52 @@ def test_party_creation_existing_and_normalized_cache(db: Database) -> None:
     created = importer.ensure_party(db, cache, "new-local_party")
     assert created.name == "New Local Party"
     assert {key: party.id for key, party in cache.items()} == {
-        "snp": existing.id, "newlocalparty": created.id,
+        "snp": existing.id,
+        "newlocalparty": created.id,
     }
     assert len(db.get_all_parties()) == 2
 
 
-@pytest.mark.parametrize("current, parties, winner", [
-    ("S.N.P.", {"snp": {"total": 1}, "labour": {"total": 99}}, "snp"),
-    ("unknown", {"bad": "invalid", "missing": {}, "labour": {"total": 2}}, "labour"),
-    ("", {"second": {"total": 5}, "first": {"total": 5}}, "second"),
-])
+@pytest.mark.parametrize(
+    "current, parties, winner",
+    [
+        ("S.N.P.", {"snp": {"total": 1}, "labour": {"total": 99}}, "snp"),
+        (
+            "unknown",
+            {"bad": "invalid", "missing": {}, "labour": {"total": 2}},
+            "labour",
+        ),
+        ("", {"second": {"total": 5}, "first": {"total": 5}}, "second"),
+    ],
+)
 def test_winner(current: str, parties: dict[str, object], winner: str) -> None:
     assert importer.pick_winner_key(current, parties) == winner
 
 
-@pytest.mark.parametrize("votes, constituency, seats, expected", [
-    ({"a": 100, "b": 60, "c": 20}, {}, 5, {"a": 3, "b": 2}),
-    ({"a": 100, "b": 60}, {"a": 3}, 3, {"a": 1, "b": 2}),
-    ({"z": 10, "a": 10}, {}, 1, {"z": 1}),
-    ({"a": 10, "z": 10}, {}, 1, {"a": 1}),
-    ({"a": 10}, {}, 0, {}), ({}, {}, 0, {}),
-])
+@pytest.mark.parametrize(
+    "votes, constituency, seats, expected",
+    [
+        ({"a": 100, "b": 60, "c": 20}, {}, 5, {"a": 3, "b": 2}),
+        ({"a": 100, "b": 60}, {"a": 3}, 3, {"a": 1, "b": 2}),
+        ({"z": 10, "a": 10}, {}, 1, {"z": 1}),
+        ({"a": 10, "z": 10}, {}, 1, {"a": 1}),
+        ({"a": 10}, {}, 0, {}),
+        ({}, {}, 0, {}),
+    ],
+)
 def test_dhondt(
-    votes: dict[str, int], constituency: dict[str, int], seats: int,
+    votes: dict[str, int],
+    constituency: dict[str, int],
+    seats: int,
     expected: dict[str, int],
 ) -> None:
     assert importer.dhondt_allocate(votes, constituency, seats) == expected
 
 
 def test_constituencies_persist_matching_votes_and_electorates(
-    db: Database, files: Path, capsys: pytest.CaptureFixture[str],
+    db: Database,
+    files: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     map_row, seats = _world(db)
     _write(files)
@@ -186,12 +234,17 @@ def test_constituencies_persist_matching_votes_and_electorates(
     election = db.get_election_by_name(SPEC.name)
     assert election is not None
     assert (election.map_id, election.type, election.election_date) == (
-        map_row.id, ElectionType.holyrood_general, date(2021, 5, 6),
+        map_row.id,
+        ElectionType.holyrood_general,
+        date(2021, 5, 6),
     )
     parties = {party.id: party.name for party in db.get_all_parties()}
     votes = db.get_votes_for_election(election.id)
-    assert {(v.seat_id, parties[v.party_id], v.vote_total, v.candidate_name, v.elected)
-            for v in votes if v.party_id is not None} == {
+    assert {
+        (v.seat_id, parties[v.party_id], v.vote_total, v.candidate_name, v.elected)
+        for v in votes
+        if v.party_id is not None
+    } == {
         (seats[0].id, "Scottish National Party", 30.0, "Alice", True),
         (seats[0].id, "Labour", 40.0, "Bob", False),
         (seats[1].id, "Labour", None, "Carol", True),
@@ -207,32 +260,58 @@ def test_constituencies_persist_matching_votes_and_electorates(
 
 @pytest.mark.parametrize("kind", ["constituency", "list"])
 def test_existing_skip_refresh_and_empty_reuse(
-    db: Database, files: Path, kind: str,
+    db: Database,
+    files: Path,
+    kind: str,
 ) -> None:
     map_row, seats = _world(db)
     _write(files)
     parent = db.add_election(map_row.id, 2020, "Parent", ElectionType.holyrood_general)
     name = SPEC.name if kind == "constituency" else f"{SPEC.name} (List)"
     election = db.add_election(
-        map_row.id, SPEC.year, name,
-        (ElectionType.holyrood_general
-         if kind == "constituency" else ElectionType.holyrood_list),
+        map_row.id,
+        SPEC.year,
+        name,
+        (
+            ElectionType.holyrood_general
+            if kind == "constituency"
+            else ElectionType.holyrood_list
+        ),
         parent_election_id=parent.id,
     )
     unrelated = db.add_election(
-        map_row.id, 2016, "Unrelated", ElectionType.holyrood_general,
+        map_row.id,
+        2016,
+        "Unrelated",
+        ElectionType.holyrood_general,
     )
     unrelated_vote = db.add_vote(
-        unrelated.id, seats[0].id, vote_total=123, elected=True,
+        unrelated.id,
+        seats[0].id,
+        vote_total=123,
+        elected=True,
     )
 
     def run(*, skip: bool = False, refresh: bool = False) -> Stats:
         if kind == "constituency":
             return importer.import_constituency_results(
-                db, SPEC, map_row, {}, False, skip, refresh,
+                db,
+                SPEC,
+                map_row,
+                {},
+                False,
+                skip,
+                refresh,
             )
         return importer.import_list_results(
-            db, SPEC, map_row, parent.id, {}, False, skip, refresh,
+            db,
+            SPEC,
+            map_row,
+            parent.id,
+            {},
+            False,
+            skip,
+            refresh,
         )
 
     run()
@@ -256,15 +335,16 @@ def test_existing_skip_refresh_and_empty_reuse(
     assert any(v.vote_total == 75 for v in db.get_votes_for_election(election.id))
     assert len(db.get_votes_for_election(election.id)) == len(before)
     assert [
-        (v.id, v.vote_total, v.elected)
-        for v in db.get_votes_for_election(unrelated.id)
+        (v.id, v.vote_total, v.elected) for v in db.get_votes_for_election(unrelated.id)
     ] == [
         (unrelated_vote.id, 123.0, True),
     ]
 
 
 def test_lists_persist_allocations_all_party_totals_and_parent(
-    db: Database, files: Path, capsys: pytest.CaptureFixture[str],
+    db: Database,
+    files: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     map_row, _ = _world(db)
     _write(files)
@@ -274,10 +354,15 @@ def test_lists_persist_allocations_all_party_totals_and_parent(
     election = db.get_election_by_name(f"{SPEC.name} (List)")
     assert election is not None
     assert (
-        election.map_id, election.parent_election_id,
-        election.type, election.election_date,
+        election.map_id,
+        election.parent_election_id,
+        election.type,
+        election.election_date,
     ) == (
-        map_row.id, parent.id, ElectionType.holyrood_list, date(2021, 5, 6),
+        map_row.id,
+        parent.id,
+        ElectionType.holyrood_list,
+        date(2021, 5, 6),
     )
     snp = db.get_party_by_name("Scottish National Party")
     labour = db.get_party_by_name("Labour")
@@ -294,7 +379,8 @@ def test_lists_persist_allocations_all_party_totals_and_parent(
         assert seat.region_id is not None
         assert regions[seat.region_id] == ("Central Scotland" if central else "Lothian")
         assert {(v.party_id, v.vote_total, v.candidate_name) for v in votes} == {
-            (snp.id, 90.0, None), (labour.id, 40.0 if central else 60.0, None),
+            (snp.id, 90.0, None),
+            (labour.id, 40.0 if central else 60.0, None),
         }
         elected = [v.party_id for v in votes if v.elected]
         slot = int(seat.seat_name.rsplit(" ", 1)[1])
@@ -306,18 +392,22 @@ def test_lists_persist_allocations_all_party_totals_and_parent(
 
 
 def test_constituency_dry_run_currently_creates_only_missing_parties(
-    db: Database, files: Path,
+    db: Database,
+    files: Path,
 ) -> None:
     map_row, seats = _world(db)
     _write(files)
     existing = db.add_party("Labour")
     stats = importer.import_constituency_results(db, SPEC, map_row, {}, True, False)
     assert (
-        stats.seats_matched, stats.votes_inserted, stats.electorates_updated,
+        stats.seats_matched,
+        stats.votes_inserted,
+        stats.electorates_updated,
     ) == (3, 0, 0)
     assert db.get_elections_for_map(map_row.id) == []
     assert {p.name for p in db.get_all_parties()} == {
-        "Labour", "Scottish National Party",
+        "Labour",
+        "Scottish National Party",
     }
     labour = db.get_party_by_name("Labour")
     assert labour is not None and labour.id == existing.id
@@ -337,7 +427,8 @@ def test_list_dry_run_writes_no_rows(db: Database, files: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "spec", [importer.ELECTION_SPECS[0], importer.ELECTION_SPECS[3]],
+    "spec",
+    [importer.ELECTION_SPECS[0], importer.ELECTION_SPECS[3]],
 )
 def test_missing_constituency_file_hints(db: Database, files: Path, spec: Spec) -> None:
     map_row, _ = _world(db)
@@ -347,7 +438,9 @@ def test_missing_constituency_file_hints(db: Database, files: Path, spec: Spec) 
 
 
 def test_missing_list_file_returns_empty_stats(
-    db: Database, files: Path, capsys: pytest.CaptureFixture[str],
+    db: Database,
+    files: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     map_row, _ = _world(db)
     stats = importer.import_list_results(db, SPEC, map_row, None, {}, False, False)
@@ -356,13 +449,22 @@ def test_missing_list_file_returns_empty_stats(
     assert "skipping list seat import" in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("include_remapped, dry_run, legacy", [
-    (False, False, False), (True, False, False), (True, True, False),
-    (False, False, True),
-])
+@pytest.mark.parametrize(
+    "include_remapped, dry_run, legacy",
+    [
+        (False, False, False),
+        (True, False, False),
+        (True, True, False),
+        (False, False, True),
+    ],
+)
 def test_main_filters_year_links_lists_and_resolves_legacy_map(
-    db: Database, files: Path, monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str], include_remapped: bool, dry_run: bool,
+    db: Database,
+    files: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    include_remapped: bool,
+    dry_run: bool,
     legacy: bool,
 ) -> None:
     name = "Legacy Holyrood" if legacy else SPEC.map_name
@@ -405,7 +507,10 @@ def test_main_filters_year_links_lists_and_resolves_legacy_map(
 
 @pytest.mark.parametrize("missing_map", [False, True])
 def test_main_rejects_empty_selection_or_missing_map(
-    db: Database, files: Path, monkeypatch: pytest.MonkeyPatch, missing_map: bool,
+    db: Database,
+    files: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    missing_map: bool,
 ) -> None:
     monkeypatch.setenv("DATABASE_PATH", str(db.engine.url.database))
     monkeypatch.setattr(sys, "argv", ["holyrood"])
@@ -418,7 +523,10 @@ def test_main_rejects_empty_selection_or_missing_map(
 
 @pytest.mark.parametrize("repeat_flag", ["--skip-existing", "--refresh"])
 def test_main_shared_map_multiple_years_and_repeat_flags(
-    db: Database, files: Path, monkeypatch: pytest.MonkeyPatch, repeat_flag: str,
+    db: Database,
+    files: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    repeat_flag: str,
 ) -> None:
     map_row, _ = _world(db)
     previous = importer.ELECTION_SPECS[1]
@@ -430,9 +538,18 @@ def test_main_shared_map_multiple_years_and_repeat_flags(
     importer.main()
     elections = {e.name: e.id for e in db.get_elections_for_map(map_row.id)}
     assert len(elections) == 4
-    monkeypatch.setattr(sys, "argv", [
-        "holyrood", "--only-year", "2016", "--only-year", "2021", repeat_flag,
-    ])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "holyrood",
+            "--only-year",
+            "2016",
+            "--only-year",
+            "2021",
+            repeat_flag,
+        ],
+    )
     importer.main()
     assert {e.name: e.id for e in db.get_elections_for_map(map_row.id)} == elections
     for name, election_id in elections.items():
@@ -443,11 +560,15 @@ def test_main_shared_map_multiple_years_and_repeat_flags(
 
 @pytest.mark.parametrize("unknown_count", [0, 1])
 def test_short_or_absent_unmatched_seat_warning(
-    db: Database, files: Path, capsys: pytest.CaptureFixture[str], unknown_count: int,
+    db: Database,
+    files: Path,
+    capsys: pytest.CaptureFixture[str],
+    unknown_count: int,
 ) -> None:
     map_row, _ = _world(db)
     source: dict[str, object] = {
-        "Alpha": {}, **{f"Unknown {i}": {} for i in range(unknown_count)},
+        "Alpha": {},
+        **{f"Unknown {i}": {} for i in range(unknown_count)},
     }
     (files / SPEC.constituency_file).write_text(json.dumps(source))
     stats = importer.import_constituency_results(db, SPEC, map_row, {}, False, False)
@@ -458,12 +579,15 @@ def test_short_or_absent_unmatched_seat_warning(
 
 
 def test_main_missing_new_boundary_map_has_no_legacy_fallback(
-    db: Database, files: Path, monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+    files: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _world(db)
     monkeypatch.setenv("DATABASE_PATH", str(db.engine.url.database))
     monkeypatch.setattr(sys, "argv", ["holyrood", "--only-year", "2026"])
     with pytest.raises(
-        ValueError, match="Scottish Parliament Constituencies 2026.*not found",
+        ValueError,
+        match="Scottish Parliament Constituencies 2026.*not found",
     ):
         importer.main()

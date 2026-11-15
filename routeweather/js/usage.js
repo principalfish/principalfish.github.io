@@ -74,9 +74,7 @@ function readEntries(storage) {
     // getItem itself can throw when site data is blocked.
     const parsed = JSON.parse(storage.getItem(STORAGE_KEY) ?? "[]");
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (e) => Array.isArray(e) && Number.isFinite(e[0]) && Number.isFinite(e[1]),
-    );
+    return parsed.filter((e) => Array.isArray(e) && Number.isFinite(e[0]) && Number.isFinite(e[1]));
   } catch {
     return [];
   }
@@ -124,9 +122,7 @@ export function formatUsageReport({ label, calls, totals, limits = FREE_LIMITS }
   for (const name of Object.keys(limits)) {
     const used = totals[name] ?? 0;
     const left = Math.max(0, limits[name] - used);
-    lines.push(
-      `  ${name}: ~${used.toFixed(1)} of ${limits[name]} used, ~${left.toFixed(1)} left`,
-    );
+    lines.push(`  ${name}: ~${used.toFixed(1)} of ${limits[name]} used, ~${left.toFixed(1)} left`);
   }
   lines.push("  (estimate for this browser only; limits are per IP address)");
   return lines.join("\n");

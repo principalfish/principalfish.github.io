@@ -29,7 +29,6 @@ from core.db import Database
 from core.schema import ElectionType
 from tests.console_fixtures import (
     RecordingRunner as _RecordingRunner,
-    app,
     flashes as _flashes,
     flashes_on_page as _flashes_on_page,
     forbid_call,
@@ -86,7 +85,7 @@ class _FixedDate(date):
     """``date`` whose ``today()`` is pinned to 2026-05-20."""
 
     @classmethod
-    def today(cls) -> "_FixedDate":
+    def today(cls) -> _FixedDate:
         return cls(2026, 5, 20)
 
 
@@ -190,7 +189,14 @@ class TestChoicesForModelForm:
         assert choices["as_of_days_back"] == day_options
         assert choices["since_days_back"] == day_options
         assert choices["half_life_days"] == [
-            7.0, 14.0, 15.0, 21.0, 30.0, 45.0, 60.0, 90.0
+            7.0,
+            14.0,
+            15.0,
+            21.0,
+            30.0,
+            45.0,
+            60.0,
+            90.0,
         ]
         assert choices["dry_run_options"] == [
             {"value": "true", "label": "Yes (preview only)"},
@@ -302,9 +308,7 @@ class TestModelRunExecute:
         # since_days_back (7) < as_of_days_back (30) trips the custom
         # model_validator, not a type-coercion failure, so this also proves
         # that validator is wired up.
-        form = _valid_form(
-            westminster_world, as_of_days_back="30", since_days_back="7"
-        )
+        form = _valid_form(westminster_world, as_of_days_back="30", since_days_back="7")
 
         response = app.test_client().post(
             "/westminster/model", data=form, follow_redirects=True
@@ -313,8 +317,10 @@ class TestModelRunExecute:
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         assert _flashes_on_page(body) == [
-            "Invalid model argument value: Value error, "
-            "Since-days-back must be >= as-of-days-back"
+            (
+                "Invalid model argument value: Value error, "
+                "Since-days-back must be >= as-of-days-back"
+            )
         ]
         assert recording_runner.calls == []
 

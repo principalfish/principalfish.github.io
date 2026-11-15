@@ -32,25 +32,48 @@
 // page and tests call it with a jsdom document and a mocked fetch.
 
 import {
-  ACTIVITIES, HOURLY_VARS, OPEN_METEO_ATTRIBUTION, PROBABILITY, SAMPLING, SPEED_RANGE_KMH,
+  ACTIVITIES,
+  HOURLY_VARS,
+  OPEN_METEO_ATTRIBUTION,
+  PROBABILITY,
+  SAMPLING,
+  SPEED_RANGE_KMH,
 } from "./config.js";
 import { parseGpx } from "./gpx.js";
 import {
-  arrivalTimes, bearingDeg, buildRoute, haversineKm, nearestPointIndices, sampleRoute,
+  arrivalTimes,
+  bearingDeg,
+  buildRoute,
+  haversineKm,
+  nearestPointIndices,
+  sampleRoute,
   spacedSampleIndices,
 } from "./route.js";
 import {
-  fetchElevations, fetchForecast, fetchProbability, fetchTimeZone, withProbability,
+  fetchElevations,
+  fetchForecast,
+  fetchProbability,
+  fetchTimeZone,
+  withProbability,
 } from "./openmeteo.js";
 import { weatherForSample } from "./weather.js";
 import { isCustomised, kmhToSpeed, resolveUnits, speedToKmh } from "./units.js";
 import { readState, writeState } from "./urlstate.js";
 import {
-  createUsageLog, elevationCallWeight, forecastCallWeight, formatUsageReport,
+  createUsageLog,
+  elevationCallWeight,
+  forecastCallWeight,
+  formatUsageReport,
 } from "./usage.js";
 import {
-  forecastSpan, forecastWindow, fromLocalInputValue, HOUR_MS, latestStartMs, MINUTE_MS,
-  nextWholeHour, windowHours,
+  forecastSpan,
+  forecastWindow,
+  fromLocalInputValue,
+  HOUR_MS,
+  latestStartMs,
+  MINUTE_MS,
+  nextWholeHour,
+  windowHours,
 } from "./schedule.js";
 import { formatDateTime, formatDuration } from "./display.js";
 import { isValidTimeZone } from "./zone.js";
@@ -168,7 +191,10 @@ export function init({
 
   const views = [];
   const addView = (update) => views.push(update);
-  const render = (reason) => views.forEach((update) => update(state, reason));
+  const render = (reason) =>
+    views.forEach((update) => {
+      update(state, reason);
+    });
 
   // Aborted when a newer load or retry starts, so a superseded load stops
   // spending quota and can never overwrite newer state.
@@ -190,9 +216,10 @@ export function init({
   function updateStartBounds() {
     const minMs = Math.floor(state.nowMs / MINUTE_MS) * MINUTE_MS;
     const lastMs = state.forecastEndMs ?? forecastWindow(state.nowMs).endHour;
-    const durationMs = state.route && Number.isFinite(state.speedKmh)
-      ? routeDurationMs(state.route, state.speedKmh)
-      : 0;
+    const durationMs =
+      state.route && Number.isFinite(state.speedKmh)
+        ? routeDurationMs(state.route, state.speedKmh)
+        : 0;
     state.startBounds = { minMs, maxMs: Math.max(minMs, latestStartMs(lastMs, durationMs)) };
   }
 
@@ -202,18 +229,21 @@ export function init({
     const startMs = times[0];
     const finishMs = times[times.length - 1];
     if (startMs < state.forecastStartMs) {
-      return `The forecast starts at ${at(state.forecastStartMs)}; `
-        + "pick a later start.";
+      return `The forecast starts at ${at(state.forecastStartMs)}; pick a later start.`;
     }
     if (finishMs <= state.forecastEndMs) return null;
     const ends = at(state.forecastEndMs);
     const latest = latestStartMs(state.forecastEndMs, finishMs - startMs);
     if (latest < Math.max(state.startBounds.minMs, state.forecastStartMs)) {
-      return `At this speed the route takes ${formatDuration(finishMs - startMs)}, longer `
-        + `than the forecast has left (it ends ${ends}). Try a higher speed.`;
+      return (
+        `At this speed the route takes ${formatDuration(finishMs - startMs)}, longer ` +
+        `than the forecast has left (it ends ${ends}). Try a higher speed.`
+      );
     }
-    return `You'd finish at ${at(finishMs)}, after the forecast ends (${ends}). `
-      + `Latest valid start: ${at(latest)}.`;
+    return (
+      `You'd finish at ${at(finishMs)}, after the forecast ends (${ends}). ` +
+      `Latest valid start: ${at(latest)}.`
+    );
   }
 
   function recompute() {
@@ -243,12 +273,16 @@ export function init({
     if (!state.locations) return;
 
     const { samples, locations } = state;
-    const times = arrivalTimes(samples.map((s) => s.cumDistKm), state.speedKmh, state.startMs);
+    const times = arrivalTimes(
+      samples.map((s) => s.cumDistKm),
+      state.speedKmh,
+      state.startMs,
+    );
     state.planError = planProblem(times);
     if (state.planError) return;
     state.times = times;
-    state.results = samples.map(
-      (s, i) => weatherForSample(locations[i], s, times[i], s.bearingDeg),
+    state.results = samples.map((s, i) =>
+      weatherForSample(locations[i], s, times[i], s.bearingDeg),
     );
     state.daylight = routeDaylight(state);
     state.sunshine = routeSunshine(state);
@@ -257,7 +291,9 @@ export function init({
 
   // --- fetching (once per GPX load) ---
 
-  const setStatus = (kind, message) => { state.status = { kind, message }; };
+  const setStatus = (kind, message) => {
+    state.status = { kind, message };
+  };
 
   async function fetchWeather(signal) {
     const n = state.samples.length;
@@ -314,11 +350,12 @@ export function init({
 
       setStatus("loading", `Fetching the forecast for ${n} locations…`);
       render("status");
-      const weigh = ({ locations }) => forecastCallWeight({
-        locations,
-        variables: HOURLY_VARS.length,
-        hours: windowHours(range),
-      });
+      const weigh = ({ locations }) =>
+        forecastCallWeight({
+          locations,
+          variables: HOURLY_VARS.length,
+          hours: windowHours(range),
+        });
       const forecast = await fetchForecast(state.samples, range, fetchImpl, {
         ...options,
         onRequest: (sent) => spend(weigh(sent)),
@@ -365,9 +402,14 @@ export function init({
     try {
       series = await fetchProbability(points, range, fetchImpl, {
         ...options,
-        onRequest: ({ locations: sent }) => spend(forecastCallWeight({
-          locations: sent, variables: 1, hours: windowHours(range),
-        })),
+        onRequest: ({ locations: sent }) =>
+          spend(
+            forecastCallWeight({
+              locations: sent,
+              variables: 1,
+              hours: windowHours(range),
+            }),
+          ),
       });
     } catch (err) {
       if (options.signal.aborted) throw err;
@@ -459,15 +501,19 @@ export function init({
   // inputs), not per keystroke, so the history isn't rewritten as you type.
   function writeUrl() {
     const { system, wind, rain, temp } = state.units;
-    win.history.replaceState(null, "", writeState({
-      activity: state.activity,
-      speed: state.speedKmh,
-      start: Number.isFinite(state.startMs) ? toIsoStart(state.startMs) : null,
-      units: system,
-      wind,
-      rain,
-      temp,
-    }));
+    win.history.replaceState(
+      null,
+      "",
+      writeState({
+        activity: state.activity,
+        speed: state.speedKmh,
+        start: Number.isFinite(state.startMs) ? toIsoStart(state.startMs) : null,
+        units: system,
+        wind,
+        rain,
+        temp,
+      }),
+    );
   }
 
   function onChange(event) {
@@ -533,7 +579,7 @@ export function init({
         return;
       }
       default:
-        // Unknown events are ignored.
+      // Unknown events are ignored.
     }
   }
 

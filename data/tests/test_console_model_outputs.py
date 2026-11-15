@@ -31,7 +31,9 @@ def _seed(db: Database) -> dict[str, int]:
     alpha = db.add_seat(m.id, "Alpha", region_id=region.id, electorate=1000)
     bravo = db.add_seat(m.id, "Bravo", region_id=region.id, electorate=1000)
 
-    baseline = db.add_election(m.id, 2024, "2024 General Election", ElectionType.uk_general)
+    baseline = db.add_election(
+        m.id, 2024, "2024 General Election", ElectionType.uk_general
+    )
     db.add_vote(baseline.id, alpha.id, party_id=lab.id, vote_total=500.0, elected=True)
     db.add_vote(baseline.id, alpha.id, party_id=con.id, vote_total=300.0)
     db.add_vote(baseline.id, bravo.id, party_id=lab.id, vote_total=450.0, elected=True)
@@ -74,13 +76,21 @@ def _seed_holyrood(db: Database) -> dict[str, int]:
     baseline = db.add_election(
         m.id, 2021, "2021 Scottish Parliament Election", ElectionType.holyrood_general
     )
-    db.add_vote(baseline.id, const_seat.id, party_id=snp.id, vote_total=500.0, elected=True)
+    db.add_vote(
+        baseline.id, const_seat.id, party_id=snp.id, vote_total=500.0, elected=True
+    )
     db.add_vote(baseline.id, const_seat.id, party_id=lab.id, vote_total=300.0)
 
-    model = db.add_election(m.id, 2026, "Holyrood UNS 2026-07-05", ElectionType.holyrood_uns)
-    db.add_vote(model.id, const_seat.id, party_id=snp.id, vote_total=520.0, elected=True)
+    model = db.add_election(
+        m.id, 2026, "Holyrood UNS 2026-07-05", ElectionType.holyrood_uns
+    )
+    db.add_vote(
+        model.id, const_seat.id, party_id=snp.id, vote_total=520.0, elected=True
+    )
     db.add_vote(model.id, const_seat.id, party_id=lab.id, vote_total=300.0)
-    db.add_vote(model.id, list_seat.id, party_id=lab.id, vote_total=12000.0, elected=True)
+    db.add_vote(
+        model.id, list_seat.id, party_id=lab.id, vote_total=12000.0, elected=True
+    )
     db.add_vote(model.id, list_seat.id, party_id=snp.id, vote_total=9000.0)
 
     return {"map_id": m.id, "baseline_id": baseline.id, "model_id": model.id}
@@ -92,7 +102,10 @@ class TestHolyroodOutputs:
     def test_lists_holyrood_output(self, db: Database) -> None:
         _seed_holyrood(db)
         ctx = build_outputs_context(
-            db, election_type=ElectionType.holyrood_uns, trend_cache_path=None, show_all=True
+            db,
+            election_type=ElectionType.holyrood_uns,
+            trend_cache_path=None,
+            show_all=True,
         )
         assert ctx["total_output_count"] == 1
         assert ctx["outputs"][0]["name"] == "Holyrood UNS 2026-07-05"
@@ -118,7 +131,10 @@ class TestBuildOutputsContext:
     def test_lists_model_outputs_with_counts(self, db: Database) -> None:
         _seed(db)
         ctx = build_outputs_context(
-            db, election_type=ElectionType.model_uns, trend_cache_path=None, show_all=True
+            db,
+            election_type=ElectionType.model_uns,
+            trend_cache_path=None,
+            show_all=True,
         )
         assert ctx["total_output_count"] == 2
         assert len(ctx["outputs"]) == 2
@@ -129,7 +145,10 @@ class TestBuildOutputsContext:
     def test_derives_trend_from_votes_without_cache(self, db: Database) -> None:
         _seed(db)
         ctx = build_outputs_context(
-            db, election_type=ElectionType.model_uns, trend_cache_path=None, show_all=True
+            db,
+            election_type=ElectionType.model_uns,
+            trend_cache_path=None,
+            show_all=True,
         )
         trend = ctx["trend_data"]
         assert trend["labels"] == ["UNS 2026-01-01", "UNS 2026-02-01"]
@@ -204,14 +223,19 @@ class TestDeleteModelOutputs:
         )
         assert deleted == 4
         ctx = build_outputs_context(
-            db, election_type=ElectionType.model_uns, trend_cache_path=None, show_all=True
+            db,
+            election_type=ElectionType.model_uns,
+            trend_cache_path=None,
+            show_all=True,
         )
         assert ctx["total_output_count"] == 1
 
     def test_delete_single_unknown_returns_none(self, db: Database) -> None:
         _seed(db)
         assert (
-            delete_model_output(db, election_id=999_999, election_type=ElectionType.model_uns)
+            delete_model_output(
+                db, election_id=999_999, election_type=ElectionType.model_uns
+            )
             is None
         )
 

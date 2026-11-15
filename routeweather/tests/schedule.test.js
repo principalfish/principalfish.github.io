@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 import {
-  forecastSpan, forecastWindow, fromLocalInputValue, HOUR_MS, latestStartMs, nextWholeHour,
-  toLocalInputValue, windowHours,
+  forecastSpan,
+  forecastWindow,
+  fromLocalInputValue,
+  HOUR_MS,
+  latestStartMs,
+  nextWholeHour,
+  toLocalInputValue,
+  windowHours,
 } from "../js/schedule.js";
 import { FORECAST_HOURS } from "../js/config.js";
 
@@ -10,7 +16,9 @@ import { FORECAST_HOURS } from "../js/config.js";
 // (deleting it if it was unset). Node applies a TZ change immediately.
 function pinTimeZone(zone) {
   const original = process.env.TZ;
-  beforeAll(() => { process.env.TZ = zone; });
+  beforeAll(() => {
+    process.env.TZ = zone;
+  });
   afterAll(() => {
     if (original === undefined) delete process.env.TZ;
     else process.env.TZ = original;
@@ -54,49 +62,51 @@ describe("forecastSpan", () => {
   });
 
   it("keeps a single usable hour", () => {
-    expect(forecastSpan([loc([NaN, NaN, 3, NaN, NaN])]))
-      .toEqual({ startMs: 2 * HOUR_MS, endMs: 2 * HOUR_MS });
+    expect(forecastSpan([loc([NaN, NaN, 3, NaN, NaN])])).toEqual({
+      startMs: 2 * HOUR_MS,
+      endMs: 2 * HOUR_MS,
+    });
   });
 
   it("throws when no hour has data everywhere", () => {
-    expect(() => forecastSpan([loc([1, NaN, NaN, NaN, NaN]), loc([NaN, 2, 3, 4, 5])]))
-      .toThrow(/no forecast data/);
+    expect(() => forecastSpan([loc([1, NaN, NaN, NaN, NaN]), loc([NaN, 2, 3, 4, 5])])).toThrow(
+      /no forecast data/,
+    );
   });
 });
 
 // --- local time, in several zones ---
 
-describe.each([
-  ["America/New_York"],
-  ["Asia/Kolkata"],
-  ["Europe/London"],
-])("local time (TZ=%s)", (zone) => {
-  pinTimeZone(zone);
+describe.each([["America/New_York"], ["Asia/Kolkata"], ["Europe/London"]])(
+  "local time (TZ=%s)",
+  (zone) => {
+    pinTimeZone(zone);
 
-  it("rounds up to the next local hour, moving on from an exact hour", () => {
-    const d = new Date(2026, 9, 26, 9, 20);
-    expect(nextWholeHour(d.getTime())).toBe(new Date(2026, 9, 26, 10, 0).getTime());
-    const exact = new Date(2026, 9, 26, 10, 0).getTime();
-    expect(nextWholeHour(exact)).toBe(new Date(2026, 9, 26, 11, 0).getTime());
-  });
+    it("rounds up to the next local hour, moving on from an exact hour", () => {
+      const d = new Date(2026, 9, 26, 9, 20);
+      expect(nextWholeHour(d.getTime())).toBe(new Date(2026, 9, 26, 10, 0).getTime());
+      const exact = new Date(2026, 9, 26, 10, 0).getTime();
+      expect(nextWholeHour(exact)).toBe(new Date(2026, 9, 26, 11, 0).getTime());
+    });
 
-  it("round-trips local minutes through datetime-local values", () => {
-    const ms = new Date(2026, 0, 5, 7, 3).getTime();
-    expect(toLocalInputValue(ms)).toBe("2026-01-05T07:03");
-    expect(fromLocalInputValue("2026-01-05T07:03")).toBe(ms);
-  });
+    it("round-trips local minutes through datetime-local values", () => {
+      const ms = new Date(2026, 0, 5, 7, 3).getTime();
+      expect(toLocalInputValue(ms)).toBe("2026-01-05T07:03");
+      expect(fromLocalInputValue("2026-01-05T07:03")).toBe(ms);
+    });
 
-  it("drops seconds when formatting", () => {
-    expect(toLocalInputValue(new Date(2026, 0, 5, 7, 3, 59).getTime())).toBe("2026-01-05T07:03");
-  });
+    it("drops seconds when formatting", () => {
+      expect(toLocalInputValue(new Date(2026, 0, 5, 7, 3, 59).getTime())).toBe("2026-01-05T07:03");
+    });
 
-  it("rejects empty and loose input", () => {
-    expect(fromLocalInputValue("")).toBeNaN();
-    expect(fromLocalInputValue("2026-01-05")).toBeNaN();
-    expect(fromLocalInputValue("Jan 5 2026 07:03")).toBeNaN();
-    expect(fromLocalInputValue(undefined)).toBeNaN();
-  });
-});
+    it("rejects empty and loose input", () => {
+      expect(fromLocalInputValue("")).toBeNaN();
+      expect(fromLocalInputValue("2026-01-05")).toBeNaN();
+      expect(fromLocalInputValue("Jan 5 2026 07:03")).toBeNaN();
+      expect(fromLocalInputValue(undefined)).toBeNaN();
+    });
+  },
+);
 
 describe("local time zone offsets", () => {
   describe("Asia/Kolkata (UTC+5:30)", () => {

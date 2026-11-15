@@ -76,9 +76,12 @@ def import_presidential(
     # An elector unit's state is its name with any " CD-N" district suffix stripped, so
     # ME/NE district units group under their parent state.
     return import_us_election(
-        db, data, pres_map,
+        db,
+        data,
+        pres_map,
         election_type=ElectionType.us_presidential,
-        year=year, name=name,
+        year=year,
+        name=name,
         state_for_key=region_for,
         refresh=refresh,
     )
@@ -87,10 +90,23 @@ def import_presidential(
 def main() -> None:
     """CLI entry point: load a US presidential election JSON file into the database."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--file", required=True, type=Path, help="Path to the presidential-YYYY.json file")
-    parser.add_argument("--year", type=int, required=True, help="Election year (e.g. 2024)")
-    parser.add_argument("--name", required=True, help="Election name (e.g. '2024 US Presidential Election')")
-    parser.add_argument("--replace", action="store_true", help="Rebuild the US Presidential map first")
+    parser.add_argument(
+        "--file",
+        required=True,
+        type=Path,
+        help="Path to the presidential-YYYY.json file",
+    )
+    parser.add_argument(
+        "--year", type=int, required=True, help="Election year (e.g. 2024)"
+    )
+    parser.add_argument(
+        "--name",
+        required=True,
+        help="Election name (e.g. '2024 US Presidential Election')",
+    )
+    parser.add_argument(
+        "--replace", action="store_true", help="Rebuild the US Presidential map first"
+    )
     parser.add_argument(
         "--refresh",
         action="store_true",

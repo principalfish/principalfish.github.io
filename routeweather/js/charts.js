@@ -55,9 +55,7 @@
 // the SVG that wraps on a phone.
 
 import * as d3 from "../../site/vendor/d3.v7.esm.js";
-import {
-  asUnits, formatElevation, KM_TO_MI, M_TO_FT, MM_TO_IN, UNIT_LABELS,
-} from "./units.js";
+import { asUnits, formatElevation, KM_TO_MI, M_TO_FT, MM_TO_IN, UNIT_LABELS } from "./units.js";
 import { isFiniteNumber as isNum } from "./display.js";
 import { nearestSpan, timeAtDistance } from "./along-route.js";
 
@@ -121,7 +119,7 @@ function converters(units) {
   return {
     dist: conv(imperial, (km) => km * KM_TO_MI),
     ele: conv(imperial, (m) => m * M_TO_FT),
-    temp: conv(units.temp === "f", (c) => c * 9 / 5 + 32),
+    temp: conv(units.temp === "f", (c) => (c * 9) / 5 + 32),
     wind: conv(units.wind === "mph", (kmh) => kmh * KM_TO_MI),
     rain: conv(units.rain === "in", (mm) => mm * MM_TO_IN),
   };
@@ -136,9 +134,13 @@ const OUTSIDE_LEGEND = {
 // The night shading's legend group, shown when part of the route is dark.
 const NIGHT_LEGEND = {
   name: "Dark",
-  items: [{
-    cls: "night", label: "after sunset / before sunrise (flat horizon)", swatch: "night",
-  }],
+  items: [
+    {
+      cls: "night",
+      label: "after sunset / before sunrise (flat horizon)",
+      swatch: "night",
+    },
+  ],
 };
 
 // Sunrise / sunset marks in the sky strip.
@@ -165,9 +167,10 @@ export function profilePoints(route, samples) {
       else out.push(hi, lo);
     };
     for (const p of points) {
-      const b = totalDistKm > 0
-        ? Math.min(PROFILE_BINS - 1, Math.floor((p.cumDistKm / totalDistKm) * PROFILE_BINS))
-        : 0;
+      const b =
+        totalDistKm > 0
+          ? Math.min(PROFILE_BINS - 1, Math.floor((p.cumDistKm / totalDistKm) * PROFILE_BINS))
+          : 0;
       if (b !== bin) {
         flush();
         bin = b;
@@ -274,34 +277,70 @@ function yDomain(values, include = [], minSpan = 1) {
 function drawElevation(ctx, h) {
   const { route, samples, units, unit, cv, xk, left, right } = ctx;
   const profile = profilePoints(route, samples);
-  const y = d3.scaleLinear().domain(yDomain(profile.map((p) => cv.ele(p.ele)), [], 20))
-    .nice().range([h - ELEV_FOOTROOM_PX, ELEV_HEADROOM_PX]);
+  const y = d3
+    .scaleLinear()
+    .domain(
+      yDomain(
+        profile.map((p) => cv.ele(p.ele)),
+        [],
+        20,
+      ),
+    )
+    .nice()
+    .range([h - ELEV_FOOTROOM_PX, ELEV_HEADROOM_PX]);
   const g = ctx.frame(`Elevation (${unit.ele})`, y);
   if (profile.length === 0) {
-    g.append("text").attr("class", "chart-note")
-      .attr("x", (left + right) / 2).attr("y", h / 2)
-      .attr("text-anchor", "middle").text("No elevation data for this route");
+    g.append("text")
+      .attr("class", "chart-note")
+      .attr("x", (left + right) / 2)
+      .attr("y", h / 2)
+      .attr("text-anchor", "middle")
+      .text("No elevation data for this route");
     return;
   }
   const yAt = (p) => y(cv.ele(p.ele));
-  g.append("path").attr("class", "elev-area")
-    .attr("d", d3.area().x((p) => xk(p.km)).y0(h).y1(yAt)(profile));
-  g.append("path").attr("class", "elev-line")
-    .attr("d", d3.line().x((p) => xk(p.km)).y(yAt)(profile));
+  g.append("path")
+    .attr("class", "elev-area")
+    .attr(
+      "d",
+      d3
+        .area()
+        .x((p) => xk(p.km))
+        .y0(h)
+        .y1(yAt)(profile),
+    );
+  g.append("path")
+    .attr("class", "elev-line")
+    .attr(
+      "d",
+      d3
+        .line()
+        .x((p) => xk(p.km))
+        .y(yAt)(profile),
+    );
 
   const extremes = samples.filter(
     (s) => (s.kind === "peak" || s.kind === "valley") && isNum(s.ele),
   );
   const at = (s) => [xk(s.cumDistKm), y(cv.ele(s.ele))];
-  g.append("g").attr("class", "extremes").selectAll("path").data(extremes).join("path")
+  g.append("g")
+    .attr("class", "extremes")
+    .selectAll("path")
+    .data(extremes)
+    .join("path")
     .attr("class", (s) => `extreme ${s.kind}`)
     .attr("transform", (s) => `translate(${at(s).join(",")})`)
     // Summit ▲ sits above the point, valley ▼ below.
     .attr("d", (s) => (s.kind === "peak" ? "M0,-3 L4,-10 L-4,-10 Z" : "M0,3 L4,10 L-4,10 Z"));
-  g.append("g").attr("class", "extreme-labels").selectAll("text")
-    .data(extremeLabels(extremes, at, units, right)).join("text")
+  g.append("g")
+    .attr("class", "extreme-labels")
+    .selectAll("text")
+    .data(extremeLabels(extremes, at, units, right))
+    .join("text")
     .attr("class", (d) => `extreme-label ${d.kind}`)
-    .attr("x", (d) => d.x).attr("y", (d) => d.y).text((d) => d.text);
+    .attr("x", (d) => d.x)
+    .attr("y", (d) => d.y)
+    .text((d) => d.text);
 }
 
 // Labels for the extremes ("978 m"), just right of each marker, level with
@@ -329,7 +368,11 @@ function drawTemperature(ctx, h) {
   const model = (d) => cv.temp(d.r.model2mTempC);
   const feels = (d) => cv.temp(d.r.feelsLikeC);
   const all = [...rows.map(at), ...rows.map(model), ...rows.map(feels)];
-  const y = d3.scaleLinear().domain(yDomain(all, [], 4)).nice().range([h, 0]);
+  const y = d3
+    .scaleLinear()
+    .domain(yDomain(all, [], 4))
+    .nice()
+    .range([h, 0]);
   const g = ctx.frame(`Temperature (${unit.temp})`, y);
   g.append("path").attr("class", "series s-feels").attr("d", line(y, feels)(rows));
   g.append("path").attr("class", "series s-temp").attr("d", line(y, at)(rows));
@@ -339,9 +382,11 @@ function drawWind(ctx, h) {
   const { rows, unit, cv, line } = ctx;
   const wind = (d) => cv.wind(d.r.windKmh);
   const gust = (d) => cv.wind(d.r.gustKmh);
-  const y = d3.scaleLinear()
+  const y = d3
+    .scaleLinear()
     .domain(yDomain([...rows.map(wind), ...rows.map(gust)], [0], 10))
-    .nice().range([h, 0]);
+    .nice()
+    .range([h, 0]);
   const g = ctx.frame(`Wind (${unit.wind})`, y);
   g.append("path").attr("class", "series s-gust").attr("d", line(y, gust)(rows));
   g.append("path").attr("class", "series s-wind").attr("d", line(y, wind)(rows));
@@ -360,25 +405,53 @@ function drawRain(ctx, h) {
   const { rows, samples, units, unit, cv, xk, totalKm, right } = ctx;
   const rain = (d) => cv.rain(d.r.precipMm);
   const minTop = MIN_RAIN_TOP[units.rain];
-  const y = d3.scaleLinear().domain([0, Math.max(minTop, d3.max(rows, rain) ?? 0)]).nice()
+  const y = d3
+    .scaleLinear()
+    .domain([0, Math.max(minTop, d3.max(rows, rain) ?? 0)])
+    .nice()
     .range([h, 0]);
   const axis = d3.axisLeft(y).ticks(RAIN_TICKS).tickSizeOuter(0);
   const g = ctx.frame(`Rain (${unit.rain})`, y, axis);
 
-  const bars = rainBars(samples, rows.map((d) => d.r), totalKm).map((b) => ({
-    x0: xk(b.fromKm), x1: xk(b.toKm), v: cv.rain(b.mm), stepH: b.stepH,
+  const bars = rainBars(
+    samples,
+    rows.map((d) => d.r),
+    totalKm,
+  ).map((b) => ({
+    x0: xk(b.fromKm),
+    x1: xk(b.toKm),
+    v: cv.rain(b.mm),
+    stepH: b.stepH,
   }));
-  g.append("g").attr("class", "rain-bars").selectAll("rect").data(bars).join("rect")
+  g.append("g")
+    .attr("class", "rain-bars")
+    .selectAll("rect")
+    .data(bars)
+    .join("rect")
     .attr("class", (b) => (b.stepH === 3 ? "s-rain avg" : "s-rain"))
-    .attr("x", (b) => b.x0 + 1).attr("width", (b) => Math.max(1, b.x1 - b.x0 - 2))
-    .attr("y", (b) => y(b.v)).attr("height", (b) => h - y(b.v));
+    .attr("x", (b) => b.x0 + 1)
+    .attr("width", (b) => Math.max(1, b.x1 - b.x0 - 2))
+    .attr("y", (b) => y(b.v))
+    .attr("height", (b) => h - y(b.v));
 
   const yProb = d3.scaleLinear().domain([0, 100]).range([h, 0]);
-  const steps = stepPoints(samples, rows.map((d) => d.r.precipProb), totalKm);
-  const probLine = d3.line().defined((d) => isNum(d.v)).x((d) => xk(d.km)).y((d) => yProb(d.v));
+  const steps = stepPoints(
+    samples,
+    rows.map((d) => d.r.precipProb),
+    totalKm,
+  );
+  const probLine = d3
+    .line()
+    .defined((d) => isNum(d.v))
+    .x((d) => xk(d.km))
+    .y((d) => yProb(d.v));
   g.append("path").attr("class", "prob-line").attr("d", probLine(steps));
-  g.append("text").attr("class", "prob-max").attr("x", right + 3).attr("y", 4)
-    .attr("dominant-baseline", "middle").text("100%");
+  g.append("text")
+    .attr("class", "prob-max")
+    .attr("x", right + 3)
+    .attr("y", 4)
+    .attr("dominant-baseline", "middle")
+    .text("100%");
 }
 
 // Sky: cloud cover as an area against the 0–100 % axis (linear between
@@ -389,29 +462,54 @@ function drawRain(ctx, h) {
 function drawSky(ctx, h) {
   const { rows, samples, xk, totalKm, daylight } = ctx;
   const y = d3.scaleLinear().domain([0, 100]).range([h, 0]);
-  const axis = d3.axisLeft(y).tickValues([0, 50, 100]).tickFormat((v) => `${v}%`)
+  const axis = d3
+    .axisLeft(y)
+    .tickValues([0, 50, 100])
+    .tickFormat((v) => `${v}%`)
     .tickSizeOuter(0);
   const g = ctx.frame("Sky (cloud %, sunshine)", y, axis);
 
   const cloud = (d) => d.r.cloudPct;
-  g.append("path").attr("class", "cloud-area").attr("d", d3.area()
-    .defined((d) => isNum(cloud(d))).x((d) => xk(d.km)).y0(h).y1((d) => y(cloud(d)))(rows));
+  g.append("path")
+    .attr("class", "cloud-area")
+    .attr(
+      "d",
+      d3
+        .area()
+        .defined((d) => isNum(cloud(d)))
+        .x((d) => xk(d.km))
+        .y0(h)
+        .y1((d) => y(cloud(d)))(rows),
+    );
 
   const sun = (d) => d.r.sunMin;
-  const bars = rows.map((d, i) => {
-    const [from, to] = nearestSpan(samples, i, totalKm);
-    return { d, x0: xk(from), x1: xk(to) };
-  }).filter((b) => isNum(sun(b.d)) && sun(b.d) > 0);
+  const bars = rows
+    .map((d, i) => {
+      const [from, to] = nearestSpan(samples, i, totalKm);
+      return { d, x0: xk(from), x1: xk(to) };
+    })
+    .filter((b) => isNum(sun(b.d)) && sun(b.d) > 0);
   const yOf = (b) => y(Math.min(60, sun(b.d)) * (100 / 60));
-  g.append("g").attr("class", "sun-bars").selectAll("rect").data(bars).join("rect")
+  g.append("g")
+    .attr("class", "sun-bars")
+    .selectAll("rect")
+    .data(bars)
+    .join("rect")
     .attr("class", (b) => (b.d.r.sunEstimated ? "s-sun est" : "s-sun"))
-    .attr("x", (b) => b.x0 + 1).attr("width", (b) => Math.max(1, b.x1 - b.x0 - 2))
-    .attr("y", yOf).attr("height", (b) => h - yOf(b));
+    .attr("x", (b) => b.x0 + 1)
+    .attr("width", (b) => Math.max(1, b.x1 - b.x0 - 2))
+    .attr("y", yOf)
+    .attr("height", (b) => h - yOf(b));
 
-  g.append("g").attr("class", "sun-events").selectAll("text")
-    .data(daylight?.events ?? []).join("text")
+  g.append("g")
+    .attr("class", "sun-events")
+    .selectAll("text")
+    .data(daylight?.events ?? [])
+    .join("text")
     .attr("class", (e) => `sun-event-label ${e.kind}`)
-    .attr("x", (e) => xk(e.km)).attr("y", 10).attr("text-anchor", "middle")
+    .attr("x", (e) => xk(e.km))
+    .attr("y", 10)
+    .attr("text-anchor", "middle")
     .text((e) => SUN_EVENT_MARK[e.kind]);
 }
 
@@ -491,28 +589,29 @@ const STRIPS = [
 // sunshine)": the start of the SVG's accessible name, from STRIPS.
 const CHART_LABEL = (() => {
   const names = STRIPS.map((strip) => strip.name);
-  const text = names.length > 1
-    ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`
-    : names[0];
+  const text =
+    names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
   return text.charAt(0).toUpperCase() + text.slice(1);
 })();
 
 // --- factory ---
 
-export function createChartsUI(container, {
-  onSeek = () => {},
-  onScrubStart = () => {},
-  onScrubEnd = () => {},
-  raf,
-  caf,
-} = {}) {
+export function createChartsUI(
+  container,
+  { onSeek = () => {}, onScrubStart = () => {}, onScrubEnd = () => {}, raf, caf } = {},
+) {
   const doc = container.ownerDocument;
   const win = doc.defaultView;
   const hatchId = `rwOutsideHatch${++instanceCount}`;
   // Resize rebuilds wait for the next frame; synchronous where there are none.
-  const requestFrame = raf ?? (win?.requestAnimationFrame
-    ? (cb) => win.requestAnimationFrame(cb)
-    : (cb) => { cb(); return null; });
+  const requestFrame =
+    raf ??
+    (win?.requestAnimationFrame
+      ? (cb) => win.requestAnimationFrame(cb)
+      : (cb) => {
+          cb();
+          return null;
+        });
   const cancelFrame = caf ?? ((id) => win?.cancelAnimationFrame?.(id));
 
   const svgNode = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -566,32 +665,41 @@ export function createChartsUI(container, {
     const groups = STRIPS.map((strip) => strip.legend).filter(Boolean);
     if (hasNight) groups.push(NIGHT_LEGEND);
     if (hasOutside) groups.push(OUTSIDE_LEGEND);
-    legend.replaceChildren(...groups.map(({ name, items }) => {
-      const li = doc.createElement("li");
-      const title = doc.createElement("span");
-      title.className = "legend-strip";
-      title.textContent = name;
-      li.append(title);
-      for (const { cls, label, swatch = "line" } of items) {
-        const item = doc.createElement("span");
-        item.className = "legend-item";
-        const mark = doc.createElement("span");
-        mark.className = `swatch swatch-${swatch} s-${cls}`;
-        mark.setAttribute("aria-hidden", "true");
-        item.append(mark, doc.createTextNode(label));
-        li.append(item);
-      }
-      return li;
-    }));
+    legend.replaceChildren(
+      ...groups.map(({ name, items }) => {
+        const li = doc.createElement("li");
+        const title = doc.createElement("span");
+        title.className = "legend-strip";
+        title.textContent = name;
+        li.append(title);
+        for (const { cls, label, swatch = "line" } of items) {
+          const item = doc.createElement("span");
+          item.className = "legend-item";
+          const mark = doc.createElement("span");
+          mark.className = `swatch swatch-${swatch} s-${cls}`;
+          mark.setAttribute("aria-hidden", "true");
+          item.append(mark, doc.createTextNode(label));
+          li.append(item);
+        }
+        return li;
+      }),
+    );
   }
 
   // Strip frame: title and y axis in a group translated to the strip's top.
   function frame(key, top, title, y, axis) {
-    const g = svg.append("g").attr("class", `strip strip-${key}`)
+    const g = svg
+      .append("g")
+      .attr("class", `strip strip-${key}`)
       .attr("transform", `translate(0,${top})`);
-    g.append("text").attr("class", "strip-title").attr("x", MARGIN.left - 40).attr("y", -5)
+    g.append("text")
+      .attr("class", "strip-title")
+      .attr("x", MARGIN.left - 40)
+      .attr("y", -5)
       .text(title);
-    g.append("g").attr("class", "axis axis-y").attr("transform", `translate(${MARGIN.left},0)`)
+    g.append("g")
+      .attr("class", "axis axis-y")
+      .attr("transform", `translate(${MARGIN.left},0)`)
       .call(axis ?? d3.axisLeft(y).ticks(3).tickSizeOuter(0));
     return g;
   }
@@ -607,7 +715,10 @@ export function createChartsUI(container, {
     totalKm = route.totalDistKm;
     toDisp = cv.dist;
     const right = width - MARGIN.right;
-    x = d3.scaleLinear().domain([0, toDisp(totalKm)]).range([MARGIN.left, right]);
+    x = d3
+      .scaleLinear()
+      .domain([0, toDisp(totalKm)])
+      .range([MARGIN.left, right]);
     const xk = (km) => x(toDisp(km));
 
     let top = MARGIN.top;
@@ -623,56 +734,122 @@ export function createChartsUI(container, {
 
     // Distance gridlines behind everything, then the outside-forecast bands.
     const ticks = x.ticks(Math.max(2, Math.floor((right - MARGIN.left) / 70)));
-    svg.append("g").attr("class", "grid").selectAll("line").data(ticks).join("line")
-      .attr("x1", (d) => x(d)).attr("x2", (d) => x(d)).attr("y1", plotTop).attr("y2", plotBottom);
+    svg
+      .append("g")
+      .attr("class", "grid")
+      .selectAll("line")
+      .data(ticks)
+      .join("line")
+      .attr("x1", (d) => x(d))
+      .attr("x2", (d) => x(d))
+      .attr("y1", plotTop)
+      .attr("y2", plotBottom);
 
     // Dark stretches, behind the outside-forecast hatch, with a line at each
     // sunrise and sunset.
     const daylight = state.daylight ?? null;
     const nightSpans = daylight?.nightSpans ?? [];
-    svg.append("g").attr("class", "night-bands").selectAll("rect").data(nightSpans).join("rect")
-      .attr("x", (d) => xk(d[0])).attr("width", (d) => Math.max(1, xk(d[1]) - xk(d[0])))
-      .attr("y", plotTop).attr("height", plotBottom - plotTop);
-    svg.append("g").attr("class", "sun-event-lines").selectAll("line")
-      .data(daylight?.events ?? []).join("line")
+    svg
+      .append("g")
+      .attr("class", "night-bands")
+      .selectAll("rect")
+      .data(nightSpans)
+      .join("rect")
+      .attr("x", (d) => xk(d[0]))
+      .attr("width", (d) => Math.max(1, xk(d[1]) - xk(d[0])))
+      .attr("y", plotTop)
+      .attr("height", plotBottom - plotTop);
+    svg
+      .append("g")
+      .attr("class", "sun-event-lines")
+      .selectAll("line")
+      .data(daylight?.events ?? [])
+      .join("line")
       .attr("class", (e) => `sun-event-line ${e.kind}`)
-      .attr("x1", (e) => xk(e.km)).attr("x2", (e) => xk(e.km))
-      .attr("y1", plotTop).attr("y2", plotBottom);
+      .attr("x1", (e) => xk(e.km))
+      .attr("x2", (e) => xk(e.km))
+      .attr("y1", plotTop)
+      .attr("y2", plotBottom);
 
     // Hatched, so the band reads as a region even over the grey profile.
-    const hatch = svg.append("defs").append("pattern").attr("id", hatchId)
-      .attr("class", "outside-hatch").attr("patternUnits", "userSpaceOnUse")
-      .attr("width", 6).attr("height", 6).attr("patternTransform", "rotate(45)");
+    const hatch = svg
+      .append("defs")
+      .append("pattern")
+      .attr("id", hatchId)
+      .attr("class", "outside-hatch")
+      .attr("patternUnits", "userSpaceOnUse")
+      .attr("width", 6)
+      .attr("height", 6)
+      .attr("patternTransform", "rotate(45)");
     hatch.append("rect").attr("width", 6).attr("height", 6);
     hatch.append("line").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 6);
     const spans = outsideSpans(samples, results, totalKm);
-    svg.append("g").attr("class", "outside-bands").selectAll("rect").data(spans).join("rect")
-      .attr("x", (d) => xk(d[0])).attr("width", (d) => Math.max(1, xk(d[1]) - xk(d[0])))
-      .attr("y", plotTop).attr("height", plotBottom - plotTop).attr("fill", `url(#${hatchId})`);
+    svg
+      .append("g")
+      .attr("class", "outside-bands")
+      .selectAll("rect")
+      .data(spans)
+      .join("rect")
+      .attr("x", (d) => xk(d[0]))
+      .attr("width", (d) => Math.max(1, xk(d[1]) - xk(d[0])))
+      .attr("y", plotTop)
+      .attr("height", plotBottom - plotTop)
+      .attr("fill", `url(#${hatchId})`);
 
     const rows = samples.map((s, i) => ({ km: s.cumDistKm, s, r: results[i] }));
-    const line = (y, get) => d3.line().defined((d) => isNum(get(d)))
-      .x((d) => xk(d.km)).y((d) => y(get(d)));
+    const line = (y, get) =>
+      d3
+        .line()
+        .defined((d) => isNum(get(d)))
+        .x((d) => xk(d.km))
+        .y((d) => y(get(d)));
     const ctx = {
-      route, samples, rows, units, unit, cv, xk, left: MARGIN.left, right, totalKm, line,
-      timeAt: (km) => timeAtDistance(state, km), daylight,
+      route,
+      samples,
+      rows,
+      units,
+      unit,
+      cv,
+      xk,
+      left: MARGIN.left,
+      right,
+      totalKm,
+      line,
+      timeAt: (km) => timeAtDistance(state, km),
+      daylight,
     };
     STRIPS.forEach((strip, i) => {
       strip.draw({ ...ctx, frame: (...args) => frame(strip.key, tops[i], ...args) }, strip.height);
     });
 
     // Shared distance axis under the last strip.
-    svg.append("g").attr("class", "axis axis-x").attr("transform", `translate(0,${plotBottom})`)
+    svg
+      .append("g")
+      .attr("class", "axis axis-x")
+      .attr("transform", `translate(0,${plotBottom})`)
       .call(d3.axisBottom(x).tickValues(ticks).tickSizeOuter(0));
-    svg.append("text").attr("class", "axis-label").attr("x", right)
-      .attr("y", plotBottom + MARGIN.bottom - 2).attr("text-anchor", "end")
+    svg
+      .append("text")
+      .attr("class", "axis-label")
+      .attr("x", right)
+      .attr("y", plotBottom + MARGIN.bottom - 2)
+      .attr("text-anchor", "end")
       .text(`Distance (${unit.dist})`);
 
     // Cursor on top, then the hit area for pointer seeking.
-    cursorNode = svg.append("line").attr("class", "chart-cursor")
-      .attr("y1", plotTop).attr("y2", plotBottom).node();
-    hitNode = svg.append("rect").attr("class", "chart-hit").attr("x", MARGIN.left)
-      .attr("y", plotTop).attr("width", right - MARGIN.left).attr("height", plotBottom - plotTop)
+    cursorNode = svg
+      .append("line")
+      .attr("class", "chart-cursor")
+      .attr("y1", plotTop)
+      .attr("y2", plotBottom)
+      .node();
+    hitNode = svg
+      .append("rect")
+      .attr("class", "chart-hit")
+      .attr("x", MARGIN.left)
+      .attr("y", plotTop)
+      .attr("width", right - MARGIN.left)
+      .attr("height", plotBottom - plotTop)
       .node();
 
     buildLegend(spans.length > 0, nightSpans.length > 0);
@@ -731,7 +908,11 @@ export function createChartsUI(container, {
     // Primary mouse button / pen contact only.
     if (!touch && event.button > 0) return;
     gesture = {
-      id: event.pointerId, touch, x0: event.clientX, y0: event.clientY, scrubbing: false,
+      id: event.pointerId,
+      touch,
+      x0: event.clientX,
+      y0: event.clientY,
+      scrubbing: false,
     };
     if (!touch) startScrub(event);
   });
@@ -753,8 +934,11 @@ export function createChartsUI(container, {
 
   function update(state) {
     if (destroyed) return;
-    const same = state.route === drawn.route && state.samples === drawn.samples
-      && state.results === drawn.results && state.units === drawn.units;
+    const same =
+      state.route === drawn.route &&
+      state.samples === drawn.samples &&
+      state.results === drawn.results &&
+      state.units === drawn.units;
     if (same) return;
     if (state.route !== drawn.route) cursorKm = 0;
     const { route, samples, results, units } = state;

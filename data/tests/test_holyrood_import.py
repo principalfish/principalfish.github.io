@@ -12,6 +12,7 @@ import re
 import sys
 from datetime import date
 from pathlib import Path
+from typing import Self
 from urllib.request import Request
 
 import pytest
@@ -29,8 +30,8 @@ from importers.polls.holyrood.holyrood_wikipedia_import import (
     fetch_html,
     identify_party_columns,
     main,
-    parse_polls as parse_constituency_polls,
     parse_date_range,
+    parse_polls as parse_constituency_polls,
 )
 from tests.uk_fixtures import HolyroodWorld, add_poll_with_rows, seed_holyrood_world
 
@@ -150,7 +151,18 @@ class TestIdentifyPartyColumns:
     """Tests for identify_party_columns — header → party mapping."""
 
     def test_standard_headers(self) -> None:
-        headers = ["dates", "pollster", "n", "con", "lab", "ld", "snp", "green", "alba", "lead"]
+        headers = [
+            "dates",
+            "pollster",
+            "n",
+            "con",
+            "lab",
+            "ld",
+            "snp",
+            "green",
+            "alba",
+            "lead",
+        ]
         result = identify_party_columns(headers)
         assert result == {
             3: "Conservative",
@@ -377,7 +389,9 @@ class TestElectionReferenceRows:
     """The last-election row is not a poll and must never be imported."""
 
     def test_election_row_is_skipped_and_the_real_poll_is_kept(self) -> None:
-        html = _make_html(_ANALYSIS_HEADER + _ANALYSIS_POLL_ROW + _ANALYSIS_ELECTION_ROW)
+        html = _make_html(
+            _ANALYSIS_HEADER + _ANALYSIS_POLL_ROW + _ANALYSIS_ELECTION_ROW
+        )
         polls = parse_constituency_polls(html)
         assert [p.pollster_name for p in polls] == ["Survation"]
 
@@ -442,7 +456,7 @@ class _FakeWikiResponse:
     def __init__(self, body: bytes) -> None:
         self._body = body
 
-    def __enter__(self) -> "_FakeWikiResponse":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc_info: object) -> None:
@@ -462,7 +476,7 @@ class TestFetchHtml:
 
         def fake_urlopen(req: Request, timeout: int) -> _FakeWikiResponse:
             seen.append((req.get_header("User-agent") or "", timeout))
-            return _FakeWikiResponse("<html>hello</html>".encode())
+            return _FakeWikiResponse(b"<html>hello</html>")
 
         monkeypatch.setattr(wikipedia_common, "urlopen", fake_urlopen)
 
@@ -472,9 +486,7 @@ class TestFetchHtml:
         # Spelled out as a literal (not compared against the module's own
         # HOLYROOD_USER_AGENT constant) so a change to that constant itself
         # — including a wrong one — cannot pass silently.
-        assert seen == [
-            ("Mozilla/5.0 (compatible; holyrood-poll-importer/1.0)", 30)
-        ]
+        assert seen == [("Mozilla/5.0 (compatible; holyrood-poll-importer/1.0)", 30)]
         # And not wikipedia_common's own default User-Agent.
         assert seen[0][0] != wikipedia_common.DEFAULT_USER_AGENT
 
@@ -732,9 +744,7 @@ class TestCommitPolls:
         assert len(rows) == 1
         assert rows[0].party_id == world.party_ids["Labour"]
 
-    def test_poll_with_only_unknown_parties_is_not_inserted(
-        self, db: Database
-    ) -> None:
+    def test_poll_with_only_unknown_parties_is_not_inserted(self, db: Database) -> None:
         world: HolyroodWorld = seed_holyrood_world(db)
         poll = _poll(party_percentages={"Workers Party": 4.0, "TUSC": 1.0})
 

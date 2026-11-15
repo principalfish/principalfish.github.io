@@ -1,12 +1,15 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  isValidTimeZone, sameZonedDay, zoneAbbreviation, zoneLabel, zoneOffsetMs, zonedParts,
+  isValidTimeZone,
+  sameZonedDay,
+  zoneAbbreviation,
+  zoneLabel,
+  zoneOffsetMs,
+  zonedParts,
   zonedTimeToMs,
 } from "../js/zone.js";
-import {
-  fromLocalInputValue, HOUR_MS, nextWholeHour, toLocalInputValue,
-} from "../js/schedule.js";
+import { fromLocalInputValue, HOUR_MS, nextWholeHour, toLocalInputValue } from "../js/schedule.js";
 import { formatArrival, formatClock, formatDateTime } from "../js/display.js";
 
 // Every check names its zone, so none depends on the machine's TZ.
@@ -16,7 +19,13 @@ describe("zonedParts", () => {
     // 09:30 UTC on Mon 26 Oct 2026 is 10:30 in Zurich (CET) and 18:30 in Tokyo.
     const ms = Date.UTC(2026, 9, 26, 9, 30, 15);
     expect(zonedParts(ms, "Europe/Zurich")).toEqual({
-      year: 2026, month: 10, day: 26, hour: 10, minute: 30, second: 15, weekday: 1,
+      year: 2026,
+      month: 10,
+      day: 26,
+      hour: 10,
+      minute: 30,
+      second: 15,
+      weekday: 1,
     });
     expect(zonedParts(ms, "Asia/Tokyo").hour).toBe(18);
   });
@@ -44,18 +53,21 @@ describe("zonedTimeToMs", () => {
   const wall = (year, month, day, hour, minute = 0) => ({ year, month, day, hour, minute });
 
   it("inverts zonedParts away from clock changes", () => {
-    expect(zonedTimeToMs(wall(2026, 10, 26, 10, 30), "Europe/Zurich"))
-      .toBe(Date.UTC(2026, 9, 26, 9, 30));
+    expect(zonedTimeToMs(wall(2026, 10, 26, 10, 30), "Europe/Zurich")).toBe(
+      Date.UTC(2026, 9, 26, 9, 30),
+    );
     expect(zonedTimeToMs(wall(2026, 10, 27, 0), "Asia/Tokyo")).toBe(Date.UTC(2026, 9, 26, 15));
   });
 
   it("reads a repeated hour as the earlier instant", () => {
     // 01:30 on 25 Oct 2026 in London is 00:30 UTC (BST) and 01:30 UTC (GMT).
-    expect(zonedTimeToMs(wall(2026, 10, 25, 1, 30), "Europe/London"))
-      .toBe(Date.UTC(2026, 9, 25, 0, 30));
+    expect(zonedTimeToMs(wall(2026, 10, 25, 1, 30), "Europe/London")).toBe(
+      Date.UTC(2026, 9, 25, 0, 30),
+    );
     // New York falls back on 1 Nov 2026: 01:30 EDT is 05:30 UTC.
-    expect(zonedTimeToMs(wall(2026, 11, 1, 1, 30), "America/New_York"))
-      .toBe(Date.UTC(2026, 10, 1, 5, 30));
+    expect(zonedTimeToMs(wall(2026, 11, 1, 1, 30), "America/New_York")).toBe(
+      Date.UTC(2026, 10, 1, 5, 30),
+    );
   });
 
   it("moves a skipped time on by the gap", () => {
@@ -81,8 +93,9 @@ describe("zone names", () => {
   it("labels a zone with its abbreviation at that time", () => {
     expect(zoneLabel(Date.UTC(2026, 6, 1), "Europe/London")).toBe("Europe/London (BST)");
     expect(zoneLabel(Date.UTC(2026, 11, 1), "Europe/London")).toBe("Europe/London (GMT)");
-    expect(zoneLabel(Date.UTC(2026, 11, 1), "America/New_York"))
-      .toMatch(/^America\/New York \((EST|GMT-5)\)$/);
+    expect(zoneLabel(Date.UTC(2026, 11, 1), "America/New_York")).toMatch(
+      /^America\/New York \((EST|GMT-5)\)$/,
+    );
     expect(zoneLabel(Date.UTC(2026, 11, 1), null)).toBe("");
   });
 

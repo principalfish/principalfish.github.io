@@ -1,7 +1,7 @@
 // Pure + DOM render helpers, ported from static/js/app.js and extended for the
 // static solver's step-through viewer.
 
-export const COLOR_SQUARES = { "0": "⬛", "1": "🟨", "2": "🟩" };
+export const COLOR_SQUARES = { 0: "⬛", 1: "🟨", 2: "🟩" };
 const WORD_LABEL = (b) => `Word ${b + 1}`;
 const fmtExp = (x) => (x == null ? "opener" : `~${x.toFixed(1)}`);
 
@@ -54,7 +54,7 @@ export function mustWithPositions(words, clueRow) {
     for (let p = 0; p < 5; p++) {
       if (words.some((w) => w[p] === ch)) {
         all.push(p + 1);
-        if (!clueRow || clueRow[p] !== "0") meaningful.push(p + 1);
+        if (clueRow?.[p] !== "0") meaningful.push(p + 1);
       }
     }
     const pos = meaningful.length ? meaningful : all;
@@ -66,7 +66,7 @@ export function cantContain(slots, clueGrid, idx) {
   const out = new Set();
   for (let j = 0; j < 5; j++) {
     if (j === idx) continue;
-    const clue = clueGrid && clueGrid[j];
+    const clue = clueGrid?.[j];
     if (typeof clue !== "string") continue;
     const greens = knownGreens(slots[j]);
     for (let p = 0; p < 5; p++) {
@@ -91,7 +91,10 @@ export function buildOverlay(slots, res) {
       let d = false;
       if (solved) ch = feas[0][p];
       else if (greens[p]) ch = greens[p];
-      else if (forced[p]) { ch = forced[p]; d = true; }
+      else if (forced[p]) {
+        ch = forced[p];
+        d = true;
+      }
       letters.push(ch);
       deduced.push(d);
     }
@@ -112,7 +115,7 @@ export function renderWordLists(slotsEl, slots, clueGrid, res) {
   slotsEl.innerHTML = res.perSlotFeasible
     .map((feasible, i) => {
       const label = WORD_LABEL(i);
-      const must = mustWithPositions(feasible, clueGrid && clueGrid[i]);
+      const must = mustWithPositions(feasible, clueGrid?.[i]);
       const cant = cantContain(slots, clueGrid, i);
       return (
         `<div class="slot-result">` +
@@ -130,12 +133,12 @@ export function renderWordLists(slotsEl, slots, clueGrid, res) {
 // Per-word "top 5" block (expanded). `perBoard` = [{board, top:[{word,
 // expRemaining, probe}]}]; `isChosen(board, word)` optionally highlights a pick.
 export function perWordTopHTML(perBoard, isChosen) {
-  if (!perBoard || !perBoard.length) return "";
+  if (!perBoard?.length) return "";
   const secs = perBoard
     .map((pb) => {
       const chips = pb.top
         .map((t, i) => {
-          const chosen = isChosen && isChosen(pb.board, t.word);
+          const chosen = isChosen?.(pb.board, t.word);
           const tag = t.probe ? ` <span class="probe-tag">probe</span>` : "";
           return (
             `<span class="chip${i === 0 ? " top" : ""}${chosen ? " chosen" : ""}">` +
@@ -156,14 +159,21 @@ export function perWordTopHTML(perBoard, isChosen) {
 // ("Suggested" for solver-chosen daily moves, "Played" for user-entered ones).
 // When `asCurrent` is set, the panel is framed as the live state to guess FROM
 // (e.g. right after "Suggest next guess") rather than a played-move recap.
-export function renderStepSuggest(container, K, move, sug, totalMoves, moveVerb = "Suggested", asCurrent = false) {
-  const ranked = sug && sug.solvable && sug.ranked ? sug.ranked : [];
-  const perBoard = sug && sug.perBoard ? sug.perBoard : [];
+export function renderStepSuggest(
+  container,
+  K,
+  move,
+  sug,
+  totalMoves,
+  moveVerb = "Suggested",
+  asCurrent = false,
+) {
+  const ranked = sug?.solvable && sug.ranked ? sug.ranked : [];
+  const perBoard = sug?.perBoard ? sug.perBoard : [];
 
   if (asCurrent) {
     const n = totalMoves;
-    const head =
-      `<h3>Current state <span class="muted small">— ${n} guess${n === 1 ? "" : "es"} entered</span></h3>`;
+    const head = `<h3>Current state <span class="muted small">— ${n} guess${n === 1 ? "" : "es"} entered</span></h3>`;
     const lead = ranked.length
       ? `<p>Next: best guess for each word below.</p>`
       : `<p><span class="good">All words pinned — nothing left to guess.</span></p>`;
@@ -171,9 +181,11 @@ export function renderStepSuggest(container, K, move, sug, totalMoves, moveVerb 
     if (ranked.length) {
       const rows = ranked
         .slice(0, 5)
-        .map((r, i) =>
-          `<tr><td>${i + 1}</td><td><b>${r.word}</b></td><td>${WORD_LABEL(r.board)}</td>` +
-          `<td>${r.setSize}</td><td>${fmtExp(r.expRemaining)}</td></tr>`)
+        .map(
+          (r, i) =>
+            `<tr><td>${i + 1}</td><td><b>${r.word}</b></td><td>${WORD_LABEL(r.board)}</td>` +
+            `<td>${r.setSize}</td><td>${fmtExp(r.expRemaining)}</td></tr>`,
+        )
         .join("");
       tbl =
         `<table class="suggest-table"><thead><tr><th>#</th><th>word</th><th>board</th>` +
@@ -191,7 +203,9 @@ export function renderStepSuggest(container, K, move, sug, totalMoves, moveVerb 
     : `<b>${move.word}</b> on <b>${WORD_LABEL(move.board)}</b> → result ${colorSquares(move.colors)}` +
       (move.expanded
         ? ` <span class="probe-tag expanded">probe·exp</span>`
-        : move.probe ? ` <span class="probe-tag">probe</span>` : "");
+        : move.probe
+          ? ` <span class="probe-tag">probe</span>`
+          : "");
 
   let globalTbl = "";
   if (ranked.length) {
@@ -213,7 +227,7 @@ export function renderStepSuggest(container, K, move, sug, totalMoves, moveVerb 
 
   const perWord = perWordTopHTML(
     perBoard,
-    (b, w) => !move.isClosing && b === move.board && w === move.word
+    (b, w) => !move.isClosing && b === move.board && w === move.word,
   );
 
   container.innerHTML =
@@ -228,14 +242,15 @@ export function renderAutoSolveTable(container, lastAutoSolve, activeIdx, onJump
     .map((m, i) => {
       const probeTag = m.expanded
         ? ` <span class="probe-tag expanded">probe·exp</span>`
-        : m.probe ? ` <span class="probe-tag">probe</span>` : "";
+        : m.probe
+          ? ` <span class="probe-tag">probe</span>`
+          : "";
       const cut = m.isClosing
         ? `<span class="muted small">answer</span>`
         : m.setSize === undefined
           ? `<span class="muted small">…</span>`
           : `<span class="muted small">${m.setSize}→${fmtExp(m.expRemaining)}</span>`;
-      const cls =
-        `move-row${m.isClosing ? " closing" : ""}${m.probe ? " probe" : ""}${i === activeIdx ? " active" : ""}`;
+      const cls = `move-row${m.isClosing ? " closing" : ""}${m.probe ? " probe" : ""}${i === activeIdx ? " active" : ""}`;
       return (
         `<tr class="${cls}" data-move="${i}"><td>${i + 1}</td><td>${WORD_LABEL(m.board)}</td>` +
         `<td><b>${m.word}</b>${probeTag}</td><td>${colorSquares(m.colors)}</td><td>${cut}</td></tr>`
@@ -270,7 +285,7 @@ export function renderAutoSolveTable(container, lastAutoSolve, activeIdx, onJump
     `<p>${note}</p>${playedLine}` +
     `<table class="suggest-table move-table"><thead><tr><th>#</th><th>board</th>` +
     `<th>guess</th><th>result</th><th>cut</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  container
-    .querySelectorAll(".move-row")
-    .forEach((tr) => tr.addEventListener("click", () => onJump(+tr.dataset.move)));
+  container.querySelectorAll(".move-row").forEach((tr) => {
+    tr.addEventListener("click", () => onJump(+tr.dataset.move));
+  });
 }

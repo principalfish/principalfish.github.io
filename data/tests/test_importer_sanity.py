@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 
 from importers.polls.sanity import regional_alignment_problem, regional_basis_problem
@@ -72,7 +74,11 @@ class TestRegionalAlignmentProblem:
 
 
 class TestRegionalBasisProblem:
-    _NATIONAL = {"Conservative": 13.0, "Labour": 14.0, "Reform UK": 17.0}
+    _NATIONAL: ClassVar[dict[str, float]] = {
+        "Conservative": 13.0,
+        "Labour": 14.0,
+        "Reform UK": 17.0,
+    }
 
     def test_regions_on_the_national_basis_are_fine(self) -> None:
         # Mean gap -1.0: regional don't-know rates vary around the national.

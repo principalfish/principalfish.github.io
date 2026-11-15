@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   buildBaselineShares,
   projectSeatUniformSwing,
@@ -7,297 +7,388 @@ import {
   AMSPredict,
   SenatePredict,
   cloneBaselineSeat,
-} from '../features/predict.js';
-import { state, Seat, manifest } from '../state.js';
-import { base64urlEncode, roundShare } from '../utils.js';
+} from "../features/predict.js";
+import { state, Seat, manifest } from "../state.js";
+import { base64urlEncode, roundShare } from "../utils.js";
 
 // A bare aggregate config matching the shape #buildAggregateConfig produces: a key plus
 // an isMember predicate. Tests build these inline rather than going through the manifest.
 const aggregateOf = (key, members) => ({
   key,
   label: key,
-  isMember: (rk) => members.includes(String(rk || '').toLowerCase()),
+  isMember: (rk) => members.includes(String(rk || "").toLowerCase()),
 });
 
-describe('buildBaselineShares', () => {
-  it('computes per-region party shares against regional turnout', () => {
+describe("buildBaselineShares", () => {
+  it("computes per-region party shares against regional turnout", () => {
     const seats = [
-      { region: 'london', turnout: 1000, votes: { labour: 600, conservative: 400 } },
-      { region: 'london', turnout: 1000, votes: { labour: 400, conservative: 600 } },
+      { region: "london", turnout: 1000, votes: { labour: 600, conservative: 400 } },
+      { region: "london", turnout: 1000, votes: { labour: 400, conservative: 600 } },
     ];
-    const shares = buildBaselineShares(seats, ['labour', 'conservative']);
-    expect(shares.get('london').get('labour')).toBe(50);
-    expect(shares.get('london').get('conservative')).toBe(50);
+    const shares = buildBaselineShares(seats, ["labour", "conservative"]);
+    expect(shares.get("london").get("labour")).toBe(50);
+    expect(shares.get("london").get("conservative")).toBe(50);
   });
 
-  it('skips seats with non-positive turnout', () => {
+  it("skips seats with non-positive turnout", () => {
     const seats = [
-      { region: 'london', turnout: 0, votes: { labour: 999 } },
-      { region: 'london', turnout: 1000, votes: { labour: 700, conservative: 300 } },
+      { region: "london", turnout: 0, votes: { labour: 999 } },
+      { region: "london", turnout: 1000, votes: { labour: 700, conservative: 300 } },
     ];
-    const shares = buildBaselineShares(seats, ['labour', 'conservative']);
-    expect(shares.get('london').get('labour')).toBe(70);
+    const shares = buildBaselineShares(seats, ["labour", "conservative"]);
+    expect(shares.get("london").get("labour")).toBe(70);
   });
 
-  it('ignores parties outside modelledPartyKeys', () => {
-    const seats = [{ region: 'london', turnout: 1000, votes: { labour: 500, green: 500 } }];
-    const shares = buildBaselineShares(seats, ['labour']);
-    expect(shares.get('london').get('labour')).toBe(50);
-    expect(shares.get('london').has('green')).toBe(false);
+  it("ignores parties outside modelledPartyKeys", () => {
+    const seats = [{ region: "london", turnout: 1000, votes: { labour: 500, green: 500 } }];
+    const shares = buildBaselineShares(seats, ["labour"]);
+    expect(shares.get("london").get("labour")).toBe(50);
+    expect(shares.get("london").has("green")).toBe(false);
   });
 
-  it('accumulates a synthetic aggregate row across member regions', () => {
+  it("accumulates a synthetic aggregate row across member regions", () => {
     const seats = [
-      { region: 'london', turnout: 1000, votes: { labour: 600, conservative: 400 } },
-      { region: 'southeast', turnout: 1000, votes: { labour: 200, conservative: 800 } },
-      { region: 'scotland', turnout: 1000, votes: { labour: 100, conservative: 900 } },
+      { region: "london", turnout: 1000, votes: { labour: 600, conservative: 400 } },
+      { region: "southeast", turnout: 1000, votes: { labour: 200, conservative: 800 } },
+      { region: "scotland", turnout: 1000, votes: { labour: 100, conservative: 900 } },
     ];
-    const agg = aggregateOf('england', ['london', 'southeast']);
-    const shares = buildBaselineShares(seats, ['labour', 'conservative'], agg);
+    const agg = aggregateOf("england", ["london", "southeast"]);
+    const shares = buildBaselineShares(seats, ["labour", "conservative"], agg);
     // England = london + southeast only (scotland excluded): labour 800/2000 = 40%.
-    expect(shares.get('england').get('labour')).toBe(40);
-    expect(shares.get('england').get('conservative')).toBe(60);
-    expect(shares.has('scotland')).toBe(true);
+    expect(shares.get("england").get("labour")).toBe(40);
+    expect(shares.get("england").get("conservative")).toBe(60);
+    expect(shares.has("scotland")).toBe(true);
   });
 
-  it('trims the smallest non-zero party when rounding pushes a region above 100', () => {
+  it("trims the smallest non-zero party when rounding pushes a region above 100", () => {
     // 33.6% each rounds to 34/34/34 = 102; the first smallest non-zero party is trimmed by 2.
-    const seats = [{ region: 'r', turnout: 1000, votes: { a: 336, b: 336, c: 336 } }];
-    const shares = buildBaselineShares(seats, ['a', 'b', 'c']);
-    const sum = shares.get('r').get('a') + shares.get('r').get('b') + shares.get('r').get('c');
+    const seats = [{ region: "r", turnout: 1000, votes: { a: 336, b: 336, c: 336 } }];
+    const shares = buildBaselineShares(seats, ["a", "b", "c"]);
+    const sum = shares.get("r").get("a") + shares.get("r").get("b") + shares.get("r").get("c");
     expect(sum).toBe(100);
-    expect(shares.get('r').get('a')).toBe(32);
+    expect(shares.get("r").get("a")).toBe(32);
   });
 
-  it('keeps trimming across parties when the overshoot exceeds the smallest party', () => {
+  it("keeps trimming across parties when the overshoot exceeds the smallest party", () => {
     // a/b/c round 0.7 -> 1 each, d rounds 98.7 -> 99: sum 102, overshoot 2 > smallest (1),
     // so the single-party trim is not enough — the loop must zero two parties to reach 100.
-    const seats = [{ region: 'r', turnout: 1000, votes: { a: 7, b: 7, c: 7, d: 987 } }];
-    const shares = buildBaselineShares(seats, ['a', 'b', 'c', 'd']);
-    const parties = shares.get('r');
-    const sum = parties.get('a') + parties.get('b') + parties.get('c') + parties.get('d');
+    const seats = [{ region: "r", turnout: 1000, votes: { a: 7, b: 7, c: 7, d: 987 } }];
+    const shares = buildBaselineShares(seats, ["a", "b", "c", "d"]);
+    const parties = shares.get("r");
+    const sum = parties.get("a") + parties.get("b") + parties.get("c") + parties.get("d");
     expect(sum).toBe(100);
   });
 });
 
-describe('projectSeatUniformSwing', () => {
-  it('applies a positive swing and lifts the winning party', () => {
-    const seat = { seat: 'A', region: 'london', winner: 'conservative', votes: { labour: 450, conservative: 550 }, turnout: 1000 };
-    const swings = new Map([['london', new Map([['labour', 20]])]]);
-    const projected = projectSeatUniformSwing(seat, swings, ['labour', 'conservative']);
-    expect(projected.winner).toBe('labour');
+describe("projectSeatUniformSwing", () => {
+  it("applies a positive swing and lifts the winning party", () => {
+    const seat = {
+      seat: "A",
+      region: "london",
+      winner: "conservative",
+      votes: { labour: 450, conservative: 550 },
+      turnout: 1000,
+    };
+    const swings = new Map([["london", new Map([["labour", 20]])]]);
+    const projected = projectSeatUniformSwing(seat, swings, ["labour", "conservative"]);
+    expect(projected.winner).toBe("labour");
     expect(projected.votes.labour).toBeGreaterThan(projected.votes.conservative);
   });
 
-  it('redistributes the residual share to non-modelled parties pro rata', () => {
-    const seat = { seat: 'A', region: 'london', winner: 'labour', votes: { labour: 500, conservative: 300, green: 200 }, turnout: 1000 };
+  it("redistributes the residual share to non-modelled parties pro rata", () => {
+    const seat = {
+      seat: "A",
+      region: "london",
+      winner: "labour",
+      votes: { labour: 500, conservative: 300, green: 200 },
+      turnout: 1000,
+    };
     // labour swing -20 frees 20pp of residual; green is the only non-modelled party so absorbs it all.
-    const swings = new Map([['london', new Map([['labour', -20]])]]);
-    const projected = projectSeatUniformSwing(seat, swings, ['labour', 'conservative']);
+    const swings = new Map([["london", new Map([["labour", -20]])]]);
+    const projected = projectSeatUniformSwing(seat, swings, ["labour", "conservative"]);
     expect(Math.round(projected.votes.green)).toBe(400);
-    expect(projected.winner).toBe('green');
+    expect(projected.winner).toBe("green");
   });
 
   it('assigns the residual to "others" when no non-modelled party exists', () => {
-    const seat = { seat: 'A', region: 'london', winner: 'labour', votes: { labour: 500, conservative: 500 }, turnout: 1000 };
-    const swings = new Map([['london', new Map([['labour', -20]])]]);
-    const projected = projectSeatUniformSwing(seat, swings, ['labour', 'conservative']);
+    const seat = {
+      seat: "A",
+      region: "london",
+      winner: "labour",
+      votes: { labour: 500, conservative: 500 },
+      turnout: 1000,
+    };
+    const swings = new Map([["london", new Map([["labour", -20]])]]);
+    const projected = projectSeatUniformSwing(seat, swings, ["labour", "conservative"]);
     expect(Math.round(projected.votes.others)).toBe(200);
-    expect(projected.winner).toBe('conservative');
+    expect(projected.winner).toBe("conservative");
   });
 
-  it('falls back to the aggregate swing for a sub-region with no direct entry', () => {
-    const seat = { seat: 'A', region: 'london', winner: 'conservative', votes: { labour: 400, conservative: 600 }, turnout: 1000 };
-    const swings = new Map([['england', new Map([['labour', 30]])]]);
-    const agg = aggregateOf('england', ['london']);
-    const projected = projectSeatUniformSwing(seat, swings, ['labour', 'conservative'], agg);
+  it("falls back to the aggregate swing for a sub-region with no direct entry", () => {
+    const seat = {
+      seat: "A",
+      region: "london",
+      winner: "conservative",
+      votes: { labour: 400, conservative: 600 },
+      turnout: 1000,
+    };
+    const swings = new Map([["england", new Map([["labour", 30]])]]);
+    const agg = aggregateOf("england", ["london"]);
+    const projected = projectSeatUniformSwing(seat, swings, ["labour", "conservative"], agg);
     // labour 40% + aggregate 30 = 70% -> labour now leads.
-    expect(projected.winner).toBe('labour');
+    expect(projected.winner).toBe("labour");
   });
 
-  it('returns an unaltered clone for a zero-turnout seat', () => {
-    const seat = { seat: 'A', region: 'london', winner: 'labour', votes: {}, turnout: 0 };
-    const projected = projectSeatUniformSwing(seat, new Map(), ['labour']);
-    expect(projected.winner).toBe('labour');
+  it("returns an unaltered clone for a zero-turnout seat", () => {
+    const seat = { seat: "A", region: "london", winner: "labour", votes: {}, turnout: 0 };
+    const projected = projectSeatUniformSwing(seat, new Map(), ["labour"]);
+    expect(projected.winner).toBe("labour");
     expect(projected.turnout).toBe(0);
   });
 
-  it('clamps the residual to zero and re-scales when modelled shares exceed 100%', () => {
-    const seat = { seat: 'A', region: 'london', winner: 'labour', votes: { labour: 500, conservative: 500 }, turnout: 1000 };
+  it("clamps the residual to zero and re-scales when modelled shares exceed 100%", () => {
+    const seat = {
+      seat: "A",
+      region: "london",
+      winner: "labour",
+      votes: { labour: 500, conservative: 500 },
+      turnout: 1000,
+    };
     // labour 50% + 60 swing = 110%, conservative 50% -> tracked sum 160% -> otherShare clamped to 0.
-    const swings = new Map([['london', new Map([['labour', 60]])]]);
-    const projected = projectSeatUniformSwing(seat, swings, ['labour', 'conservative']);
+    const swings = new Map([["london", new Map([["labour", 60]])]]);
+    const projected = projectSeatUniformSwing(seat, swings, ["labour", "conservative"]);
     expect(projected.votes.others).toBeUndefined();
     // Re-scaled back down to turnout; party shares re-normalise to 100%.
     expect(projected.turnout).toBeCloseTo(1000, 6);
-    expect(Seat.voteSharePct(projected, 'labour') + Seat.voteSharePct(projected, 'conservative')).toBeCloseTo(100, 6);
-    expect(projected.winner).toBe('labour');
+    expect(
+      Seat.voteSharePct(projected, "labour") + Seat.voteSharePct(projected, "conservative"),
+    ).toBeCloseTo(100, 6);
+    expect(projected.winner).toBe("labour");
   });
 
-  it('preserves turnout (projected votes sum to baseSeat.turnout)', () => {
-    const seat = { seat: 'A', region: 'london', winner: 'labour', votes: { labour: 400, conservative: 400, libdems: 200 }, turnout: 1000 };
-    const swings = new Map([['london', new Map([['labour', 10], ['conservative', -10]])]]);
-    const projected = projectSeatUniformSwing(seat, swings, ['labour', 'conservative']);
+  it("preserves turnout (projected votes sum to baseSeat.turnout)", () => {
+    const seat = {
+      seat: "A",
+      region: "london",
+      winner: "labour",
+      votes: { labour: 400, conservative: 400, libdems: 200 },
+      turnout: 1000,
+    };
+    const swings = new Map([
+      [
+        "london",
+        new Map([
+          ["labour", 10],
+          ["conservative", -10],
+        ]),
+      ],
+    ]);
+    const projected = projectSeatUniformSwing(seat, swings, ["labour", "conservative"]);
     expect(projected.turnout).toBeCloseTo(1000, 6);
   });
 });
 
-describe('dhondtAllocate', () => {
-  it('allocates seats by descending quotient', () => {
-    const votes = new Map([['a', 100], ['b', 80], ['c', 30]]);
-    expect(dhondtAllocate(votes, 3)).toEqual(['a', 'b', 'a']);
+describe("dhondtAllocate", () => {
+  it("allocates seats by descending quotient", () => {
+    const votes = new Map([
+      ["a", 100],
+      ["b", 80],
+      ["c", 30],
+    ]);
+    expect(dhondtAllocate(votes, 3)).toEqual(["a", "b", "a"]);
   });
 
-  it('deducts constituency wins from the divisor so list seats top up', () => {
-    const votes = new Map([['a', 100], ['b', 80], ['c', 30]]);
-    const constWins = new Map([['a', 2]]);
-    expect(dhondtAllocate(votes, 3, constWins)).toEqual(['b', 'b', 'a']);
+  it("deducts constituency wins from the divisor so list seats top up", () => {
+    const votes = new Map([
+      ["a", 100],
+      ["b", 80],
+      ["c", 30],
+    ]);
+    const constWins = new Map([["a", 2]]);
+    expect(dhondtAllocate(votes, 3, constWins)).toEqual(["b", "b", "a"]);
   });
 
-  it('skips parties with non-positive votes', () => {
-    const votes = new Map([['a', 0], ['b', 50]]);
-    expect(dhondtAllocate(votes, 2)).toEqual(['b', 'b']);
+  it("skips parties with non-positive votes", () => {
+    const votes = new Map([
+      ["a", 0],
+      ["b", 50],
+    ]);
+    expect(dhondtAllocate(votes, 2)).toEqual(["b", "b"]);
   });
 
-  it('returns an empty array when no party has positive votes', () => {
+  it("returns an empty array when no party has positive votes", () => {
     // The all-skipped path: bestParty stays null every iteration, so nothing is pushed.
     // #allocateListSeats maps these missing winners to Seats with winner: null.
-    expect(dhondtAllocate(new Map([['a', 0], ['b', -5]]), 2)).toEqual([]);
+    expect(
+      dhondtAllocate(
+        new Map([
+          ["a", 0],
+          ["b", -5],
+        ]),
+        2,
+      ),
+    ).toEqual([]);
   });
 
-  it('returns an empty array when zero seats are requested', () => {
-    expect(dhondtAllocate(new Map([['a', 100]]), 0)).toEqual([]);
+  it("returns an empty array when zero seats are requested", () => {
+    expect(dhondtAllocate(new Map([["a", 100]]), 0)).toEqual([]);
   });
 });
 
-describe('FPTPPredict serialize / deserialize', () => {
+describe("FPTPPredict serialize / deserialize", () => {
   const config = {
-    modelledPartyKeys: ['labour', 'conservative'],
-    gridSections: [{ id: 'gb', columnKeys: ['labour', 'conservative'], regionKeys: ['london'] }],
+    modelledPartyKeys: ["labour", "conservative"],
+    gridSections: [{ id: "gb", columnKeys: ["labour", "conservative"], regionKeys: ["london"] }],
   };
 
   beforeEach(() => {
     // The model reads its baseline + region labels from the global state singleton.
     state.comparisonElectionData = {
       currentSeats: [
-        { seat: 'A', region: 'london', winner: 'labour', votes: { labour: 600, conservative: 400 }, turnout: 1000 },
+        {
+          seat: "A",
+          region: "london",
+          winner: "labour",
+          votes: { labour: 600, conservative: 400 },
+          turnout: 1000,
+        },
       ],
     };
-    state.currentRegionLabelsByKey = new Map([['london', 'London']]);
+    state.currentRegionLabelsByKey = new Map([["london", "London"]]);
   });
 
-  it('round-trips an entered override that differs from baseline', () => {
+  it("round-trips an entered override that differs from baseline", () => {
     const model = new FPTPPredict(2029, config);
-    model.setShare('london', 'labour', 70);
+    model.setShare("london", "labour", 70);
     const payload = model.serialize();
-    expect(payload).not.toBe('');
+    expect(payload).not.toBe("");
 
     const restored = new FPTPPredict(2029, config);
     restored.deserialize(payload);
-    expect(restored.getShare('london', 'labour')).toBe(70);
+    expect(restored.getShare("london", "labour")).toBe(70);
     // An untouched party still reads through to its baseline.
-    expect(restored.getShare('london', 'conservative')).toBe(40);
+    expect(restored.getShare("london", "conservative")).toBe(40);
   });
 
-  it('serializes to an empty payload when no input differs from baseline', () => {
+  it("serializes to an empty payload when no input differs from baseline", () => {
     const model = new FPTPPredict(2029, config);
-    expect(model.serialize()).toBe('');
+    expect(model.serialize()).toBe("");
   });
 
-  it('clearShare reverts a cell to baseline and prunes the empty region map', () => {
+  it("clearShare reverts a cell to baseline and prunes the empty region map", () => {
     const model = new FPTPPredict(2029, config);
-    model.setShare('london', 'labour', 70);
-    expect(model.getShare('london', 'labour')).toBe(70);
+    model.setShare("london", "labour", 70);
+    expect(model.getShare("london", "labour")).toBe(70);
 
-    model.clearShare('london', 'labour');
+    model.clearShare("london", "labour");
     // Baseline labour share is 600/1000 = 60; getShare must fall back to it, not to 0.
-    expect(model.getShare('london', 'labour')).toBe(60);
-    expect(model.currentInputMap().has('london')).toBe(false);
+    expect(model.getShare("london", "labour")).toBe(60);
+    expect(model.currentInputMap().has("london")).toBe(false);
   });
 
-  it('deserialize tolerates a payload whose `r` is not an array', () => {
-    const payload = base64urlEncode(JSON.stringify({ e: 0, r: 'not-an-array' }));
+  it("deserialize tolerates a payload whose `r` is not an array", () => {
+    const payload = base64urlEncode(JSON.stringify({ e: 0, r: "not-an-array" }));
     const model = new FPTPPredict(2029, config);
     expect(() => model.deserialize(payload)).not.toThrow();
     expect(model.currentInputMap().size).toBe(0);
   });
 
-  it('ignores overrides for regions outside the grid', () => {
+  it("ignores overrides for regions outside the grid", () => {
     const model = new FPTPPredict(2029, config);
-    model.setShare('london', 'labour', 65);
+    model.setShare("london", "labour", 65);
     const payload = model.serialize();
 
-    state.currentRegionLabelsByKey = new Map([['london', 'London']]);
-    const restored = new FPTPPredict(2029, { ...config, gridSections: [{ id: 'gb', columnKeys: ['labour', 'conservative'], regionKeys: [] }] });
+    state.currentRegionLabelsByKey = new Map([["london", "London"]]);
+    const restored = new FPTPPredict(2029, {
+      ...config,
+      gridSections: [{ id: "gb", columnKeys: ["labour", "conservative"], regionKeys: [] }],
+    });
     restored.deserialize(payload);
     // 'london' is no longer a valid region in this config, so the override is dropped.
-    expect(restored.currentInputMap().has('london')).toBe(false);
+    expect(restored.currentInputMap().has("london")).toBe(false);
   });
 });
 
-describe('PredictModel.setAggregateExpanded', () => {
+describe("PredictModel.setAggregateExpanded", () => {
   const config = {
-    modelledPartyKeys: ['labour', 'conservative'],
-    aggregate: { key: 'england', label: 'England', excludeRegions: ['scotland'] },
-    gridSections: [{ id: 'gb', columnKeys: ['labour', 'conservative'], containsAggregate: true, extraRegionKeys: ['scotland'] }],
+    modelledPartyKeys: ["labour", "conservative"],
+    aggregate: { key: "england", label: "England", excludeRegions: ["scotland"] },
+    gridSections: [
+      {
+        id: "gb",
+        columnKeys: ["labour", "conservative"],
+        containsAggregate: true,
+        extraRegionKeys: ["scotland"],
+      },
+    ],
   };
 
   beforeEach(() => {
     state.comparisonElectionData = { currentSeats: [] };
     state.currentRegionLabelsByKey = new Map([
-      ['northeastengland', 'North East'],
-      ['northwestengland', 'North West'],
-      ['scotland', 'Scotland'],
+      ["northeastengland", "North East"],
+      ["northwestengland", "North West"],
+      ["scotland", "Scotland"],
     ]);
   });
 
-  it('propagates the aggregate input onto empty member sub-regions and clears the aggregate', () => {
+  it("propagates the aggregate input onto empty member sub-regions and clears the aggregate", () => {
     const model = new FPTPPredict(2029, config);
-    model.setShare('england', 'labour', 55);
+    model.setShare("england", "labour", 55);
     model.setAggregateExpanded(true);
 
     const input = model.currentInputMap();
-    expect(input.has('england')).toBe(false);
-    expect(input.get('northeastengland').get('labour')).toBe(55);
-    expect(input.get('northwestengland').get('labour')).toBe(55);
+    expect(input.has("england")).toBe(false);
+    expect(input.get("northeastengland").get("labour")).toBe(55);
+    expect(input.get("northwestengland").get("labour")).toBe(55);
     // 'scotland' is excluded from the aggregate, so it is not seeded.
-    expect(input.has('scotland')).toBe(false);
+    expect(input.has("scotland")).toBe(false);
   });
 
-  it('drops member sub-region inputs on collapse', () => {
+  it("drops member sub-region inputs on collapse", () => {
     const model = new FPTPPredict(2029, config);
     model.aggregateExpanded = true;
-    model.setShare('northeastengland', 'labour', 40);
+    model.setShare("northeastengland", "labour", 40);
     model.setAggregateExpanded(false);
-    expect(model.currentInputMap().has('northeastengland')).toBe(false);
+    expect(model.currentInputMap().has("northeastengland")).toBe(false);
   });
 
-  it('seeds each member region from its own baseline + the aggregate swing, not the raw national number', () => {
+  it("seeds each member region from its own baseline + the aggregate swing, not the raw national number", () => {
     // Regression for: "change a national %, drill down — every region shows the same number."
     // North East baseline: 60% labour. North West baseline: 40% labour.
     // England (aggregate) baseline: 50% labour (sum of both regions).
     state.comparisonElectionData = {
       currentSeats: [
-        new Seat({ seat: 'NE 1', region: 'northeastengland', winner: 'labour', votes: { labour: 1200, conservative: 800 } }),
-        new Seat({ seat: 'NW 1', region: 'northwestengland', winner: 'conservative', votes: { labour: 800, conservative: 1200 } }),
+        new Seat({
+          seat: "NE 1",
+          region: "northeastengland",
+          winner: "labour",
+          votes: { labour: 1200, conservative: 800 },
+        }),
+        new Seat({
+          seat: "NW 1",
+          region: "northwestengland",
+          winner: "conservative",
+          votes: { labour: 800, conservative: 1200 },
+        }),
       ],
     };
     const model = new FPTPPredict(2029, config);
 
     // Set England labour to 60: swing = 60 − 50 = +10 pp.
-    model.setShare('england', 'labour', 60);
+    model.setShare("england", "labour", 60);
     model.setAggregateExpanded(true);
 
     const input = model.currentInputMap();
-    expect(input.has('england')).toBe(false);
+    expect(input.has("england")).toBe(false);
     // Each region gets its own baseline + the +10 swing, not the flat 60.
-    expect(input.get('northeastengland').get('labour')).toBe(roundShare(60 + 10)); // 70
-    expect(input.get('northwestengland').get('labour')).toBe(roundShare(40 + 10)); // 50
+    expect(input.get("northeastengland").get("labour")).toBe(roundShare(60 + 10)); // 70
+    expect(input.get("northwestengland").get("labour")).toBe(roundShare(40 + 10)); // 50
     // If the old absolute-copy bug were still present both would be 60 (same as the national input).
-    expect(input.get('northeastengland').get('labour')).not.toBe(60);
-    expect(input.get('northwestengland').get('labour')).not.toBe(60);
+    expect(input.get("northeastengland").get("labour")).not.toBe(60);
+    expect(input.get("northwestengland").get("labour")).not.toBe(60);
     // scotland is excluded from the aggregate and must not be seeded.
-    expect(input.has('scotland')).toBe(false);
+    expect(input.has("scotland")).toBe(false);
   });
 });
 
@@ -305,17 +396,34 @@ describe('PredictModel.loadSimulationShares — "Use current forecast"', () => {
   // Two English regions with baselines that lean opposite ways — NE labour, NW conservative —
   // and an England aggregate that sits at an even 50/50 (turnout-weighted sum of both).
   const config = {
-    modelledPartyKeys: ['labour', 'conservative'],
-    aggregate: { key: 'england', label: 'England', excludeRegions: ['scotland'] },
-    gridSections: [{ id: 'gb', columnKeys: ['labour', 'conservative'], containsAggregate: true, extraRegionKeys: ['scotland'] }],
+    modelledPartyKeys: ["labour", "conservative"],
+    aggregate: { key: "england", label: "England", excludeRegions: ["scotland"] },
+    gridSections: [
+      {
+        id: "gb",
+        columnKeys: ["labour", "conservative"],
+        containsAggregate: true,
+        extraRegionKeys: ["scotland"],
+      },
+    ],
   };
 
   // A forecast whose two regions swing hard in *opposite* directions: NE flips to
   // conservative, NW flips to labour. Their average is 50/50 — identical to the England
   // baseline — so the aggregate swing is zero and the collapsed path changes nothing.
   const simulationSeats = [
-    { seat: 'NE 1', region: 'northeastengland', turnout: 100, votes: { labour: 30, conservative: 70 } },
-    { seat: 'NW 1', region: 'northwestengland', turnout: 100, votes: { labour: 70, conservative: 30 } },
+    {
+      seat: "NE 1",
+      region: "northeastengland",
+      turnout: 100,
+      votes: { labour: 30, conservative: 70 },
+    },
+    {
+      seat: "NW 1",
+      region: "northwestengland",
+      turnout: 100,
+      votes: { labour: 70, conservative: 30 },
+    },
   ];
 
   const winnersByRegion = (seats) => Object.fromEntries(seats.map((s) => [s.region, s.winner]));
@@ -323,33 +431,43 @@ describe('PredictModel.loadSimulationShares — "Use current forecast"', () => {
   beforeEach(() => {
     state.comparisonElectionData = {
       currentSeats: [
-        new Seat({ seat: 'NE 1', region: 'northeastengland', winner: 'labour', votes: { labour: 1200, conservative: 800 } }),
-        new Seat({ seat: 'NW 1', region: 'northwestengland', winner: 'conservative', votes: { labour: 800, conservative: 1200 } }),
+        new Seat({
+          seat: "NE 1",
+          region: "northeastengland",
+          winner: "labour",
+          votes: { labour: 1200, conservative: 800 },
+        }),
+        new Seat({
+          seat: "NW 1",
+          region: "northwestengland",
+          winner: "conservative",
+          votes: { labour: 800, conservative: 1200 },
+        }),
       ],
     };
     state.currentRegionLabelsByKey = new Map([
-      ['northeastengland', 'North East'],
-      ['northwestengland', 'North West'],
+      ["northeastengland", "North East"],
+      ["northwestengland", "North West"],
     ]);
   });
 
-  it('collapsed load writes only the aggregate row, collapsing the per-region forecast to one swing', () => {
+  it("collapsed load writes only the aggregate row, collapsing the per-region forecast to one swing", () => {
     const model = new FPTPPredict(2029, config); // aggregateExpanded defaults to false
     model.loadSimulationShares(simulationSeats);
 
     const input = model.currentInputMap();
     // Only the England aggregate is populated; the sub-regions are skipped while collapsed.
-    expect(input.has('england')).toBe(true);
-    expect(input.has('northeastengland')).toBe(false);
-    expect(input.has('northwestengland')).toBe(false);
+    expect(input.has("england")).toBe(true);
+    expect(input.has("northeastengland")).toBe(false);
+    expect(input.has("northwestengland")).toBe(false);
     // The aggregate averages the two opposite regions back to 50/50 — equal to its 50/50
     // baseline — so the swing is zero and every seat keeps its baseline winner.
     const winners = winnersByRegion(model.project());
-    expect(winners.northeastengland).toBe('labour');
-    expect(winners.northwestengland).toBe('conservative');
+    expect(winners.northeastengland).toBe("labour");
+    expect(winners.northwestengland).toBe("conservative");
   });
 
-  it('expanding before load gives each region its own swing, matching the per-region forecast', () => {
+  it("expanding before load gives each region its own swing, matching the per-region forecast", () => {
     // This is what handlePredictApply does (setAggregateExpanded(true) before load) so the
     // predict map reproduces the current prediction instead of one aggregate swing.
     const model = new FPTPPredict(2029, config);
@@ -358,53 +476,94 @@ describe('PredictModel.loadSimulationShares — "Use current forecast"', () => {
 
     const input = model.currentInputMap();
     // Each sub-region now carries its own forecast shares; the aggregate is not written.
-    expect(input.has('england')).toBe(false);
-    expect(input.get('northeastengland').get('labour')).toBe(30);
-    expect(input.get('northwestengland').get('labour')).toBe(70);
+    expect(input.has("england")).toBe(false);
+    expect(input.get("northeastengland").get("labour")).toBe(30);
+    expect(input.get("northwestengland").get("labour")).toBe(70);
     // Per-region swings flip each seat the way the forecast does — the opposite of the
     // collapsed single-swing path, which left both winners unchanged.
     const winners = winnersByRegion(model.project());
-    expect(winners.northeastengland).toBe('conservative');
-    expect(winners.northwestengland).toBe('labour');
+    expect(winners.northeastengland).toBe("conservative");
+    expect(winners.northwestengland).toBe("labour");
   });
 });
 
-describe('AMSPredict.project (two-pass constituency + D\'Hondt list)', () => {
+describe("AMSPredict.project (two-pass constituency + D'Hondt list)", () => {
   const config = {
-    modelledPartyKeys: ['snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform'],
-    aggregate: { key: 'scotland', label: 'Scotland', excludeRegions: [] },
-    tabs: [{ key: 'constituency', label: 'Constituency' }, { key: 'list', label: 'List' }],
-    gridSections: [{ id: 'holyrood', columnKeys: ['snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform'], containsAggregate: true }],
+    modelledPartyKeys: ["snp", "labour", "conservative", "libdems", "scottishgreens", "reform"],
+    aggregate: { key: "scotland", label: "Scotland", excludeRegions: [] },
+    tabs: [
+      { key: "constituency", label: "Constituency" },
+      { key: "list", label: "List" },
+    ],
+    gridSections: [
+      {
+        id: "holyrood",
+        columnKeys: ["snp", "labour", "conservative", "libdems", "scottishgreens", "reform"],
+        containsAggregate: true,
+      },
+    ],
   };
 
   // 3 constituency seats + 7 list seats, all in Glasgow. List seats duplicate the regional
   // list total across every seat (as the real data does).
-  const listVotes = { snp: 5000, labour: 4000, conservative: 2000, scottishgreens: 1500, libdems: 1000 };
+  const listVotes = {
+    snp: 5000,
+    labour: 4000,
+    conservative: 2000,
+    scottishgreens: 1500,
+    libdems: 1000,
+  };
   const buildSeats = () => [
-    new Seat({ seat: 'Glasgow A', region: 'glasgow', winner: 'snp', votes: { snp: 600, labour: 400 } }),
-    new Seat({ seat: 'Glasgow B', region: 'glasgow', winner: 'snp', votes: { snp: 550, labour: 450 } }),
-    new Seat({ seat: 'Glasgow C', region: 'glasgow', winner: 'labour', votes: { labour: 600, snp: 400 } }),
-    ...Array.from({ length: 7 }, (_, i) => new Seat({ seat: `Glasgow List ${i + 1}`, region: 'glasgow', winner: 'snp', votes: { ...listVotes } })),
+    new Seat({
+      seat: "Glasgow A",
+      region: "glasgow",
+      winner: "snp",
+      votes: { snp: 600, labour: 400 },
+    }),
+    new Seat({
+      seat: "Glasgow B",
+      region: "glasgow",
+      winner: "snp",
+      votes: { snp: 550, labour: 450 },
+    }),
+    new Seat({
+      seat: "Glasgow C",
+      region: "glasgow",
+      winner: "labour",
+      votes: { labour: 600, snp: 400 },
+    }),
+    ...Array.from(
+      { length: 7 },
+      (_, i) =>
+        new Seat({
+          seat: `Glasgow List ${i + 1}`,
+          region: "glasgow",
+          winner: "snp",
+          votes: { ...listVotes },
+        }),
+    ),
   ];
 
   beforeEach(() => {
     state.comparisonElectionData = { currentSeats: buildSeats() };
-    state.currentRegionLabelsByKey = new Map([['glasgow', 'Glasgow']]);
+    state.currentRegionLabelsByKey = new Map([["glasgow", "Glasgow"]]);
   });
 
-  it('returns the untouched baseline when no input differs (zero-swing short-circuit)', () => {
+  it("returns the untouched baseline when no input differs (zero-swing short-circuit)", () => {
     const model = new AMSPredict(2026, config);
     const projected = model.project();
     expect(projected).toHaveLength(10);
-    expect(projected.map((s) => s.winner)).toEqual(state.comparisonElectionData.currentSeats.map((s) => s.winner));
+    expect(projected.map((s) => s.winner)).toEqual(
+      state.comparisonElectionData.currentSeats.map((s) => s.winner),
+    );
   });
 
-  it('runs both passes and preserves the seat split when an input drives a swing', () => {
+  it("runs both passes and preserves the seat split when an input drives a swing", () => {
     const model = new AMSPredict(2026, config);
     // A constituency input bypasses the short-circuit and exercises the FPTP pass. Collapsed,
     // input is entered on the 'scotland' aggregate and falls through to its member regions.
-    model.setActiveTab('constituency');
-    model.setShare('scotland', 'labour', 70);
+    model.setActiveTab("constituency");
+    model.setShare("scotland", "labour", 70);
     const projected = model.project();
 
     const consts = projected.filter((s) => !Seat.isList(s));
@@ -412,16 +571,16 @@ describe('AMSPredict.project (two-pass constituency + D\'Hondt list)', () => {
     expect(consts).toHaveLength(3);
     expect(lists).toHaveLength(7);
     // Labour's lifted constituency share should now carry the formerly-SNP seats.
-    expect(consts.every((s) => s.winner === 'labour')).toBe(true);
+    expect(consts.every((s) => s.winner === "labour")).toBe(true);
     // The D'Hondt list pass still assigns a winner to every list seat.
     expect(lists.every((s) => s.winner)).toBe(true);
   });
 
-  it('does not apply constituency swings to list votes when the list ballot is untouched', () => {
+  it("does not apply constituency swings to list votes when the list ballot is untouched", () => {
     const model = new AMSPredict(2026, config);
     // Big labour swing on the constituency ballot only; the list ballot is left at baseline.
-    model.setActiveTab('constituency');
-    model.setShare('scotland', 'labour', 70);
+    model.setActiveTab("constituency");
+    model.setShare("scotland", "labour", 70);
     const lists = model.project().filter((s) => Seat.isList(s));
 
     // List votes must stay at their baseline distribution (SNP 5000 > Labour 4000). Under the
@@ -432,45 +591,71 @@ describe('AMSPredict.project (two-pass constituency + D\'Hondt list)', () => {
   it('folds list seats to "others" when a region has no list votes (D\'Hondt returns nothing)', () => {
     // Edge: list seats with no votes -> #allocateListSeats hits dhondtAllocate([]) -> winners[idx]
     // is undefined -> `winners[idx] || null`, and the Seat constructor then resolves null to 'others'.
-    state.comparisonElectionData = { currentSeats: [
-      new Seat({ seat: 'Glasgow A', region: 'glasgow', winner: 'snp', votes: { snp: 600, labour: 400 } }),
-      new Seat({ seat: 'Glasgow List 1', region: 'glasgow', winner: 'snp', votes: {} }),
-      new Seat({ seat: 'Glasgow List 2', region: 'glasgow', winner: 'snp', votes: {} }),
-    ] };
+    state.comparisonElectionData = {
+      currentSeats: [
+        new Seat({
+          seat: "Glasgow A",
+          region: "glasgow",
+          winner: "snp",
+          votes: { snp: 600, labour: 400 },
+        }),
+        new Seat({ seat: "Glasgow List 1", region: "glasgow", winner: "snp", votes: {} }),
+        new Seat({ seat: "Glasgow List 2", region: "glasgow", winner: "snp", votes: {} }),
+      ],
+    };
     const model = new AMSPredict(2026, config);
-    model.setActiveTab('constituency');
-    model.setShare('scotland', 'labour', 70); // bypass the zero-swing short-circuit
+    model.setActiveTab("constituency");
+    model.setShare("scotland", "labour", 70); // bypass the zero-swing short-circuit
     const lists = model.project().filter((s) => Seat.isList(s));
     expect(lists).toHaveLength(2);
-    expect(lists.every((s) => s.winner === 'others')).toBe(true);
+    expect(lists.every((s) => s.winner === "others")).toBe(true);
   });
 });
 
-describe('AMSPredict.validate (checks every ballot, not just the active tab)', () => {
+describe("AMSPredict.validate (checks every ballot, not just the active tab)", () => {
   const config = {
-    modelledPartyKeys: ['snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform'],
-    aggregate: { key: 'scotland', label: 'Scotland', excludeRegions: [] },
-    tabs: [{ key: 'constituency', label: 'Constituency' }, { key: 'list', label: 'List' }],
-    gridSections: [{ id: 'holyrood', columnKeys: ['snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform'], containsAggregate: true }],
+    modelledPartyKeys: ["snp", "labour", "conservative", "libdems", "scottishgreens", "reform"],
+    aggregate: { key: "scotland", label: "Scotland", excludeRegions: [] },
+    tabs: [
+      { key: "constituency", label: "Constituency" },
+      { key: "list", label: "List" },
+    ],
+    gridSections: [
+      {
+        id: "holyrood",
+        columnKeys: ["snp", "labour", "conservative", "libdems", "scottishgreens", "reform"],
+        containsAggregate: true,
+      },
+    ],
   };
 
   beforeEach(() => {
     state.comparisonElectionData = {
       currentSeats: [
-        new Seat({ seat: 'Glasgow A', region: 'glasgow', winner: 'snp', votes: { snp: 600, labour: 400 } }),
-        new Seat({ seat: 'Glasgow List 1', region: 'glasgow', winner: 'snp', votes: { snp: 5000, labour: 4000 } }),
+        new Seat({
+          seat: "Glasgow A",
+          region: "glasgow",
+          winner: "snp",
+          votes: { snp: 600, labour: 400 },
+        }),
+        new Seat({
+          seat: "Glasgow List 1",
+          region: "glasgow",
+          winner: "snp",
+          votes: { snp: 5000, labour: 4000 },
+        }),
       ],
     };
-    state.currentRegionLabelsByKey = new Map([['glasgow', 'Glasgow']]);
+    state.currentRegionLabelsByKey = new Map([["glasgow", "Glasgow"]]);
   });
 
-  it('flags an over-100% row entered on the inactive (list) ballot', () => {
+  it("flags an over-100% row entered on the inactive (list) ballot", () => {
     const model = new AMSPredict(2026, config);
-    model.setActiveTab('list');
-    model.setShare('scotland', 'snp', 60);
-    model.setShare('scotland', 'labour', 50); // list sum = 110%
+    model.setActiveTab("list");
+    model.setShare("scotland", "snp", 60);
+    model.setShare("scotland", "labour", 50); // list sum = 110%
     // Switch back to constituency: the offending row is now on the inactive tab.
-    model.setActiveTab('constituency');
+    model.setActiveTab("constituency");
 
     const invalid = model.validate();
     expect(invalid.length).toBeGreaterThan(0);
@@ -479,286 +664,421 @@ describe('AMSPredict.validate (checks every ballot, not just the active tab)', (
   });
 });
 
-describe('AMSPredict serialize / deserialize', () => {
+describe("AMSPredict serialize / deserialize", () => {
   const config = {
-    modelledPartyKeys: ['snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform'],
-    aggregate: { key: 'scotland', label: 'Scotland', excludeRegions: [] },
-    tabs: [{ key: 'constituency', label: 'Constituency' }, { key: 'list', label: 'List' }],
-    gridSections: [{ id: 'holyrood', columnKeys: ['snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform'], containsAggregate: true }],
+    modelledPartyKeys: ["snp", "labour", "conservative", "libdems", "scottishgreens", "reform"],
+    aggregate: { key: "scotland", label: "Scotland", excludeRegions: [] },
+    tabs: [
+      { key: "constituency", label: "Constituency" },
+      { key: "list", label: "List" },
+    ],
+    gridSections: [
+      {
+        id: "holyrood",
+        columnKeys: ["snp", "labour", "conservative", "libdems", "scottishgreens", "reform"],
+        containsAggregate: true,
+      },
+    ],
   };
 
   beforeEach(() => {
     state.comparisonElectionData = {
       currentSeats: [
-        new Seat({ seat: 'Glasgow A', region: 'glasgow', winner: 'snp', votes: { snp: 600, labour: 400 } }),
-        new Seat({ seat: 'Glasgow List 1', region: 'glasgow', winner: 'snp', votes: { snp: 5000, labour: 4000, conservative: 2000 } }),
+        new Seat({
+          seat: "Glasgow A",
+          region: "glasgow",
+          winner: "snp",
+          votes: { snp: 600, labour: 400 },
+        }),
+        new Seat({
+          seat: "Glasgow List 1",
+          region: "glasgow",
+          winner: "snp",
+          votes: { snp: 5000, labour: 4000, conservative: 2000 },
+        }),
       ],
     };
-    state.currentRegionLabelsByKey = new Map([['glasgow', 'Glasgow']]);
+    state.currentRegionLabelsByKey = new Map([["glasgow", "Glasgow"]]);
   });
 
-  it('round-trips constituency and list overrides into the correct ballots', () => {
+  it("round-trips constituency and list overrides into the correct ballots", () => {
     const model = new AMSPredict(2026, config);
-    model.setActiveTab('constituency');
-    model.setShare('scotland', 'labour', 60);
-    model.setActiveTab('list');
-    model.setShare('scotland', 'snp', 45);
+    model.setActiveTab("constituency");
+    model.setShare("scotland", "labour", 60);
+    model.setActiveTab("list");
+    model.setShare("scotland", "snp", 45);
     const payload = model.serialize();
-    expect(payload).not.toBe('');
+    expect(payload).not.toBe("");
 
     const restored = new AMSPredict(2026, config);
     restored.deserialize(payload);
-    restored.setActiveTab('constituency');
-    expect(restored.getShare('scotland', 'labour')).toBe(60);
-    restored.setActiveTab('list');
-    expect(restored.getShare('scotland', 'snp')).toBe(45);
+    restored.setActiveTab("constituency");
+    expect(restored.getShare("scotland", "labour")).toBe(60);
+    restored.setActiveTab("list");
+    expect(restored.getShare("scotland", "snp")).toBe(45);
   });
 
-  it('ignores a payload missing the AMS discriminator (h !== 1)', () => {
+  it("ignores a payload missing the AMS discriminator (h !== 1)", () => {
     // An FPTP-shaped payload (no `h`, 3-tuple overrides) must not load into an AMS model.
-    const fptpPayload = base64urlEncode(JSON.stringify({ e: 0, r: [['scotland', 'labour', 60]] }));
+    const fptpPayload = base64urlEncode(JSON.stringify({ e: 0, r: [["scotland", "labour", 60]] }));
     const model = new AMSPredict(2026, config);
     model.deserialize(fptpPayload);
     expect(model.inputMaps().every((m) => m.size === 0)).toBe(true);
   });
 });
 
-describe('SenatePredict (seats-up projection + full-chamber composition)', () => {
+describe("SenatePredict (seats-up projection + full-chamber composition)", () => {
   const config = {
-    modelledPartyKeys: ['democrat', 'republican'],
-    aggregate: { key: 'national', label: 'National', excludeRegions: [] },
-    gridSections: [{ id: 'us', columnKeys: ['democrat', 'republican'], containsAggregate: true }],
-    tabs: [{ key: 'seatsup', label: 'Seats up' }, { key: 'chamber', label: 'Full Senate' }],
+    modelledPartyKeys: ["democrat", "republican"],
+    aggregate: { key: "national", label: "National", excludeRegions: [] },
+    gridSections: [{ id: "us", columnKeys: ["democrat", "republican"], containsAggregate: true }],
+    tabs: [
+      { key: "seatsup", label: "Seats up" },
+      { key: "chamber", label: "Full Senate" },
+    ],
   };
 
   // Baseline = the seats up in 2026 (Class 2), shaped like the 2020 Senate result.
   const buildBaseSeats = () => [
-    new Seat({ seat: 'Alpha', region: 'east', winner: 'republican', votes: { republican: 600, democrat: 400 } }),
-    new Seat({ seat: 'Beta', region: 'east', winner: 'democrat', votes: { democrat: 550, republican: 450 } }),
+    new Seat({
+      seat: "Alpha",
+      region: "east",
+      winner: "republican",
+      votes: { republican: 600, democrat: 400 },
+    }),
+    new Seat({
+      seat: "Beta",
+      region: "east",
+      winner: "democrat",
+      votes: { democrat: 550, republican: 450 },
+    }),
   ];
 
   // Chamber snapshot = all 100 senators; here 3 states covering every class combination. Alpha
   // holds the contested Class-2 seat + a carried-over Class-1 Democrat; Beta a contested Class-2
   // + carried-over Class-3, both Democrat; Gamma has no Class-2 seat (not up in 2026).
   const buildChamberSeats = () => [
-    new Seat({ seat: 'Alpha', region: 'east', winner: 'split', members: [
-      { party: 'republican', name: 'Alpha R', class: 2 },
-      { party: 'democrat', name: 'Alpha D', class: 1 },
-    ] }),
-    new Seat({ seat: 'Beta', region: 'east', winner: 'democrat', members: [
-      { party: 'democrat', name: 'Beta D2', class: 2 },
-      { party: 'democrat', name: 'Beta D3', class: 3 },
-    ] }),
-    new Seat({ seat: 'Gamma', region: 'east', winner: 'republican', members: [
-      { party: 'republican', name: 'Gamma R1', class: 1 },
-      { party: 'republican', name: 'Gamma R3', class: 3 },
-    ] }),
+    new Seat({
+      seat: "Alpha",
+      region: "east",
+      winner: "split",
+      members: [
+        { party: "republican", name: "Alpha R", class: 2 },
+        { party: "democrat", name: "Alpha D", class: 1 },
+      ],
+    }),
+    new Seat({
+      seat: "Beta",
+      region: "east",
+      winner: "democrat",
+      members: [
+        { party: "democrat", name: "Beta D2", class: 2 },
+        { party: "democrat", name: "Beta D3", class: 3 },
+      ],
+    }),
+    new Seat({
+      seat: "Gamma",
+      region: "east",
+      winner: "republican",
+      members: [
+        { party: "republican", name: "Gamma R1", class: 1 },
+        { party: "republican", name: "Gamma R3", class: 3 },
+      ],
+    }),
   ];
 
   beforeEach(() => {
     state.comparisonElectionData = { currentSeats: buildBaseSeats() };
-    state.currentRegionLabelsByKey = new Map([['east', 'East']]);
+    state.currentRegionLabelsByKey = new Map([["east", "East"]]);
     // Class 2 votes in 2026, which is what the chamber merge replaces.
-    manifest.init({ mapModes: { 23: { name: 'us-senate-2024', regions: [], senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 } } } });
-    state.currentElection = { id: '2020-us-senate', mapId: 23 };
+    manifest.init({
+      mapModes: {
+        23: {
+          name: "us-senate-2024",
+          regions: [],
+          senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 },
+        },
+      },
+    });
+    state.currentElection = { id: "2020-us-senate", mapId: 23 };
   });
 
-  afterEach(() => { manifest.init({ mapModes: {} }); state.currentElection = null; });
+  afterEach(() => {
+    manifest.init({ mapModes: {} });
+    state.currentElection = null;
+  });
 
-  it('isMultiMemberView tracks the active output tab', () => {
+  it("isMultiMemberView tracks the active output tab", () => {
     const model = new SenatePredict(2026, config);
     expect(model.isMultiMemberView()).toBe(false);
-    model.setActiveTab('chamber');
+    model.setActiveTab("chamber");
     expect(model.isMultiMemberView()).toBe(true);
   });
 
-  it('seats-up view projects only the contested (Class-2) baseline seats', () => {
+  it("seats-up view projects only the contested (Class-2) baseline seats", () => {
     const model = new SenatePredict(2026, config);
     model.setChamberSeats(buildChamberSeats());
     const projected = model.project();
-    expect(projected.map((s) => s.seat).sort()).toEqual(['Alpha', 'Beta']);
-    expect(projected.find((s) => s.seat === 'Alpha').winner).toBe('republican');
+    expect(projected.map((s) => s.seat).sort()).toEqual(["Alpha", "Beta"]);
+    expect(projected.find((s) => s.seat === "Alpha").winner).toBe("republican");
   });
 
-  it('chamber view merges projected winners with carried-over senators and colours splits', () => {
+  it("chamber view merges projected winners with carried-over senators and colours splits", () => {
     const model = new SenatePredict(2026, config);
     model.setChamberSeats(buildChamberSeats());
-    model.setActiveTab('chamber');
+    model.setActiveTab("chamber");
     const chamber = model.project();
     expect(chamber).toHaveLength(3);
 
     // Alpha: contested Class-2 stays Republican (zero swing) + carried-over Class-1 Democrat -> split.
-    const alpha = chamber.find((s) => s.seat === 'Alpha');
-    expect(alpha.members.find((m) => m.class === 2).party).toBe('republican');
-    expect(alpha.members.find((m) => m.class === 1).party).toBe('democrat');
-    expect(alpha.winner).toBe('split');
+    const alpha = chamber.find((s) => s.seat === "Alpha");
+    expect(alpha.members.find((m) => m.class === 2).party).toBe("republican");
+    expect(alpha.members.find((m) => m.class === 1).party).toBe("democrat");
+    expect(alpha.winner).toBe("split");
 
     // Gamma has no Class-2 seat, so both members carry over untouched.
-    const gamma = chamber.find((s) => s.seat === 'Gamma');
-    expect(gamma.members.map((m) => m.party)).toEqual(['republican', 'republican']);
-    expect(gamma.winner).toBe('republican');
+    const gamma = chamber.find((s) => s.seat === "Gamma");
+    expect(gamma.members.map((m) => m.party)).toEqual(["republican", "republican"]);
+    expect(gamma.winner).toBe("republican");
   });
 
-  it('comparisonSeatsForView targets the 2020 base for seats-up, the current chamber for Full Senate', () => {
+  it("comparisonSeatsForView targets the 2020 base for seats-up, the current chamber for Full Senate", () => {
     const model = new SenatePredict(2026, config);
     model.setChamberSeats(buildChamberSeats());
     // Seats-up: delta is gains vs the 2020 projection baseline (Alpha + Beta).
-    expect(model.comparisonSeatsForView().map((s) => s.seat).sort()).toEqual(['Alpha', 'Beta']);
+    expect(
+      model
+        .comparisonSeatsForView()
+        .map((s) => s.seat)
+        .sort(),
+    ).toEqual(["Alpha", "Beta"]);
     // Full Senate: delta is net change vs the current 100-member chamber (Alpha + Beta + Gamma).
-    model.setActiveTab('chamber');
-    expect(model.comparisonSeatsForView().map((s) => s.seat).sort()).toEqual(['Alpha', 'Beta', 'Gamma']);
+    model.setActiveTab("chamber");
+    expect(
+      model
+        .comparisonSeatsForView()
+        .map((s) => s.seat)
+        .sort(),
+    ).toEqual(["Alpha", "Beta", "Gamma"]);
   });
 
-  it('a swing that flips the contested seat flips it in the chamber composition too', () => {
+  it("a swing that flips the contested seat flips it in the chamber composition too", () => {
     const model = new SenatePredict(2026, config);
     model.setChamberSeats(buildChamberSeats());
-    model.setActiveTab('chamber');
+    model.setActiveTab("chamber");
     // Drive Democrats up nationally (baseline east ~D47/R53); the aggregate swing falls through
     // to every sub-region, flipping Alpha's contested Class-2 seat from R to D.
-    model.setShare('national', 'democrat', 60);
-    model.setShare('national', 'republican', 40);
-    const alpha = model.project().find((s) => s.seat === 'Alpha');
-    expect(alpha.members.find((m) => m.class === 2).party).toBe('democrat');
+    model.setShare("national", "democrat", 60);
+    model.setShare("national", "republican", 40);
+    const alpha = model.project().find((s) => s.seat === "Alpha");
+    expect(alpha.members.find((m) => m.class === 2).party).toBe("democrat");
     // Alpha now has two Democrats (flipped Class-2 + carried-over Class-1) -> solid, not split.
-    expect(alpha.winner).toBe('democrat');
+    expect(alpha.winner).toBe("democrat");
   });
 });
 
-describe('SenatePredict special elections', () => {
+describe("SenatePredict special elections", () => {
   const config = {
-    modelledPartyKeys: ['democrat', 'republican'],
-    aggregate: { key: 'national', label: 'National', excludeRegions: [] },
-    gridSections: [{ id: 'us', columnKeys: ['democrat', 'republican'], containsAggregate: true }],
-    tabs: [{ key: 'seatsup', label: 'Seats up' }, { key: 'chamber', label: 'Full Senate' }],
+    modelledPartyKeys: ["democrat", "republican"],
+    aggregate: { key: "national", label: "National", excludeRegions: [] },
+    gridSections: [{ id: "us", columnKeys: ["democrat", "republican"], containsAggregate: true }],
+    tabs: [
+      { key: "seatsup", label: "Seats up" },
+      { key: "chamber", label: "Full Senate" },
+    ],
   };
 
   // Regular Class-2 baseline (the 2020 cycle): one seat, in its own region so the special's
   // seat can't be confused with it by a region-wide swing.
   const buildBaseSeats = () => [
-    new Seat({ seat: 'Alpha', region: 'east', winner: 'republican', votes: { republican: 600, democrat: 400 } }),
+    new Seat({
+      seat: "Alpha",
+      region: "east",
+      winner: "republican",
+      votes: { republican: 600, democrat: 400 },
+    }),
   ];
 
   // The special's baseline row comes from a different election (the 2022 cycle) — here a
   // heavily Republican Ohio, which pulls the 'west' region baseline with it once added.
   const buildSpecialSeats = () => [
-    new Seat({ seat: 'Ohio', region: 'west', winner: 'republican', votes: { republican: 700, democrat: 300 } }),
+    new Seat({
+      seat: "Ohio",
+      region: "west",
+      winner: "republican",
+      votes: { republican: 700, democrat: 300 },
+    }),
   ];
-  const specials = [{ seat: 'Ohio', class: 3, year: 2026, baselineElectionId: '2022-us-senate' }];
+  const specials = [{ seat: "Ohio", class: 3, year: 2026, baselineElectionId: "2022-us-senate" }];
 
   // Chamber snapshot: Ohio's contested seat is the Class-3 one (the special); Alabama's
   // Class-3 senator is on the regular cycle and must not be touched by the projection.
   const buildChamberSeats = () => [
-    new Seat({ seat: 'Ohio', region: 'west', winner: 'republican', members: [
-      { party: 'republican', name: 'Ohio R3', class: 3 },
-      { party: 'republican', name: 'Ohio R1', class: 1 },
-    ] }),
-    new Seat({ seat: 'Alabama', region: 'west', winner: 'republican', members: [
-      { party: 'republican', name: 'Alabama R3', class: 3 },
-      { party: 'republican', name: 'Alabama R2', class: 2 },
-    ] }),
+    new Seat({
+      seat: "Ohio",
+      region: "west",
+      winner: "republican",
+      members: [
+        { party: "republican", name: "Ohio R3", class: 3 },
+        { party: "republican", name: "Ohio R1", class: 1 },
+      ],
+    }),
+    new Seat({
+      seat: "Alabama",
+      region: "west",
+      winner: "republican",
+      members: [
+        { party: "republican", name: "Alabama R3", class: 3 },
+        { party: "republican", name: "Alabama R2", class: 2 },
+      ],
+    }),
   ];
 
   beforeEach(() => {
     state.comparisonElectionData = { currentSeats: buildBaseSeats() };
-    state.currentRegionLabelsByKey = new Map([['east', 'East'], ['west', 'West']]);
+    state.currentRegionLabelsByKey = new Map([
+      ["east", "East"],
+      ["west", "West"],
+    ]);
   });
 
-  it('adds the special seat to the seats-up projection and its comparison', () => {
+  it("adds the special seat to the seats-up projection and its comparison", () => {
     const model = new SenatePredict(2026, config);
     model.setSpecialSeats(buildSpecialSeats(), specials);
-    expect(model.project().map((s) => s.seat).sort()).toEqual(['Alpha', 'Ohio']);
-    expect(model.comparisonSeatsForView().map((s) => s.seat).sort()).toEqual(['Alpha', 'Ohio']);
+    expect(
+      model
+        .project()
+        .map((s) => s.seat)
+        .sort(),
+    ).toEqual(["Alpha", "Ohio"]);
+    expect(
+      model
+        .comparisonSeatsForView()
+        .map((s) => s.seat)
+        .sort(),
+    ).toEqual(["Alpha", "Ohio"]);
   });
 
-  it('recomputes the ballot baseline over the enlarged base', () => {
+  it("recomputes the ballot baseline over the enlarged base", () => {
     const model = new SenatePredict(2026, config);
-    expect(model.currentBaselineMap().has('west')).toBe(false);
+    expect(model.currentBaselineMap().has("west")).toBe(false);
     model.setSpecialSeats(buildSpecialSeats(), specials);
     // The special's region now has baseline shares, and the national aggregate has absorbed it
     // (1000 R600/D400 + 1000 R700/D300 -> R65/D35).
-    expect(model.currentBaselineMap().get('west').get('republican')).toBe(70);
-    expect(model.currentBaselineMap().get('national').get('republican')).toBe(65);
+    expect(model.currentBaselineMap().get("west").get("republican")).toBe(70);
+    expect(model.currentBaselineMap().get("national").get("republican")).toBe(65);
   });
 
-  it('does not add a special seat already present in the projection base', () => {
+  it("does not add a special seat already present in the projection base", () => {
     const model = new SenatePredict(2026, config);
-    model.setSpecialSeats(buildBaseSeats(), [{ seat: 'Alpha', class: 3, year: 2026 }]);
-    expect(model.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
+    model.setSpecialSeats(buildBaseSeats(), [{ seat: "Alpha", class: 3, year: 2026 }]);
+    expect(model.projectionBase.map((s) => s.seat)).toEqual(["Alpha"]);
   });
 
-  it('chamber view replaces the special state class-3 member but not another state\'s', () => {
+  it("chamber view replaces the special state class-3 member but not another state's", () => {
     const model = new SenatePredict(2026, config);
     model.setChamberSeats(buildChamberSeats());
     model.setSpecialSeats(buildSpecialSeats(), specials);
-    model.setActiveTab('chamber');
+    model.setActiveTab("chamber");
     // Swing nationally to the Democrats (baseline R65/D35 over the enlarged base): the
     // aggregate swing falls through to every region, flipping Ohio's special seat.
-    model.setShare('national', 'democrat', 60);
-    model.setShare('national', 'republican', 40);
+    model.setShare("national", "democrat", 60);
+    model.setShare("national", "republican", 40);
     const chamber = model.project();
 
-    const ohio = chamber.find((s) => s.seat === 'Ohio');
-    expect(ohio.members.find((m) => m.class === 3).party).toBe('democrat');
-    expect(ohio.members.find((m) => m.class === 1).party).toBe('republican');
-    expect(ohio.winner).toBe('split');
+    const ohio = chamber.find((s) => s.seat === "Ohio");
+    expect(ohio.members.find((m) => m.class === 3).party).toBe("democrat");
+    expect(ohio.members.find((m) => m.class === 1).party).toBe("republican");
+    expect(ohio.winner).toBe("split");
 
     // Alabama is not a special state, so its Class-3 senator carries over untouched — only a
     // Class-2 member there could be replaced, and it has no projected seat this cycle.
-    const alabama = chamber.find((s) => s.seat === 'Alabama');
-    expect(alabama.members.map((m) => m.party)).toEqual(['republican', 'republican']);
+    const alabama = chamber.find((s) => s.seat === "Alabama");
+    expect(alabama.members.map((m) => m.party)).toEqual(["republican", "republican"]);
   });
 
-  it('is inert when the special baseline failed to load (no seats handed in)', () => {
+  it("is inert when the special baseline failed to load (no seats handed in)", () => {
     const model = new SenatePredict(2026, config);
     model.setChamberSeats(buildChamberSeats());
     model.setSpecialSeats([], specials);
-    model.setActiveTab('chamber');
-    expect(model.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
-    const ohio = model.project().find((s) => s.seat === 'Ohio');
-    expect(ohio.members.map((m) => m.name)).toEqual(['Ohio R3', 'Ohio R1']);
+    model.setActiveTab("chamber");
+    expect(model.projectionBase.map((s) => s.seat)).toEqual(["Alpha"]);
+    const ohio = model.project().find((s) => s.seat === "Ohio");
+    expect(ohio.members.map((m) => m.name)).toEqual(["Ohio R3", "Ohio R1"]);
   });
 });
 
-describe('uncalled baseline seats', () => {
+describe("uncalled baseline seats", () => {
   // A seat still counting when the baseline was published: the leader is carried as the winner,
   // and the percent counted rides along. Votes so far stand in for the final result.
-  const uncalled = (extra = {}) => new Seat({
-    seat: 'TX-07', region: 'south', winner: 'republican', called: false, pctCounted: 62.5,
-    votes: { republican: 540, democrat: 460 }, ...extra,
-  });
+  const uncalled = (extra = {}) =>
+    new Seat({
+      seat: "TX-07",
+      region: "south",
+      winner: "republican",
+      called: false,
+      pctCounted: 62.5,
+      votes: { republican: 540, democrat: 460 },
+      ...extra,
+    });
   // No votes at all: nothing to project from, so no leader and no winner.
-  const noVotes = () => new Seat({ seat: 'TX-08', region: 'south', called: false, pctCounted: 0, votes: {} });
-  const dropDem = new Map([['south', new Map([['democrat', -20], ['republican', 20]])]]);
-  const flipDem = new Map([['south', new Map([['democrat', 20], ['republican', -20]])]]);
-  const models = ['democrat', 'republican'];
+  const noVotes = () =>
+    new Seat({ seat: "TX-08", region: "south", called: false, pctCounted: 0, votes: {} });
+  const dropDem = new Map([
+    [
+      "south",
+      new Map([
+        ["democrat", -20],
+        ["republican", 20],
+      ]),
+    ],
+  ]);
+  const flipDem = new Map([
+    [
+      "south",
+      new Map([
+        ["democrat", 20],
+        ["republican", -20],
+      ]),
+    ],
+  ]);
+  const models = ["democrat", "republican"];
 
-  it('projects from the votes counted so far and comes out called', () => {
+  it("projects from the votes counted so far and comes out called", () => {
     const projected = projectSeatUniformSwing(uncalled(), flipDem, models);
     expect(projected.called).toBe(true);
     expect(projected.pctCounted).toBeNull();
     // 46% + 20 = 66% Democrat: the swing runs off the partial count's shares.
-    expect(projected.winner).toBe('democrat');
+    expect(projected.winner).toBe("democrat");
     expect(projected.turnout).toBeCloseTo(1000, 6);
   });
 
-  it('keeps the leader when the swing does not overturn it', () => {
+  it("keeps the leader when the swing does not overturn it", () => {
     const projected = projectSeatUniformSwing(uncalled(), dropDem, models);
     expect(projected.called).toBe(true);
-    expect(projected.winner).toBe('republican');
+    expect(projected.winner).toBe("republican");
   });
 
-  it('a zero-swing clone of an uncalled seat is called, with its leader as winner', () => {
+  it("a zero-swing clone of an uncalled seat is called, with its leader as winner", () => {
     const clone = cloneBaselineSeat(uncalled());
     expect(clone.called).toBe(true);
     expect(clone.pctCounted).toBeNull();
-    expect(clone.winner).toBe('republican');
+    expect(clone.winner).toBe("republican");
     expect(clone.votes).toEqual({ republican: 540, democrat: 460 });
   });
 
-  it('a projected clone drops stale candidate rows', () => {
+  it("a projected clone drops stale candidate rows", () => {
     const split = new Seat({
-      seat: 'A', region: 'r', winner: 'democrat', called: false, votes: { republican: 540, democrat: 460 },
-      candidateRows: [{ party: 'democrat', votes: 460, name: 'D' }, { party: 'republican', votes: 400, name: 'R1' }, { party: 'republican', votes: 140, name: 'R2' }],
+      seat: "A",
+      region: "r",
+      winner: "democrat",
+      called: false,
+      votes: { republican: 540, democrat: 460 },
+      candidateRows: [
+        { party: "democrat", votes: 460, name: "D" },
+        { party: "republican", votes: 400, name: "R1" },
+        { party: "republican", votes: 140, name: "R2" },
+      ],
     });
     expect(split.candidateRows).not.toBeNull();
     expect(cloneBaselineSeat(split).candidateRows).toBeNull();
@@ -769,14 +1089,14 @@ describe('uncalled baseline seats', () => {
     expect(tied.winner).toBeNull();
     const clone = cloneBaselineSeat(tied);
     expect(clone.called).toBe(true);
-    expect(clone.winner).toBe('democrat');
+    expect(clone.winner).toBe("democrat");
   });
 
-  it('a seat with no votes stays unprojected, uncalled and without a winner', () => {
+  it("a seat with no votes stays unprojected, uncalled and without a winner", () => {
     const swung = projectSeatUniformSwing(noVotes(), flipDem, models);
     expect(swung.called).toBe(false);
     expect(swung.winner).toBeNull();
-    expect(swung.winner).not.toBe('others');
+    expect(swung.winner).not.toBe("others");
     expect(swung.turnout).toBe(0);
     expect(swung.pctCounted).toBe(0);
     const clone = cloneBaselineSeat(noVotes());
@@ -784,28 +1104,33 @@ describe('uncalled baseline seats', () => {
     expect(clone.winner).toBeNull();
   });
 
-  it('leaves a called seat exactly as published', () => {
-    const calledSeat = new Seat({ seat: 'A', region: 'south', winner: 'democrat', votes: { democrat: 600, republican: 400 } });
+  it("leaves a called seat exactly as published", () => {
+    const calledSeat = new Seat({
+      seat: "A",
+      region: "south",
+      winner: "democrat",
+      votes: { democrat: 600, republican: 400 },
+    });
     const clone = cloneBaselineSeat(calledSeat);
     expect(clone.called).toBe(true);
-    expect(clone.winner).toBe('democrat');
+    expect(clone.winner).toBe("democrat");
     expect(clone).not.toBe(calledSeat);
   });
 
-  it('does not touch the baseline seat itself (the anchor keeps its called:false flags)', () => {
+  it("does not touch the baseline seat itself (the anchor keeps its called:false flags)", () => {
     const base = uncalled();
     projectSeatUniformSwing(base, flipDem, models);
     cloneBaselineSeat(base);
     expect(base.called).toBe(false);
     expect(base.pctCounted).toBe(62.5);
-    expect(base.winner).toBe('republican');
+    expect(base.winner).toBe("republican");
   });
 
-  describe('through a predict model', () => {
+  describe("through a predict model", () => {
     const config = {
       modelledPartyKeys: models,
-      aggregate: { key: 'national', label: 'National', excludeRegions: [] },
-      gridSections: [{ id: 'us', columnKeys: models, containsAggregate: true }],
+      aggregate: { key: "national", label: "National", excludeRegions: [] },
+      gridSections: [{ id: "us", columnKeys: models, containsAggregate: true }],
     };
     let baseline;
 
@@ -813,152 +1138,212 @@ describe('uncalled baseline seats', () => {
       baseline = [
         uncalled(),
         noVotes(),
-        new Seat({ seat: 'TX-09', region: 'south', winner: 'democrat', votes: { democrat: 700, republican: 300 } }),
+        new Seat({
+          seat: "TX-09",
+          region: "south",
+          winner: "democrat",
+          votes: { democrat: 700, republican: 300 },
+        }),
       ];
       state.comparisonElectionData = { currentSeats: baseline };
-      state.currentRegionLabelsByKey = new Map([['south', 'South']]);
+      state.currentRegionLabelsByKey = new Map([["south", "South"]]);
     });
 
-    it('with no swing, an FPTP projection calls the uncalled seat and leaves the empty one alone', () => {
+    it("with no swing, an FPTP projection calls the uncalled seat and leaves the empty one alone", () => {
       const projected = new FPTPPredict(2028, config).project();
       const byName = Object.fromEntries(projected.map((seat) => [seat.seat, seat]));
-      expect(byName['TX-07'].called).toBe(true);
-      expect(byName['TX-07'].winner).toBe('republican');
-      expect(byName['TX-08'].called).toBe(false);
-      expect(byName['TX-08'].winner).toBeNull();
-      expect(byName['TX-09'].called).toBe(true);
+      expect(byName["TX-07"].called).toBe(true);
+      expect(byName["TX-07"].winner).toBe("republican");
+      expect(byName["TX-08"].called).toBe(false);
+      expect(byName["TX-08"].winner).toBeNull();
+      expect(byName["TX-09"].called).toBe(true);
       // Copies, so the projection never aliases the baseline the comparison column reads.
       expect(baseline[0].called).toBe(false);
     });
 
-    it('with a swing, the uncalled seat is projected and called; the empty one stays neutral', () => {
+    it("with a swing, the uncalled seat is projected and called; the empty one stays neutral", () => {
       const model = new FPTPPredict(2028, config);
-      model.setShare('national', 'democrat', 80);
-      model.setShare('national', 'republican', 20);
+      model.setShare("national", "democrat", 80);
+      model.setShare("national", "republican", 20);
       const byName = Object.fromEntries(model.project().map((seat) => [seat.seat, seat]));
-      expect(byName['TX-07'].called).toBe(true);
-      expect(byName['TX-07'].pctCounted).toBeNull();
-      expect(byName['TX-07'].winner).toBe('democrat');
-      expect(byName['TX-08'].called).toBe(false);
-      expect(byName['TX-08'].winner).toBeNull();
+      expect(byName["TX-07"].called).toBe(true);
+      expect(byName["TX-07"].pctCounted).toBeNull();
+      expect(byName["TX-07"].winner).toBe("democrat");
+      expect(byName["TX-08"].called).toBe(false);
+      expect(byName["TX-08"].winner).toBeNull();
     });
 
-    it('a Senate projection with no swing calls its uncalled seat too', () => {
-      const senateConfig = { ...config, tabs: [{ key: 'seatsup', label: 'Seats up' }] };
+    it("a Senate projection with no swing calls its uncalled seat too", () => {
+      const senateConfig = { ...config, tabs: [{ key: "seatsup", label: "Seats up" }] };
       state.comparisonElectionData = { currentSeats: [uncalled(), noVotes()] };
       const projected = new SenatePredict(2028, senateConfig).project();
-      expect(projected.map((seat) => [seat.called, seat.winner])).toEqual([[true, 'republican'], [false, null]]);
+      expect(projected.map((seat) => [seat.called, seat.winner])).toEqual([
+        [true, "republican"],
+        [false, null],
+      ]);
     });
   });
 });
 
-describe('SenatePredict 2028 baselines (regular class and per-seat overrides)', () => {
+describe("SenatePredict 2028 baselines (regular class and per-seat overrides)", () => {
   const config = {
-    modelledPartyKeys: ['democrat', 'republican'],
-    aggregate: { key: 'national', label: 'National', excludeRegions: [] },
-    gridSections: [{ id: 'us', columnKeys: ['democrat', 'republican'], containsAggregate: true }],
-    tabs: [{ key: 'seatsup', label: 'Seats up' }, { key: 'chamber', label: 'Full Senate' }],
+    modelledPartyKeys: ["democrat", "republican"],
+    aggregate: { key: "national", label: "National", excludeRegions: [] },
+    gridSections: [{ id: "us", columnKeys: ["democrat", "republican"], containsAggregate: true }],
+    tabs: [
+      { key: "seatsup", label: "Seats up" },
+      { key: "chamber", label: "Full Senate" },
+    ],
   };
 
   // Class 3 as of 2022: Florida and Ohio both leaned Republican then.
   const classBaseline = () => [
-    new Seat({ seat: 'Georgia', region: 'south', winner: 'democrat', votes: { democrat: 510, republican: 490 } }),
-    new Seat({ seat: 'Florida', region: 'south', winner: 'republican', votes: { republican: 570, democrat: 430 } }),
-    new Seat({ seat: 'Ohio', region: 'midwest', winner: 'republican', votes: { republican: 540, democrat: 460 } }),
+    new Seat({
+      seat: "Georgia",
+      region: "south",
+      winner: "democrat",
+      votes: { democrat: 510, republican: 490 },
+    }),
+    new Seat({
+      seat: "Florida",
+      region: "south",
+      winner: "republican",
+      votes: { republican: 570, democrat: 430 },
+    }),
+    new Seat({
+      seat: "Ohio",
+      region: "midwest",
+      winner: "republican",
+      votes: { republican: 540, democrat: 460 },
+    }),
   ];
   // The 2026 specials, with different splits (and Georgia, which must not be taken from here).
   const overrideSeats = () => [
-    new Seat({ seat: 'Florida', region: 'south', winner: 'republican', votes: { republican: 600, democrat: 400 } }),
-    new Seat({ seat: 'Ohio', region: 'midwest', winner: 'republican', votes: { republican: 520, democrat: 480 } }),
+    new Seat({
+      seat: "Florida",
+      region: "south",
+      winner: "republican",
+      votes: { republican: 600, democrat: 400 },
+    }),
+    new Seat({
+      seat: "Ohio",
+      region: "midwest",
+      winner: "republican",
+      votes: { republican: 520, democrat: 480 },
+    }),
   ];
 
   beforeEach(() => {
     state.comparisonElectionData = { currentSeats: classBaseline() };
-    state.currentRegionLabelsByKey = new Map([['south', 'South'], ['midwest', 'Midwest']]);
+    state.currentRegionLabelsByKey = new Map([
+      ["south", "South"],
+      ["midwest", "Midwest"],
+    ]);
   });
 
-  it('replaces only the named seats of the class baseline', () => {
+  it("replaces only the named seats of the class baseline", () => {
     const model = new SenatePredict(2028, config);
     model.setBaselineOverrides(overrideSeats());
     const votesOf = (name) => model.projectionBase.find((seat) => seat.seat === name).votes;
-    expect(model.projectionBase.map((seat) => seat.seat)).toEqual(['Georgia', 'Florida', 'Ohio']);
-    expect(votesOf('Georgia')).toEqual({ democrat: 510, republican: 490 });
-    expect(votesOf('Florida')).toEqual({ republican: 600, democrat: 400 });
-    expect(votesOf('Ohio')).toEqual({ republican: 520, democrat: 480 });
+    expect(model.projectionBase.map((seat) => seat.seat)).toEqual(["Georgia", "Florida", "Ohio"]);
+    expect(votesOf("Georgia")).toEqual({ democrat: 510, republican: 490 });
+    expect(votesOf("Florida")).toEqual({ republican: 600, democrat: 400 });
+    expect(votesOf("Ohio")).toEqual({ republican: 520, democrat: 480 });
   });
 
-  it('recomputes the ballot baseline from the replaced seats', () => {
+  it("recomputes the ballot baseline from the replaced seats", () => {
     const model = new SenatePredict(2028, config);
     // South before: Georgia 1000 + Florida 1000 -> R 53 (490+570 of 2000).
-    expect(model.currentBaselineMap().get('south').get('republican')).toBe(53);
+    expect(model.currentBaselineMap().get("south").get("republican")).toBe(53);
     model.setBaselineOverrides(overrideSeats());
     // After: Georgia + Florida(2026) -> R 55 (490+600 of 2000, rounded).
-    expect(model.currentBaselineMap().get('south').get('republican')).toBe(55);
-    expect(model.currentBaselineMap().get('midwest').get('republican')).toBe(52);
+    expect(model.currentBaselineMap().get("south").get("republican")).toBe(55);
+    expect(model.currentBaselineMap().get("midwest").get("republican")).toBe(52);
   });
 
-  it('ignores an override seat that is not in the contested class', () => {
+  it("ignores an override seat that is not in the contested class", () => {
     const model = new SenatePredict(2028, config);
     model.setBaselineOverrides([
-      new Seat({ seat: 'Texas', region: 'south', winner: 'republican', votes: { republican: 900, democrat: 100 } }),
+      new Seat({
+        seat: "Texas",
+        region: "south",
+        winner: "republican",
+        votes: { republican: 900, democrat: 100 },
+      }),
     ]);
-    expect(model.projectionBase.map((seat) => seat.seat)).toEqual(['Georgia', 'Florida', 'Ohio']);
+    expect(model.projectionBase.map((seat) => seat.seat)).toEqual(["Georgia", "Florida", "Ohio"]);
   });
 
-  it('is a no-op when nothing loaded', () => {
+  it("is a no-op when nothing loaded", () => {
     const model = new SenatePredict(2028, config);
     const before = model.projectionBase;
     model.setBaselineOverrides([]);
     expect(model.projectionBase).toBe(before);
   });
 
-  it('projects the overridden seats off their 2026 result and the rest off 2022', () => {
+  it("projects the overridden seats off their 2026 result and the rest off 2022", () => {
     const model = new SenatePredict(2028, config);
     model.setBaselineOverrides(overrideSeats());
     const projected = model.project();
-    const ohio = projected.find((seat) => seat.seat === 'Ohio');
-    const georgia = projected.find((seat) => seat.seat === 'Georgia');
+    const ohio = projected.find((seat) => seat.seat === "Ohio");
+    const georgia = projected.find((seat) => seat.seat === "Georgia");
     // Zero swing reproduces the baselines exactly.
     expect(ohio.votes).toEqual({ republican: 520, democrat: 480 });
     expect(georgia.votes).toEqual({ democrat: 510, republican: 490 });
   });
 
-  describe('regular class in the chamber view', () => {
+  describe("regular class in the chamber view", () => {
     const chamberSeats = () => [
-      new Seat({ seat: 'Georgia', region: 'south', winner: 'split', members: [
-        { party: 'democrat', name: 'GA D2', class: 2 },
-        { party: 'democrat', name: 'GA D3', class: 3 },
-      ] }),
+      new Seat({
+        seat: "Georgia",
+        region: "south",
+        winner: "split",
+        members: [
+          { party: "democrat", name: "GA D2", class: 2 },
+          { party: "democrat", name: "GA D3", class: 3 },
+        ],
+      }),
     ];
 
-    afterEach(() => { manifest.init({ mapModes: {} }); state.currentElection = null; });
+    afterEach(() => {
+      manifest.init({ mapModes: {} });
+      state.currentElection = null;
+    });
 
-    it('replaces the member of the class up in the next election year, not Class 2', () => {
-      manifest.init({ mapModes: { 23: { name: 'us-senate-2024', regions: [], senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 } } } });
-      state.currentElection = { id: '2022-us-senate', mapId: 23 };
+    it("replaces the member of the class up in the next election year, not Class 2", () => {
+      manifest.init({
+        mapModes: {
+          23: {
+            name: "us-senate-2024",
+            regions: [],
+            senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 },
+          },
+        },
+      });
+      state.currentElection = { id: "2022-us-senate", mapId: 23 };
       const model = new SenatePredict(2028, config);
       expect(model.regularClass).toBe(3);
       model.setChamberSeats(chamberSeats());
-      model.setActiveTab('chamber');
+      model.setActiveTab("chamber");
       // Georgia's baseline is D 51%: zero swing keeps the Democrat as projected winner.
-      model.setShare('national', 'democrat', 30);
-      model.setShare('national', 'republican', 70);
-      const georgia = model.project().find((seat) => seat.seat === 'Georgia');
-      expect(georgia.members.find((member) => member.class === 3).party).toBe('republican');
-      expect(georgia.members.find((member) => member.class === 2).name).toBe('GA D2');
+      model.setShare("national", "democrat", 30);
+      model.setShare("national", "republican", 70);
+      const georgia = model.project().find((seat) => seat.seat === "Georgia");
+      expect(georgia.members.find((member) => member.class === 3).party).toBe("republican");
+      expect(georgia.members.find((member) => member.class === 2).name).toBe("GA D2");
     });
 
-    it('has no regular class without a class cycle, so the chamber view replaces no regular member', () => {
-      manifest.init({ mapModes: { 23: { name: 'us-senate-2024', regions: [] } } });
-      state.currentElection = { id: '2022-us-senate', mapId: 23 };
+    it("has no regular class without a class cycle, so the chamber view replaces no regular member", () => {
+      manifest.init({ mapModes: { 23: { name: "us-senate-2024", regions: [] } } });
+      state.currentElection = { id: "2022-us-senate", mapId: 23 };
       const model = new SenatePredict(2028, config);
       expect(model.regularClass).toBeNull();
       model.setChamberSeats(chamberSeats());
-      model.setActiveTab('chamber');
-      model.setShare('national', 'democrat', 30);
-      model.setShare('national', 'republican', 70);
-      const georgia = model.project().find((seat) => seat.seat === 'Georgia');
-      expect(georgia.members.map((member) => member.name)).toEqual(['GA D2', 'GA D3']);
+      model.setActiveTab("chamber");
+      model.setShare("national", "democrat", 30);
+      model.setShare("national", "republican", 70);
+      const georgia = model.project().find((seat) => seat.seat === "Georgia");
+      expect(georgia.members.map((member) => member.name)).toEqual(["GA D2", "GA D3"]);
     });
   });
 });

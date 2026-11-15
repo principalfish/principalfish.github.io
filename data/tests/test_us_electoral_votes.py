@@ -55,10 +55,10 @@ class TestEvFor:
     """ev_for: per-era lookups and ME/NE special cases."""
 
     def test_california_by_era(self) -> None:
-        assert us_ev.ev_for("California", 1964) == 40   # 1960 census
-        assert us_ev.ev_for("California", 1972) == 45   # 1970 census
-        assert us_ev.ev_for("California", 1984) == 47   # 1980 census
-        assert us_ev.ev_for("California", 2004) == 55   # 2000 census
+        assert us_ev.ev_for("California", 1964) == 40  # 1960 census
+        assert us_ev.ev_for("California", 1972) == 45  # 1970 census
+        assert us_ev.ev_for("California", 1984) == 47  # 1980 census
+        assert us_ev.ev_for("California", 2004) == 55  # 2000 census
         assert us_ev.ev_for("California", 2012) == 55
         assert us_ev.ev_for("California", 2024) == 54
 
@@ -84,7 +84,7 @@ class TestEvFor:
         # The 2000 election ran on the 1990-census apportionment (one cycle behind the
         # count), not the 2000-census values used from 2004 on — this is what makes the
         # 2000 map tally to Bush 271 / Gore 267 rather than 278 / 260.
-        assert us_ev.ev_for("New York", 2000) == 33   # 33 (1990) vs 31 (2000 census)
+        assert us_ev.ev_for("New York", 2000) == 33  # 33 (1990) vs 31 (2000 census)
         assert us_ev.ev_for("California", 2000) == 54  # 54 (1990) vs 55 (2000 census)
         assert us_ev.ev_for("Pennsylvania", 2000) == 23
 
@@ -189,7 +189,9 @@ class TestEvByEraTables:
         # 49 whole units (48 non-ME/NE states + DC) at 529 EVs, +ME(4)+NE(5) = 538.
         for era, table in us_ev.EV_BY_ERA.items():
             assert len(table) == 49, f"era {era} has {len(table)} units, expected 49"
-            assert sum(table.values()) == 529, f"era {era} sums to {sum(table.values())}, expected 529"
+            assert sum(table.values()) == 529, (
+                f"era {era} sums to {sum(table.values())}, expected 529"
+            )
 
     def test_every_era_excludes_me_ne(self) -> None:
         # Maine and Nebraska are never in the per-era table; they are special-cased.

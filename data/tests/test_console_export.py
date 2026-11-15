@@ -22,12 +22,7 @@ from console.paths import EXPORT_ELECTION_SCRIPT
 from console.sections import SECTIONS
 from console.shared import runner as script_runner
 from console.us.models import MODEL_RUN_LOCK
-from tests.console_fixtures import (  # noqa: F401  (pytest fixtures)
-    app,
-    command_line,
-    flashes,
-    flashes_on_page,
-)
+from tests.console_fixtures import command_line, flashes, flashes_on_page
 
 _CROSS_SITE = {"Sec-Fetch-Site": "cross-site"}
 _CONTENT_LABELS = ("Results", "Current forecast", "Metadata (parties and regions)")
@@ -81,7 +76,7 @@ def export(monkeypatch: pytest.MonkeyPatch) -> Iterator[RecordingExport]:
 
 
 @pytest.fixture()
-def client(app: Flask) -> FlaskClient[Response]:  # noqa: F811
+def client(app: Flask) -> FlaskClient[Response]:
     return app.test_client()
 
 
@@ -501,9 +496,7 @@ class TestNavigation:
         # when the post is refused.
         pages = [
             client.get("/export").get_data(as_text=True),
-            client.post("/export", data={"sections": ["house"]}).get_data(
-                as_text=True
-            ),
+            client.post("/export", data={"sections": ["house"]}).get_data(as_text=True),
         ]
 
         for body in pages:

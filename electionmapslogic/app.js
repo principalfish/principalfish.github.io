@@ -12,14 +12,8 @@
 // module, so a page that registers no features (e.g. the US page today) bundles none of that
 // code, and which features run is manifest-driven rather than hard-coded in the entry.
 
-import {
-  state,
-  manifest,
-  page,
-  initState,
-  buildRouteSearchParams,
-} from './state.js';
-import { fetchJson } from './files.js';
+import { state, manifest, page, initState, buildRouteSearchParams } from "./state.js";
+import { fetchJson } from "./files.js";
 import { activateUncertaintyView } from "./uncertainty-controller.js";
 import {
   renderHeader,
@@ -32,11 +26,11 @@ import {
   setElectionPreDataFetch,
   wireInit,
   registerMapInitHook,
-} from './dom.js';
+} from "./dom.js";
 
 // Base path for data fetches. Page-relative by default ('data' → /<page>/data); a page may
 // set page.dataBase to read a different directory.
-const DATA_BASE = page.dataBase || 'data';
+const DATA_BASE = page.dataBase || "data";
 
 /**
  * @typedef {object} FeatureModule
@@ -86,7 +80,7 @@ function enabledFeatures(featureModules) {
  */
 async function initPage(featureModules) {
   // Fetch 1: manifest — election list, parliament config, file paths, party/region lookup data
-  const view = new URLSearchParams(window.location.search).get('view') || 'election';
+  const view = new URLSearchParams(window.location.search).get("view") || "election";
   await initState(await fetchJson(`${DATA_BASE}/map-modes.json`), view);
 
   // Resolve which registered features this page actually enables, then switch them on:
@@ -99,8 +93,8 @@ async function initPage(featureModules) {
 
   // If the URL requested a feature view this page doesn't enable (e.g. ?view=predict on the
   // US page), degrade to the election view rather than rendering a half-wired feature.
-  if (state.view === 'predict' && !features.predict) state.view = 'election';
-  if (state.view === 'polltracker' && !features.pollTracker) state.view = 'election';
+  if (state.view === "predict" && !features.predict) state.view = "election";
+  if (state.view === "polltracker" && !features.pollTracker) state.view = "election";
 
   renderPageTitle();
   trackVirtualPageView();
@@ -108,11 +102,11 @@ async function initPage(featureModules) {
   // Render early with the election name only — subtitle will be overwritten with full summary
   // text (majority / hung parliament) once election results have loaded below.
   renderHeader();
-  if (state.view === 'polltracker') {
+  if (state.view === "polltracker") {
     await features.pollTracker.activate();
   } else {
     await activateElection(features);
-    if (state.view === 'predict') await features.predict.activate();
+    if (state.view === "predict") await features.predict.activate();
   }
 }
 
@@ -135,14 +129,16 @@ async function activateElection(features) {
   // `getBaseElection`, which handles the feature-gate fallback (demoting view to 'election')
   // and the manifest-driven baseline lookup. A null return means baseline isn't configured.
   let fetchElection;
-  if (state.view === 'predict' && features.predict?.getBaseElection) {
+  if (state.view === "predict" && features.predict?.getBaseElection) {
     fetchElection = features.predict.getBaseElection();
     // getBaseElection demotes the view to 'election' (returning currentElection) when predict
     // isn't a feature; a null return here means predict IS configured but its baseline election
     // is missing/unresolvable. Fail with a clear message rather than letting resolveElectionFiles
     // throw an opaque TypeError on the null.
-    if (state.view === 'predict' && !fetchElection) {
-      throw new Error(`Predict baseline election is not configured or resolvable for parliament '${state.currentParliament}'`);
+    if (state.view === "predict" && !fetchElection) {
+      throw new Error(
+        `Predict baseline election is not configured or resolvable for parliament '${state.currentParliament}'`,
+      );
     }
   } else {
     fetchElection = state.currentElection;
@@ -153,14 +149,18 @@ async function activateElection(features) {
   const requestedElection = state.currentElection;
   const requestedParliament = state.currentParliament;
   const requestedView = state.view;
-  const includeComparison = state.view !== 'predict' && comparisonDataFile;
+  const includeComparison = state.view !== "predict" && comparisonDataFile;
   const [mapData, resultsData, comparisonData] = await Promise.all([
     fetchJson(`${DATA_BASE}/${mapFile}`),
     fetchJson(`${DATA_BASE}/${dataFile}`),
     includeComparison ? fetchJson(`${DATA_BASE}/${comparisonDataFile}`) : Promise.resolve(null),
   ]);
-  if (state.currentElection !== requestedElection || state.currentParliament !== requestedParliament
-      || state.view !== requestedView) return;
+  if (
+    state.currentElection !== requestedElection ||
+    state.currentParliament !== requestedParliament ||
+    state.view !== requestedView
+  )
+    return;
 
   // Wire results into state. Predict mode points both electionData and
   // comparisonElectionData at the baseline so the initial render shows it without
@@ -168,7 +168,7 @@ async function activateElection(features) {
   // shared `?predict=` scenario is present.
   state.setMapData(mapData);
   state.setElectionData(resultsData, fetchElection?.name ?? null);
-  if (state.view === 'predict') {
+  if (state.view === "predict") {
     state.setComparisonElectionData(resultsData, fetchElection?.name ?? null);
   } else if (comparisonData) {
     state.setComparisonElectionData(comparisonData);
@@ -181,25 +181,29 @@ async function activateElection(features) {
   renderMap();
   syncRightPanelHeight();
 
-  if (state.view === 'election') {
+  if (state.view === "election") {
     for (const feature of Object.values(features)) {
       await feature.activateElection?.();
     }
     await activateUncertaintyView();
   }
 
-  if (state.currentElection !== requestedElection || state.currentParliament !== requestedParliament
-      || state.view !== requestedView) return;
+  if (
+    state.currentElection !== requestedElection ||
+    state.currentParliament !== requestedParliament ||
+    state.view !== requestedView
+  )
+    return;
 
-  const params = buildRouteSearchParams(state.view === 'predict' ? 'predict' : 'election');
-  window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+  const params = buildRouteSearchParams(state.view === "predict" ? "predict" : "election");
+  window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
 }
 
 // =====================================================================
 // MISC
 // =====================================================================
 
-let lastTrackedPath = '';
+let lastTrackedPath = "";
 
 /**
  * Fires a gtag page_view event for the current location, deduplicating against the last tracked path.
@@ -207,13 +211,13 @@ let lastTrackedPath = '';
  * @returns {void}
  */
 function trackVirtualPageView() {
-  if (typeof window.gtag !== 'function') return;
+  if (typeof window.gtag !== "function") return;
 
   const pagePath = `${window.location.pathname}${window.location.search}`;
   if (pagePath === lastTrackedPath) return;
 
   lastTrackedPath = pagePath;
-  window.gtag('event', 'page_view', {
+  window.gtag("event", "page_view", {
     page_location: window.location.href,
     page_path: pagePath,
     page_title: document.title,
@@ -237,7 +241,7 @@ export async function startApp(featureModules = {}) {
   try {
     await initPage(featureModules);
   } catch (error) {
-    renderHeader('', true);
+    renderHeader("", true);
     console.error(error);
   }
 }

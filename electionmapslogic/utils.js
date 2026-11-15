@@ -3,7 +3,7 @@
  * (neutral grey). Shared across the state, render, and poll-tracker layers.
  * @type {string}
  */
-export const DEFAULT_PARTY_COLOUR = '#9CA3AF';
+export const DEFAULT_PARTY_COLOUR = "#9CA3AF";
 
 /**
  * Escapes HTML special characters in a string for safe insertion into innerHTML.
@@ -11,11 +11,11 @@ export const DEFAULT_PARTY_COLOUR = '#9CA3AF';
  * @returns {string} HTML-escaped string.
  */
 export function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 /**
@@ -24,7 +24,9 @@ export function escapeHtml(str) {
  * @returns {string} Trimmed lowercase seat name for use in Map lookups.
  */
 export function seatLookupKey(seatName) {
-  return String(seatName || '').trim().toLowerCase();
+  return String(seatName || "")
+    .trim()
+    .toLowerCase();
 }
 
 /**
@@ -36,7 +38,10 @@ export function seatLookupKey(seatName) {
  * @returns {string} Canonical postcode (e.g. 'sw1a1aa' → 'SW1A 1AA').
  */
 export function normalizePostcode(postcode) {
-  const stripped = String(postcode || '').trim().toUpperCase().replace(/\s+/g, '');
+  const stripped = String(postcode || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
   return stripped.length >= 5 ? `${stripped.slice(0, -3)} ${stripped.slice(-3)}` : stripped;
 }
 
@@ -52,7 +57,9 @@ export function normalizePostcode(postcode) {
  * @returns {string} The seat name to select (accent-stripped, possibly renamed).
  */
 export function resolveLookupSeatName(rawName, seatKeys, seatRenames) {
-  const constituencyName = String(rawName || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const constituencyName = String(rawName || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
   if (!seatKeys?.has(seatLookupKey(constituencyName)) && seatRenames) {
     const mapped = seatRenames[constituencyName] ?? null;
     if (mapped) return mapped;
@@ -66,7 +73,7 @@ export function resolveLookupSeatName(rawName, seatKeys, seatRenames) {
  * @returns {string} Rounded integer as a locale-formatted string (e.g. '1,234').
  */
 export function formatInt(value) {
-  return Math.round(value).toLocaleString('en-GB');
+  return Math.round(value).toLocaleString("en-GB");
 }
 
 /**
@@ -85,8 +92,8 @@ export function formatPct(value) {
  */
 export function deltaClass(value) {
   const num = Number(value || 0);
-  if (Math.abs(num) < 1e-9) return 'maps-delta-neutral';
-  return num > 0 ? 'maps-delta-positive' : 'maps-delta-negative';
+  if (Math.abs(num) < 1e-9) return "maps-delta-neutral";
+  return num > 0 ? "maps-delta-positive" : "maps-delta-negative";
 }
 
 /**
@@ -98,8 +105,8 @@ export function deltaClass(value) {
  */
 export function formatSigned(value, digits = 0) {
   const num = Number(value || 0);
-  if (Math.abs(num) < 1e-9) return '0';
-  const sign = num > 0 ? '+' : '';
+  if (Math.abs(num) < 1e-9) return "0";
+  const sign = num > 0 ? "+" : "";
   return `${sign}${num.toFixed(digits)}`;
 }
 
@@ -109,7 +116,9 @@ export function formatSigned(value, digits = 0) {
  * @returns {string} Lowercase alphanumeric string suitable for use as a lookup key.
  */
 export function normalizeRegionKey(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 }
 
 /**
@@ -119,15 +128,18 @@ export function normalizeRegionKey(value) {
  * @returns {string} Title-cased label, or 'Unknown' if empty.
  */
 export function titleCaseFromRegionKey(regionKey) {
-  const text = String(regionKey || '').trim();
-  if (!text) return 'Unknown';
-  const spaced = text.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/-/g, ' ').replace(/_/g, ' ');
-  if (spaced.includes(' ')) {
+  const text = String(regionKey || "").trim();
+  if (!text) return "Unknown";
+  const spaced = text
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/-/g, " ")
+    .replace(/_/g, " ");
+  if (spaced.includes(" ")) {
     return spaced
       .split(/\s+/)
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-      .join(' ');
+      .join(" ");
   }
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -141,9 +153,9 @@ export function titleCaseFromRegionKey(regionKey) {
  */
 export function getRegionLabel(regionKey, labelsByKey) {
   const normalized = normalizeRegionKey(regionKey);
-  if (!normalized) return 'Unknown';
+  if (!normalized) return "Unknown";
   const label = labelsByKey?.get(normalized) || titleCaseFromRegionKey(regionKey);
-  return label.replace(/ and /gi, ' & ');
+  return label.replace(/ and /gi, " & ");
 }
 
 /**
@@ -176,7 +188,7 @@ export function roundShare(value) {
  * @returns {string}
  */
 export function base64urlEncode(text) {
-  return btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /**
@@ -186,8 +198,13 @@ export function base64urlEncode(text) {
  * @returns {string|null}
  */
 export function base64urlDecode(payload) {
-  const padded = payload.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((payload.length + 3) % 4);
-  try { return atob(padded); } catch { return null; }
+  const padded =
+    payload.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((payload.length + 3) % 4);
+  try {
+    return atob(padded);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -201,10 +218,13 @@ export function base64urlDecode(payload) {
 export function buildStateTrendSeries(entries) {
   if (!Array.isArray(entries)) return [];
   return entries
-    .filter((entry) => entry
-      && Number.isFinite(Number(entry.year))
-      && Number.isFinite(Number(entry.dem))
-      && Number.isFinite(Number(entry.rep)))
+    .filter(
+      (entry) =>
+        entry &&
+        Number.isFinite(Number(entry.year)) &&
+        Number.isFinite(Number(entry.dem)) &&
+        Number.isFinite(Number(entry.rep)),
+    )
     .map((entry) => ({ year: Number(entry.year), dem: Number(entry.dem), rep: Number(entry.rep) }))
     .sort((a, b) => a.year - b.year);
 }

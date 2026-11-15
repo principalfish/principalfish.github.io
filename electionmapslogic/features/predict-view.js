@@ -5,13 +5,13 @@
 // page whose manifest enables the `predict` feature. The action handlers themselves live
 // in predict-controller.js and are registered here via setPredictActionHandlers.
 
-import { state, manifest } from '../state.js';
-import { escapeHtml, clampNumber } from '../utils.js';
+import { state, manifest } from "../state.js";
+import { escapeHtml, clampNumber } from "../utils.js";
 
-const predictWindow = document.getElementById('mapsPredictWindow');
-const predictGrid = document.getElementById('mapsPredictGrid');
-const predictTabNav = document.getElementById('mapsPredictTabNav');
-const predictTitle = document.getElementById('mapsPredictTitle');
+const predictWindow = document.getElementById("mapsPredictWindow");
+const predictGrid = document.getElementById("mapsPredictGrid");
+const predictTabNav = document.getElementById("mapsPredictTabNav");
+const predictTitle = document.getElementById("mapsPredictTitle");
 
 // Action handlers wired by the predict controller (predict-controller.js) so predict-mode
 // actions can run their projection / URL-share / forecast-load logic without dom.js needing to
@@ -76,8 +76,8 @@ export function setApplyActionVisible(visible) {
  */
 export function setPredictWindowVisible(visible) {
   predictWindow.hidden = !visible;
-  predictWindow.classList.toggle('maps-predict-window-fill', visible);
-  document.body.classList.toggle('maps-predict-mode', visible);
+  predictWindow.classList.toggle("maps-predict-window-fill", visible);
+  document.body.classList.toggle("maps-predict-mode", visible);
 }
 
 /**
@@ -106,7 +106,7 @@ export function renderPredict() {
     const hasTabs = (model.tabs?.length || 0) > 0;
     predictTabNav.hidden = !hasTabs;
     if (hasTabs) renderPredictTabs(model);
-    else predictTabNav.innerHTML = '';
+    else predictTabNav.innerHTML = "";
   }
   renderPredictGrid(model);
 }
@@ -126,13 +126,13 @@ export function renderPredict() {
  * @returns {void}
  */
 function renderPredictTabs(model) {
-  predictTabNav.innerHTML = '';
+  predictTabNav.innerHTML = "";
   model.tabs.forEach(({ key, label }) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = `maps-predict-tab-btn${model.activeTab === key ? ' active' : ''}`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `maps-predict-tab-btn${model.activeTab === key ? " active" : ""}`;
     btn.textContent = label;
-    btn.addEventListener('click', () => {
+    btn.addEventListener("click", () => {
       // Switching ballot re-routes share reads/writes via currentInputMap; re-render so
       // the grid surfaces the active tab's inputs instead of the previous tab's.
       model.setActiveTab(key);
@@ -175,7 +175,7 @@ function renderPredictTabs(model) {
  * @returns {void}
  */
 function renderPredictGrid(model) {
-  predictGrid.innerHTML = '';
+  predictGrid.innerHTML = "";
   const otherCellByRegion = new Map();
 
   /** Repaints a region's 'other' cell from `model.getOtherShare`, toggling the
@@ -185,67 +185,68 @@ function renderPredictGrid(model) {
     if (!cell) return;
     const other = model.getOtherShare(regionKey);
     cell.textContent = String(other);
-    cell.classList.toggle('maps-predict-grid-total-over', other < 0);
+    cell.classList.toggle("maps-predict-grid-total-over", other < 0);
   };
 
   model.gridSections().forEach((section) => {
     if (!section.regions.length) return;
 
-    const wrap = document.createElement('section');
+    const wrap = document.createElement("section");
     wrap.className = `maps-predict-grid-section maps-predict-grid-section-${section.id}`;
     if (section.title) {
-      const heading = document.createElement('h4');
-      heading.className = 'maps-predict-grid-section-title';
+      const heading = document.createElement("h4");
+      heading.className = "maps-predict-grid-section-title";
       heading.textContent = section.title;
       wrap.appendChild(heading);
     }
 
-    const table = document.createElement('table');
-    table.className = 'maps-predict-grid-table';
+    const table = document.createElement("table");
+    table.className = "maps-predict-grid-table";
 
     // Header row.
-    const thead = document.createElement('thead');
-    const headRow = document.createElement('tr');
-    const regionTh = document.createElement('th');
-    regionTh.textContent = section.blankRegionHeader ? '' : 'Region';
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    const regionTh = document.createElement("th");
+    regionTh.textContent = section.blankRegionHeader ? "" : "Region";
     headRow.appendChild(regionTh);
     section.columnKeys.forEach((columnKey) => {
-      const th = document.createElement('th');
+      const th = document.createElement("th");
       // Virtual columns (e.g. 'nat') carry their own title + swatch class in the manifest;
       // plain party columns fall back to the manifest party label + colour.
       const meta = model.columnMeta(columnKey);
       if (meta) {
         if (meta.title) th.title = meta.title;
-        th.innerHTML = `<span class="maps-party-swatch ${meta.swatchClass || ''}" aria-hidden="true"></span>`;
+        th.innerHTML = `<span class="maps-party-swatch ${meta.swatchClass || ""}" aria-hidden="true"></span>`;
       } else {
         th.title = manifest.labelParty(columnKey);
         th.innerHTML = `<span class="maps-party-swatch" style="background:${manifest.colourParty(columnKey)}" aria-hidden="true"></span>`;
       }
       headRow.appendChild(th);
     });
-    const otherTh = document.createElement('th');
-    otherTh.title = 'Other';
-    otherTh.innerHTML = '<span class="maps-party-swatch maps-party-swatch-other" aria-hidden="true"></span>';
+    const otherTh = document.createElement("th");
+    otherTh.title = "Other";
+    otherTh.innerHTML =
+      '<span class="maps-party-swatch maps-party-swatch-other" aria-hidden="true"></span>';
     headRow.appendChild(otherTh);
     thead.appendChild(headRow);
     table.appendChild(thead);
 
     // Body rows.
-    const tbody = document.createElement('tbody');
+    const tbody = document.createElement("tbody");
     section.regions.forEach((row) => {
-      const tr = document.createElement('tr');
+      const tr = document.createElement("tr");
 
-      const labelTd = document.createElement('td');
-      labelTd.className = 'maps-predict-grid-region';
+      const labelTd = document.createElement("td");
+      labelTd.className = "maps-predict-grid-region";
       if (row.isAggregate) {
-        const labelWrap = document.createElement('div');
-        labelWrap.className = 'maps-predict-region-label-wrap';
+        const labelWrap = document.createElement("div");
+        labelWrap.className = "maps-predict-region-label-wrap";
         labelWrap.innerHTML = `<span>${escapeHtml(row.regionLabel)}</span>`;
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'maps-predict-expand-btn';
-        toggle.textContent = model.aggregateExpanded ? 'Hide regions' : 'Show regions';
-        toggle.addEventListener('click', () => {
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "maps-predict-expand-btn";
+        toggle.textContent = model.aggregateExpanded ? "Hide regions" : "Show regions";
+        toggle.addEventListener("click", () => {
           // Toggle drives input-map propagation inside the model (aggregate→subs on
           // expand, drop subs on collapse); re-render rebuilds rows from model.regions()
           // so the new layout is reflected in the DOM.
@@ -256,39 +257,39 @@ function renderPredictGrid(model) {
         labelTd.appendChild(labelWrap);
       } else {
         labelTd.textContent = row.predictLabel;
-        if (row.isAggregateChild) labelTd.classList.add('maps-predict-grid-region-child');
+        if (row.isAggregateChild) labelTd.classList.add("maps-predict-grid-region-child");
       }
       tr.appendChild(labelTd);
 
       section.columnKeys.forEach((columnKey) => {
         const partyKey = model.resolveColumnPartyKey(row.regionKey, columnKey);
-        const td = document.createElement('td');
+        const td = document.createElement("td");
         if (!partyKey) {
-          td.className = 'maps-predict-grid-total';
-          td.textContent = '—';
+          td.className = "maps-predict-grid-total";
+          td.textContent = "—";
           tr.appendChild(td);
           return;
         }
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.step = '1';
-        input.min = '0';
-        input.max = '100';
-        input.className = 'maps-predict-grid-input';
+        const input = document.createElement("input");
+        input.type = "number";
+        input.step = "1";
+        input.min = "0";
+        input.max = "100";
+        input.className = "maps-predict-grid-input";
         input.dataset.regionKey = row.regionKey;
         input.dataset.partyKey = partyKey;
         input.value = String(model.getShare(row.regionKey, partyKey));
         if (row.isAggregate && model.aggregateExpanded) {
           input.disabled = true;
         } else {
-          input.addEventListener('change', () => {
+          input.addEventListener("change", () => {
             // 'change' fires on blur / Enter. An empty cell means "revert to baseline": clear
             // the override and redisplay the baseline value, rather than coercing the blank to
             // 0% (clampNumber('') is 0, which would silently pin the party to zero). Otherwise
             // clamp + round before persisting so the model only ever holds [0, 100] integer
             // shares. Either way refresh the row's 'other' cell so the implied total stays
             // consistent.
-            if (input.value.trim() === '') {
+            if (input.value.trim() === "") {
               model.clearShare(row.regionKey, partyKey);
               input.value = String(model.getShare(row.regionKey, partyKey));
               refreshOther(row.regionKey);
@@ -304,11 +305,11 @@ function renderPredictGrid(model) {
         tr.appendChild(td);
       });
 
-      const otherTd = document.createElement('td');
-      otherTd.className = 'maps-predict-grid-total';
+      const otherTd = document.createElement("td");
+      otherTd.className = "maps-predict-grid-total";
       const initialOther = model.getOtherShare(row.regionKey);
       otherTd.textContent = String(initialOther);
-      otherTd.classList.toggle('maps-predict-grid-total-over', initialOther < 0);
+      otherTd.classList.toggle("maps-predict-grid-total-over", initialOther < 0);
       otherCellByRegion.set(row.regionKey, otherTd);
       tr.appendChild(otherTd);
       tbody.appendChild(tr);
@@ -345,19 +346,19 @@ function renderPredictGrid(model) {
  * @returns {void}
  */
 export function wirePredictControls() {
-  document.querySelectorAll('[data-predict-action]').forEach((button) => {
-    button.addEventListener('click', () => {
+  document.querySelectorAll("[data-predict-action]").forEach((button) => {
+    button.addEventListener("click", () => {
       // Collapse is layout-only and stays in dom.js; the rest (apply/submit/share/reset)
       // routes to the orchestrator-supplied handler so this module doesn't need to
       // import predict-mode logic from predict-controller.js.
-      const action = button.getAttribute('data-predict-action');
-      if (action === 'collapse') {
+      const action = button.getAttribute("data-predict-action");
+      if (action === "collapse") {
         // Dropping maps-predict-window-fill makes the window shrink to header-only
         // height (its body is also display:none via the --collapsed class), so the
         // seat card's flex:1 claims the recovered space. Reverse on re-expand.
-        const collapsed = predictWindow.classList.toggle('maps-predict-window--collapsed');
-        button.textContent = collapsed ? '▼' : '▲';
-        predictWindow.classList.toggle('maps-predict-window-fill', !collapsed);
+        const collapsed = predictWindow.classList.toggle("maps-predict-window--collapsed");
+        button.textContent = collapsed ? "▼" : "▲";
+        predictWindow.classList.toggle("maps-predict-window-fill", !collapsed);
         return;
       }
       const handler = predictActionHandlers[action];

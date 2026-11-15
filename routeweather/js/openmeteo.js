@@ -138,10 +138,9 @@ function abortedError(what, cause) {
 function throwIfAbortedOrTimeout(err, what, signal) {
   if (signal?.aborted) throw abortedError(what, err);
   if (err?.name === "TimeoutError" || err?.name === "AbortError") {
-    throw new Error(
-      `Open-Meteo ${what} request timed out after ${REQUEST_TIMEOUT_MS / 1000} s`,
-      { cause: err },
-    );
+    throw new Error(`Open-Meteo ${what} request timed out after ${REQUEST_TIMEOUT_MS / 1000} s`, {
+      cause: err,
+    });
   }
 }
 
@@ -246,7 +245,7 @@ async function sendAndRead(url, fetchImpl, what, { signal, onSent, combined }) {
     throwIfAbortedOrTimeout(err, what, signal);
     // Otherwise a non-JSON body (e.g. a proxy's HTML error page): reported below.
   }
-  const reason = body && body.error ? `: ${body.reason ?? "unknown error"}` : "";
+  const reason = body?.error ? `: ${body.reason ?? "unknown error"}` : "";
   if (!res.ok) throw new Error(`Open-Meteo ${what} request failed (HTTP ${res.status})${reason}`);
   if (reason) throw new Error(`Open-Meteo ${what} request failed${reason}`);
   if (body === null) throw new Error(`Open-Meteo ${what} response was not JSON`);
@@ -379,7 +378,7 @@ export function normaliseSeries(json, name) {
 }
 
 function hourlyTimes(json) {
-  const hourly = json && json.hourly;
+  const hourly = json?.hourly;
   if (!hourly || !Array.isArray(hourly.time)) {
     throw new Error("Open-Meteo location has no hourly times");
   }
@@ -406,9 +405,9 @@ function hourlyValues(hourly, name, timesMs) {
 // failed), are NaN, which the page shows as a gap. New location objects; the
 // originals are not touched.
 export function withProbability(locations, owners, series) {
-  const byTime = (series ?? []).map(({ timesMs, values }) => (
-    new Map(Array.from(timesMs, (t, k) => [t, values[k]]))
-  ));
+  const byTime = (series ?? []).map(
+    ({ timesMs, values }) => new Map(Array.from(timesMs, (t, k) => [t, values[k]])),
+  );
   return locations.map((loc, i) => {
     const lookup = byTime[owners[i]];
     const values = Float64Array.from(loc.timesMs, (t) => lookup?.get(t) ?? NaN);

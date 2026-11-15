@@ -66,9 +66,7 @@ def senate_election(
     for seat in snapshot["seats"]:
         state = seat["n"]
         if any(member["class"] == 2 for member in seat["members"]):
-            election[state] = senate_race(
-                "democrat", f"Winner {state}", seat_class=2
-            )
+            election[state] = senate_race("democrat", f"Winner {state}", seat_class=2)
         if state in SPECIALS:
             election[state] = senate_race(
                 "republican", f"Special {state}", seat_class=3, special=True

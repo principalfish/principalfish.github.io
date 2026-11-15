@@ -37,10 +37,9 @@ Two notes for callers:
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Sequence
-from collections.abc import Set as AbstractSet
+from collections.abc import Callable, Sequence, Set as AbstractSet
 from datetime import date
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field
@@ -51,11 +50,6 @@ from importers.polls.westminster.registry import IMPORTERS
 from importers.polls.westminster.wikipedia_index import PollIndex
 
 QueueStatus = Literal["pending", "imported", "skipped", "failed", "no_importer"]
-
-# The row type a particular queue is built from. The queue itself stores rows as
-# the base type; the injected callables are typed on the concrete one, so a
-# caller's hooks can read its own extra columns without casting.
-RowT = TypeVar("RowT", bound=ScrapedPollRow)
 
 # What identifies a poll for the presence check, and what orders the worklist:
 # a tuple whose shape each caller chooses. Westminster uses ``(identifier,
@@ -212,7 +206,10 @@ def no_row_cutoff(db: Database, map_id: int | None) -> Callable[[ScrapedPollRow]
     return cutoff_for
 
 
-def build_queue_from_rows(
+# RowT is the row type a particular queue is built from. The queue itself stores
+# rows as the base type; the injected callables are typed on the concrete one, so a
+# caller's hooks can read its own extra columns without casting.
+def build_queue_from_rows[RowT: ScrapedPollRow](
     db: Database,
     rows: Sequence[RowT],
     *,

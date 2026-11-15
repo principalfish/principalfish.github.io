@@ -1,33 +1,26 @@
 # principalfish.github.io
 
-A GitHub Pages static site with a Python data pipeline. Read
-[README.md](README.md) for the repository overview, setup and key commands; each
-area's own README holds its detail, and [data/README.md](data/README.md) leads to
-the data runbook.
+A GitHub Pages static site with a Python data pipeline. [README.md](README.md) has the
+overview and setup; each area's README holds its detail, and
+[data/README.md](data/README.md) leads to the data runbook.
 
-## Testing
+## Checks
 
-The Python data pipeline and console are tested under `data/`. The test commands
-use the `data/election_data` virtualenv (falling back to `data/.venv`), which needs the
-one-time editable install from [data/README.md](data/README.md#python-environment): no
-code or test adds to `sys.path`, so scripts run by path fail without it.
+Run `./check.sh` from the repo root before a commit: ruff, Biome, shellcheck, strict
+mypy, pytest, Vitest, each step run even if an earlier one fails. `--lint-only` skips the
+tests, `--fix` applies lint fixes first, and `-- ARGS` goes to pytest. The suites alone:
 
-Run the full check suite — strict `mypy` first (it gates the run), then `pytest`:
+    cd data && ./run_tests.sh   # strict mypy (gates the run), then pytest
+    npm test                    # Vitest
 
-    cd data && ./run_tests.sh
+`run_tests.sh` forwards extra args to pytest after `tests/`, so they filter the whole
+suite (a file path doesn't narrow it). One file, or a single step, runs
+with the venv interpreter directly:
 
-`run_tests.sh` forwards extra args to pytest, so you can narrow a run:
-
-    cd data && ./run_tests.sh tests/test_export_payload.py    # one file
-    cd data && ./run_tests.sh -k model_outputs -q             # by keyword
-
-Run a single step with the venv interpreter directly:
-
+    cd data && ./run_tests.sh -k model_outputs -q                       # by keyword
+    cd data && ./election_data/bin/python -m pytest tests/test_export_payload.py -q   # one file
     cd data && ./election_data/bin/python -m mypy             # type-check only (data/mypy.ini, strict)
     cd data && ./election_data/bin/python -m pytest tests/ -q # tests only
-
-Tests live in `data/tests/`; shared DB fixtures are in `data/tests/conftest.py`
-(each test gets a fresh temporary SQLite database, so real data is never touched).
 
 Quick smoke checks (no test runner):
 
@@ -38,42 +31,23 @@ Quick smoke checks (no test runner):
 `--output-root` applies only to `--current-simulation`; use `--output-base` for any
 scratch export of the full site.
 
-## Running the front end
+## Rules
 
-Build the assets and serve on port 8000:
-
-    ./server.sh
-
-After editing anything under `electionmapslogic/`, rebuild the bundles or the served
-pages keep the old logic (both pages share the engine, so both are regenerated):
-
-    npm run minify:electionmaps
-
-`map-modes.json` is generated. Edit `map-modes-shell.json` (the hand-authored source of
-truth) and re-export — `parliamentFeatures` is copied through verbatim:
-
-    cd data && ./election_data/bin/python export/export_elections.py
-
-### Driving the maps page headlessly
-
-`server.sh`'s server does not survive the shell that spawned it, so for an unattended
-run start one detached instead:
-
-    (setsid nohup python3 -m http.server 8000 --bind 127.0.0.1 &)
-
-There is no browser on this machine — Playwright's `chromium-headless-shell` installs
-but fails on a missing `libatk-1.0.so.0`, and installing the deps needs sudo. To
-exercise the real modules without one, drive them under `jsdom` from a scratch dir:
-
-- **Pre-bundle with esbuild.** This repo's `package.json` has no `"type": "module"`, so
-  Node loads `electionmapslogic/*.js` as CJS and their `import`s throw.
-- **Inject `electionmapslogic/shell.html`** into the jsdom document before importing the
-  bundle. `shell-loader.js` does this at runtime and `#mapsElectionList` /
-  `#mapsElectionCountdown` live there — without it `renderLeftBar()` silently renders an
-  empty nav, which reads as a regression but is a harness bug.
-- **Pin `jsdom@24`** (later majors throw `ERR_REQUIRE_ESM` on Node 21), set `navigator`
-  via `Object.defineProperty` (it is getter-only), and stub `ResizeObserver` /
-  `IntersectionObserver`.
-
-Check a second parliament (e.g. Westminster) alongside the one you changed — it catches
-both harness bugs and accidental cross-page regressions from the shared engine.
+- **The data venv needs the one-time editable install** ([data/README.md](data/README.md#python-environment)).
+  No code or test adds to `sys.path`, so scripts run by path fail without it.
+- **Never write to the live database.** `.env` is loaded with override, so setting
+  `DATABASE_PATH` in the shell does not redirect a script: it still opens the live
+  database. Tests are safe: each gets a fresh temporary SQLite database (shared
+  fixtures in `data/tests/conftest.py`).
+- **Rebuild the bundles after editing `electionmapslogic/`** (`npm run minify:electionmaps`);
+  both map pages share the engine, so both bundles regenerate, and CI fails on a stale one.
+- **`map-modes.json` is generated.** Edit `map-modes-shell.json` (`parliamentFeatures` is
+  copied through verbatim) and re-export: `cd data && ./election_data/bin/python export/export_elections.py`.
+- **There is no browser on this machine.** To check the maps engine, drive it under jsdom as
+  [the engine README](electionmapslogic/README.md#driving-the-pages-headlessly) describes;
+  its stubs and traps have each bitten before.
+- **Stage files by name, never `git add -A`:** exported data files are tracked. If a test
+  run or `./check.sh` leaves `electionmaps/data/results/model_output_trends.json` modified,
+  something in the suite is writing it: restore it and find the writer, don't commit it.
+- **A lint suppression carries its reason** (`# noqa: <code> - <why>`,
+  `// biome-ignore <rule>: <why>`); there are no per-file ignores or file-wide suppressions.

@@ -292,7 +292,7 @@ def model_run_execute() -> ResponseReturnValue:
             back_endpoint="westminster.model_run_form",
             back_label="Back to the model form",
         )
-    except jobs.JobBusy as busy:
+    except jobs.JobBusyError as busy:
         jobs.flash_busy("Westminster model not run", busy)
         return render_template(
             "model_run.html",

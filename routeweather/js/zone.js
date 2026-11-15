@@ -19,17 +19,20 @@ const formatters = new Map();
 
 function partsFormatter(timeZone) {
   if (!formatters.has(timeZone)) {
-    formatters.set(timeZone, new Intl.DateTimeFormat("en-GB", {
+    formatters.set(
       timeZone,
-      hourCycle: "h23",
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      second: "numeric",
-      weekday: "short",
-    }));
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone,
+        hourCycle: "h23",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        second: "numeric",
+        weekday: "short",
+      }),
+    );
   }
   return formatters.get(timeZone);
 }
@@ -48,7 +51,13 @@ export function isValidTimeZone(timeZone) {
 }
 
 const NO_PARTS = Object.freeze({
-  year: NaN, month: NaN, day: NaN, hour: NaN, minute: NaN, second: NaN, weekday: NaN,
+  year: NaN,
+  month: NaN,
+  day: NaN,
+  hour: NaN,
+  minute: NaN,
+  second: NaN,
+  weekday: NaN,
 });
 
 // Epoch ms -> { year, month (1-12), day, hour, minute, second, weekday (0 =

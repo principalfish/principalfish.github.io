@@ -2,32 +2,73 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { workerModules } from "./worker-support.mjs";
 
 let createWorkerClient;
-beforeAll(async () => { ({ createWorkerClient } = await workerModules()); });
+beforeAll(async () => {
+  ({ createWorkerClient } = await workerModules());
+});
 const clients = [];
-afterEach(() => { clients.splice(0).forEach(c => c.dispose()); vi.useRealTimers(); });
+afterEach(() => {
+  clients.splice(0).forEach((c) => {
+    c.dispose();
+  });
+  vi.useRealTimers();
+});
 const words = ["AAAAA", "BBBBB", "CCCCC", "DDDDD", "EEEEE"];
 const catalogue = () => ({ pool: words, expanded: [...words, "ZZZZZ"], days: [1000] });
-const position = () => ({ words, slots: words.map(() => ({ guesses: [] })), grid: Array(5).fill("22222"), done: false });
-const result = () => ({ continuation: position(), result: { solvable: true, precise: 1.0000000000000002, missing: undefined, zero: -0 } });
-const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
+const position = () => ({
+  words,
+  slots: words.map(() => ({ guesses: [] })),
+  grid: Array(5).fill("22222"),
+  done: false,
+});
+const result = () => ({
+  continuation: position(),
+  result: { solvable: true, precise: 1.0000000000000002, missing: undefined, zero: -0 },
+});
+const flush = async () => {
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+};
 function factory() {
   const workers = [];
   const make = () => {
     const listeners = new Map();
     const worker = {
-      messages: [], terminated: false,
-      addEventListener(type, listener) { listeners.set(type, listener); },
-      removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
-      terminate() { this.terminated = true; },
+      messages: [],
+      terminated: false,
+      addEventListener(type, listener) {
+        listeners.set(type, listener);
+      },
+      removeEventListener(type, listener) {
+        if (listeners.get(type) === listener) listeners.delete(type);
+      },
+      terminate() {
+        this.terminated = true;
+      },
       postMessage(message) {
         this.messages.push(structuredClone(message));
-        if (message.message.type === "initialize") queueMicrotask(() => this.reply(message, catalogue()));
+        if (message.message.type === "initialize")
+          queueMicrotask(() => this.reply(message, catalogue()));
         if (["restore-daily", "restore-manual", "reset-manual"].includes(message.message.type)) {
-          queueMicrotask(() => this.reply(message, message.message.type === "restore-daily" ? message.message.continuation : null));
+          queueMicrotask(() =>
+            this.reply(
+              message,
+              message.message.type === "restore-daily" ? message.message.continuation : null,
+            ),
+          );
         }
       },
-      emit(type, data) { listeners.get(type)?.(type === "message" ? { data } : data); },
-      reply(message, value, fields = {}) { this.emit("message", { type: "result", id: message.id, generation: message.generation, result: value, computeMs: 2, ...fields }); },
+      emit(type, data) {
+        listeners.get(type)?.(type === "message" ? { data } : data);
+      },
+      reply(message, value, fields = {}) {
+        this.emit("message", {
+          type: "result",
+          id: message.id,
+          generation: message.generation,
+          result: value,
+          computeMs: 2,
+          ...fields,
+        });
+      },
       listeners,
     };
     workers.push(worker);
@@ -72,7 +113,11 @@ describe("single Worker lifecycle", () => {
     const next = client.request({ type: "advance-daily", expanded: true });
     await flush();
     const restarted = workers[1];
-    expect(restarted.messages.map(m => m.message.type)).toEqual(["initialize", "restore-daily", "advance-daily"]);
+    expect(restarted.messages.map((m) => m.message.type)).toEqual([
+      "initialize",
+      "restore-daily",
+      "advance-daily",
+    ]);
     expect(restarted.messages[1].message.continuation.slots[0].guesses).toEqual([]);
     restarted.reply(restarted.messages.at(-1), result());
     const acceptedReply = await next;
@@ -100,7 +145,9 @@ describe("single Worker lifecycle", () => {
     oldError({ message: "obsolete crash" });
     workers[1].reply({ ...current, id: current.id - 1 }, result());
     let done = false;
-    second.then(() => { done = true; });
+    second.then(() => {
+      done = true;
+    });
     await flush();
     expect(done).toBe(false);
     expect(workers[1].terminated).toBe(false);
@@ -108,34 +155,42 @@ describe("single Worker lifecycle", () => {
     await second;
   });
 
-  it.each(["error", "messageerror"])("preserves accepted state on runtime %s and permits explicit retry", async (type) => {
-    const { client, workers, fallback } = await setup();
-    client.acceptDaily({ day: 1000, continuation: position() });
-    const job = client.request({ type: "advance-daily" });
-    const rejected = expect(job).rejects.toThrow(type === "error" ? "crashed" : "could not be read");
-    await flush();
-    workers[0].emit(type, { message: "crashed" });
-    await rejected;
-    expect(workers[0].terminated).toBe(true);
-    expect(fallback).not.toHaveBeenCalled();
-    const retry = client.request({ type: "advance-daily" });
-    await flush();
-    expect(workers[1].messages[1].message.type).toBe("restore-daily");
-    workers[1].reply(workers[1].messages.at(-1), result());
-    await retry;
-  });
+  it.each(["error", "messageerror"])(
+    "preserves accepted state on runtime %s and permits explicit retry",
+    async (type) => {
+      const { client, workers, fallback } = await setup();
+      client.acceptDaily({ day: 1000, continuation: position() });
+      const job = client.request({ type: "advance-daily" });
+      const rejected = expect(job).rejects.toThrow(
+        type === "error" ? "crashed" : "could not be read",
+      );
+      await flush();
+      workers[0].emit(type, { message: "crashed" });
+      await rejected;
+      expect(workers[0].terminated).toBe(true);
+      expect(fallback).not.toHaveBeenCalled();
+      const retry = client.request({ type: "advance-daily" });
+      await flush();
+      expect(workers[1].messages[1].message.type).toBe("restore-daily");
+      workers[1].reply(workers[1].messages.at(-1), result());
+      await retry;
+    },
+  );
 
-  it.each([null, {}, { type: "result", result: {} }])("rejects malformed replies %j", async (bad) => {
-    const { client, workers, fallback } = await setup();
-    client.acceptDaily({ day: 1000, continuation: position() });
-    const job = client.request({ type: "advance-daily" });
-    const rejected = expect(job).rejects.toThrow("Malformed");
-    await flush();
-    workers[0].emit("message", bad);
-    await rejected;
-    expect(workers[0].terminated).toBe(true);
-    expect(fallback).not.toHaveBeenCalled();
-  });
+  it.each([null, {}, { type: "result", result: {} }])(
+    "rejects malformed replies %j",
+    async (bad) => {
+      const { client, workers, fallback } = await setup();
+      client.acceptDaily({ day: 1000, continuation: position() });
+      const job = client.request({ type: "advance-daily" });
+      const rejected = expect(job).rejects.toThrow("Malformed");
+      await flush();
+      workers[0].emit("message", bad);
+      await rejected;
+      expect(workers[0].terminated).toBe(true);
+      expect(fallback).not.toHaveBeenCalled();
+    },
+  );
 
   it("restores manual entered input without replaying final or prefix solves", async () => {
     const { client, workers } = await setup();
@@ -148,18 +203,41 @@ describe("single Worker lifecycle", () => {
     await rejected;
     const retry = client.request({ type: "replay-manual", index: 0 });
     await flush();
-    expect(workers[1].messages.map(m => m.message.type)).toEqual(["initialize", "restore-manual", "replay-manual"]);
-    workers[1].reply(workers[1].messages.at(-1), { slots: input.slots, move: { word: "AAAAA" }, step: { after: { solvable: true } } });
+    expect(workers[1].messages.map((m) => m.message.type)).toEqual([
+      "initialize",
+      "restore-manual",
+      "replay-manual",
+    ]);
+    workers[1].reply(workers[1].messages.at(-1), {
+      slots: input.slots,
+      move: { word: "AAAAA" },
+      step: { after: { solvable: true } },
+    });
     await retry;
   });
 
   it("invalidates cached manual probe choices in the Worker before analysing the changed set", async () => {
     const { client, workers } = await setup();
     client.resetManual();
-    const job = client.request({ type: "analyse-manual", slots: position().slots, clueGrid: null, expanded: true, compact: true });
+    const job = client.request({
+      type: "analyse-manual",
+      slots: position().slots,
+      clueGrid: null,
+      expanded: true,
+      compact: true,
+    });
     await flush();
-    expect(workers[0].messages.map(m => m.message.type)).toEqual(["initialize", "reset-manual", "analyse-manual"]);
-    workers[0].reply(workers[0].messages.at(-1), { result: { solvable: true }, moves: [], startSlots: position().slots, reuse: 0 });
+    expect(workers[0].messages.map((m) => m.message.type)).toEqual([
+      "initialize",
+      "reset-manual",
+      "analyse-manual",
+    ]);
+    workers[0].reply(workers[0].messages.at(-1), {
+      result: { solvable: true },
+      moves: [],
+      startSlots: position().slots,
+      reuse: 0,
+    });
     await job;
   });
 
@@ -171,7 +249,9 @@ describe("single Worker lifecycle", () => {
     client.dispose();
     expect(workers[0].listeners.size).toBe(0);
     expect(workers[0].terminated).toBe(true);
-    await expect(client.request({ type: "initialize" })).rejects.toMatchObject({ name: "CancelledError" });
+    await expect(client.request({ type: "initialize" })).rejects.toMatchObject({
+      name: "CancelledError",
+    });
   });
 });
 
@@ -199,11 +279,15 @@ describe("startup and asset errors", () => {
       expect(f.workers[0].terminated).toBe(true);
       return { service: { request: () => catalogue() }, days: [1000] };
     });
-    const client = createWorkerClient({ workerFactory: () => {
-      const worker = f.make();
-      worker.emit = () => {};
-      return worker;
-    }, startupTimeout: 100, directFactory: fallback });
+    const client = createWorkerClient({
+      workerFactory: () => {
+        const worker = f.make();
+        worker.emit = () => {};
+        return worker;
+      },
+      startupTimeout: 100,
+      directFactory: fallback,
+    });
     clients.push(client);
     const pending = client.request({ type: "initialize" });
     await vi.advanceTimersByTimeAsync(100);
@@ -219,13 +303,19 @@ describe("startup and asset errors", () => {
       expect(f.workers[0].listeners.size).toBe(0);
       return { service: { request: () => catalogue() }, days: [1000] };
     });
-    const client = createWorkerClient({ workerFactory: () => {
-      const worker = f.make();
-      queueMicrotask(() => worker.emit("error", { message: "cannot start" }));
-      // Suppress the ordinary ready delivery to simulate a module setup failure.
-      worker.emit = (type, data) => { if (type !== "message") worker.listeners.get(type)?.(data); };
-      return worker;
-    }, directFactory: fallback, onCompatibility: compatibility });
+    const client = createWorkerClient({
+      workerFactory: () => {
+        const worker = f.make();
+        queueMicrotask(() => worker.emit("error", { message: "cannot start" }));
+        // Suppress the ordinary ready delivery to simulate a module setup failure.
+        worker.emit = (type, data) => {
+          if (type !== "message") worker.listeners.get(type)?.(data);
+        };
+        return worker;
+      },
+      directFactory: fallback,
+      onCompatibility: compatibility,
+    });
     clients.push(client);
     expect(await client.request({ type: "initialize" })).toEqual(catalogue());
     expect(compatibility).toHaveBeenCalledWith(expect.stringContaining("Compatibility mode"));
@@ -233,8 +323,15 @@ describe("startup and asset errors", () => {
   });
 
   it("supports browsers without Worker while surfacing fallback asset failure", async () => {
-    const client = createWorkerClient({ workerFactory() { throw new Error("unsupported"); },
-      directFactory: async () => { throw new Error("corrupt matrix"); }, onCompatibility: vi.fn() });
+    const client = createWorkerClient({
+      workerFactory() {
+        throw new Error("unsupported");
+      },
+      directFactory: async () => {
+        throw new Error("corrupt matrix");
+      },
+      onCompatibility: vi.fn(),
+    });
     clients.push(client);
     await expect(client.request({ type: "initialize" })).rejects.toThrow("corrupt matrix");
   });
@@ -242,17 +339,28 @@ describe("startup and asset errors", () => {
   it("does not silently fall back on an asset failure and retries with a fresh Worker", async () => {
     const f = factory();
     const fallback = vi.fn();
-    const client = createWorkerClient({ workerFactory: () => {
-      const worker = f.make();
-      const post = worker.postMessage;
-      worker.postMessage = function (message) {
-        if (message.message.type === "initialize" && f.workers.length === 1) {
-          this.messages.push(message);
-          queueMicrotask(() => this.emit("message", { id: message.id, generation: message.generation, type: "failure", kind: "asset", error: "invalid matrix" }));
-        } else post.call(this, message);
-      };
-      return worker;
-    }, directFactory: fallback });
+    const client = createWorkerClient({
+      workerFactory: () => {
+        const worker = f.make();
+        const post = worker.postMessage;
+        worker.postMessage = function (message) {
+          if (message.message.type === "initialize" && f.workers.length === 1) {
+            this.messages.push(message);
+            queueMicrotask(() =>
+              this.emit("message", {
+                id: message.id,
+                generation: message.generation,
+                type: "failure",
+                kind: "asset",
+                error: "invalid matrix",
+              }),
+            );
+          } else post.call(this, message);
+        };
+        return worker;
+      },
+      directFactory: fallback,
+    });
     clients.push(client);
     await expect(client.request({ type: "initialize" })).rejects.toThrow("invalid matrix");
     expect(fallback).not.toHaveBeenCalled();

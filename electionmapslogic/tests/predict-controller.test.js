@@ -1,10 +1,10 @@
-import { readFileSync } from 'node:fs';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from "node:fs";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // predict-controller imports the DOM render layer (dom.js) and the predict view module
 // (predict-view.js) at module load, both of which touch document/observers. Stub them so the
 // module imports cleanly in Node. files.js is stubbed so the simulation fetch is controllable.
-vi.mock('../dom.js', () => ({
+vi.mock("../dom.js", () => ({
   renderHeader: vi.fn(),
   renderMap: vi.fn(),
   renderMapControlOptions: vi.fn(),
@@ -12,13 +12,13 @@ vi.mock('../dom.js', () => ({
   initRegionTable: vi.fn(),
   refreshOpenSeatPopup: vi.fn(),
 }));
-vi.mock('../features/predict-view.js', () => ({
+vi.mock("../features/predict-view.js", () => ({
   renderPredict: vi.fn(),
   setApplyActionVisible: vi.fn(),
   setPredictActionHandlers: vi.fn(),
   setPredictWindowVisible: vi.fn(),
 }));
-vi.mock('../files.js', () => ({ fetchJson: vi.fn() }));
+vi.mock("../files.js", () => ({ fetchJson: vi.fn() }));
 vi.mock("../features/senate-forecast-view.js", () => ({
   renderSenateForecastComparison: vi.fn(),
   renderSenateForecastTabs: vi.fn(),
@@ -29,82 +29,104 @@ import {
   getPredictBaseElection,
   ensurePredictSimulation,
   parliamentHasForecast,
-} from '../features/predict-controller.js';
-import { setApplyActionVisible, setPredictActionHandlers } from '../features/predict-view.js';
-import { manifest, page, state, ElectionData } from '../state.js';
-import { fetchJson } from '../files.js';
-import { loadSenateSpecialBaseline } from '../features/senate-baseline.js';
-import { renderSenateForecastComparison, renderSenateForecastTabs } from "../features/senate-forecast-view.js";
+} from "../features/predict-controller.js";
+import { setApplyActionVisible, setPredictActionHandlers } from "../features/predict-view.js";
+import { manifest, page, state, ElectionData } from "../state.js";
+import { fetchJson } from "../files.js";
+import { loadSenateSpecialBaseline } from "../features/senate-baseline.js";
+import {
+  renderSenateForecastComparison,
+  renderSenateForecastTabs,
+} from "../features/senate-forecast-view.js";
 
-describe('getPredictBaseElection', () => {
+describe("getPredictBaseElection", () => {
   beforeEach(() => {
-    state.currentParliament = 'westminster';
-    state.currentElection = { id: 'current' };
-    state.view = 'predict';
+    state.currentParliament = "westminster";
+    state.currentElection = { id: "current" };
+    state.view = "predict";
   });
 
-  it('demotes the view to election when the parliament has no predict feature', () => {
+  it("demotes the view to election when the parliament has no predict feature", () => {
     manifest.init({ parliamentFeatures: { westminster: { features: [] } }, elections: [] });
     const result = getPredictBaseElection();
-    expect(state.view).toBe('election');
+    expect(state.view).toBe("election");
     expect(result).toBe(state.currentElection);
   });
 
-  it('returns the configured baseline election when predict is enabled and resolvable', () => {
+  it("returns the configured baseline election when predict is enabled and resolvable", () => {
     manifest.init({
-      parliamentFeatures: { westminster: { features: ['predict'], predictBaselineElectionId: 'base' } },
-      elections: [{ id: 'base', name: 'Baseline' }],
+      parliamentFeatures: {
+        westminster: { features: ["predict"], predictBaselineElectionId: "base" },
+      },
+      elections: [{ id: "base", name: "Baseline" }],
     });
     const result = getPredictBaseElection();
-    expect(state.view).toBe('predict');
-    expect(result).toMatchObject({ id: 'base' });
+    expect(state.view).toBe("predict");
+    expect(result).toMatchObject({ id: "base" });
   });
 
-  it('returns null when predict is enabled but no baseline id is configured', () => {
-    manifest.init({ parliamentFeatures: { westminster: { features: ['predict'] } }, elections: [] });
+  it("returns null when predict is enabled but no baseline id is configured", () => {
+    manifest.init({
+      parliamentFeatures: { westminster: { features: ["predict"] } },
+      elections: [],
+    });
     expect(getPredictBaseElection()).toBe(null);
   });
 
-  it('returns a falsy value when the configured baseline id does not resolve to an election', () => {
+  it("returns a falsy value when the configured baseline id does not resolve to an election", () => {
     manifest.init({
-      parliamentFeatures: { westminster: { features: ['predict'], predictBaselineElectionId: 'missing' } },
+      parliamentFeatures: {
+        westminster: { features: ["predict"], predictBaselineElectionId: "missing" },
+      },
       elections: [],
     });
     expect(getPredictBaseElection()).toBeFalsy();
   });
 });
 
-describe('parliamentHasForecast', () => {
-  it('is true when the anchor resolves to a model/nowcast election', () => {
+describe("parliamentHasForecast", () => {
+  it("is true when the anchor resolves to a model/nowcast election", () => {
     manifest.init({
-      parliamentFeatures: { westminster: { predictAnchorElectionId: 'nowcast' } },
-      elections: [{ id: 'nowcast', model: true }],
+      parliamentFeatures: { westminster: { predictAnchorElectionId: "nowcast" } },
+      elections: [{ id: "nowcast", model: true }],
     });
-    expect(parliamentHasForecast('westminster')).toBe(true);
+    expect(parliamentHasForecast("westminster")).toBe(true);
   });
 
-  it('is false when the anchor is a plain past election (US-style)', () => {
+  it("is false when the anchor is a plain past election (US-style)", () => {
     manifest.init({
-      parliamentFeatures: { us_presidential: { predictAnchorElectionId: '2024-us-president' } },
-      elections: [{ id: '2024-us-president' }],
+      parliamentFeatures: { us_presidential: { predictAnchorElectionId: "2024-us-president" } },
+      elections: [{ id: "2024-us-president" }],
     });
-    expect(parliamentHasForecast('us_presidential')).toBe(false);
+    expect(parliamentHasForecast("us_presidential")).toBe(false);
   });
 
-  it('is false when no anchor election id is configured', () => {
+  it("is false when no anchor election id is configured", () => {
     manifest.init({ parliamentFeatures: { us_house: {} }, elections: [] });
-    expect(parliamentHasForecast('us_house')).toBe(false);
+    expect(parliamentHasForecast("us_house")).toBe(false);
   });
 });
 
-describe('activatePredictView forecast gating', () => {
+describe("activatePredictView forecast gating", () => {
   // Minimal single-seat baseline: FPTPPredict's constructor builds its ballot baseline from
   // state.comparisonElectionData (set by activateElection in the real flow).
-  const baselineResults = { seats: [{ n: 'A', r: 'glasgow', w: 'snp', p: [['snp', 600], ['labour', 400]] }] };
+  const baselineResults = {
+    seats: [
+      {
+        n: "A",
+        r: "glasgow",
+        w: "snp",
+        p: [
+          ["snp", 600],
+          ["labour", 400],
+        ],
+      },
+    ],
+  };
   const predictConfig = {
-    model: 'fptp',
-    modelledPartyKeys: ['snp', 'labour'],
-    gridSections: [{ id: 's', columnKeys: ['snp', 'labour'] }],
+    model: "fptp",
+    modelledPartyKeys: ["snp", "labour"],
+    gridSections: [{ id: "s", columnKeys: ["snp", "labour"] }],
   };
 
   /** Manifest with a predict-enabled parliament whose anchor is / isn't a model election.
@@ -112,10 +134,19 @@ describe('activatePredictView forecast gating', () => {
   function configurePredict(parliament, { modelAnchor }) {
     manifest.init({
       parliamentFeatures: {
-        [parliament]: { predictAnchorElectionId: 'anchor', nextElectionYear: 2030, predict: predictConfig },
+        [parliament]: {
+          predictAnchorElectionId: "anchor",
+          nextElectionYear: 2030,
+          predict: predictConfig,
+        },
       },
-      elections: [{ id: 'anchor', mapId: 1, ...(modelAnchor ? { model: true } : {}) }],
-      files: { elections: { mapsById: { 1: 'maps/m.topo.json' }, electionsById: { anchor: 'results/r.json' } } },
+      elections: [{ id: "anchor", mapId: 1, ...(modelAnchor ? { model: true } : {}) }],
+      files: {
+        elections: {
+          mapsById: { 1: "maps/m.topo.json" },
+          electionsById: { anchor: "results/r.json" },
+        },
+      },
     });
     state.comparisonElectionData = new ElectionData(baselineResults);
   }
@@ -127,7 +158,9 @@ describe('activatePredictView forecast gating', () => {
     state.currentParliament = parliament;
     try {
       await activatePredictView();
-    } catch { /* expected: no window in node; gating already ran */ }
+    } catch {
+      /* expected: no window in node; gating already ran */
+    }
   }
 
   beforeEach(() => {
@@ -138,104 +171,166 @@ describe('activatePredictView forecast gating', () => {
     renderSenateForecastTabs.mockClear();
   });
 
-  it('with a model anchor: registers the apply handler, shows the button, prefetches', async () => {
-    configurePredict('p_forecast', { modelAnchor: true });
+  it("with a model anchor: registers the apply handler, shows the button, prefetches", async () => {
+    configurePredict("p_forecast", { modelAnchor: true });
     fetchJson.mockResolvedValue(baselineResults);
-    await runActivate('p_forecast');
+    await runActivate("p_forecast");
     expect(setApplyActionVisible).toHaveBeenCalledWith(true);
     const handlers = setPredictActionHandlers.mock.calls[0][0];
-    expect(handlers.apply).toBeTypeOf('function');
-    expect(fetchJson).toHaveBeenCalledWith('data/results/r.json');
+    expect(handlers.apply).toBeTypeOf("function");
+    expect(fetchJson).toHaveBeenCalledWith("data/results/r.json");
     expect(renderSenateForecastComparison).toHaveBeenCalledExactlyOnceWith();
     expect(renderSenateForecastTabs).toHaveBeenCalledExactlyOnceWith();
-    expect(renderSenateForecastComparison.mock.invocationCallOrder[0])
-      .toBeLessThan(fetchJson.mock.invocationCallOrder[0]);
-    expect(renderSenateForecastTabs.mock.invocationCallOrder[0])
-      .toBeLessThan(fetchJson.mock.invocationCallOrder[0]);
+    expect(renderSenateForecastComparison.mock.invocationCallOrder[0]).toBeLessThan(
+      fetchJson.mock.invocationCallOrder[0],
+    );
+    expect(renderSenateForecastTabs.mock.invocationCallOrder[0]).toBeLessThan(
+      fetchJson.mock.invocationCallOrder[0],
+    );
   });
 
-  it('without a model anchor (US-style): no apply handler, hidden button, no prefetch', async () => {
-    configurePredict('p_noforecast', { modelAnchor: false });
-    await runActivate('p_noforecast');
+  it("without a model anchor (US-style): no apply handler, hidden button, no prefetch", async () => {
+    configurePredict("p_noforecast", { modelAnchor: false });
+    await runActivate("p_noforecast");
     expect(setApplyActionVisible).toHaveBeenCalledWith(false);
     const handlers = setPredictActionHandlers.mock.calls[0][0];
     expect(handlers.apply).toBeUndefined();
-    expect(handlers.submit).toBeTypeOf('function');
+    expect(handlers.submit).toBeTypeOf("function");
     expect(fetchJson).not.toHaveBeenCalled();
   });
 });
 
-describe('ensurePredictSimulation', () => {
+describe("ensurePredictSimulation", () => {
   // One seat -> ElectionData.baseSeats has length 1 (success); empty seats -> length 0 (failure).
-  const oneSeatResults = { seats: [{ n: 'A', r: 'glasgow', w: 'snp', p: [['snp', 600], ['labour', 400]] }] };
+  const oneSeatResults = {
+    seats: [
+      {
+        n: "A",
+        r: "glasgow",
+        w: "snp",
+        p: [
+          ["snp", 600],
+          ["labour", 400],
+        ],
+      },
+    ],
+  };
   const emptyResults = { seats: [] };
 
   // Wires up a parliament whose anchor election resolves to a data file. Distinct parliament
   // keys per test avoid the module-level cache leaking across tests.
   function configureAnchor(parliament, { withAnchor = true } = {}) {
     manifest.init({
-      parliamentFeatures: { [parliament]: withAnchor ? { predictAnchorElectionId: 'anchor' } : {} },
-      elections: [{ id: 'anchor', mapId: 1 }],
-      files: { elections: { mapsById: { 1: 'maps/m.topo.json' }, electionsById: { anchor: 'results/r.json' } } },
+      parliamentFeatures: { [parliament]: withAnchor ? { predictAnchorElectionId: "anchor" } : {} },
+      elections: [{ id: "anchor", mapId: 1 }],
+      files: {
+        elections: {
+          mapsById: { 1: "maps/m.topo.json" },
+          electionsById: { anchor: "results/r.json" },
+        },
+      },
     });
   }
 
-  beforeEach(() => { fetchJson.mockReset(); });
+  beforeEach(() => {
+    fetchJson.mockReset();
+  });
 
-  it('returns null without fetching when the anchor election is not configured', async () => {
-    configureAnchor('p_noanchor', { withAnchor: false });
-    expect(await ensurePredictSimulation('p_noanchor')).toBe(null);
+  it("returns null without fetching when the anchor election is not configured", async () => {
+    configureAnchor("p_noanchor", { withAnchor: false });
+    expect(await ensurePredictSimulation("p_noanchor")).toBe(null);
     expect(fetchJson).not.toHaveBeenCalled();
   });
 
-  it('fetches, parses, and returns the anchor election baseSeats', async () => {
-    configureAnchor('p_ok');
+  it("fetches, parses, and returns the anchor election baseSeats", async () => {
+    configureAnchor("p_ok");
     fetchJson.mockResolvedValue(oneSeatResults);
-    const seats = await ensurePredictSimulation('p_ok');
+    const seats = await ensurePredictSimulation("p_ok");
     expect(seats).toHaveLength(1);
-    expect(seats[0].winner).toBe('snp');
-    expect(fetchJson).toHaveBeenCalledWith('data/results/r.json');
+    expect(seats[0].winner).toBe("snp");
+    expect(fetchJson).toHaveBeenCalledWith("data/results/r.json");
   });
 
-  it('caches the in-flight promise so concurrent callers share one fetch', async () => {
-    configureAnchor('p_cache');
+  it("caches the in-flight promise so concurrent callers share one fetch", async () => {
+    configureAnchor("p_cache");
     fetchJson.mockResolvedValue(oneSeatResults);
     const [a, b] = await Promise.all([
-      ensurePredictSimulation('p_cache'),
-      ensurePredictSimulation('p_cache'),
+      ensurePredictSimulation("p_cache"),
+      ensurePredictSimulation("p_cache"),
     ]);
     expect(a).toBe(b);
     expect(fetchJson).toHaveBeenCalledTimes(1);
   });
 
-  it('evicts the cache entry on failure so the next call retries', async () => {
-    configureAnchor('p_evict');
+  it("evicts the cache entry on failure so the next call retries", async () => {
+    configureAnchor("p_evict");
     fetchJson.mockResolvedValue(emptyResults); // empty baseSeats -> null result
-    expect(await ensurePredictSimulation('p_evict')).toBe(null);
-    expect(await ensurePredictSimulation('p_evict')).toBe(null);
+    expect(await ensurePredictSimulation("p_evict")).toBe(null);
+    expect(await ensurePredictSimulation("p_evict")).toBe(null);
     // Two separate fetches because the failed entry was evicted between calls.
     expect(fetchJson).toHaveBeenCalledTimes(2);
   });
 });
 
-describe('activatePredictView Senate special elections', () => {
+describe("activatePredictView Senate special elections", () => {
   // Regular Class-2 baseline (what activateElection would have loaded), and the separate
   // baseline election the 2026 specials are swung from.
-  const classBaseline = { seats: [{ n: 'Alpha', r: 'east', w: 'republican', p: [['republican', 600], ['democrat', 400]] }] };
-  const specialBaseline = { seats: [
-    { n: 'Ohio', r: 'west', w: 'republican', p: [['republican', 700], ['democrat', 300]] },
-    { n: 'Florida', r: 'south', w: 'republican', p: [['republican', 550], ['democrat', 450]] },
-    { n: 'Georgia', r: 'south', w: 'democrat', p: [['democrat', 510], ['republican', 490]] },
-  ] };
+  const classBaseline = {
+    seats: [
+      {
+        n: "Alpha",
+        r: "east",
+        w: "republican",
+        p: [
+          ["republican", 600],
+          ["democrat", 400],
+        ],
+      },
+    ],
+  };
+  const specialBaseline = {
+    seats: [
+      {
+        n: "Ohio",
+        r: "west",
+        w: "republican",
+        p: [
+          ["republican", 700],
+          ["democrat", 300],
+        ],
+      },
+      {
+        n: "Florida",
+        r: "south",
+        w: "republican",
+        p: [
+          ["republican", 550],
+          ["democrat", 450],
+        ],
+      },
+      {
+        n: "Georgia",
+        r: "south",
+        w: "democrat",
+        p: [
+          ["democrat", 510],
+          ["republican", 490],
+        ],
+      },
+    ],
+  };
   const specials = [
-    { seat: 'Florida', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
-    { seat: 'Ohio', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
+    { seat: "Florida", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
+    { seat: "Ohio", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
   ];
   const predictConfig = {
-    model: 'senate',
-    modelledPartyKeys: ['democrat', 'republican'],
-    gridSections: [{ id: 'us', columnKeys: ['democrat', 'republican'] }],
-    tabs: [{ key: 'seatsup', label: 'Seats up' }, { key: 'chamber', label: 'Full Senate' }],
+    model: "senate",
+    modelledPartyKeys: ["democrat", "republican"],
+    gridSections: [{ id: "us", columnKeys: ["democrat", "republican"] }],
+    tabs: [
+      { key: "seatsup", label: "Seats up" },
+      { key: "chamber", label: "Full Senate" },
+    ],
   };
 
   /** Configures a Senate-shaped parliament whose map declares (or doesn't) special elections.
@@ -243,17 +338,35 @@ describe('activatePredictView Senate special elections', () => {
   function configureSenate(parliament, { specialElections }) {
     manifest.init({
       parliamentFeatures: { [parliament]: { nextElectionYear: 2026, predict: predictConfig } },
-      elections: [{ id: '2020-us-senate', mapId: 23 }, { id: '2022-us-senate', mapId: 23 }],
-      mapModes: { 23: { name: 'us-senate-2024', regions: [], ...(specialElections ? { senateSpecialElections: specialElections } : {}) } },
-      files: { elections: {
-        mapsById: { 23: 'maps/m.topo.json' },
-        electionsById: { '2020-us-senate': 'results/2020.json', '2022-us-senate': 'results/2022.json' },
-      } },
+      elections: [
+        { id: "2020-us-senate", mapId: 23 },
+        { id: "2022-us-senate", mapId: 23 },
+      ],
+      mapModes: {
+        23: {
+          name: "us-senate-2024",
+          regions: [],
+          ...(specialElections ? { senateSpecialElections: specialElections } : {}),
+        },
+      },
+      files: {
+        elections: {
+          mapsById: { 23: "maps/m.topo.json" },
+          electionsById: {
+            "2020-us-senate": "results/2020.json",
+            "2022-us-senate": "results/2022.json",
+          },
+        },
+      },
     });
     state.currentParliament = parliament;
-    state.currentElection = { id: '2020-us-senate', mapId: 23 };
+    state.currentElection = { id: "2020-us-senate", mapId: 23 };
     state.comparisonElectionData = new ElectionData(classBaseline);
-    state.currentRegionLabelsByKey = new Map([['east', 'East'], ['west', 'West'], ['south', 'South']]);
+    state.currentRegionLabelsByKey = new Map([
+      ["east", "East"],
+      ["west", "West"],
+      ["south", "South"],
+    ]);
   }
 
   /** Runs activatePredictView far enough to load the specials; it then throws on the absent
@@ -261,65 +374,97 @@ describe('activatePredictView Senate special elections', () => {
   async function runActivate() {
     try {
       await activatePredictView();
-    } catch { /* expected: no window in node; the special load already ran */ }
+    } catch {
+      /* expected: no window in node; the special load already ran */
+    }
   }
 
-  beforeEach(() => { fetchJson.mockReset(); });
-  afterEach(() => { delete page.dataBase; });
+  beforeEach(() => {
+    fetchJson.mockReset();
+  });
+  afterEach(() => {
+    delete page.dataBase;
+  });
 
-  it('fetches each distinct special baseline once and adds only the named seats', async () => {
-    configureSenate('p_specials', { specialElections: specials });
+  it("fetches each distinct special baseline once and adds only the named seats", async () => {
+    configureSenate("p_specials", { specialElections: specials });
     fetchJson.mockResolvedValue(specialBaseline);
     await runActivate();
     // Both specials share the 2022 baseline, so it is fetched once — and Georgia, which is in
     // that file but is not a special, stays out of the projection.
     expect(fetchJson).toHaveBeenCalledTimes(1);
-    expect(fetchJson).toHaveBeenCalledWith('data/results/2022.json');
-    expect(state.predictModel.projectionBase.map((s) => s.seat).sort()).toEqual(['Alpha', 'Florida', 'Ohio']);
+    expect(fetchJson).toHaveBeenCalledWith("data/results/2022.json");
+    expect(state.predictModel.projectionBase.map((s) => s.seat).sort()).toEqual([
+      "Alpha",
+      "Florida",
+      "Ohio",
+    ]);
   });
 
-  it('no-ops when the map declares no special elections', async () => {
-    configureSenate('p_nospecials', { specialElections: null });
+  it("no-ops when the map declares no special elections", async () => {
+    configureSenate("p_nospecials", { specialElections: null });
     await runActivate();
     expect(fetchJson).not.toHaveBeenCalled();
-    expect(state.predictModel.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
+    expect(state.predictModel.projectionBase.map((s) => s.seat)).toEqual(["Alpha"]);
   });
 
-  it('a failed baseline fetch is a no-op: the regular class still projects', async () => {
-    configureSenate('p_specialfail', { specialElections: specials });
-    fetchJson.mockRejectedValue(new Error('404'));
-    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it("a failed baseline fetch is a no-op: the regular class still projects", async () => {
+    configureSenate("p_specialfail", { specialElections: specials });
+    fetchJson.mockRejectedValue(new Error("404"));
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     await runActivate();
-    expect(state.predictModel.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
-    expect(state.predictModel.project().map((s) => s.seat)).toEqual(['Alpha']);
+    expect(state.predictModel.projectionBase.map((s) => s.seat)).toEqual(["Alpha"]);
+    expect(state.predictModel.project().map((s) => s.seat)).toEqual(["Alpha"]);
     logged.mockRestore();
   });
 
-  it('skips a special whose baseline election id does not resolve', async () => {
-    configureSenate('p_badid', { specialElections: [{ seat: 'Ohio', class: 3, year: 2026, baselineElectionId: 'missing' }] });
+  it("skips a special whose baseline election id does not resolve", async () => {
+    configureSenate("p_badid", {
+      specialElections: [{ seat: "Ohio", class: 3, year: 2026, baselineElectionId: "missing" }],
+    });
     await runActivate();
     expect(fetchJson).not.toHaveBeenCalled();
-    expect(state.predictModel.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
+    expect(state.predictModel.projectionBase.map((s) => s.seat)).toEqual(["Alpha"]);
   });
 
   it("uses the page data path and normalized keys while preserving deduplication and share baselines", async () => {
-    configureSenate("p_specialdedup", { specialElections: [
-      ...specials.map((special) => ({ ...special, seat: ` ${special.seat.toUpperCase()} ` })),
-      { seat: "Alpha", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
-    ] });
+    configureSenate("p_specialdedup", {
+      specialElections: [
+        ...specials.map((special) => ({ ...special, seat: ` ${special.seat.toUpperCase()} ` })),
+        { seat: "Alpha", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
+      ],
+    });
     page.dataBase = "custom-data";
     fetchJson.mockImplementation((url) => {
       if (url !== "custom-data/results/2022.json") throw new Error(`Unexpected URL: ${url}`);
-      return Promise.resolve({ seats: [
-        ...specialBaseline.seats, specialBaseline.seats[0],
-        { n: "Alpha", r: "east", w: "democrat", p: [["democrat", 900], ["republican", 100]] },
-      ] });
+      return Promise.resolve({
+        seats: [
+          ...specialBaseline.seats,
+          specialBaseline.seats[0],
+          {
+            n: "Alpha",
+            r: "east",
+            w: "democrat",
+            p: [
+              ["democrat", 900],
+              ["republican", 100],
+            ],
+          },
+        ],
+      });
     });
     await runActivate();
     const model = state.predictModel;
     expect(fetchJson).toHaveBeenCalledExactlyOnceWith("custom-data/results/2022.json");
-    expect(model.projectionBase.map((seat) => seat.seat).sort()).toEqual(["Alpha", "Florida", "Ohio"]);
-    expect(model.projectionBase.find((seat) => seat.seat === "Alpha").votes).toEqual({ republican: 600, democrat: 400 });
+    expect(model.projectionBase.map((seat) => seat.seat).sort()).toEqual([
+      "Alpha",
+      "Florida",
+      "Ohio",
+    ]);
+    expect(model.projectionBase.find((seat) => seat.seat === "Alpha").votes).toEqual({
+      republican: 600,
+      democrat: 400,
+    });
     expect(model.ballots[0].baseline.get("west").get("democrat")).toBe(30);
     expect(model.ballots[0].baseline.get("south").get("democrat")).toBe(45);
     expect(model.ballots[0].baseline.get("east").get("democrat")).toBe(40);
@@ -327,13 +472,18 @@ describe('activatePredictView Senate special elections', () => {
     const payload = model.serialize();
     model.deserialize(payload);
     expect(model.serialize()).toBe(payload);
-    expect(model.project().map((seat) => seat.seat).sort()).toEqual(["Alpha", "Florida", "Ohio"]);
+    expect(
+      model
+        .project()
+        .map((seat) => seat.seat)
+        .sort(),
+    ).toEqual(["Alpha", "Florida", "Ohio"]);
   });
 
   it("keeps loaded special groups when another baseline fails", async () => {
-    configureSenate("p_specialpartial", { specialElections: [
-      specials[0], { ...specials[1], baselineElectionId: "other-baseline" },
-    ] });
+    configureSenate("p_specialpartial", {
+      specialElections: [specials[0], { ...specials[1], baselineElectionId: "other-baseline" }],
+    });
     manifest.elections.push({ id: "other-baseline", mapId: 23 });
     manifest.files.elections.electionsById["other-baseline"] = "results/other.json";
     fetchJson.mockImplementation((url) => {
@@ -344,162 +494,241 @@ describe('activatePredictView Senate special elections', () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
       await runActivate();
-      expect(fetchJson.mock.calls.map(([url]) => url)).toEqual(["data/results/2022.json", "data/results/other.json"]);
-      expect(state.predictModel.projectionBase.map((seat) => seat.seat).sort()).toEqual(["Alpha", "Florida"]);
-      expect(state.predictModel.project().map((seat) => seat.seat).sort()).toEqual(["Alpha", "Florida"]);
+      expect(fetchJson.mock.calls.map(([url]) => url)).toEqual([
+        "data/results/2022.json",
+        "data/results/other.json",
+      ]);
+      expect(state.predictModel.projectionBase.map((seat) => seat.seat).sort()).toEqual([
+        "Alpha",
+        "Florida",
+      ]);
+      expect(
+        state.predictModel
+          .project()
+          .map((seat) => seat.seat)
+          .sort(),
+      ).toEqual(["Alpha", "Florida"]);
     } finally {
       logged.mockRestore();
     }
   });
 });
 
-describe('2028 predict rollover (shipped shell)', () => {
-  const shell = JSON.parse(readFileSync(new URL('../../uselectionmaps/data/map-modes-shell.json', import.meta.url), 'utf8'));
+describe("2028 predict rollover (shipped shell)", () => {
+  const shell = JSON.parse(
+    readFileSync(
+      new URL("../../uselectionmaps/data/map-modes-shell.json", import.meta.url),
+      "utf8",
+    ),
+  );
   const elections = [
-    { id: '2026-us-house', mapId: 24, parliament: 'us_house' },
-    { id: '2024-us-house', mapId: 21, parliament: 'us_house' },
-    { id: '2026-us-senate', mapId: 23, parliament: 'us_senate' },
-    { id: '2022-us-senate', mapId: 23, parliament: 'us_senate' },
+    { id: "2026-us-house", mapId: 24, parliament: "us_house" },
+    { id: "2024-us-house", mapId: 21, parliament: "us_house" },
+    { id: "2026-us-senate", mapId: 23, parliament: "us_senate" },
+    { id: "2022-us-senate", mapId: 23, parliament: "us_senate" },
   ];
 
   beforeEach(() => {
-    manifest.init({ parliamentFeatures: shell.parliamentFeatures, elections, mapModes: shell.mapModes });
-    state.view = 'predict';
+    manifest.init({
+      parliamentFeatures: shell.parliamentFeatures,
+      elections,
+      mapModes: shell.mapModes,
+    });
+    state.view = "predict";
   });
 
-  it('House swings from the 2026 result and opens on it', () => {
-    state.currentParliament = 'us_house';
-    expect(getPredictBaseElection()).toMatchObject({ id: '2026-us-house' });
-    expect(manifest.parliamentConfig('us_house').predictAnchorElectionId).toBe('2026-us-house');
-    expect(manifest.parliamentConfig('us_house').nextElectionYear).toBe(2028);
+  it("House swings from the 2026 result and opens on it", () => {
+    state.currentParliament = "us_house";
+    expect(getPredictBaseElection()).toMatchObject({ id: "2026-us-house" });
+    expect(manifest.parliamentConfig("us_house").predictAnchorElectionId).toBe("2026-us-house");
+    expect(manifest.parliamentConfig("us_house").nextElectionYear).toBe(2028);
     // The anchor is a real past election, not a forecast to apply.
-    expect(parliamentHasForecast('us_house')).toBe(false);
+    expect(parliamentHasForecast("us_house")).toBe(false);
   });
 
-  it('Senate swings class 3 from 2022 and opens on the 2026 result', () => {
-    state.currentParliament = 'us_senate';
-    expect(getPredictBaseElection()).toMatchObject({ id: '2022-us-senate' });
-    expect(manifest.parliamentConfig('us_senate').predictAnchorElectionId).toBe('2026-us-senate');
-    expect(manifest.parliamentConfig('us_senate').nextElectionYear).toBe(2028);
-    expect(parliamentHasForecast('us_senate')).toBe(false);
+  it("Senate swings class 3 from 2022 and opens on the 2026 result", () => {
+    state.currentParliament = "us_senate";
+    expect(getPredictBaseElection()).toMatchObject({ id: "2022-us-senate" });
+    expect(manifest.parliamentConfig("us_senate").predictAnchorElectionId).toBe("2026-us-senate");
+    expect(manifest.parliamentConfig("us_senate").nextElectionYear).toBe(2028);
+    expect(parliamentHasForecast("us_senate")).toBe(false);
   });
 
-  it('declares Florida and Ohio overrides and no live 2026 specials', () => {
-    const senate = shell.mapModes['23'];
+  it("declares Florida and Ohio overrides and no live 2026 specials", () => {
+    const senate = shell.mapModes["23"];
     expect(senate.senateSpecialElections).toEqual([]);
     expect(senate.senateBaselineOverrides).toEqual([
-      { seat: 'Florida', class: 3, baselineElectionId: '2026-us-senate' },
-      { seat: 'Ohio', class: 3, baselineElectionId: '2026-us-senate' },
+      { seat: "Florida", class: 3, baselineElectionId: "2026-us-senate" },
+      { seat: "Ohio", class: 3, baselineElectionId: "2026-us-senate" },
     ]);
-    expect(shell.parliamentFeatures.us_senate.predict.tabs[0].label).toBe('Seats up (2028)');
+    expect(shell.parliamentFeatures.us_senate.predict.tabs[0].label).toBe("Seats up (2028)");
   });
 });
 
-describe('activatePredictView Senate baseline overrides (2028 class 3)', () => {
+describe("activatePredictView Senate baseline overrides (2028 class 3)", () => {
   // The 2022 class-3 field the page loaded as its baseline, in 2022's shares.
-  const class3 = ['Georgia', 'Florida', 'Ohio', 'Arizona'];
-  const baseline2022 = { seats: class3.map((n) => ({
-    n, r: 'south', w: 'republican', p: [['republican', 520], ['democrat', 480]],
-  })) };
+  const class3 = ["Georgia", "Florida", "Ohio", "Arizona"];
+  const baseline2022 = {
+    seats: class3.map((n) => ({
+      n,
+      r: "south",
+      w: "republican",
+      p: [
+        ["republican", 520],
+        ["democrat", 480],
+      ],
+    })),
+  };
   // The 2026 Senate file: the specials in the Florida and Ohio slots, plus a Class-2 seat that
   // has nothing to do with 2028.
-  const results2026 = { seats: [
-    { n: 'Florida', r: 'south', w: 'republican', p: [['republican', 600], ['democrat', 400]] },
-    { n: 'Ohio', r: 'south', w: 'republican', p: [['republican', 540], ['democrat', 460]] },
-    { n: 'Maine', r: 'south', w: 'democrat', p: [['democrat', 700], ['republican', 300]] },
-  ] };
+  const results2026 = {
+    seats: [
+      {
+        n: "Florida",
+        r: "south",
+        w: "republican",
+        p: [
+          ["republican", 600],
+          ["democrat", 400],
+        ],
+      },
+      {
+        n: "Ohio",
+        r: "south",
+        w: "republican",
+        p: [
+          ["republican", 540],
+          ["democrat", 460],
+        ],
+      },
+      {
+        n: "Maine",
+        r: "south",
+        w: "democrat",
+        p: [
+          ["democrat", 700],
+          ["republican", 300],
+        ],
+      },
+    ],
+  };
   const overrides = [
-    { seat: 'Florida', class: 3, baselineElectionId: '2026-us-senate' },
-    { seat: 'Ohio', class: 3, baselineElectionId: '2026-us-senate' },
+    { seat: "Florida", class: 3, baselineElectionId: "2026-us-senate" },
+    { seat: "Ohio", class: 3, baselineElectionId: "2026-us-senate" },
   ];
   const predictConfig = {
-    model: 'senate',
-    modelledPartyKeys: ['democrat', 'republican'],
-    gridSections: [{ id: 'us', columnKeys: ['democrat', 'republican'] }],
-    tabs: [{ key: 'seatsup', label: 'Seats up' }, { key: 'chamber', label: 'Full Senate' }],
+    model: "senate",
+    modelledPartyKeys: ["democrat", "republican"],
+    gridSections: [{ id: "us", columnKeys: ["democrat", "republican"] }],
+    tabs: [
+      { key: "seatsup", label: "Seats up" },
+      { key: "chamber", label: "Full Senate" },
+    ],
   };
 
   function configureSenate(parliament, mapOverrides) {
     manifest.init({
       parliamentFeatures: { [parliament]: { nextElectionYear: 2028, predict: predictConfig } },
-      elections: [{ id: '2022-us-senate', mapId: 23 }, { id: '2026-us-senate', mapId: 23 }],
-      mapModes: { 23: {
-        name: 'us-senate-2024', regions: [], senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 },
-        ...(mapOverrides ? { senateBaselineOverrides: mapOverrides } : {}),
-      } },
-      files: { elections: {
-        mapsById: { 23: 'maps/m.topo.json' },
-        electionsById: { '2022-us-senate': 'results/2022.json', '2026-us-senate': 'results/2026.json' },
-      } },
+      elections: [
+        { id: "2022-us-senate", mapId: 23 },
+        { id: "2026-us-senate", mapId: 23 },
+      ],
+      mapModes: {
+        23: {
+          name: "us-senate-2024",
+          regions: [],
+          senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 },
+          ...(mapOverrides ? { senateBaselineOverrides: mapOverrides } : {}),
+        },
+      },
+      files: {
+        elections: {
+          mapsById: { 23: "maps/m.topo.json" },
+          electionsById: {
+            "2022-us-senate": "results/2022.json",
+            "2026-us-senate": "results/2026.json",
+          },
+        },
+      },
     });
     state.currentParliament = parliament;
-    state.currentElection = { id: '2022-us-senate', mapId: 23 };
+    state.currentElection = { id: "2022-us-senate", mapId: 23 };
     state.comparisonElectionData = new ElectionData(baseline2022);
-    state.currentRegionLabelsByKey = new Map([['south', 'South']]);
+    state.currentRegionLabelsByKey = new Map([["south", "South"]]);
   }
 
   async function runActivate() {
     try {
       await activatePredictView();
-    } catch { /* expected: no window in node; the override load already ran */ }
+    } catch {
+      /* expected: no window in node; the override load already ran */
+    }
   }
 
-  beforeEach(() => { fetchJson.mockReset(); });
-
-  it('loadSenateSpecialBaseline takes only the named seats of the overriding election', async () => {
-    configureSenate('p_loader', overrides);
-    fetchJson.mockResolvedValue(results2026);
-    const seats = await loadSenateSpecialBaseline(overrides);
-    expect(fetchJson).toHaveBeenCalledExactlyOnceWith('data/results/2026.json');
-    expect(seats.map((seat) => seat.seat)).toEqual(['Florida', 'Ohio']);
+  beforeEach(() => {
+    fetchJson.mockReset();
   });
 
-  it('swings Florida and Ohio from 2026 and the rest of the class from 2022', async () => {
-    configureSenate('p_overrides', overrides);
+  it("loadSenateSpecialBaseline takes only the named seats of the overriding election", async () => {
+    configureSenate("p_loader", overrides);
+    fetchJson.mockResolvedValue(results2026);
+    const seats = await loadSenateSpecialBaseline(overrides);
+    expect(fetchJson).toHaveBeenCalledExactlyOnceWith("data/results/2026.json");
+    expect(seats.map((seat) => seat.seat)).toEqual(["Florida", "Ohio"]);
+  });
+
+  it("swings Florida and Ohio from 2026 and the rest of the class from 2022", async () => {
+    configureSenate("p_overrides", overrides);
     fetchJson.mockResolvedValue(results2026);
     await runActivate();
     const model = state.predictModel;
-    expect(fetchJson).toHaveBeenCalledExactlyOnceWith('data/results/2026.json');
+    expect(fetchJson).toHaveBeenCalledExactlyOnceWith("data/results/2026.json");
     // The class stays the 2028 field: same four states, nothing added from the 2026 file.
     expect(model.projectionBase.map((seat) => seat.seat)).toEqual(class3);
     const rep = (name) => model.projectionBase.find((seat) => seat.seat === name).votes.republican;
-    expect(rep('Georgia')).toBe(520);
-    expect(rep('Arizona')).toBe(520);
-    expect(rep('Florida')).toBe(600);
-    expect(rep('Ohio')).toBe(540);
+    expect(rep("Georgia")).toBe(520);
+    expect(rep("Arizona")).toBe(520);
+    expect(rep("Florida")).toBe(600);
+    expect(rep("Ohio")).toBe(540);
     expect(model.regularClass).toBe(3);
     // The ballot baseline follows the replaced rows: (520+600+540+520) / 4000 = 54.5%, shown as 55.
-    expect(model.ballots[0].baseline.get('south').get('republican')).toBe(55);
+    expect(model.ballots[0].baseline.get("south").get("republican")).toBe(55);
   });
 
-  it('no-ops when the map declares no overrides', async () => {
-    configureSenate('p_nooverrides', null);
+  it("no-ops when the map declares no overrides", async () => {
+    configureSenate("p_nooverrides", null);
     await runActivate();
     expect(fetchJson).not.toHaveBeenCalled();
-    expect(state.predictModel.projectionBase.every((seat) => seat.votes.republican === 520)).toBe(true);
+    expect(state.predictModel.projectionBase.every((seat) => seat.votes.republican === 520)).toBe(
+      true,
+    );
   });
 
-  it('a failed override fetch leaves the 2022 baseline in place', async () => {
-    configureSenate('p_overridefail', overrides);
-    fetchJson.mockRejectedValue(new Error('404'));
-    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it("a failed override fetch leaves the 2022 baseline in place", async () => {
+    configureSenate("p_overridefail", overrides);
+    fetchJson.mockRejectedValue(new Error("404"));
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     await runActivate();
-    expect(state.predictModel.projectionBase.map((seat) => seat.votes.republican)).toEqual([520, 520, 520, 520]);
+    expect(state.predictModel.projectionBase.map((seat) => seat.votes.republican)).toEqual([
+      520, 520, 520, 520,
+    ]);
     logged.mockRestore();
   });
 
-  it('ignores an override for a class other than the one being contested', async () => {
+  it("ignores an override for a class other than the one being contested", async () => {
     // Florida and Ohio also hold Class-1 seats: a Class-3 special must not rebase them.
-    configureSenate('p_overrideclass', overrides);
+    configureSenate("p_overrideclass", overrides);
     manifest.parliamentFeatures.p_overrideclass.nextElectionYear = 2030;
     await runActivate();
     expect(state.predictModel.regularClass).toBe(1);
     expect(fetchJson).not.toHaveBeenCalled();
-    expect(state.predictModel.projectionBase.map((seat) => seat.votes.republican)).toEqual([520, 520, 520, 520]);
+    expect(state.predictModel.projectionBase.map((seat) => seat.votes.republican)).toEqual([
+      520, 520, 520, 520,
+    ]);
   });
 
-  it('skips an override whose baseline election id does not resolve', async () => {
-    configureSenate('p_overridebadid', [{ seat: 'Ohio', class: 3, baselineElectionId: 'missing' }]);
+  it("skips an override whose baseline election id does not resolve", async () => {
+    configureSenate("p_overridebadid", [{ seat: "Ohio", class: 3, baselineElectionId: "missing" }]);
     await runActivate();
     expect(fetchJson).not.toHaveBeenCalled();
   });

@@ -60,10 +60,10 @@ export function createClueGridUI(container, onEdit) {
 
       const tiles = document.createElement("span");
       tiles.className = "tiles";
-      const res = results && results[r];
+      const res = results?.[r];
       for (let c = 0; c < 5; c++) {
         const tile = document.createElement("div");
-        const ded = res && res.deduced[c];
+        const ded = res?.deduced[c];
         tile.className = `tile ${COLOR_CLASS[colorOf(r, c)]}${ded ? " deduced" : ""}`;
         tile.textContent = res ? res.letters[c] : "";
         if (r < 4) {
@@ -96,7 +96,7 @@ export function createClueGridUI(container, onEdit) {
   // Overwrite rows 1-4 from a clue-grid array (strings of 0/1/2, or null = gray).
   function setClueGrid(grid) {
     for (let r = 0; r < 4; r++) {
-      const s = grid && grid[r];
+      const s = grid?.[r];
       for (let c = 0; c < 5; c++) {
         rows[r][c] = s && "012".includes(s[c]) ? +s[c] : 0;
       }
@@ -150,7 +150,7 @@ export function createManualUI(container, onChange) {
     });
   }
 
-  function renderRow(si, ri, row) {
+  function renderRow(_si, _ri, row) {
     const rowEl = document.createElement("div");
     rowEl.className = "tile-row";
     for (let ti = 0; ti < 5; ti++) {
@@ -236,7 +236,7 @@ export function createManualUI(container, onChange) {
     };
     const rows = state[si].rows;
     const last = rows[rows.length - 1];
-    if (last && last.letters.every((l) => l === "")) rows[rows.length - 1] = row;
+    if (last?.letters.every((l) => l === "")) rows[rows.length - 1] = row;
     else rows.push(row);
     render();
   }
@@ -247,7 +247,7 @@ export function createManualUI(container, onChange) {
   function checkAgainst(answers) {
     let changed = 0;
     state.forEach((slot, si) => {
-      const ans = answers && answers[si];
+      const ans = answers?.[si];
       if (!ans) return;
       slot.rows.forEach((row) => {
         if (!row.letters.every((l) => l !== "")) return;

@@ -12,20 +12,17 @@
 // Because only this entry imports these feature modules, esbuild bundles them into
 // electionmaps.min.js alone; the US bundle (which omits these imports) ships without them.
 
-import { startApp } from '../electionmapslogic/app.js';
+import { startApp } from "../electionmapslogic/app.js";
 import {
   activatePredictView,
   getPredictBaseElection,
-} from '../electionmapslogic/features/predict-controller.js';
-import { wirePredictControls } from '../electionmapslogic/features/predict-view.js';
+} from "../electionmapslogic/features/predict-controller.js";
+import { wirePredictControls } from "../electionmapslogic/features/predict-view.js";
 import {
   activatePollTrackerMode,
   wirePollTrackerControls,
-} from '../electionmapslogic/features/polltracker-view.js';
-import {
-  wirePostcodeSearch,
-  initPostcodeSearch,
-} from '../electionmapslogic/features/postcode.js';
+} from "../electionmapslogic/features/polltracker-view.js";
+import { wirePostcodeSearch, initPostcodeSearch } from "../electionmapslogic/features/postcode.js";
 
 startApp({
   predict: {

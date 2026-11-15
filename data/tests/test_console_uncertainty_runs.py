@@ -33,7 +33,6 @@ from models.support.monte_carlo import (
 from models.support.persistence import OutputVote, replace_output, westminster_uns_scope
 from models.support.simulation_replay import replay_simulation
 from models.westminster import run_uns_model as runner
-from tests.console_fixtures import app, saved  # noqa: F401  (pytest fixtures)
 from tests.export_golden import run_export
 from tests.test_westminster_uncertainty_integration import DAY, _poll
 
@@ -598,14 +597,12 @@ def test_hub_preview_without_detail_and_with_a_bad_summary(
     assert "No u rows: the run has no stored seat detail." in body
     with closing(sqlite3.connect(db.config.database_path)) as conn:
         conn.execute(
-            "UPDATE model_uncertainty SET national_json = '{}' "
-            "WHERE election_id = ?",
+            "UPDATE model_uncertainty SET national_json = '{}' WHERE election_id = ?",
             (election_id,),
         )
         conn.commit()
     assert (
-        "The export would fail on this run&#39;s stored summary: "
-        "national.simulations"
+        "The export would fail on this run&#39;s stored summary: national.simulations"
     ) in _hub(app)
 
 

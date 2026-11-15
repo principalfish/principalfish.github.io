@@ -15,23 +15,45 @@ from importers.results.us import import_house_elections as import_house_mod
 
 def _seed_us_parties(db: Database) -> None:
     """Insert the US Party rows the importer resolves by name."""
-    for name in ("Democratic", "Republican", "Libertarian", "US Green", "Independent", "Others"):
+    for name in (
+        "Democratic",
+        "Republican",
+        "Libertarian",
+        "US Green",
+        "Independent",
+        "Others",
+    ):
         db.add_party(name)
 
 
-def test_import_house_loads_seats_votes_and_winner(db: Database, tmp_path: Path) -> None:
+def test_import_house_loads_seats_votes_and_winner(
+    db: Database, tmp_path: Path
+) -> None:
     """import_house creates the map, regions, seats and votes with the right winner."""
     _seed_us_parties(db)
     election_json = tmp_path / "house-2024.json"
-    election_json.write_text(json.dumps({
-        "TX-01": {"seatInfo": {"current": "republican"},
-                  "partyInfo": {"republican": {"total": 200, "name": "R One"},
-                                "democrat": {"total": 100, "name": "D One"}}},
-        "CA-12": {"seatInfo": {"current": "democrat"},
-                  "partyInfo": {"democrat": {"total": 300, "name": "D Two"}}},
-    }), encoding="utf-8")
+    election_json.write_text(
+        json.dumps(
+            {
+                "TX-01": {
+                    "seatInfo": {"current": "republican"},
+                    "partyInfo": {
+                        "republican": {"total": 200, "name": "R One"},
+                        "democrat": {"total": 100, "name": "D One"},
+                    },
+                },
+                "CA-12": {
+                    "seatInfo": {"current": "democrat"},
+                    "partyInfo": {"democrat": {"total": 300, "name": "D Two"}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
-    inserted = import_house_mod.import_house(db, election_json, 2024, "2024 US House Election")
+    inserted = import_house_mod.import_house(
+        db, election_json, 2024, "2024 US House Election"
+    )
 
     assert inserted == 3
     house_map = db.get_map(import_house_mod.MAP_ID)
@@ -48,11 +70,20 @@ def test_import_house_538_file_is_unchanged(db: Database, tmp_path: Path) -> Non
     """A file without meta or status fields imports as it always has."""
     _seed_us_parties(db)
     election_json = tmp_path / "house-2024.json"
-    election_json.write_text(json.dumps({
-        "TX-01": {"seatInfo": {"current": "republican"},
-                  "partyInfo": {"republican": {"total": 200, "name": "R One"},
-                                "democrat": {"total": 100, "name": "D One"}}},
-    }), encoding="utf-8")
+    election_json.write_text(
+        json.dumps(
+            {
+                "TX-01": {
+                    "seatInfo": {"current": "republican"},
+                    "partyInfo": {
+                        "republican": {"total": 200, "name": "R One"},
+                        "democrat": {"total": 100, "name": "D One"},
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     import_house_mod.import_house(db, election_json, 2024, "2024 US House Election")
 
@@ -62,7 +93,9 @@ def test_import_house_538_file_is_unchanged(db: Database, tmp_path: Path) -> Non
     assert election.election_date == date(2024, 11, 5)
     assert election.source_note is None
     assert db.get_seat_statuses(election.id) == {}
-    elected = {v.candidate_name for v in db.get_votes_for_election(election.id) if v.elected}
+    elected = {
+        v.candidate_name for v in db.get_votes_for_election(election.id) if v.elected
+    }
     assert elected == {"R One"}
 
 
@@ -70,22 +103,45 @@ def test_import_house_takes_map_from_meta(db: Database, tmp_path: Path) -> None:
     """A file's meta names its district set's map, created on first import."""
     _seed_us_parties(db)
     election_json = tmp_path / "house-2018.json"
-    election_json.write_text(json.dumps({
-        "meta": {"map_id": 25, "map_name": "US House Districts 2012 cycle",
-                 "election_date": "2018-11-06", "source_note": "Results: test."},
-        "NC-09": {"seatInfo": {"current": None, "called": False, "pct": 100.0,
-                               "sameParty": False, "round": None},
-                  "partyInfo": {"republican": {"total": 139246, "name": "Mark Harris"},
-                                "democrat": {"total": 138341, "name": "Dan McCready"}}},
-    }), encoding="utf-8")
+    election_json.write_text(
+        json.dumps(
+            {
+                "meta": {
+                    "map_id": 25,
+                    "map_name": "US House Districts 2012 cycle",
+                    "election_date": "2018-11-06",
+                    "source_note": "Results: test.",
+                },
+                "NC-09": {
+                    "seatInfo": {
+                        "current": None,
+                        "called": False,
+                        "pct": 100.0,
+                        "sameParty": False,
+                        "round": None,
+                    },
+                    "partyInfo": {
+                        "republican": {"total": 139246, "name": "Mark Harris"},
+                        "democrat": {"total": 138341, "name": "Dan McCready"},
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
-    inserted = import_house_mod.import_house(db, election_json, 2018, "2018 US House Election")
+    inserted = import_house_mod.import_house(
+        db, election_json, 2018, "2018 US House Election"
+    )
 
     assert inserted == 2
     assert db.get_map(import_house_mod.MAP_ID) is None
     house_map = db.get_map(25)
     assert house_map is not None
-    assert (house_map.name, house_map.parliament) == ("US House Districts 2012 cycle", "us_house")
+    assert (house_map.name, house_map.parliament) == (
+        "US House Districts 2012 cycle",
+        "us_house",
+    )
     election = db.get_election_by_name("2018 US House Election")
     assert election is not None and election.map_id == 25
     assert election.election_date == date(2018, 11, 6)
@@ -101,8 +157,14 @@ def test_import_house_takes_map_from_meta(db: Database, tmp_path: Path) -> None:
         ({"current": "democrat", "called": "yes"}, "called/sameParty"),
         ({"current": "democrat", "called": True, "pct": "50"}, "pct must be"),
         ({"current": "democrat", "called": True, "round": "second"}, "unknown round"),
-        ({"current": "democrat", "called": True, "senateClass": 4}, "senateClass must be"),
-        ({"current": "democrat", "called": True, "senateClass": True}, "senateClass must be"),
+        (
+            {"current": "democrat", "called": True, "senateClass": 4},
+            "senateClass must be",
+        ),
+        (
+            {"current": "democrat", "called": True, "senateClass": True},
+            "senateClass must be",
+        ),
     ],
 )
 def test_import_house_rejects_bad_status_fields(
@@ -110,24 +172,40 @@ def test_import_house_rejects_bad_status_fields(
 ) -> None:
     _seed_us_parties(db)
     election_json = tmp_path / "house-2026.json"
-    election_json.write_text(json.dumps({
-        "TX-01": {"seatInfo": seat_info,
-                  "partyInfo": {"democrat": {"total": 1, "name": "D"}}},
-    }), encoding="utf-8")
+    election_json.write_text(
+        json.dumps(
+            {
+                "TX-01": {
+                    "seatInfo": seat_info,
+                    "partyInfo": {"democrat": {"total": 1, "name": "D"}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     with pytest.raises(SystemExit, match=message):
         import_house_mod.import_house(db, election_json, 2026, "2026 US House Election")
 
 
-def test_import_house_refuses_a_map_id_of_another_parliament(db: Database, tmp_path: Path) -> None:
+def test_import_house_refuses_a_map_id_of_another_parliament(
+    db: Database, tmp_path: Path
+) -> None:
     _seed_us_parties(db)
     other = db.add_map("Somewhere else", parliament="westminster")
     election_json = tmp_path / "house-2026.json"
-    election_json.write_text(json.dumps({
-        "meta": {"map_id": other.id, "map_name": "US House Districts 2026"},
-        "TX-01": {"seatInfo": {"current": "democrat"},
-                  "partyInfo": {"democrat": {"total": 1, "name": "D"}}},
-    }), encoding="utf-8")
+    election_json.write_text(
+        json.dumps(
+            {
+                "meta": {"map_id": other.id, "map_name": "US House Districts 2026"},
+                "TX-01": {
+                    "seatInfo": {"current": "democrat"},
+                    "partyInfo": {"democrat": {"total": 1, "name": "D"}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     with pytest.raises(SystemExit, match="refusing to reuse it"):
         import_house_mod.import_house(db, election_json, 2026, "2026 US House Election")
@@ -149,11 +227,18 @@ def test_import_house_rejects_bad_meta(
 ) -> None:
     _seed_us_parties(db)
     election_json = tmp_path / "house-2026.json"
-    election_json.write_text(json.dumps({
-        "meta": meta,
-        "TX-01": {"seatInfo": {"current": "democrat"},
-                  "partyInfo": {"democrat": {"total": 1, "name": "D"}}},
-    }), encoding="utf-8")
+    election_json.write_text(
+        json.dumps(
+            {
+                "meta": meta,
+                "TX-01": {
+                    "seatInfo": {"current": "democrat"},
+                    "partyInfo": {"democrat": {"total": 1, "name": "D"}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     with pytest.raises(SystemExit, match=message):
         import_house_mod.import_house(db, election_json, 2026, "2026 US House Election")
@@ -164,8 +249,10 @@ def test_failed_first_import_creates_no_map(db: Database, tmp_path: Path) -> Non
     election_json = tmp_path / "house-2018.json"
     good = {
         "meta": {"map_id": 25, "map_name": "US House Districts 2012 cycle"},
-        "TX-01": {"seatInfo": {"current": "democrat"},
-                  "partyInfo": {"democrat": {"total": 1, "name": "D"}}},
+        "TX-01": {
+            "seatInfo": {"current": "democrat"},
+            "partyInfo": {"democrat": {"total": 1, "name": "D"}},
+        },
     }
     election_json.write_text(json.dumps(good), encoding="utf-8")
 

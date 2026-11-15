@@ -35,8 +35,18 @@ class TestRepositionSupplementalEntries:
     def test_insert_before_anchor(self) -> None:
         # A prior reorder can push a supplemental with insertBeforeId to the end, so it must
         # be pulled back in front of the anchor.
-        descriptors = [{"id": "snapshot", "parliament": "us_senate", "insertBeforeId": "2024-us-senate"}]
-        entries = [{"id": "2024-us-senate"}, {"id": "2022-us-senate"}, {"id": "snapshot"}]
+        descriptors = [
+            {
+                "id": "snapshot",
+                "parliament": "us_senate",
+                "insertBeforeId": "2024-us-senate",
+            }
+        ]
+        entries = [
+            {"id": "2024-us-senate"},
+            {"id": "2022-us-senate"},
+            {"id": "snapshot"},
+        ]
         reposition_supplemental_entries(entries, descriptors, parliaments={"us_senate"})
         assert _ids(entries) == ["snapshot", "2024-us-senate", "2022-us-senate"]
 
@@ -50,7 +60,11 @@ class TestRepositionSupplementalEntries:
         ]
         # parliaments=None processes every supplemental (the None default path).
         reposition_supplemental_entries(entries, SUPPLEMENTAL_LEGACY_ELECTIONS)
-        assert _ids(entries) == [anchor, "2019-general-changed-boundaries", "2019-general"]
+        assert _ids(entries) == [
+            anchor,
+            "2019-general-changed-boundaries",
+            "2019-general",
+        ]
 
     def test_parliament_filter_skips_other_pages_supplementals(self) -> None:
         # current-senate belongs to us_senate; a westminster-only page must leave it untouched.
@@ -83,7 +97,13 @@ class TestRepositionSupplementalEntries:
         assert _ids(entries) == ["2024-general", "2019-general"]
 
     def test_is_idempotent(self) -> None:
-        descriptors = [{"id": "snapshot", "parliament": "us_senate", "insertBeforeId": "2024-us-senate"}]
+        descriptors = [
+            {
+                "id": "snapshot",
+                "parliament": "us_senate",
+                "insertBeforeId": "2024-us-senate",
+            }
+        ]
         entries = [{"id": "2024-us-senate"}, {"id": "snapshot"}]
         reposition_supplemental_entries(entries, descriptors, parliaments={"us_senate"})
         once = _ids(entries)
@@ -127,7 +147,9 @@ class TestApplySupplementalPrebuilt:
         # Nothing may be registered for the broken supplemental.
         assert entries == []
 
-    def test_present_prebuilt_result_file_registers_entry_with_flags(self, tmp_path: Path) -> None:
+    def test_present_prebuilt_result_file_registers_entry_with_flags(
+        self, tmp_path: Path
+    ) -> None:
         results_dir = tmp_path / "results"
         results_dir.mkdir()
         (results_dir / "senate-current.json").write_text("{}", encoding="utf-8")
@@ -173,7 +195,9 @@ def uk_supplemental(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         "prebuilt": True,
     }
     monkeypatch.setattr(
-        legacy, "SUPPLEMENTAL_LEGACY_ELECTIONS", [supplemental, other_parliament],
+        legacy,
+        "SUPPLEMENTAL_LEGACY_ELECTIONS",
+        [supplemental, other_parliament],
     )
     return supplemental
 
@@ -231,7 +255,12 @@ def _apply_uk(
     maps = {} if maps is None else maps
     data = {} if data is None else data
     apply_supplemental_legacy_elections(
-        entries, maps, data, tmp_path / "results", tmp_path / "legacy", dry_run,
+        entries,
+        maps,
+        data,
+        tmp_path / "results",
+        tmp_path / "legacy",
+        dry_run,
         manifest_parties=parties,
         manifest_regions_by_map_id=regions,
         parliaments={"westminster"} if parliaments is None else parliaments,
@@ -242,7 +271,9 @@ def _apply_uk(
 @pytest.mark.parametrize("missing_source_name", [False, True])
 @pytest.mark.parametrize("dry_run", [False, True])
 def test_uk_missing_source_fails_before_manifest_registration(
-    tmp_path: Path, uk_supplemental: dict[str, Any], missing_source_name: bool,
+    tmp_path: Path,
+    uk_supplemental: dict[str, Any],
+    missing_source_name: bool,
     dry_run: bool,
 ) -> None:
     if missing_source_name:
@@ -268,13 +299,17 @@ def test_uk_missing_source_fails_before_manifest_registration(
 
 
 def test_uk_legacy_conversion_uses_parties_and_map_scoped_regions(
-    tmp_path: Path, uk_supplemental: dict[str, Any],
+    tmp_path: Path,
+    uk_supplemental: dict[str, Any],
 ) -> None:
     source = _write_uk_source(tmp_path, _LEGACY_UK_PAYLOAD)
     original = source.read_bytes()
     entries: list[dict[str, Any]] = []
     maps, data = _apply_uk(
-        tmp_path, entries, parties=_UK_PARTIES, regions=_UK_REGIONS,
+        tmp_path,
+        entries,
+        parties=_UK_PARTIES,
+        regions=_UK_REGIONS,
     )
     assert json.loads((tmp_path / "results/synthetic-result.json").read_text()) == {
         "schema": "pf-results-v4",
@@ -294,20 +329,21 @@ def test_uk_legacy_conversion_uses_parties_and_map_scoped_regions(
     ["schema", "no-parties", "empty-parties", "no-regions", "empty-regions"],
 )
 def test_uk_raw_payload_passthrough(
-    tmp_path: Path, uk_supplemental: dict[str, Any], mode: str,
+    tmp_path: Path,
+    uk_supplemental: dict[str, Any],
+    mode: str,
 ) -> None:
     payload = (
         {"schema": "pf-results-v4", "seats": [{"n": "Raw", "p": [[17, 5]]}]}
-        if mode == "schema" else _LEGACY_UK_PAYLOAD
+        if mode == "schema"
+        else _LEGACY_UK_PAYLOAD
     )
     _write_uk_source(tmp_path, payload)
     parties = (
-        None if mode == "no-parties" else [] if mode == "empty-parties"
-        else _UK_PARTIES
+        None if mode == "no-parties" else [] if mode == "empty-parties" else _UK_PARTIES
     )
     regions = (
-        None if mode == "no-regions" else {} if mode == "empty-regions"
-        else _UK_REGIONS
+        None if mode == "no-regions" else {} if mode == "empty-regions" else _UK_REGIONS
     )
     entries: list[dict[str, Any]] = []
     _apply_uk(tmp_path, entries, parties=parties, regions=regions)
@@ -316,12 +352,21 @@ def test_uk_raw_payload_passthrough(
     assert entries == [_UK_ENTRY]
 
 
-@pytest.mark.parametrize("position, anchor_exists", [
-    ("insertAfterId", True), ("insertAfterId", False),
-    ("insertBeforeId", True), ("insertBeforeId", False), ("none", False),
-])
+@pytest.mark.parametrize(
+    "position, anchor_exists",
+    [
+        ("insertAfterId", True),
+        ("insertAfterId", False),
+        ("insertBeforeId", True),
+        ("insertBeforeId", False),
+        ("none", False),
+    ],
+)
 def test_uk_manifest_insertion_and_existing_reference_preservation(
-    tmp_path: Path, uk_supplemental: dict[str, Any], position: str, anchor_exists: bool,
+    tmp_path: Path,
+    uk_supplemental: dict[str, Any],
+    position: str,
+    anchor_exists: bool,
 ) -> None:
     uk_supplemental.pop("insertAfterId")
     if position != "none":
@@ -340,9 +385,14 @@ def test_uk_manifest_insertion_and_existing_reference_preservation(
     sentinel.write_bytes(b"unchanged foreign results")
     returned_maps, returned_data = _apply_uk(tmp_path, entries, maps=maps, data=data)
     expected = (
-        [first, anchor, _UK_ENTRY, last] if position == "insertAfterId"
-        else [first, _UK_ENTRY, anchor, last]
-    ) if anchor_exists else [first, last, _UK_ENTRY]
+        (
+            [first, anchor, _UK_ENTRY, last]
+            if position == "insertAfterId"
+            else [first, _UK_ENTRY, anchor, last]
+        )
+        if anchor_exists
+        else [first, last, _UK_ENTRY]
+    )
     assert entries == expected
     assert returned_maps is maps and returned_data is data
     assert maps == {"42": "maps/custom-uk.json", "99": "maps/senate.json"}
@@ -355,7 +405,8 @@ def test_uk_manifest_insertion_and_existing_reference_preservation(
 
 
 def test_uk_existing_entry_replaced_in_place_with_flags(
-    tmp_path: Path, uk_supplemental: dict[str, Any],
+    tmp_path: Path,
+    uk_supplemental: dict[str, Any],
 ) -> None:
     uk_supplemental.update({"multiMember": True, "upcomingElections": True})
     _write_uk_source(tmp_path, _LEGACY_UK_PAYLOAD)
@@ -370,7 +421,8 @@ def test_uk_existing_entry_replaced_in_place_with_flags(
 
 
 def test_uk_dry_run_plans_references_without_reading_or_writing_json(
-    tmp_path: Path, uk_supplemental: dict[str, Any],
+    tmp_path: Path,
+    uk_supplemental: dict[str, Any],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     source = _write_uk_source(tmp_path, {})
@@ -380,18 +432,24 @@ def test_uk_dry_run_plans_references_without_reading_or_writing_json(
     result.write_bytes(b"previous result remains untouched")
     before = {
         p.relative_to(tmp_path): p.read_bytes()
-        for p in tmp_path.rglob("*") if p.is_file()
+        for p in tmp_path.rglob("*")
+        if p.is_file()
     }
     entries: list[dict[str, Any]] = [{"id": "anchor"}]
     maps, data = _apply_uk(
-        tmp_path, entries, dry_run=True, parties=_UK_PARTIES, regions=_UK_REGIONS,
+        tmp_path,
+        entries,
+        dry_run=True,
+        parties=_UK_PARTIES,
+        regions=_UK_REGIONS,
     )
     assert entries == [{"id": "anchor"}, _UK_ENTRY]
     assert maps == {"42": "maps/map-42.topo.json"}
     assert data == {"synthetic-uk": "results/synthetic-result.json"}
     after = {
         p.relative_to(tmp_path): p.read_bytes()
-        for p in tmp_path.rglob("*") if p.is_file()
+        for p in tmp_path.rglob("*")
+        if p.is_file()
     }
     assert after == before
     output = capsys.readouterr().out
@@ -400,7 +458,8 @@ def test_uk_dry_run_plans_references_without_reading_or_writing_json(
 
 
 def test_uk_parliament_filter_skips_source_validation_and_all_changes(
-    tmp_path: Path, uk_supplemental: dict[str, Any],
+    tmp_path: Path,
+    uk_supplemental: dict[str, Any],
 ) -> None:
     entries = [{"id": "existing", "parliament": "holyrood"}]
     maps = {"8": "maps/holyrood.json"}

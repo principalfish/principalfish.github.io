@@ -5,20 +5,30 @@ function finite(value, min = 0, max = Infinity) {
 }
 
 function validRange(values, length, max = Infinity) {
-  return Array.isArray(values) && values.length === length
-    && values.every((value, index) => finite(value, 0, max)
-      && (index === 0 || value >= values[index - 1]));
+  return (
+    Array.isArray(values) &&
+    values.length === length &&
+    values.every(
+      (value, index) => finite(value, 0, max) && (index === 0 || value >= values[index - 1]),
+    )
+  );
 }
 
 /** Normalize compact seat rows, or defensively copy an already normalized party map. */
 export function decodeSeatUncertainty(value, resolveParty) {
   const entries = Array.isArray(value)
-    ? value.map((row) => Array.isArray(row) ? [row[0], row.slice(1)] : [])
+    ? value.map((row) => (Array.isArray(row) ? [row[0], row.slice(1)] : []))
     : Object.entries(value || {});
   const result = {};
   for (const [party, band] of entries) {
-    if (party == null || !Array.isArray(band) || band.length !== 3
-        || !validRange(band.slice(0, 2), 2, 100) || !finite(band[2], 0, 1)) continue;
+    if (
+      party == null ||
+      !Array.isArray(band) ||
+      band.length !== 3 ||
+      !validRange(band.slice(0, 2), 2, 100) ||
+      !finite(band[2], 0, 1)
+    )
+      continue;
     result[resolveParty(party)] = [...band];
   }
   return result;
@@ -31,17 +41,31 @@ export function decodeSeatUncertainty(value, resolveParty) {
  * and decodes to null (no uncertainty).
  */
 export function decodeUncertainty(payload, identity, resolveParty, regionsById) {
-  if (!identity || payload?.schema !== "pf-uncertainty-v1"
-      || payload.uncertaintyId !== identity || !finite(payload.interval, 0, 1)
-      || payload.interval === 0 || !Number.isInteger(payload.simulations)
-      || payload.simulations <= 0 || !payload.national?.parties) return null;
+  if (
+    !identity ||
+    payload?.schema !== "pf-uncertainty-v1" ||
+    payload.uncertaintyId !== identity ||
+    !finite(payload.interval, 0, 1) ||
+    payload.interval === 0 ||
+    !Number.isInteger(payload.simulations) ||
+    payload.simulations <= 0 ||
+    !payload.national?.parties
+  )
+    return null;
   function decodeBlock(block) {
     const parties = {};
     for (const [id, row] of Object.entries(block?.parties || {})) {
-      if (!validRange(row?.v, 2, 100) || !validRange(row?.s, 3)
-          || !Number.isInteger(row.m) || row.m < 0) continue;
+      if (
+        !validRange(row?.v, 2, 100) ||
+        !validRange(row?.s, 3) ||
+        !Number.isInteger(row.m) ||
+        row.m < 0
+      )
+        continue;
       parties[resolveParty(id)] = {
-        v: [...row.v], s: [...row.s], m: row.m,
+        v: [...row.v],
+        s: [...row.s],
+        m: row.m,
         pm: finite(row.pm, 0, 1) ? row.pm : null,
         pl: finite(row.pl, 0, 1) ? row.pl : null,
       };
@@ -64,7 +88,8 @@ export function decodeUncertainty(payload, identity, resolveParty, regionsById) 
  */
 export function activeUncertainty(state) {
   return state.view === "election" && state.currentElection?.model
-    ? state.electionData?.uncertainty ?? null : null;
+    ? (state.electionData?.uncertainty ?? null)
+    : null;
 }
 
 /**
@@ -83,10 +108,18 @@ export function shownUncertainty(state) {
 export function uncertaintyForTotals(state) {
   const summary = shownUncertainty(state);
   const filters = state.mapFilters;
-  if (!summary || state.voteTotals.mode !== "all" || filters.party !== "all"
-      || filters.secondParty !== "all" || filters.majorityMin !== 0
-      || filters.majorityMax !== 100 || filters.gainsOnly || filters.upcoming !== "all"
-      || typeof filters.region !== "string") return null;
+  if (
+    !summary ||
+    state.voteTotals.mode !== "all" ||
+    filters.party !== "all" ||
+    filters.secondParty !== "all" ||
+    filters.majorityMin !== 0 ||
+    filters.majorityMax !== 100 ||
+    filters.gainsOnly ||
+    filters.upcoming !== "all" ||
+    typeof filters.region !== "string"
+  )
+    return null;
   const block = filters.region === "all" ? summary.national : summary.regions[filters.region];
   return block && Object.keys(block.parties).length ? block : null;
 }
@@ -161,7 +194,8 @@ function headlineOutlook(summary, labelParty) {
   // Hung first, then parties by name: the order a tie is read out in.
   const outcomes = [
     { party: null, probability: hung },
-    ...leaders.map(([party, row]) => ({ party, probability: row.pm }))
+    ...leaders
+      .map(([party, row]) => ({ party, probability: row.pm }))
       .sort((a, b) => labelParty(a.party).localeCompare(labelParty(b.party))),
   ];
   const outcomeProbability = Math.max(...outcomes.map((outcome) => outcome.probability));
@@ -171,7 +205,8 @@ function headlineOutlook(summary, labelParty) {
     outcomeProbability,
     outcomes: outcomes.filter((outcome) => formatProbability(outcome.probability) === outcomeOdds),
     // A tie is read out by name: ordering by the hidden decimal would rank what the text calls level.
-    largest: leaders.filter(([, row]) => formatProbability(row.pl) === largestOdds)
+    largest: leaders
+      .filter(([, row]) => formatProbability(row.pl) === largestOdds)
       .sort((a, b) => labelParty(a[0]).localeCompare(labelParty(b[0]))),
   };
 }
@@ -184,17 +219,20 @@ function headlineOutlook(summary, labelParty) {
 export function uncertaintyOutcomeLine(summary, labelParty) {
   const outlook = headlineOutlook(summary, labelParty);
   if (!outlook) return "";
-  const outcomeName = ({ party }) => party === null ? "Hung parliament" : `${labelParty(party)} majority`;
+  const outcomeName = ({ party }) =>
+    party === null ? "Hung parliament" : `${labelParty(party)} majority`;
   const outcomeOdds = formatProbability(outlook.outcomeProbability);
-  const outcome = outlook.outcomes.length > 1
-    ? `${joinNames(outlook.outcomes.map(outcomeName), "or")} equally likely (${outcomeOdds})`
-    : `${outcomeName(outlook.outcomes[0])} `
-      + `${probabilityPercent(outlook.outcomeProbability) >= 50 ? "likely" : "most likely"} (${outcomeOdds})`;
+  const outcome =
+    outlook.outcomes.length > 1
+      ? `${joinNames(outlook.outcomes.map(outcomeName), "or")} equally likely (${outcomeOdds})`
+      : `${outcomeName(outlook.outcomes[0])} ` +
+        `${probabilityPercent(outlook.outcomeProbability) >= 50 ? "likely" : "most likely"} (${outcomeOdds})`;
   const names = outlook.largest.map(([party]) => labelParty(party));
   const largestOdds = formatProbability(outlook.largest[0][1].pl);
-  const largest = names.length > 1
-    ? `${joinNames(names, "and")} level as largest party (${largestOdds})`
-    : `${names[0]} largest party (${largestOdds})`;
+  const largest =
+    names.length > 1
+      ? `${joinNames(names, "and")} level as largest party (${largestOdds})`
+      : `${names[0]} largest party (${largestOdds})`;
   return `${outcome} · ${largest}`;
 }
 
@@ -215,8 +253,11 @@ export function simulatedSubtitle(electionName, summary, labelParty) {
 export function uncertaintyHeadline(summary, labelParty) {
   const outlook = headlineOutlook(summary, labelParty);
   if (!outlook) return "";
-  const parts = outlook.largest.map(([party, row]) => `${labelParty(party)} `
-    + `${uncertaintyNumber(row.m)} seats (${uncertaintyRange(row.s)}) · majority ${formatProbability(row.pm)}`);
+  const parts = outlook.largest.map(
+    ([party, row]) =>
+      `${labelParty(party)} ` +
+      `${uncertaintyNumber(row.m)} seats (${uncertaintyRange(row.s)}) · majority ${formatProbability(row.pm)}`,
+  );
   if (!outlook.outcomes.some(({ party }) => party === null)) {
     parts.push(`hung ${formatProbability(outlook.hung)}`);
   }

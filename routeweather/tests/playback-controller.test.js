@@ -15,20 +15,41 @@ const POINTS = [
 
 function makeResults(samples, tempC = 10) {
   return samples.map((s, i) => ({
-    tempC: tempC + i, model2mTempC: tempC, windKmh: 20, windFromDeg: 270, gustKmh: 30,
-    headKmh: 5, crossKmh: 1, precipMm: 0, precipProb: 0, code: 0, model10mWindKmh: 15,
-    model10mGustKmh: 25, cellElev: 300, eleUsed: s.ele, outsideForecast: false,
+    tempC: tempC + i,
+    model2mTempC: tempC,
+    windKmh: 20,
+    windFromDeg: 270,
+    gustKmh: 30,
+    headKmh: 5,
+    crossKmh: 1,
+    precipMm: 0,
+    precipProb: 0,
+    code: 0,
+    model10mWindKmh: 15,
+    model10mGustKmh: 25,
+    cellElev: 300,
+    eleUsed: s.ele,
+    outsideForecast: false,
   }));
 }
 
 function makeState(route = buildRoute(POINTS)) {
   const samples = route.points.map((p, i) => ({
-    index: i, lat: p.lat, lon: p.lon, ele: p.ele, cumDistKm: p.cumDistKm,
-    bearingDeg: p.bearingDeg, kind: "filler",
+    index: i,
+    lat: p.lat,
+    lon: p.lon,
+    ele: p.ele,
+    cumDistKm: p.cumDistKm,
+    bearingDeg: p.bearingDeg,
+    kind: "filler",
   }));
   return {
-    route, samples, results: makeResults(samples), units: resolveUnits("metric"),
-    startMs: Date.UTC(2026, 9, 26, 9, 0), speedKmh: 5,
+    route,
+    samples,
+    results: makeResults(samples),
+    units: resolveUnits("metric"),
+    startMs: Date.UTC(2026, 9, 26, 9, 0),
+    speedKmh: 5,
   };
 }
 
@@ -38,13 +59,18 @@ function fakeFrames() {
   let nextId = 1;
   return {
     now: () => t,
-    raf: (cb) => { pending.set(nextId, cb); return nextId++; },
+    raf: (cb) => {
+      pending.set(nextId, cb);
+      return nextId++;
+    },
     caf: (id) => pending.delete(id),
     step(ms) {
       t += ms;
       const due = [...pending.values()];
       pending.clear();
-      due.forEach((cb) => cb(t));
+      due.forEach((cb) => {
+        cb(t);
+      });
     },
   };
 }
@@ -57,7 +83,7 @@ describe("createPlaybackController", () => {
   let controller;
 
   beforeEach(() => {
-    document.body.innerHTML = "<section id=\"chartsPanel\"></section><div id=\"playback\"></div>";
+    document.body.innerHTML = '<section id="chartsPanel"></section><div id="playback"></div>';
     positions = [];
     frames = fakeFrames();
     const mapView = { setPosition: (km, weather) => positions.push({ km, weather }) };

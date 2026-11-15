@@ -45,6 +45,7 @@ def test_the_startup_tasks_sweep_then_ask_for_a_backup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[str] = []
+
     def sweep() -> int:
         calls.append("sweep")
         return 0

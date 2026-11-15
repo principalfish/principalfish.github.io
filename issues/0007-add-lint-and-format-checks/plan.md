@@ -132,7 +132,7 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
 - [x] 4. `ruff check` clean in `data/tests/`; fixtures registered; `.git-blame-ignore-revs` lists pieces 2 and 3
 - [x] 5. `ruff check` clean everywhere; strict mypy still clean
 - [x] 6. `biome ci` clean; bundles in sync
-- [ ] 7. `./lint.sh` runs all checks and fails at the right steps; CI lint job
+- [x] 7. `./lint.sh` runs all checks and fails at the right steps; CI lint job
 - [ ] 8. README, AGENTS.md and data/README.md meet the project-docs guide; every command accounted for and checked
 
 ## Verification
@@ -174,3 +174,4 @@ After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh`
 - Piece 6 committed 5dd207ae (2026-11-15), approved under the standing instruction with the sparse-array biome-ignores accepted; the click-through list goes on the user's end-of-issue testing list.
 - Piece 7 (2026-11-15): `lint.sh` as planned. Deviation: the CI `lint` job installs into `data/.venv` (as the `data` job does) rather than a bare `pip install`, so `lint.sh`'s venv lookup finds ruff and shellcheck. Proven by hand, each edit restored: each of the four steps fails alone and is named; two at once are both named; `--fix` repairs an unused import plus unformatted Python and JS; `--fix` still runs every check when a fixer fails (an unfixable Biome error, a Python syntax error); no venv and missing tools exit 1 with install hints; an unknown argument exits 2; `--help` works from any directory; shellcheck passes on lint.sh. A `var` probe does not fail Biome (noVar isn't in Biome 2's recommended set), so the Biome probe uses a self-assignment. CI is proven when the PR runs it.
 - Piece 7 review: correctness raised 2 low bugs in lint.sh (`--fix` aborting on a failing `ruff format`; `--help` from another directory), both verified and fixed, re-check clean. Dropped: the missing workflow `permissions:` block (pre-existing for all jobs; possible separate hardening task) and two coverage notes. A git_guard false positive blocked a read-only command (a `git diff` plus a heredoc with apostrophes), so the checks started before their input files existed and reviewed the worktree directly.
+- Piece 7 committed fb509ea7 (2026-11-15), lint.sh mode 100755; approved under the standing instruction with the data/.venv choice accepted.

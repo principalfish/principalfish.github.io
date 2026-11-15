@@ -57,6 +57,9 @@ jobs:
 
       - name: mypy + pytest
         working-directory: data
+        # -n auto would be half the runner's 4 vCPUs (tests/conftest.py); use all four.
+        env:
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 4
         run: ./run_tests.sh
 
   frontend:

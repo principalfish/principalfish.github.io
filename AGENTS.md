@@ -14,8 +14,10 @@ tests, `--fix` applies lint fixes first, and `-- ARGS` goes to pytest. The suite
     npm test                    # Vitest
 
 `run_tests.sh` forwards extra args to pytest after `tests/`, so they filter the whole
-suite (a file path doesn't narrow it). One file, or a single step, runs
-with the venv interpreter directly:
+suite (a file path doesn't narrow it). It runs pytest in parallel on half the CPUs, with
+temp files in RAM: `-n 0` runs serially (needed for `-s`), `PYTEST_XDIST_AUTO_NUM_WORKERS=<n>`
+sets the worker count, and `TESTS_TMP_ON_DISK=1` keeps temp files on disk to inspect them.
+One file, or a single step, runs serially with the venv interpreter directly:
 
     cd data && ./run_tests.sh -k model_outputs -q                       # by keyword
     cd data && ./election_data/bin/python -m pytest tests/test_export_payload.py -q   # one file

@@ -129,3 +129,4 @@ Piece 1 also reports the draft PR's CI "mypy + pytest" step time against today's
 - Piece 1: the hook defers to xdist only when `PYTEST_XDIST_AUTO_NUM_WORKERS` parses as an int (review fix), matching xdist 3.8's own parse; junk or empty means half the CPUs.
 - Piece 1: with `-q` xdist prints no "created: N/N workers" line; run without `-q` to see it.
 - Piece 1, accepted at review (user: "Tried it, approve"): a SIGKILLed run leaves its `/dev/shm/data-tests.*` folder until reboot; both the INT and TERM traps stay in `run_tests.sh` (TERM may be redundant but states the intent).
+- 2026-11-15 (planner): piece 2 decisions from the user. Helper at `data/tests/source_files.py`, `python_files(under=None)`, no caching. The sub-folder scans (`test_importer_packages.py:27/32`, `test_console_templates.py:339`) switch to it too ("Switch them too"). With no git, or no checkout, the scans fail loudly rather than skip ("Fail loudly").

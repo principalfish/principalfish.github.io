@@ -10,6 +10,7 @@
 - Coverage works under xdist (identical XML on a subset); this chat adds `-n` to the planner branch's coverage-changed.sh, only when xdist is importable (2026-11-15).
 - CI uses all 4 workers: CPU/2 stays the default (an xdist hook in conftest that the `PYTEST_XDIST_AUTO_NUM_WORKERS` env var overrides), and ci.yml sets it to 4 for the Python job (2026-11-15).
 - Pytest's temp files go in RAM: when `/dev/shm` exists, run_tests.sh points `--basetemp` at a fresh per-run folder under it and deletes it on exit; an env var keeps them on disk instead (2026-11-15).
+- Piece 2: helper `data/tests/source_files.py` with `python_files(under=None)`; the sub-folder scans (`test_importer_packages.py:27/32`, `test_console_templates.py:339`) switch too ("Switch them too"); no git or not a checkout fails loudly ("Fail loudly"); no caching (2026-11-15).
 
 ## Open
 

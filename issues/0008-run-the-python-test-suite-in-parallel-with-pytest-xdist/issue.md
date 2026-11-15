@@ -10,11 +10,11 @@ Out of scope: gating the GitHub Pages deploy on CI (considered and dropped), and
 
 ## Plan
 
-_2026-11-15 · 1 of 3 pieces done · now: piece 2 in progress_
+_2026-11-15 · 2 of 3 pieces done · now: waiting on a decision_
 
 - [x] **1/3 Run the suite in parallel** · `817554d4`
   run_tests.sh runs pytest on half the CPUs (4 on CI), with temp files in a per-run RAM folder
-- [ ] **2/3 List the scanned source files through git** · in progress
+- [x] **2/3 List the scanned source files through git** · `d15b8f04`
   the repo-scan tests list data/'s files with git, so gitignored folders can't fail them
 - [ ] **3/3 Fail the run if it changes tracked exported data** · not started
   a session guard names any file under electionmaps/data or uselectionmaps/data that a run changed

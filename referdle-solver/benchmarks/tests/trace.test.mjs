@@ -8,6 +8,7 @@ describe("lossless semantic trace protocol", () => {
       undefined,
       null: null,
       numbers: [-0, NaN, Infinity, -Infinity, 1.0000000000000002],
+      // biome-ignore lint/suspicious/noSparseArray: a hole and an undefined must stay distinct
       holes: [, undefined],
       text: "AAAAA",
     };

@@ -6,8 +6,6 @@ import { pmCode } from "./data.js";
 import { STRATEGY } from "./strategy.js";
 import { solve } from "./solver.js";
 
-const LOOKAHEAD_MAX = 14;
-
 function hasRepeat(word) {
   return new Set(word).size < 5;
 }
@@ -42,11 +40,6 @@ function answerIndices(answers, poolIndex) {
   const idx = new Int32Array(answers.length);
   for (let i = 0; i < answers.length; i++) idx[i] = poolIndex.get(answers[i]);
   return idx;
-}
-
-// code(answers[g] vs answers[s]) using PM.
-function setCode(idx, PM, N, g, s) {
-  return pmCode(PM, N, idx[g], idx[s]);
 }
 
 export function expectedRemainingAll(answers, PM, N, poolIndex) {
@@ -474,7 +467,7 @@ function analyzeBoard(answers, PM, N, poolIndex, ALL_GUESSES, PLURALS, avoidDoub
 
 function topForBoard({ answers, scores, best, avoidDoubles }, n) {
   const top = topFromScores(answers, scores, n, avoidDoubles);
-  if (best && best.probe && !top.some((t) => t.word === best.word)) {
+  if (best?.probe && !top.some((t) => t.word === best.word)) {
     top.unshift({
       word: best.word,
       expRemaining: round2(best.expRemaining),
@@ -492,7 +485,7 @@ function topForBoard({ answers, scores, best, avoidDoubles }, n) {
 // (and STRATEGY.resolve_tiebreak is on), the endgame tie-break refines the chosen
 // board's word; without it, behaviour is unchanged.
 export function bestGuessAcrossBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURALS, ctx) {
-  if (!res || !res.solvable) return [];
+  if (!res?.solvable) return [];
   const analyses = analyzeBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURALS);
   return rankBoards(analyses, res, PM, N, poolIndex, PLURALS, ctx);
 }
@@ -500,7 +493,7 @@ export function bestGuessAcrossBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURAL
 // One request's scores and independent choices serve both ranking and display.
 // Endgame refinement changes only the copied ranked entry, not a board's choice.
 export function buildSuggestions(res, PM, N, poolIndex, ALL_GUESSES, PLURALS, ctx) {
-  if (!res || !res.solvable) return { solvable: false };
+  if (!res?.solvable) return { solvable: false };
   const analyses = analyzeBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURALS);
   const ranked = rankBoards(analyses, res, PM, N, poolIndex, PLURALS, ctx);
   const perBoard = analyses.map((analysis) => ({

@@ -64,7 +64,7 @@ async function loadMatrix(path) {
 }
 
 export async function loadAssets(onProgress) {
-  const note = (m) => onProgress && onProgress(m);
+  const note = (m) => onProgress?.(m);
 
   note("Loading word lists…");
   const [poolTxt, expandedTxt, pluralsTxt, manifest] = await Promise.all([
@@ -129,7 +129,7 @@ async function loadDailyFile(state, file) {
     let arr = null;
     try {
       arr = await fetchJSON(`${BASE}/${file}`);
-    } catch (e) {
+    } catch {
       arr = null;
     }
     state.dailyCache.set(file, arr);

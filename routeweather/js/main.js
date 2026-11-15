@@ -191,7 +191,10 @@ export function init({
 
   const views = [];
   const addView = (update) => views.push(update);
-  const render = (reason) => views.forEach((update) => update(state, reason));
+  const render = (reason) =>
+    views.forEach((update) => {
+      update(state, reason);
+    });
 
   // Aborted when a newer load or retry starts, so a superseded load stops
   // spending quota and can never overwrite newer state.
@@ -226,7 +229,7 @@ export function init({
     const startMs = times[0];
     const finishMs = times[times.length - 1];
     if (startMs < state.forecastStartMs) {
-      return `The forecast starts at ${at(state.forecastStartMs)}; ` + "pick a later start.";
+      return `The forecast starts at ${at(state.forecastStartMs)}; pick a later start.`;
     }
     if (finishMs <= state.forecastEndMs) return null;
     const ends = at(state.forecastEndMs);

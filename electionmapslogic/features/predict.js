@@ -68,7 +68,7 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
     // If this region feeds a synthetic aggregate (e.g. an English region → 'england'), credit the
     // same turnout + votes a second time under the aggregate key, so the aggregate row ends up as
     // the sum of its members. The seat legitimately appears in both its own row and the aggregate.
-    if (aggregateConfig && aggregateConfig.isMember(regionKey)) {
+    if (aggregateConfig?.isMember(regionKey)) {
       const agg = ensureRegion(aggregateConfig.key);
       agg.totalVotes += turnout;
       modelledPartyKeys.forEach((partyKey) => {
@@ -197,7 +197,7 @@ export function projectSeatUniformSwing(
   const resolveSwing = (partyKey) => {
     const direct = Number(swingsByRegionByParty.get(regionKey)?.get(partyKey) || 0);
     if (Math.abs(direct) > 1e-9) return direct;
-    if (aggregateConfig && aggregateConfig.isMember(regionKey)) {
+    if (aggregateConfig?.isMember(regionKey)) {
       return Number(swingsByRegionByParty.get(aggregateConfig.key)?.get(partyKey) || 0);
     }
     return 0;
@@ -449,7 +449,7 @@ class PredictModel {
    *   predict pipeline treats null as "skip aggregate handling entirely").
    */
   static #buildAggregateConfig(aggCfg) {
-    if (!aggCfg || !aggCfg.key) return null;
+    if (!aggCfg?.key) return null;
     const aggKey = normalizeRegionKey(aggCfg.key);
     const exclude = new Set((aggCfg.excludeRegions || []).map((rk) => normalizeRegionKey(rk)));
     return {
@@ -762,7 +762,9 @@ class PredictModel {
    */
   reset() {
     this.aggregateExpanded = false;
-    this.ballots.forEach((b) => b.input.clear());
+    this.ballots.forEach((b) => {
+      b.input.clear();
+    });
   }
 
   /**
@@ -1040,7 +1042,9 @@ class PredictModel {
       },
     ];
     if (this.aggregateExpanded) {
-      subRows.forEach((r) => rows.push({ ...r, isAggregateChild: true, section: sectionKey }));
+      subRows.forEach((r) => {
+        rows.push({ ...r, isAggregateChild: true, section: sectionKey });
+      });
     }
     return rows;
   }

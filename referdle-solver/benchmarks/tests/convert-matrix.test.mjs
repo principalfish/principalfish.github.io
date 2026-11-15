@@ -29,7 +29,9 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 function legacy(values, littleEndian = true) {
   const bytes = Buffer.alloc(values.length * 2);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  values.forEach((value, i) => view.setInt16(i * 2, value, littleEndian));
+  values.forEach((value, i) => {
+    view.setInt16(i * 2, value, littleEndian);
+  });
   return gzipSync(bytes);
 }
 

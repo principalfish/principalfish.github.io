@@ -166,7 +166,7 @@ describe("createReadoutUI", () => {
     container = document.getElementById("readout");
   });
 
-  const valueOf = (key) => container.querySelector(`.readout-${key} dd`).textContent;
+  const readoutText = (key) => container.querySelector(`.readout-${key} dd`).textContent;
 
   it("builds a labelled list showing dashes until updated", () => {
     createReadoutUI(container);
@@ -186,18 +186,18 @@ describe("createReadoutUI", () => {
       "Sky",
       "Model",
     ]);
-    expect(valueOf("temp")).toBe(MISSING);
+    expect(readoutText("temp")).toBe(MISSING);
   });
 
   it("writes the values, and only the ones that changed", () => {
     const readout = createReadoutUI(container);
     const state = makeState();
     readout.update(state, WEATHER, 5);
-    expect(valueOf("temp")).toBe("8 °C");
-    expect(valueOf("weather")).toBe("Light rain");
+    expect(readoutText("temp")).toBe("8 °C");
+    expect(readoutText("weather")).toBe("Light rain");
     const tempNode = container.querySelector(".readout-temp dd").firstChild;
     readout.update(state, { ...WEATHER, windKmh: 30 }, 5);
-    expect(valueOf("wind")).toMatch(/^30 km\/h/);
+    expect(readoutText("wind")).toMatch(/^30 km\/h/);
     // Unchanged text keeps its node.
     expect(container.querySelector(".readout-temp dd").firstChild).toBe(tempNode);
   });

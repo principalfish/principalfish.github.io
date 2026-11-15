@@ -169,7 +169,9 @@ describe("fetchForecast", () => {
     expect(listParam(mock.calls[1].url, "latitude")).toHaveLength(1);
     expect(mock.maxInFlight()).toBe(1);
     expect(locations).toHaveLength(samples.length);
-    locations.forEach((loc, i) => expect(loc.cellLat).toBeCloseTo(samples[i].lat, 5));
+    locations.forEach((loc, i) => {
+      expect(loc.cellLat).toBeCloseTo(samples[i].lat, 5);
+    });
   });
 
   it("normalises a single-object response into a one-element array", async () => {
@@ -302,8 +304,8 @@ describe("fetchForecast options", () => {
   it("reports a caller abort mid-request as aborted, not timed out", async () => {
     const controller = new AbortController();
     let seen;
-    const impl = (url, { signal }) =>
-      new Promise((resolve, reject) => {
+    const impl = (_url, { signal }) =>
+      new Promise((_resolve, reject) => {
         seen = signal;
         signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
       });
@@ -339,8 +341,8 @@ describe("without AbortSignal.any and AbortSignal.timeout", () => {
   });
 
   // Fetch that settles only when its signal aborts, with the signal's reason.
-  const hangingFetch = (url, { signal }) =>
-    new Promise((resolve, reject) => {
+  const hangingFetch = (_url, { signal }) =>
+    new Promise((_resolve, reject) => {
       signal.addEventListener("abort", () => reject(signal.reason));
     });
 
@@ -374,7 +376,7 @@ describe("without AbortSignal.any and AbortSignal.timeout", () => {
     const err = await pending;
     expect(err.message).toMatch(`timed out after ${REQUEST_TIMEOUT_MS / 1000} s`);
 
-    const quick = async (url) => jsonResponse(fakeLocation(50, -3));
+    const quick = async (_url) => jsonResponse(fakeLocation(50, -3));
     await fetchForecast(samplesN(1), RANGE, quick);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -614,7 +616,9 @@ describe("fetchElevations", () => {
     expect(listParam(calls[0], "latitude")).toHaveLength(ELEVATION_CHUNK_SIZE);
     expect(listParam(calls[1], "latitude")).toHaveLength(1);
     expect(elevations).toHaveLength(points.length);
-    elevations.forEach((ele, i) => expect(ele).toBeCloseTo(points[i].lat * 10, 6));
+    elevations.forEach((ele, i) => {
+      expect(ele).toBeCloseTo(points[i].lat * 10, 6);
+    });
   });
 
   it("turns null elevations into NaN", async () => {

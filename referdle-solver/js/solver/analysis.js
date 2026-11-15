@@ -5,8 +5,7 @@ import { freshSlots, reconstructSlots } from "./engine.js";
 
 // An all-gray clue carries no signal; null takes the fast no-clue solver path.
 export const clueIsSet = (grid) =>
-  grid &&
-  grid.slice(0, 4).some((c) => typeof c === "string" && (c.includes("1") || c.includes("2")));
+  grid?.slice(0, 4).some((c) => typeof c === "string" && (c.includes("1") || c.includes("2")));
 export const manualClue = (grid) => (clueIsSet(grid) ? grid : null);
 
 export function createManualAnalysis(st) {

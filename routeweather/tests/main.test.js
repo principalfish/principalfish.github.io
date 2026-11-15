@@ -620,7 +620,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
   it("shows wind in mph over metric without touching distance, speed or the data", async () => {
     const { page, calls } = startPage();
     const reasons = [];
-    page.addView((state, reason) => reasons.push(reason));
+    page.addView((_state, reason) => reasons.push(reason));
     await loadRoute(page);
     // Through the clock, so the position survives the units re-render.
     page.playback.clock.seek(0.5);
@@ -711,7 +711,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
   it("ignores re-picking a preset or toggle with nothing to change", () => {
     const { page } = startPage();
     const reasons = [];
-    page.addView((state, reason) => reasons.push(reason));
+    page.addView((_state, reason) => reasons.push(reason));
     const units = page.state.units;
     clickRadio("units", "metric");
     clickRadio("windUnit", "kmh");
@@ -990,7 +990,7 @@ describe.each(ZONES)("route weather page (TZ=%s)", (zone, offsetMin) => {
   it("passes a reason to registered views", async () => {
     const { page } = startPage();
     const reasons = [];
-    page.addView((state, reason) => reasons.push(reason));
+    page.addView((_state, reason) => reasons.push(reason));
     await loadRoute(page);
     expect(reasons).toContain("load");
     expect(reasons).toContain("status");

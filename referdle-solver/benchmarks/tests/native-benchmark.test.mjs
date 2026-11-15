@@ -21,6 +21,7 @@ const result = {
   present: undefined,
   negativeZero: -0,
   nested: [undefined, null, -0, 1.0000000000000002],
+  // biome-ignore lint/suspicious/noSparseArray: the hole is part of what the round trip must keep
   sparse: ["AAAAA", , "BBBBB"],
 };
 const expected = {

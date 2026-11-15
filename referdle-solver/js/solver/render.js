@@ -54,7 +54,7 @@ export function mustWithPositions(words, clueRow) {
     for (let p = 0; p < 5; p++) {
       if (words.some((w) => w[p] === ch)) {
         all.push(p + 1);
-        if (!clueRow || clueRow[p] !== "0") meaningful.push(p + 1);
+        if (clueRow?.[p] !== "0") meaningful.push(p + 1);
       }
     }
     const pos = meaningful.length ? meaningful : all;
@@ -66,7 +66,7 @@ export function cantContain(slots, clueGrid, idx) {
   const out = new Set();
   for (let j = 0; j < 5; j++) {
     if (j === idx) continue;
-    const clue = clueGrid && clueGrid[j];
+    const clue = clueGrid?.[j];
     if (typeof clue !== "string") continue;
     const greens = knownGreens(slots[j]);
     for (let p = 0; p < 5; p++) {
@@ -115,7 +115,7 @@ export function renderWordLists(slotsEl, slots, clueGrid, res) {
   slotsEl.innerHTML = res.perSlotFeasible
     .map((feasible, i) => {
       const label = WORD_LABEL(i);
-      const must = mustWithPositions(feasible, clueGrid && clueGrid[i]);
+      const must = mustWithPositions(feasible, clueGrid?.[i]);
       const cant = cantContain(slots, clueGrid, i);
       return (
         `<div class="slot-result">` +
@@ -133,12 +133,12 @@ export function renderWordLists(slotsEl, slots, clueGrid, res) {
 // Per-word "top 5" block (expanded). `perBoard` = [{board, top:[{word,
 // expRemaining, probe}]}]; `isChosen(board, word)` optionally highlights a pick.
 export function perWordTopHTML(perBoard, isChosen) {
-  if (!perBoard || !perBoard.length) return "";
+  if (!perBoard?.length) return "";
   const secs = perBoard
     .map((pb) => {
       const chips = pb.top
         .map((t, i) => {
-          const chosen = isChosen && isChosen(pb.board, t.word);
+          const chosen = isChosen?.(pb.board, t.word);
           const tag = t.probe ? ` <span class="probe-tag">probe</span>` : "";
           return (
             `<span class="chip${i === 0 ? " top" : ""}${chosen ? " chosen" : ""}">` +
@@ -168,8 +168,8 @@ export function renderStepSuggest(
   moveVerb = "Suggested",
   asCurrent = false,
 ) {
-  const ranked = sug && sug.solvable && sug.ranked ? sug.ranked : [];
-  const perBoard = sug && sug.perBoard ? sug.perBoard : [];
+  const ranked = sug?.solvable && sug.ranked ? sug.ranked : [];
+  const perBoard = sug?.perBoard ? sug.perBoard : [];
 
   if (asCurrent) {
     const n = totalMoves;
@@ -285,7 +285,7 @@ export function renderAutoSolveTable(container, lastAutoSolve, activeIdx, onJump
     `<p>${note}</p>${playedLine}` +
     `<table class="suggest-table move-table"><thead><tr><th>#</th><th>board</th>` +
     `<th>guess</th><th>result</th><th>cut</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  container
-    .querySelectorAll(".move-row")
-    .forEach((tr) => tr.addEventListener("click", () => onJump(+tr.dataset.move)));
+  container.querySelectorAll(".move-row").forEach((tr) => {
+    tr.addEventListener("click", () => onJump(+tr.dataset.move));
+  });
 }

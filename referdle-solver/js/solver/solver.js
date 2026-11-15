@@ -14,17 +14,6 @@ const FINAL = 4;
 
 // --- pattern access ------------------------------------------------------------
 
-// Pattern code of get_comparison(guess, cand): PM lookup when both are pool
-// words, else computed on the fly. (PM[i*N+j] = code(pool[i] vs pool[j]).)
-function codeFor(guess, cand, PM, N, poolIndex) {
-  const gi = poolIndex.get(guess);
-  if (gi !== undefined) {
-    const ci = poolIndex.get(cand);
-    if (ci !== undefined) return pmCode(PM, N, gi, ci);
-  }
-  return compareCode(guess, cand);
-}
-
 // 2D pattern-code block M[a][b] = code(aWords[a] vs bWords[b]).
 function poolBlock(aWords, bWords, PM, N, poolIndex) {
   const na = aWords.length,
@@ -110,7 +99,7 @@ function feasibleForSlot(s, cands, found) {
   const feasible = [];
   const forbidMemo = new Map();
   for (const w of cands[s]) {
-    if (found && found.has(w)) continue;
+    if (found?.has(w)) continue;
     if (!baseUsed.has(w)) {
       feasible.push(w);
     } else {
@@ -270,7 +259,7 @@ function chainArcConsistency(cands, clue, PM, N, poolIndex) {
       const pat = clue[i];
       if (!pat) continue;
       const code = cluePatternCode(pat);
-      let A = cands[i];
+      const A = cands[i];
       let B = cands[i + 1];
       let M = poolBlock(A, B, PM, N, poolIndex);
       // keep B[j] iff some A[a] matches

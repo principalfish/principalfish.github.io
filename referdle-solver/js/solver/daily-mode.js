@@ -125,7 +125,7 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
     if (!words) return;
     // Already solved (whole-game or stepped to the end) — just re-show the final
     // state; don't recompute the game.
-    if (lastAutoSolve && lastAutoSolve.game && lastAutoSolve.game.solved) {
+    if (lastAutoSolve?.game?.solved) {
       cancelAnim();
       jumpToMove(lastAutoSolve.moves.length - 1);
       summaryStatus();
@@ -150,14 +150,14 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
       let safety = 0;
       while (safety++ < 80) {
         if (aborted()) return;
-        if (turn && turn.done) break;
+        if (turn?.done) break;
 
         // Compute exactly ONE move. nextTurn() renders it live via finishStep.
         await nextTurn(true);
         if (aborted()) return;
 
         const n = turn ? turn.moves.length : 0;
-        if (turn && turn.done) break;
+        if (turn?.done) break;
 
         if (!skipRequested) {
           // Describe the real move just played, and flag what's next.
@@ -195,7 +195,7 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
     const total = lastAutoSolve.moves.length;
     const guesses = lastAutoSolve.game ? lastAutoSolve.game.guessCount : total;
     const closing = total - guesses;
-    const solved = lastAutoSolve.game && lastAutoSolve.game.solved;
+    const solved = lastAutoSolve.game?.solved;
     const breakdown = closing > 0 ? ` (${guesses} guesses + ${closing} closing)` : "";
     status(
       solved
@@ -312,7 +312,11 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
     const step = steps[K];
 
     manual.reset();
-    slotsAfter.forEach((s, b) => s.guesses.forEach((g) => manual.addGuess(b, g.word, g.colors)));
+    slotsAfter.forEach((s, b) => {
+      s.guesses.forEach((g) => {
+        manual.addGuess(b, g.word, g.colors);
+      });
+    });
 
     clueUI.setResults(buildOverlay(slotsAfter, step.after));
     if (step.after.solvable) {

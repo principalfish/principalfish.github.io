@@ -310,7 +310,7 @@ export async function main(args = process.argv.slice(2), dependencies = {}) {
       ...dependencies,
       progress: dependencies.progress ?? ((message) => stderr(`${message}\n`)),
     });
-    const json = JSON.stringify(report, null, 2) + "\n";
+    const json = `${JSON.stringify(report, null, 2)}\n`;
     if (options.reportFile) await writeFile(options.reportFile, json);
     stdout(json);
     return report.valid ? 0 : 1;

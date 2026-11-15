@@ -83,7 +83,7 @@ function state(pool, guesses = pool, synthetic) {
   return { PM, N: pool.length, poolIndex, POOL: pool, ALL_GUESSES: guesses, PLURALS: new Set() };
 }
 function oldCombined(mod, res, st, ctx) {
-  if (!res || !res.solvable) return { solvable: false };
+  if (!res?.solvable) return { solvable: false };
   const args = [st.PM, st.N, st.poolIndex, st.ALL_GUESSES, st.PLURALS];
   return {
     solvable: true,

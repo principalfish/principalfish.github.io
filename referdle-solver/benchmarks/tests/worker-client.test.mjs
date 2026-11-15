@@ -7,7 +7,9 @@ beforeAll(async () => {
 });
 const clients = [];
 afterEach(() => {
-  clients.splice(0).forEach((c) => c.dispose());
+  clients.splice(0).forEach((c) => {
+    c.dispose();
+  });
   vi.useRealTimers();
 });
 const words = ["AAAAA", "BBBBB", "CCCCC", "DDDDD", "EEEEE"];

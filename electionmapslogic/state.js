@@ -696,7 +696,7 @@ export class Seat {
     return {
       uncalledTag,
       samePartyNote: this.sameParty ? SAME_PARTY_NOTE : "",
-      roundNote: Object.prototype.hasOwnProperty.call(DECISIVE_ROUND_LABELS, this.round)
+      roundNote: Object.hasOwn(DECISIVE_ROUND_LABELS, this.round)
         ? DECISIVE_ROUND_LABELS[this.round]
         : "",
     };
@@ -959,7 +959,7 @@ export class ElectionSummary {
       const memberStats = new Map();
       let total = 0;
       let uncalledMembers = 0;
-      seats.forEach((seat) =>
+      seats.forEach((seat) => {
         (seat.members || []).forEach((member) => {
           // Count only members matching the active member-level filters (party + cycle), via the
           // same predicate the map uses, so the totals agree with the filtered seats — e.g. a
@@ -976,8 +976,8 @@ export class ElectionSummary {
           if (!memberStats.has(key)) memberStats.set(key, { seats: 0, votes: 0 });
           memberStats.get(key).seats += 1;
           total += 1;
-        }),
-      );
+        });
+      });
       const parties = Array.from(memberStats.entries())
         .map(([party, stats]) => ({ party, ...stats }))
         .sort((a, b) => b.seats - a.seats);
@@ -2076,7 +2076,9 @@ class AppState {
       seats?.forEach((seat) => {
         // An uncalled seat with no leader has no winner key; don't invent an 'others' entry.
         if (seat.winner || seat.called !== false) keys.add(mergeKey(seat.winner || "others"));
-        Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(mergeKey(partyKey)));
+        Object.keys(seat.votes || {}).forEach((partyKey) => {
+          keys.add(mergeKey(partyKey));
+        });
       });
     };
     addFromSeats(this.electionData?.currentSeats);

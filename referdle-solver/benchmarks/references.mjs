@@ -264,12 +264,12 @@ export async function beginRecording(directory, { overwrite = false } = {}) {
       validateInventory(manifest, timings);
       await writeFile(
         path.join(staging, "reference-manifest.json"),
-        JSON.stringify(manifest, null, 2) + "\n",
+        `${JSON.stringify(manifest, null, 2)}\n`,
         { flag: "wx" },
       );
       await writeFile(
         path.join(staging, "timing-baseline.json"),
-        JSON.stringify(timings, null, 2) + "\n",
+        `${JSON.stringify(timings, null, 2)}\n`,
         { flag: "wx" },
       );
       const backup = `${staging}.previous`;

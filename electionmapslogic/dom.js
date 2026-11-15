@@ -15,7 +15,6 @@ import {
   seatLookupKey,
   normalizeRegionKey,
   clampNumber,
-  DEFAULT_PARTY_COLOUR,
   buildStateTrendSeries,
 } from "./utils.js";
 import { fetchJson } from "./files.js";

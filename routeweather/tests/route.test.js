@@ -119,7 +119,9 @@ describe("buildRoute", () => {
 
   it("adds cumulative distance matching a hand-computed sum", () => {
     const route = buildRoute(POINTS);
-    route.points.forEach((p, i) => expect(p.cumDistKm).toBeCloseTo(i * STEP_KM, 9));
+    route.points.forEach((p, i) => {
+      expect(p.cumDistKm).toBeCloseTo(i * STEP_KM, 9);
+    });
     for (let i = 1; i < route.points.length; i++) {
       expect(route.points[i].cumDistKm).toBeGreaterThan(route.points[i - 1].cumDistKm);
     }
@@ -246,7 +248,9 @@ describe("smoothElevation", () => {
   it("passes raw values through where points are sparser than half the window", () => {
     const eles = [100, 400, 50, 300];
     const smoothed = smoothElevation(buildRoute(lineRoute(eles, 200)), 100);
-    smoothed.forEach((value, i) => expect(value).toBeCloseTo(eles[i], 9));
+    smoothed.forEach((value, i) => {
+      expect(value).toBeCloseTo(eles[i], 9);
+    });
   });
 
   // Spacings that put neighbours exactly windowM/2 away, where float error in

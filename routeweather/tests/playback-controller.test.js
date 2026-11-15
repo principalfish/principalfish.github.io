@@ -68,7 +68,9 @@ function fakeFrames() {
       t += ms;
       const due = [...pending.values()];
       pending.clear();
-      due.forEach((cb) => cb(t));
+      due.forEach((cb) => {
+        cb(t);
+      });
     },
   };
 }

@@ -24,7 +24,9 @@
   };
 
   const drawCharts = () => {
-    charts.splice(0).forEach((chart) => chart.destroy());
+    charts.splice(0).forEach((chart) => {
+      chart.destroy();
+    });
     if (!window.Chart) return;
     applyThemeColours();
     chartSpecs.forEach(({ canvas, datasets, yLabel }) => {
@@ -107,9 +109,9 @@
         return;
       }
 
-      bulkDeleteForm
-        .querySelectorAll('input[name="election_ids"]')
-        .forEach((node) => node.remove());
+      bulkDeleteForm.querySelectorAll('input[name="election_ids"]').forEach((node) => {
+        node.remove();
+      });
       selected.forEach((id) => {
         const hidden = document.createElement("input");
         hidden.type = "hidden";

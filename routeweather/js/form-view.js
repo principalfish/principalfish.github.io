@@ -48,7 +48,7 @@ export function createFormUI(doc, onChange) {
   // --- listeners ---
 
   $("gpxFile").addEventListener("change", (e) => {
-    const file = e.target.files && e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) emit({ type: "file", file });
     // Clear so choosing the same file again (e.g. to retry) fires `change`.
     e.target.value = "";
@@ -77,7 +77,7 @@ export function createFormUI(doc, onChange) {
   zone.addEventListener("drop", (e) => {
     e.preventDefault();
     zone.classList.remove("dragging");
-    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    const file = e.dataTransfer?.files?.[0];
     if (file) emit({ type: "file", file });
   });
 
@@ -132,13 +132,17 @@ export function createFormUI(doc, onChange) {
   // --- render ---
 
   function update(state) {
-    radios("activity").forEach((el) => setProp(el, "checked", el.value === state.activity));
+    radios("activity").forEach((el) => {
+      setProp(el, "checked", el.value === state.activity);
+    });
     const { units } = state;
-    radios("units").forEach((el) => setProp(el, "checked", el.value === units.system));
+    radios("units").forEach((el) => {
+      setProp(el, "checked", el.value === units.system);
+    });
     for (const quantity of UNIT_QUANTITIES) {
-      radios(UNIT_TOGGLE_NAME[quantity]).forEach((el) =>
-        setProp(el, "checked", el.value === units[quantity]),
-      );
+      radios(UNIT_TOGGLE_NAME[quantity]).forEach((el) => {
+        setProp(el, "checked", el.value === units[quantity]);
+      });
     }
     setProp($("speedUnit"), "textContent", SPEED_UNIT[units.system]);
 

@@ -245,7 +245,7 @@ async function sendAndRead(url, fetchImpl, what, { signal, onSent, combined }) {
     throwIfAbortedOrTimeout(err, what, signal);
     // Otherwise a non-JSON body (e.g. a proxy's HTML error page): reported below.
   }
-  const reason = body && body.error ? `: ${body.reason ?? "unknown error"}` : "";
+  const reason = body?.error ? `: ${body.reason ?? "unknown error"}` : "";
   if (!res.ok) throw new Error(`Open-Meteo ${what} request failed (HTTP ${res.status})${reason}`);
   if (reason) throw new Error(`Open-Meteo ${what} request failed${reason}`);
   if (body === null) throw new Error(`Open-Meteo ${what} response was not JSON`);
@@ -378,7 +378,7 @@ export function normaliseSeries(json, name) {
 }
 
 function hourlyTimes(json) {
-  const hourly = json && json.hourly;
+  const hourly = json?.hourly;
   if (!hourly || !Array.isArray(hourly.time)) {
     throw new Error("Open-Meteo location has no hourly times");
   }

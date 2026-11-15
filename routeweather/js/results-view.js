@@ -260,7 +260,9 @@ export function createPointsTableUI(doc) {
     body.innerHTML = "";
     $("pointsDetails").hidden = !state.results;
     if (!state.results) return;
-    state.results.forEach((_, i) => body.append(pointRow(doc, state, i)));
+    state.results.forEach((_, i) => {
+      body.append(pointRow(doc, state, i));
+    });
   }
 
   return { update };

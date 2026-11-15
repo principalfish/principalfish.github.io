@@ -198,7 +198,9 @@ describe("poll tracker uncertainty display", () => {
       [30, 40],
       [50, 10],
     ]);
-    smoothed.slice(0, 6).forEach(([lo, hi]) => expect(lo).toBeLessThanOrEqual(hi));
+    smoothed.slice(0, 6).forEach(([lo, hi]) => {
+      expect(lo).toBeLessThanOrEqual(hi);
+    });
   });
 
   it("averages over model updates, holding each carried-forward step flat", () => {
@@ -262,14 +264,14 @@ describe("poll tracker uncertainty display", () => {
     expect(inner[0][0]).toBeGreaterThan(10);
     expect(inner[0][1]).toBeLessThan(30);
     expect(inner[1][0]).toBeGreaterThan(130);
-    ribbons.forEach((ribbon) =>
+    ribbons.forEach((ribbon) => {
       ribbon.forEach(([lo, hi], index) => {
         expect(lo).toBeGreaterThanOrEqual(band[index][0]);
         expect(hi).toBeLessThanOrEqual(band[index][1]);
         expect(lo).toBeLessThanOrEqual(central[index]);
         expect(hi).toBeGreaterThanOrEqual(central[index]);
-      }),
-    );
+      });
+    });
   });
 
   it("clamps outside central projections and preserves missing or malformed geometry", () => {

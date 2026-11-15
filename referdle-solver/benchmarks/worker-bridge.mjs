@@ -1,7 +1,6 @@
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
-import { readFile } from "node:fs/promises";
 import { build } from "esbuild";
 
 const componentDir = fileURLToPath(new URL("../", import.meta.url));

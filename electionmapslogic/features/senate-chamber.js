@@ -50,7 +50,9 @@ export function buildSenateChamber(
 ) {
   if (!chamberSeats.length) return contestedSeats;
   const winnerByState = new Map();
-  contestedSeats.forEach((seat) => winnerByState.set(seatLookupKey(seat.seat), seat.winner));
+  contestedSeats.forEach((seat) => {
+    winnerByState.set(seatLookupKey(seat.seat), seat.winner);
+  });
 
   return chamberSeats.map((seat) => {
     const seatKey = seatLookupKey(seat.seat);

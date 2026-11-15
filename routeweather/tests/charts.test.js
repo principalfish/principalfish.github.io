@@ -334,7 +334,10 @@ describe("createChartsUI", () => {
   afterEach(() => charts.destroy());
 
   const seeks = () => calls.filter(([kind]) => kind === "seek").map(([, km]) => km);
-  const runFrames = () => frames.splice(0).forEach((cb) => cb());
+  const runFrames = () =>
+    frames.splice(0).forEach((cb) => {
+      cb();
+    });
 
   it("draws nothing without results", () => {
     charts.update(makeState(undefined, { results: null }));
@@ -673,7 +676,9 @@ describe("createChartsUI", () => {
     // Strips: elevation, temperature, wind, rain, then sky, whose
     // percentages have no unit. Each mixed set's strips match the preset its
     // own unit comes from.
-    metric.slice(0, 4).forEach((ticks, i) => expect(imperial[i]).not.toEqual(ticks));
+    metric.slice(0, 4).forEach((ticks, i) => {
+      expect(imperial[i]).not.toEqual(ticks);
+    });
     expect(imperial[4]).toEqual(metric[4]);
     charts.update({ ...state, units: resolveUnits("metric", { wind: "mph", rain: "in" }) });
     expect(stripTicks()).toEqual([metric[0], metric[1], imperial[2], imperial[3], metric[4]]);

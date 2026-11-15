@@ -107,9 +107,9 @@ describe("buildSenateChamber", () => {
     const result = buildSenateChamber(chamber, contested, specialClasses);
     expect(JSON.stringify(chamber)).toBe(beforeChamber);
     expect(JSON.stringify(contested)).toBe(beforeContested);
-    result[0].members.forEach((member, index) =>
-      expect(member).not.toBe(chamber[0].members[index]),
-    );
+    result[0].members.forEach((member, index) => {
+      expect(member).not.toBe(chamber[0].members[index]);
+    });
     result[0].members[0].party = "independent";
     expect(JSON.stringify(chamber)).toBe(beforeChamber);
   });

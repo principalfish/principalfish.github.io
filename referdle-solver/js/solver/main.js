@@ -157,7 +157,7 @@ async function loadDaily(day) {
 function populateDailyDropdown() {
   const sel = $("daily-select");
   const fmt = (iso) =>
-    new Date(iso + "T00:00:00").toLocaleDateString("en-GB", {
+    new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
       weekday: "short",
       day: "numeric",
       month: "short",

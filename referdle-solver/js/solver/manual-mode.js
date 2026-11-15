@@ -98,7 +98,7 @@ export function initManualMode(
       const { result: res, clueGrid, startSlots, moves } = reply;
       const steps =
         reply.steps ||
-        moves.map((m, i) =>
+        moves.map((_m, i) =>
           i < reply.reuse && lastAutoSolve
             ? lastAutoSolve.steps[i]
             : { after: undefined, suggest: undefined },
@@ -217,7 +217,11 @@ export function initManualMode(
       steps[K] = step;
 
       manual.reset();
-      slotsAfter.forEach((s, b) => s.guesses.forEach((g) => manual.addGuess(b, g.word, g.colors)));
+      slotsAfter.forEach((s, b) => {
+        s.guesses.forEach((g) => {
+          manual.addGuess(b, g.word, g.colors);
+        });
+      });
       clueUI.setResults(buildOverlay(slotsAfter, step.after));
       if (step.after.solvable) {
         renderWordLists(uiEls.slotsEl, slotsAfter, clueGrid, step.after);

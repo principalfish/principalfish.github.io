@@ -16,7 +16,7 @@ import {
 } from "../uncertainty.js";
 
 /** Whole seats `m` differ from the median `s[1]`, so a test reading the median fails. */
-export function publicSummary() {
+function publicSummary() {
   return {
     schema: "pf-uncertainty-v1",
     uncertaintyId: "matching-run",

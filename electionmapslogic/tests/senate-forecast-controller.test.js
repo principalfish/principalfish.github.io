@@ -111,7 +111,11 @@ function expectedChamberTallies() {
   const add = (party, change) => {
     counts[party] = (counts[party] || 0) + change;
   };
-  chamber.forEach((seat) => seat.members.forEach((member) => add(member.party, 1)));
+  chamber.forEach((seat) => {
+    seat.members.forEach((member) => {
+      add(member.party, 1);
+    });
+  });
   new ElectionData(forecastData).currentSeats.forEach((seat) => {
     const key = seatLookupKey(seat.seat);
     const contestedClass = specialClass.get(key) ?? 2;
@@ -173,11 +177,11 @@ describe("activateSenateForecastView", () => {
     expect(tallies(state.filteredSeatsSummary)).toEqual(expectedTallies);
     // The comparison side is the current chamber itself, so its tallies are the snapshot's members.
     const snapshotMembers = {};
-    new ElectionData(chamberData).currentSeats.forEach((seat) =>
+    new ElectionData(chamberData).currentSeats.forEach((seat) => {
       seat.members.forEach((member) => {
         if (member.party) snapshotMembers[member.party] = (snapshotMembers[member.party] || 0) + 1;
-      }),
-    );
+      });
+    });
     expect(tallies(state.filteredSeatsComparisonSummary)).toEqual(snapshotMembers);
     expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(100);
     expect(state.filteredSeatsSummary.totalVotes).toBe(0);

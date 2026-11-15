@@ -22,7 +22,7 @@
  *     so that page-view events can be fired manually at the right moment.
  */
 // Google Analytics runtime gating for dev/localhost
-(function () {
+(() => {
   const hostname = window.location.hostname;
   const isDevelopmentHost =
     window.location.protocol === "file:" ||
@@ -41,6 +41,7 @@
 
   window.dataLayer = window.dataLayer || [];
   window.gtag = function () {
+    // biome-ignore lint/complexity/noArguments: gtag must queue the Arguments object itself, as Google's snippet does
     window.dataLayer.push(arguments);
   };
   window.gtag("js", new Date());

@@ -16,8 +16,7 @@ function optionalNumber(value, label, { integer = false, max = Infinity } = {}) 
 
 function validateReport(report) {
   if (
-    !report ||
-    report.schemaVersion !== 1 ||
+    report?.schemaVersion !== 1 ||
     !["record", "verify"].includes(report.action) ||
     typeof report.valid !== "boolean" ||
     !Array.isArray(report.cases) ||
@@ -89,7 +88,9 @@ function validateReport(report) {
     optionalNumber(row.transportOverheadMs, "case transport overhead");
     if (row.turnRoundtripMs !== undefined) {
       if (!Array.isArray(row.turnRoundtripMs)) throw new Error("Invalid turn roundtrip times");
-      row.turnRoundtripMs.forEach((time) => optionalNumber(time, "turn roundtrip time"));
+      row.turnRoundtripMs.forEach((time) => {
+        optionalNumber(time, "turn roundtrip time");
+      });
     }
     optionalNumber(row.moves, "played moves", { integer: true, max: 80 });
     if (report.action === "record" && row.baselineComputeMs != null)

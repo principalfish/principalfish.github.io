@@ -35,7 +35,7 @@ function getDailyChallengeIndex(seedSource, challengeCount) {
  * @returns {string} The localStorage key for this day's save, e.g. ``"chronos_save_Mon Mar 18 2026"``.
  */
 function getDailySaveKey(seedSource) {
-  return "chronos_save_" + seedSource;
+  return `chronos_save_${seedSource}`;
 }
 
 /**
@@ -161,20 +161,22 @@ async function init() {
  */
 function cleanupOldDailySaves() {
   const today = new Date().toDateString();
-  const todayKey = "chronos_save_" + today;
+  const todayKey = `chronos_save_${today}`;
 
   // Get all localStorage keys
   const keysToRemove = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     // Find all chronos_save_ keys that aren't today's
-    if (key && key.startsWith("chronos_save_") && key !== todayKey) {
+    if (key?.startsWith("chronos_save_") && key !== todayKey) {
       keysToRemove.push(key);
     }
   }
 
   // Remove old save games
-  keysToRemove.forEach((key) => localStorage.removeItem(key));
+  keysToRemove.forEach((key) => {
+    localStorage.removeItem(key);
+  });
 
   if (keysToRemove.length > 0) {
     console.log(`Cleaned up ${keysToRemove.length} old daily save game(s)`);
@@ -189,6 +191,7 @@ function cleanupOldDailySaves() {
  *
  * @returns {void}
  */
+// biome-ignore lint/correctness/noUnusedVariables: called from an inline handler in index.html
 function saveEasyModePref() {
   const isEasy = document.getElementById("easyModeToggle").checked;
   localStorage.setItem("chronos_easy_mode", isEasy);
@@ -224,7 +227,7 @@ function showAlreadyPlayed() {
   document.getElementById("game-view").classList.add("hidden");
   document.getElementById("result-view").classList.remove("hidden");
   document.getElementById("btn-view-results").classList.remove("hidden");
-  document.getElementById("result-title").innerText = "Daily Complete!";
+  document.getElementById("result-title").textContent = "Daily Complete!";
   // Add the timer display here
   document.getElementById("result-text").innerHTML = `
         <div class="mb-3">You've already played today's challenge.</div>
@@ -277,7 +280,7 @@ function updateTimer() {
     .toString()
     .padStart(2, "0");
 
-  timerEl.innerText = `${hours}:${mins}:${secs}`;
+  timerEl.textContent = `${hours}:${mins}:${secs}`;
 }
 
 /**
@@ -298,7 +301,7 @@ function setupGame() {
       return;
     }
     currentChallenge = allChallenges[Math.floor(Math.random() * allChallenges.length)];
-    document.getElementById("mode-badge").innerText = "Infinite Mode";
+    document.getElementById("mode-badge").textContent = "Infinite Mode";
   }
   renderFacts();
 }
@@ -375,32 +378,6 @@ function renderSavedGuesses() {
 }
 
 /**
- * Format a human-readable label for a challenge's answer.
- *
- * Returns "Year: Y ERA" for year challenges, "The Xs ERA" for decade challenges, or
- * "The Nth Century ERA" for century challenges.
- *
- * @param {Object} challenge - Challenge object with properties y (number), e (string),
- *   and t (string: 'year' | 'decade' | 'century').
- * @returns {string} Formatted display name for the challenge's answer.
- */
-function getDisplayName(challenge) {
-  const { y, e, t } = challenge;
-
-  if (t === "year") return `Year: ${y} ${e}`;
-
-  if (t === "decade") {
-    const decadeStart = Math.floor(y / 10) * 10;
-    return `The ${decadeStart}s ${e}`;
-  }
-
-  if (t === "century") {
-    const century = Math.floor(y / 100) + 1;
-    return `The ${century}${getOrdinalSuffix(century)} Century ${e}`;
-  }
-}
-
-/**
  * Return the English ordinal suffix for a positive integer.
  *
  * Handles the 11th/12th/13th special cases correctly.
@@ -423,6 +400,7 @@ function getOrdinalSuffix(n) {
  *
  * @returns {void}
  */
+// biome-ignore lint/correctness/noUnusedVariables: called from an inline handler in markup this file builds
 function showHint() {
   const nextFact = document.getElementById(`fact-${visibleFacts}`);
   if (nextFact) {
@@ -448,15 +426,16 @@ function showHint() {
  *
  * @returns {void}
  */
+// biome-ignore lint/correctness/noUnusedVariables: called from an inline handler in index.html
 function handleGuess() {
   if (isGameOver) return;
 
   const gYearInput = document.getElementById("guessYear");
-  const gYear = parseInt(gYearInput.value);
+  const gYear = parseInt(gYearInput.value, 10);
   const gEra = document.getElementById("guessEra").value;
   const isEasyMode = document.getElementById("easyModeToggle").checked;
 
-  if (isNaN(gYear)) {
+  if (Number.isNaN(gYear)) {
     alert("Please enter a valid year.");
     return;
   }
@@ -540,7 +519,7 @@ function handleGuess() {
     }, 1200);
   } else {
     attempts--;
-    document.getElementById("attempts-left").innerText = attempts;
+    document.getElementById("attempts-left").textContent = attempts;
     if (attempts <= 0) endGame(false);
   }
 
@@ -599,24 +578,6 @@ function getFeedbackConfig(diff, won) {
 }
 
 /**
- * Append a feedback row to the ``#feedback-list`` element.
- *
- * Creates a div with the guess year/era and the feedback label, coloured according to cfg.
- *
- * @param {number} year - The guessed year value.
- * @param {string} era - The guessed era ('AD' or 'BC').
- * @param {{label: string, color: string, emoji: string}} cfg - Feedback configuration from getFeedbackConfig.
- * @returns {void}
- */
-function addFeedbackUI(year, era, cfg) {
-  const row = document.createElement("div");
-  row.className = "guess-row";
-  row.style.backgroundColor = cfg.color;
-  row.innerHTML = `<span>${year} ${era}</span> <span>${cfg.label}</span>`;
-  document.getElementById("feedback-list").prepend(row);
-}
-
-/**
  * Transition to the result view and record the game outcome.
  *
  * Displays the target year, sets the result title (Victory or Time's Up), applies the
@@ -634,7 +595,7 @@ function endGame(winStatus, isRestoring = false) {
 
   const resultYear = document.getElementById("result-year");
   if (resultYear) {
-    resultYear.innerText = `${currentChallenge.y} ${currentChallenge.e}`;
+    resultYear.textContent = `${currentChallenge.y} ${currentChallenge.e}`;
   }
   isGameOver = true;
   won = winStatus; // Ensure global won is set
@@ -643,7 +604,7 @@ function endGame(winStatus, isRestoring = false) {
   document.getElementById("btn-view-results").classList.remove("hidden");
 
   if (winStatus) {
-    document.getElementById("result-title").innerText = "🏆 Victory!";
+    document.getElementById("result-title").textContent = "🏆 Victory!";
     const resultCard = document.getElementById("result-view");
     resultCard.classList.add("victory-card-active");
     // ONLY launch fireworks if they actually just won (not on refresh)
@@ -651,7 +612,7 @@ function endGame(winStatus, isRestoring = false) {
       launchFireworks();
     }
   } else {
-    document.getElementById("result-title").innerText = "⌛ Time's Up!";
+    document.getElementById("result-title").textContent = "⌛ Time's Up!";
   }
   // Use formatHistoryDate here to ensure "1333" becomes "1330s" for the reveal
   const displayDate = formatHistoryDate(currentChallenge.y, currentChallenge.e, currentChallenge.t);
@@ -686,6 +647,7 @@ function endGame(winStatus, isRestoring = false) {
  *
  * @returns {void}
  */
+// biome-ignore lint/correctness/noUnusedVariables: called from an inline handler in index.html
 function viewGame() {
   document.getElementById("result-view").classList.add("hidden");
   document.getElementById("game-view").classList.remove("hidden");
@@ -702,6 +664,7 @@ function viewGame() {
  *
  * @returns {void}
  */
+// biome-ignore lint/correctness/noUnusedVariables: called from an inline handler in index.html
 function viewResults() {
   document.getElementById("game-view").classList.add("hidden");
   document.getElementById("result-view").classList.remove("hidden");
@@ -747,6 +710,7 @@ function saveHistory(wonStatus) {
  *
  * @returns {void}
  */
+// biome-ignore lint/correctness/noUnusedVariables: called from an inline handler in index.html
 function shareResult() {
   let finalWon = won;
   let emojis = guessHistory.join("");
@@ -761,9 +725,6 @@ function shareResult() {
     }
   }
   const scoreDisplay = finalWon ? finalScore : "X";
-
-  // Get the formatted date for the share message
-  const displayDate = formatHistoryDate(currentChallenge.y, currentChallenge.e, currentChallenge.t);
 
   const text =
     `⌛ Chronos ${mode === "daily" ? "Daily" : "Infinite"}\n` +
@@ -791,6 +752,7 @@ function loadFireworksPref() {
  * @param {string} mode - One of 'low', 'high', or 'extreme'.
  * @returns {void}
  */
+// biome-ignore lint/correctness/noUnusedVariables: called from an inline handler in markup this file builds
 function saveFireworksPref(mode) {
   localStorage.setItem("chronos_fireworks_mode", mode);
 }
@@ -805,6 +767,7 @@ function saveFireworksPref(mode) {
  *
  * @returns {void}
  */
+// biome-ignore lint/correctness/noUnusedVariables: called from an inline handler in index.html
 function toggleHistory() {
   const history = JSON.parse(localStorage.getItem("chronos_history_v3") || "[]");
   calculateStreak(history);
@@ -914,7 +877,7 @@ function generateTable(data) {
                 <td><span class="badge ${badgeClass}">${resultText}</span></td>
             </tr>`;
   });
-  return t + "</tbody></table>";
+  return `${t}</tbody></table>`;
 }
 
 /**
@@ -1010,10 +973,10 @@ function calculateStreak(history) {
   // 4. Walk through the sorted dates and count consecutive days
   // Parse DD/MM/YYYY format
   const parts = validDates[0].split("/");
-  let expectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+  const expectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
   expectedDate.setHours(0, 0, 0, 0); // Normalize to midnight
 
-  for (let dateStr of validDates) {
+  for (const dateStr of validDates) {
     const dateParts = dateStr.split("/");
     const actualDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
     actualDate.setHours(0, 0, 0, 0); // Normalize to midnight
@@ -1039,6 +1002,7 @@ function calculateStreak(history) {
  *
  * @returns {void}
  */
+// biome-ignore lint/correctness/noUnusedVariables: called from an inline handler in markup this file builds
 function clearAllData() {
   if (confirm("Are you sure? This will delete ALL history, streaks, and saved games!")) {
     // Clear all known keys
@@ -1048,19 +1012,23 @@ function clearAllData() {
       "chronos_daily_result",
       "chronos_easy_mode",
       "chronos_fireworks_mode",
-      "chronos_save_" + currentSeed,
+      `chronos_save_${currentSeed}`,
     ];
-    keys.forEach((k) => localStorage.removeItem(k));
+    keys.forEach((k) => {
+      localStorage.removeItem(k);
+    });
 
     // Remove ALL daily save games (chronos_save_*)
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith("chronos_save_")) {
+      if (key?.startsWith("chronos_save_")) {
         keysToRemove.push(key);
       }
     }
-    keysToRemove.forEach((k) => localStorage.removeItem(k));
+    keysToRemove.forEach((k) => {
+      localStorage.removeItem(k);
+    });
 
     alert("All data cleared.");
     // Redirect to Daily mode to start fresh
@@ -1077,6 +1045,7 @@ function clearAllData() {
  *
  * @returns {void}
  */
+// biome-ignore lint/correctness/noUnusedVariables: called from an inline handler in index.html
 function playAgain() {
   // If we are in Daily mode and finished, 'Play Again' should take us to Infinite
   if (mode === "daily") {
@@ -1084,7 +1053,7 @@ function playAgain() {
   } else {
     // If in Infinite mode, check if a new daily is available
     const currentSeed = new Date().toDateString();
-    const saved = localStorage.getItem("chronos_save_" + currentSeed);
+    const saved = localStorage.getItem(`chronos_save_${currentSeed}`);
 
     // If no saved game for today, or if the saved game is not finished, go to daily
     if (!saved) {
@@ -1122,7 +1091,7 @@ function resetGameState() {
   visibleFacts = 1;
 
   // Reset UI
-  document.getElementById("attempts-left").innerText = attempts;
+  document.getElementById("attempts-left").textContent = attempts;
   document.getElementById("feedback-list").innerHTML = "";
   document.getElementById("game-view").classList.remove("hidden");
   document.getElementById("result-view").classList.add("hidden");

@@ -105,7 +105,7 @@ Rejected alternatives:
 ## Checkpoints
 - [x] 1. Suite runs in parallel on half the CPUs (4 on CI), temp files in RAM, docs updated
 - [x] 2. Repo scans list files through git; stray ignored folders no longer fail them
-- [ ] 3. Run fails if it changes tracked exported data
+- [x] 3. Run fails if it changes tracked exported data
 
 ## Verification
 
@@ -139,4 +139,5 @@ Piece 1 also reports the draft PR's CI "mypy + pytest" step time against today's
 - Piece 3: changed-lines coverage has no figure (coveragerc omits `tests/*`, where the plugin and its tests live). Accepted by the coverage check: `test_data_guard.py` covers the helpers against throwaway git repos, the hooks with fake sessions (worker skip, failing a changed run, warn-and-skip without git or a checkout, an already-failed status) and end-to-end pytester runs (serial and `-n 2`). The guard was also shown on the real tree with a temporary probe test that wrote `electionmaps/data/results/holyrood-prediction-meta.json`: the run exited 1 and named the file, both with workers and with `-n 0`; the probe was deleted and the file restored.
 - Piece 3: the guard is a plugin, `data/tests/data_guard.py`, registered through `pytest_plugins` in `tests/conftest.py`. A change sets the exit status to TESTS_FAILED (only from OK or NO_TESTS_COLLECTED) and lists the paths in the terminal summary; no git or no checkout gives a "data guard skipped" line. Workers skip it (`workerinput`). Two AGENTS.md lines under the "Stage files by name" rule mention it.
 - Piece 3: implementation on claude-sonnet-5-5 (the user's change of build model); correctness and security stay on frontier.
+- Piece 3, approved (user: "Approve, fix them (A)"): the three test findings were fixed on claude-sonnet-5-5; the light re-check was clean.
 

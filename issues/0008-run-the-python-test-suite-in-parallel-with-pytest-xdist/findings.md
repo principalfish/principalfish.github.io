@@ -34,7 +34,7 @@
 | round | coverage | - | test | verified | fixed | `data/tests/test_data_guard.py` | No test that an already-failed exit status is left alone |
 | round | docs | - | - | - | - | - | clean |
 | round | security | - | - | - | - | - | clean |
-| re-check | coverage | low | test | verified | open | `data/tests/test_data_guard.py:225` | In the "already-failed status is left alone" test the TESTS_FAILED case can't catch a regression; only INTERRUPTED discriminates |
-| re-check | coverage | low | test | verified | open | `data/tests/test_data_guard.py:212` | Nothing covers NO_TESTS_COLLECTED flipping to TESTS_FAILED; only OK is tested |
-| re-check | coverage | - | cleanup | verified | open | `data/tests/test_data_guard.py:255` | `assert state.skipped_because is not None` is redundant with the equality on the next line |
-
+| re-check | coverage | low | test | verified | fixed | `data/tests/test_data_guard.py:225` | In the "already-failed status is left alone" test the TESTS_FAILED case can't catch a regression; only INTERRUPTED discriminates |
+| re-check | coverage | low | test | verified | fixed | `data/tests/test_data_guard.py:212` | Nothing covers NO_TESTS_COLLECTED flipping to TESTS_FAILED; only OK is tested |
+| re-check | coverage | - | cleanup | verified | fixed | `data/tests/test_data_guard.py:255` | `assert state.skipped_because is not None` is redundant with the equality on the next line |
+| manual | user | - | test | - | fixed | `data/tests/test_data_guard.py` | User chose option A: the already-failed status test uses USAGE_ERROR and INTERRUPTED, the failing-run test is parametrized over OK and NO_TESTS_COLLECTED, and the redundant assert is gone (mutation proofs: both regressions are now caught) |

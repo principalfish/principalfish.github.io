@@ -17,7 +17,7 @@ Python election-data pipeline: local setup and everyday operation. Everything el
 | `core/` | Shared modules: `schema.py` (SQLAlchemy tables), `db.py` (database access), `config.py` (settings; loads the repo-root `.env`), `backup.py`, `electoral_votes.py`, plus the US geography names and the SQLite migration helpers |
 | `console/` | Local web console for the data (`create_app`): five sections (Westminster, Holyrood, US House, US Senate, US President), the Export page, the Runs log and Admin; see [the console](docs/console.md) |
 | `server.py` | Local data preview server (`:5055`) |
-| `archive/` | Finished one-offs and retired setup files (not maintained, not type-checked; see its README) |
+| `archive/` | Finished one-offs and retired setup files (not maintained, type-checked or linted; see its README) |
 | `inputs/` | Committed source data files per jurisdiction (`westminster/`, `holyrood/`, `us/`) read by the importers |
 | `importers/` | `seed/` (parties, region populations), `results/` (Westminster, Holyrood and US elections, boundaries, by-elections; US has `nyt/` for the New York Times fetch-and-convert pipeline and `geometry/` for the TopoJSON builders) and `polls/` (Wikipedia-driven poll importers, `registry.py` lists the Westminster pollsters) |
 | `models/` | Election models — `westminster/` (runner, uncertainty calibration and validation, with their JSON artefacts), `holyrood/` (UNS retrospective), `us/` (House, President, Senate forecasts) and `support/` (the simulation, persistence, trends and uncertainty code they share) |

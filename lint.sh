@@ -86,7 +86,7 @@ run_step() {
 
 run_step "ruff check" "$RUFF" check "${PYTHON_DIRS[@]}"
 run_step "ruff format" "$RUFF" format --check "${PYTHON_DIRS[@]}"
-run_step "biome" "$BIOME" ci .
+run_step "biome" "$BIOME" ci --error-on-warnings .
 run_step "shellcheck" "$SHELLCHECK" "${SHELL_SCRIPTS[@]}"
 
 if ((${#failed[@]})); then

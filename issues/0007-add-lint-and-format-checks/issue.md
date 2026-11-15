@@ -32,5 +32,5 @@ _2026-11-15 · 8 of 8 pieces done · now: all done, in review (draft PR #87)_
   Rewrite the README, AGENTS.md and data/README.md as short front doors, carrying the lint commands.
 - [x] **Review fixes (CI)** · `cfcfa05b`
   Ignore ruff's executable-bit rules, which only fire off WSL.
-- [x] **Review fixes (round 1)** · `8c06ded5`
-  Fail the lint on Biome warnings; correct the archive row. CLAUDE.md one-liner left for the user.
+- [x] **Review fixes (round 1)** · `8c06ded5`, `3d1edb61`
+  Fail the lint on Biome warnings; correct the archive row; cut CLAUDE.md to `@AGENTS.md`.

@@ -51,3 +51,15 @@ Cost: 3 check subagents (correctness, security, coverage) · ~222k tokens · ~3 
 
 | Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
 |-|-|-|-|-|-|-|-|
+
+## piece 7 · 2026-11-15 · One lint script and CI
+
+Cost: 5 subagents (correctness, security, coverage, verifier, correctness re-check) · ~300k tokens · ~6 min · the three checks started before their input files were written (a git_guard parse block); each reviewed the worktree directly
+
+| Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
+|-|-|-|-|-|-|-|-|
+| round | correctness | low | bug | verified | fixed | `lint.sh:71` | Under `--fix` a failing `ruff format` (e.g. a syntax error) aborted the run via `set -e`, so no check or summary ran; now `|| true` like the other fixers, and the check steps report it |
+| round | correctness | low | bug | verified | fixed | `lint.sh:19` | `--help` failed when run from another directory (`usage` read `$0` after the `cd`); now reads the script's own name |
+| round | security | low | risk | dropped | - | `.github/workflows/ci.yml:3` | No top-level `permissions:` block — dropped: pre-existing for every job, not made worse here; could be its own hardening task |
+| round | coverage | low | other | dropped | - | `lint.sh:65` | `git ls-files` skips untracked `.sh` files locally — dropped: the header and plan promise tracked scripts |
+| round | coverage | info | other | dropped | - | `.github/workflows/ci.yml:9-35` | The CI job is only proven by the PR run — dropped: the plan says so |

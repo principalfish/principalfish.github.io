@@ -8,17 +8,15 @@
 - The repo-scanning tests list data/'s .py files through one shared helper using `git ls-files --cached --others --exclude-standard`, so gitignored folders are skipped (2026-11-15).
 - Add a session guard: the run fails if tracked files under electionmaps/data or uselectionmaps/data changed during it, naming them (2026-11-15).
 - Coverage works under xdist (identical XML on a subset); this chat adds `-n` to the planner branch's coverage-changed.sh, only when xdist is importable (2026-11-15).
+- Pages deploys from GitHub Actions: a `deploy` job in `ci.yml` needs lint, data and frontend, runs on push to `master` (and `workflow_dispatch`) only (2026-11-15).
+- Artifact: `git archive HEAD` minus dotfiles, `_`-prefixed paths and `data/`; every site URL keeps working, the pipeline's sources stop being published (2026-11-15).
+- Drop Jekyll: files upload as they are; only the stray `.md` → `.html` renderings (e.g. `/AGENTS.html`, `/CLAUDE.html`) disappear (2026-11-15).
+- Switch order: Phil flips Settings → Pages → Source to GitHub Actions just before merging the PR (2026-11-15).
+- Extras: `workflow_dispatch` only. No top-level `permissions: contents: read`, no branch protection (Phil didn't pick them) (2026-11-15).
+- The custom domain is held in the repo's Pages settings (`principalfish.co.uk`, HTTPS cert approved), so it carries over; `CNAME` stays in the artifact (2026-11-15).
 
 ## Open
 - CPU/2 gives CI (4 vCPU) only 2 workers: does CI also use CPU/2, or `auto`?
-- Pages deploy: switch Pages source to GitHub Actions, and add a `deploy` job in `ci.yml` that needs lint, data and frontend, on push to `master` only.
-  - Jekyll: no front matter outside `data/`, no `_`-prefixed published files. Today Jekyll renders the tracked `*.md` to HTML; an Actions deploy serves them raw.
-  - The custom domain `principalfish.co.uk` is held in the repo's Pages settings (HTTPS cert approved), so it carries over.
-  - What goes in the artifact? Today Jekyll publishes every tracked file except dotfiles and `_*`, including the Python sources in `data/`. About 50 MB is tracked, far under the limits.
-  - Order of the switch: the flip and the workflow must land together, or deploys stop.
-  - `workflow_dispatch` for a manual redeploy?
-  - Top-level `permissions: contents: read`?
-  - Branch protection (probably not: direct data pushes to `master`)?
 
 ## Assumed
 - Issue 0007 merged (PR #87, 2026-11-15 12:18); the builder branches from `master`.

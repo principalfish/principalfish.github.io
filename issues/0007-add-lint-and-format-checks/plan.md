@@ -131,7 +131,7 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
 - [x] 3. JS formatting-only commit with bundles; `biome format` clean
 - [x] 4. `ruff check` clean in `data/tests/`; fixtures registered; `.git-blame-ignore-revs` lists pieces 2 and 3
 - [x] 5. `ruff check` clean everywhere; strict mypy still clean
-- [ ] 6. `biome ci` clean; bundles in sync
+- [x] 6. `biome ci` clean; bundles in sync
 - [ ] 7. `./lint.sh` runs all checks and fails at the right steps; CI lint job
 - [ ] 8. README, AGENTS.md and data/README.md meet the project-docs guide; every command accounted for and checked
 
@@ -171,3 +171,4 @@ After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh`
 - Piece 6 decisions: 10 guesstheyear functions called from inline handlers keep a `biome-ignore` naming the caller (Biome's `_` rename would break the page); dead code deleted (guesstheyear getDisplayName, addFeedbackUI, an unused displayDate; referdle parseClue, codeFor, setCode and a stale duplicate LOOKAHEAD_MAX); `biome-ignore` with reasons for site/ga-setup.js `arguments` (gtag must queue the Arguments object) and two deliberate sparse arrays in referdle benchmark tests; test-local `valueOf` renamed `readoutText`; an unneeded `export` on a test helper dropped.
 - Piece 6 guesstheyear proof: jsdom drive of HEAD's script.js vs the new one (clock and Math.random pinned) through init, a guess, hint, history, results and back renders identically with no errors, once an innerText setter is polyfilled (jsdom has no innerText, so HEAD's innerText writes were no-ops under jsdom).
 - Piece 6 review: correctness, security and coverage all clean. Changed-lines coverage 40% (40 of 67 uncovered); accepted reasons: referdle solver files are exercised only through esbuild data: URL bundles that V8 coverage can't map (as in piece 3), and the rest are forEach block bodies on lines already uncovered on master; guesstheyear and site/ga-setup.js have no tests and are proven by the drive and `node --check`.
+- Piece 6 committed 5dd207ae (2026-11-15), approved under the standing instruction with the sparse-array biome-ignores accepted; the click-through list goes on the user's end-of-issue testing list.

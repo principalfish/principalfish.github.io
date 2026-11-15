@@ -1,0 +1,6 @@
+# GitHub Pages runs Jekyll over the repo before serving it. The Python pipeline in
+# data/ is source, not site content, so it stays out of the published site. The
+# pages' own data (electionmaps/data/, uselectionmaps/data/) is unaffected: Jekyll
+# matches exclude entries from the repo root.
+exclude:
+  - data

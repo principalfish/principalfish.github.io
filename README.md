@@ -47,8 +47,10 @@ After editing anything under `electionmapslogic/`, rebuild the bundles with
 
 ## Ship
 
-GitHub Pages serves `master` as committed: there is no build at deploy, so the
-minified bundles, vendored libraries and exported map data are all committed. The
+GitHub Pages serves `master` as committed: nothing is compiled or bundled at deploy
+(its Jekyll pass copies files as-is and renders only the Markdown docs), so the
+minified bundles, vendored libraries and exported map data are all committed.
+`_config.yml` keeps the `data/` pipeline out of the published site. The
 data console's **Export** page, or `export/export_elections.py`, writes the maps'
 data files into the repo; commit and push them to publish. CI
 (`.github/workflows/ci.yml`) runs `./check.sh --lint-only`, the Python suite and Vitest in

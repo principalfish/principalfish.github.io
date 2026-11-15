@@ -17,6 +17,7 @@ import pytest
 
 from console import create_app
 from tests.layout_helpers import leftover_files
+from tests.source_files import python_files
 
 DATA_DIR = Path(__file__).resolve().parent.parent
 ARCHIVE_DIR = DATA_DIR / "archive"
@@ -31,11 +32,9 @@ CONVERTERS = [
 BLUEPRINTS = sorted(
     {blueprint.import_name for blueprint in create_app().blueprints.values()}
 )
-LIVE_SOURCES = sorted(
-    path
-    for path in DATA_DIR.rglob("*.py")
-    if not {"archive", "election_data", ".venv"} & set(path.relative_to(DATA_DIR).parts)
-)
+LIVE_SOURCES = [
+    path for path in python_files() if "archive" not in path.relative_to(DATA_DIR).parts
+]
 MOVED_AWAY = [
     "old_data",
     "scripts/us_results",

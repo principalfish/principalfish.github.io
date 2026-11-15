@@ -229,7 +229,9 @@ def test_restore_with_no_local_archive_raises(source_db: Path, archive: Path) ->
 
 
 @pytest.mark.parametrize(
-    "payload", [b"not gzip at all", gzip.compress(b"not a database")]
+    "payload",
+    [b"not gzip at all", gzip.compress(b"not a database", mtime=0)],
+    ids=["not gzip", "gzip, not sqlite"],
 )
 def test_restore_of_a_corrupt_archive_raises(
     source_db: Path, archive: Path, payload: bytes

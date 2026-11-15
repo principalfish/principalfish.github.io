@@ -5,6 +5,7 @@ Each test gets a fully fresh set of tables (drop + create) so tests
 are completely isolated from each other.
 """
 
+import os
 import sqlite3
 from collections.abc import Generator
 from pathlib import Path
@@ -17,8 +18,39 @@ from core.config import DatabaseConfig
 from core.db import Database
 from tests.uk_fixtures import WestminsterWorld, copy_database, seed_westminster_world
 
-# The console app, seeded app and saved-run fixtures, shared by the console tests.
-pytest_plugins = ["tests.console_fixtures"]
+# The console app, seeded app and saved-run fixtures, shared by the console tests,
+# and the check that a run leaves the exported data files alone.
+pytest_plugins = ["tests.console_fixtures", "tests.data_guard"]
+
+
+def half_the_cpus() -> int:
+    """Return half the CPUs this process may run on, and at least 1.
+
+    The affinity mask is what a container or ``taskset`` actually allows;
+    ``os.cpu_count`` is the fallback where ``sched_getaffinity`` doesn't exist.
+    """
+    try:
+        available = len(os.sched_getaffinity(0))
+    except AttributeError:
+        available = os.cpu_count() or 1
+    return max(1, available // 2)
+
+
+@pytest.hookimpl(optionalhook=True)
+def pytest_xdist_auto_num_workers(config: pytest.Config) -> int | None:
+    """Make ``-n auto`` start half the CPUs' worth of workers.
+
+    The hook is first-result and this one runs before xdist's own, so its answer
+    wins; returning None when ``PYTEST_XDIST_AUTO_NUM_WORKERS`` holds a number
+    lets xdist apply that count instead. xdist ignores a value that isn't a
+    number and would use every CPU, so that case stays at half. ``optionalhook``
+    keeps this conftest loadable without xdist installed.
+    """
+    try:
+        int(os.environ.get("PYTEST_XDIST_AUTO_NUM_WORKERS", ""))
+    except ValueError:
+        return half_the_cpus()
+    return None
 
 
 @pytest.fixture(autouse=True)

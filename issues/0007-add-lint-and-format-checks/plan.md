@@ -133,7 +133,7 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
 - [x] 5. `ruff check` clean everywhere; strict mypy still clean
 - [x] 6. `biome ci` clean; bundles in sync
 - [x] 7. `./lint.sh` runs all checks and fails at the right steps; CI lint job
-- [ ] 8. README, AGENTS.md and data/README.md meet the project-docs guide; every command accounted for and checked
+- [x] 8. README, AGENTS.md and data/README.md meet the project-docs guide; every command accounted for and checked
 
 ## Verification
 
@@ -178,3 +178,4 @@ After the merge, the planner chat updates `project.md`: Checks gains `./lint.sh`
 - EXE fix (2026-11-15): PR CI's lint job failed on 28 × EXE001; ruff doesn't run EXE001/EXE002 on WSL, so local runs can't catch them. Planner's decision: `ignore = ["EXE001", "EXE002"]` in `data/pyproject.toml` with a reason (the builder had first made the 28 scripts executable; reverted for the planner's fix). Committed cfcfa05b; CI's lint job then passed.
 - Piece 8 (2026-11-15): README.md 69 lines / 387 words, AGENTS.md 49 / 370, data/README.md 112 / 805. Moved: Import polls → data/docs/console.md; quick checks and troubleshooting → data/docs/database.md (now loading `.env` first); env-var table → data/README.md; headless jsdom driving → electionmapslogic/README.md; root files → site/README.md. New guesstheyear/README.md (its regenerate command and helpers had no home). All 41 old commands accounted for; 68 links checked, test_docs.py 60 passed. Fixed a wrong fact: `./run_tests.sh <file>` never ran one file. For project.md: its Checks line says run_tests.sh forwards "a test path" — a path doesn't narrow the run.
 - Piece 8 review: 4 verified docs findings fixed; dropped the pre-existing `guesstheyear/app.py` 0.0.0.0 bind (possible separate fix) and three others.
+- Piece 8 committed 3fabbbd7 (2026-11-15), approved under the standing instruction with the open finding fixed first (planner option a): the database quick checks source `.env` only if present and fall back to the shell value, then `~/dbs/elections.db`; proven in a scratch layout with a `.env`, without one, and without one but with the shell variable set. guesstheyear/README.md accepted.

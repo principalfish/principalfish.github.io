@@ -7,3 +7,14 @@ The Python suite (`data/tests`, 7,424 tests) runs serially on one core and takes
 Two safety fixes come with it. The tests that scan `data/` for source files will list files through git, so a gitignored folder of old scratch copies can't make them fail (today 6.5 GB of them in `data/.pytest_cache` fail five tests locally). And the run fails if any test changes the tracked exported data under `electionmaps/data` or `uselectionmaps/data`, naming the file, because a test once rewrote `model_output_trends.json`.
 
 Out of scope: gating the GitHub Pages deploy on CI (considered and dropped), and keeping `data/` off the published site.
+
+## Plan
+
+_2026-11-15 · 0 of 3 pieces done · now: waiting on a decision_
+
+- [ ] **1/3 Run the suite in parallel** · not started
+  run_tests.sh runs pytest on half the CPUs (4 on CI), with temp files in a per-run RAM folder
+- [ ] **2/3 List the scanned source files through git** · not started
+  the repo-scan tests list data/'s files with git, so gitignored folders can't fail them
+- [ ] **3/3 Fail the run if it changes tracked exported data** · not started
+  a session guard names any file under electionmaps/data or uselectionmaps/data that a run changed

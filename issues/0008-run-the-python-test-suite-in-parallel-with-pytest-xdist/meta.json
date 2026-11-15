@@ -3,7 +3,7 @@
   "slug": "run-the-python-test-suite-in-parallel-with-pytest-xdist",
   "title": "Run the Python test suite in parallel with pytest-xdist",
   "mode": "build",
-  "state": "investigating",
+  "state": "planned",
   "branch": "run-the-python-test-suite-in-parallel-with-pytest-xdist",
   "base": "master",
   "gh_issue": 88,

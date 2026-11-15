@@ -86,3 +86,4 @@
 - 2026-11-15 12:20 · add-lint-and-format-checks (0007) · cleanup: removed worktree /home/philiph/workspace/principalfish.github.io/.claude/worktrees/add-lint-and-format-checks-15b52f, branch claude/add-lint-and-format-checks-15b52f
 - 2026-11-15 13:31 · run-the-python-test-suite-in-parallel-with-pytest-xdist (0008) · GitHub issue #88
 - 2026-11-15 13:31 · run-the-python-test-suite-in-parallel-with-pytest-xdist (0008) · build_model = claude-opus-5-5
+- 2026-11-15 13:31 · run-the-python-test-suite-in-parallel-with-pytest-xdist (0008) · investigating → planned

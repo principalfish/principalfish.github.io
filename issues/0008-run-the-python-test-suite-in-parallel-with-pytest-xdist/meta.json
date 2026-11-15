@@ -6,9 +6,9 @@
   "state": "investigating",
   "branch": "run-the-python-test-suite-in-parallel-with-pytest-xdist",
   "base": "master",
-  "gh_issue": null,
-  "build_model": null,
+  "gh_issue": 88,
+  "build_model": "claude-opus-5-5",
   "created": "2026-11-15 12:10",
-  "updated": "2026-11-15 12:10",
+  "updated": "2026-11-15 13:31",
   "done": null
 }

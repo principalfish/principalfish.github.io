@@ -12,7 +12,7 @@ Rules that no linter can check, such as how booleans are named, guard clauses or
 
 ## Plan
 
-_2026-11-14 · 4 of 8 pieces done · now: piece 5 in progress_
+_2026-11-15 · 5 of 8 pieces done · now: piece 6 in progress_
 
 - [x] **1/8 Pin the tools and add their settings** · `68720459`
   Pin ruff, shellcheck and Biome and add their settings.
@@ -22,9 +22,9 @@ _2026-11-14 · 4 of 8 pieces done · now: piece 5 in progress_
   One formatting-only commit with Biome, bundles rebuilt.
 - [x] **4/8 Fix the ruff findings in the tests** · `149e3967`
   Clean up the tests, including how shared fixtures are registered.
-- [ ] **5/8 Fix the ruff findings in the pipeline code** · in progress
+- [x] **5/8 Fix the ruff findings in the pipeline code** · `c4de3561`
   Clean up the pipeline code without changing behaviour.
-- [ ] **6/8 Fix the Biome findings** · not started
+- [ ] **6/8 Fix the Biome findings** · in progress
   Clean up the JavaScript across every page, checked by hand in the browser.
 - [ ] **7/8 One lint script and CI** · not started
   `./lint.sh` and a CI lint job.

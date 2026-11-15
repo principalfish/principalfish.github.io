@@ -24,6 +24,10 @@ extend-exclude = ["archive", "election_data", ".venv"]
 
 [tool.ruff.lint]
 extend-select = ["N", "PTH", "C4"]
+# ruff doesn't run EXE001/EXE002 (the executable-bit checks) on WSL, where file modes
+# are unreliable, so locally they never fire and could only fail in CI. The scripts are
+# run with the venv interpreter, not executed directly.
+ignore = ["EXE001", "EXE002"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

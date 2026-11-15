@@ -10,7 +10,7 @@ Out of scope: gating the GitHub Pages deploy on CI (considered and dropped), and
 
 ## Plan
 
-_2026-11-15 · 3 of 3 pieces done · now: all done, in review_
+_2026-11-15 · 3 of 3 pieces done · now: PR #89 ready_
 
 - [x] **1/3 Run the suite in parallel** · `817554d4`
   run_tests.sh runs pytest on half the CPUs (4 on CI), with temp files in a per-run RAM folder

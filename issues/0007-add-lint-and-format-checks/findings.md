@@ -103,3 +103,16 @@ Cost: 1 re-check subagent (correctness) · ~60k tokens · ~1 min
 | manual | user | medium | bug | - | fixed | `lint.sh:89` | `biome ci` exited 0 on warnings; now `--error-on-warnings` (a 2-warning probe fails "biome", the tree passes) |
 | manual | user | low | docs | - | fixed | `data/README.md:20` | `archive/` row now says not maintained, type-checked or linted (true of ruff, shellcheck, mypy and Biome) |
 | manual | user | low | docs | - | fixed | `CLAUDE.md:1` | Now exactly `@AGENTS.md` (3d1edb61), on the user's direct go-ahead in the builder chat; a relayed request had been declined |
+
+## piece 9 · 2026-11-15
+
+| Phase | Check | Severity | Kind | Verdict | Outcome | Where | Finding |
+|-|-|-|-|-|-|-|-|
+| round | correctness | low | defect | verified | fixed | `check.sh:21` | Ctrl-C during pytest didn't stop the run: pytest turns SIGINT into exit 2, so Vitest started. Now `trap … exit 130' INT`; a probe gives rc 130 and no Vitest, and rc 1 with Vitest run when the trap is commented out |
+| round | correctness | low | defect | verified | fixed | `check.sh:52` | `--lint-only -- ARGS` silently dropped the pytest args; now exits 2 with a message (also raised by coverage) |
+| round | coverage | low | other | dropped | - | `check.sh` | Vitest-only failure not proven by hand — dropped: same `run_step` path proof A exercised |
+| round | coverage | info | other | dropped | - | `check.sh` | Empty `"${PYTEST_ARGS[@]}"` under `set -u` fails on bash < 4.4 — dropped: the script already needs bash 4+ (`mapfile`, from lint.sh) |
+| round | coverage | info | other | dropped | - | `check.sh` | Missing-npm guard untested — dropped: trivial defensive guard |
+| round | verify | low | docs | noticed | open | `data/README.md:30` | Prerequisites say "A Linux or macOS shell", but check.sh (like lint.sh before it) uses `mapfile`, which needs bash 4+; stock macOS bash is 3.2. Pre-existing |
+| re-check | correctness | - | - | - | - | - | Clean: both fixes confirmed, no new defects |
+| re-check | coverage | - | - | - | - | - | Clean: both fixes confirmed and proven by hand |

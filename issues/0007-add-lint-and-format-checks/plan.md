@@ -144,7 +144,7 @@ Rejected: gating first with per-rule ignores to burn down later (the ignores ten
 - [x] 6. `biome ci` clean; bundles in sync
 - [x] 7. `./lint.sh` runs all checks and fails at the right steps; CI lint job
 - [x] 8. README, AGENTS.md and data/README.md meet the project-docs guide; every command accounted for and checked
-- [ ] 9. `./check.sh` runs lint, types and both test suites; `--lint-only` gates CI; no `lint.sh` left
+- [x] 9. `./check.sh` runs lint, types and both test suites; `--lint-only` gates CI; no `lint.sh` left
 
 ## Verification
 
@@ -192,3 +192,5 @@ After the merge, the planner chat updates `project.md`: Checks gains `./check.sh
 - Piece 8 committed 3fabbbd7 (2026-11-15), approved under the standing instruction with the open finding fixed first (planner option a): the database quick checks source `.env` only if present and fall back to the shell value, then `~/dbs/elections.db`; proven in a scratch layout with a `.env`, without one, and without one but with the shell variable set. guesstheyear/README.md accepted.
 - Review fixes committed 8c06ded5 (2026-11-15): `biome ci --error-on-warnings` in lint.sh and the archive row in data/README.md, approved under the standing instruction. The CLAUDE.md one-line fix stays open for the user.
 - CLAUDE.md fix committed 3d1edb61 (2026-11-15): CLAUDE.md is now the single line `@AGENTS.md`, on Phil's direct go-ahead in the builder chat. Review 01's chosen fixes are all applied.
+- Piece 9 (2026-11-15): built on Sonnet (the piece's `Model:`); the review round's frontier correctness check caught the Ctrl-C and `--lint-only -- ARGS` defects, both fixed. Deviation: the spec said AGENTS.md "keeps its warning" that the tests rewrite the tracked trends file, and named it `data/model_output_trends.json`. AGENTS.md had no such warning; the file is `electionmaps/data/results/model_output_trends.json`; four full `./check.sh` runs left it unmodified (the rewrite last reproduced 2026-09-08). So AGENTS.md says instead: stage files by name, and if a test run or `./check.sh` leaves that file modified, restore it and find the writer. Hand proofs: A lint + failing test (rc 1, "Failed: ruff check, ruff format, mypy + pytest", Vitest still ran); B clean full run rc 0 (7424 pytest, 1667 Vitest); C `-- -k model_outputs -q` 15 passed, 7409 deselected; D `--lint-only` four steps only; E `--help` from /tmp; F `--bogus` rc 2; G `--lint-only -- -k x` rc 2; H SIGINT during pytest rc 130, no Vitest. Coverage: no Python/JS lines; branch total unchanged (73%, 649/2481). Noticed, open: data/README.md says "Linux or macOS shell" but check.sh needs bash 4+ (`mapfile`).
+- Piece 9 committed 37f550fd (2026-11-15), approved under the standing instruction; the AGENTS.md staging rule (in place of the trends warning) and the bash 4+ / macOS item accepted by the planner.
